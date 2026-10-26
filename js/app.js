@@ -124,9 +124,9 @@ function openPlan(id) {
 const nameTaken = (name, exceptId) => plans.list.some(p => p.id !== exceptId && p.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
 // The name itself if it is free, else with the first free number added: "Sample plan 2".
 function uniqueName(name) {
-  let n = 2;
-  while (nameTaken(n === 2 ? name : `${name} ${n - 1}`)) n++;
-  return n === 2 ? name : `${name} ${n - 1}`;
+  let candidate = name, n = 1;
+  while (nameTaken(candidate)) candidate = `${name} ${++n}`;
+  return candidate;
 }
 
 // Asks for a plan name until it is free (or the user cancels); `exceptId` is the plan being renamed.
@@ -184,6 +184,8 @@ function fmtDate(date) {
   if (!date) return '';
   return new Date(date + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
+// A yyyy-mm-dd date in the app's language, read as a calendar day (no time zone shift).
+const fmtDay = (iso, opts) => new Date(iso + 'T00:00Z').toLocaleDateString(locale(), { ...opts, timeZone: 'UTC' });
 function fmtNum(n) {
   return Number(n).toLocaleString(locale(), { maximumFractionDigits: 2 });
 }
@@ -320,7 +322,7 @@ function smartCheck(g) {
   if (!g.title || g.title.trim().length < 4) errs.title = t('err.title');
   if (!g.specific || g.specific.trim().length < 15) errs.specific = t('err.specific');
   // A goal measured by its activities or routines needs no metric or target of its own.
-  if (!byActivities(g) && !byRoutines(g)) {
+  if (ownMetric(g)) {
     if (!g.metric || !g.metric.trim()) errs.metric = t('err.metric');
     if (!isNum(g.target)) errs.target = t('err.target');
     else if (isNum(g.baseline) && Number(g.baseline) === Number(g.target)) errs.target = t('err.targetSame');
@@ -382,19 +384,22 @@ const byActivities = g => g.progress === 'activities';
 // The activities such a goal counts: the actual pieces of work (activities without sub-activities
 // of their own) under the goal and its sub-goals.
 function countedActivities(g) {
+  return treeActivities(g).filter(a => !isRoutine(a) && !relsTo(a.id, 'subactivity').length);
+}
+
+// The activities working toward a goal and its sub-goals.
+function treeActivities(g) {
   const goals = [g, ...descendants(g.id, 'subgoal').map(id => db.goals.find(x => x.id === id)).filter(Boolean)];
   const ids = new Set(goals.flatMap(x => goalActivities(x).map(a => a.id)));
-  return db.activities.filter(a => ids.has(a.id) && !isRoutine(a) && !relsTo(a.id, 'subactivity').length);
+  return db.activities.filter(a => ids.has(a.id));
 }
 
 // Goals can also measure progress by how consistently their routines are kept (`progress: 'routines'`):
 // the routines working toward the goal and its sub-goals.
 const byRoutines = g => g.progress === 'routines';
-function goalRoutines(g) {
-  const goals = [g, ...descendants(g.id, 'subgoal').map(id => db.goals.find(x => x.id === id)).filter(Boolean)];
-  const ids = new Set(goals.flatMap(x => goalActivities(x).map(a => a.id)));
-  return db.activities.filter(a => ids.has(a.id) && isRoutine(a));
-}
+// Measured by its own metric and target (form values say 'measure', stored goals leave it out).
+const ownMetric = g => !g.progress || g.progress === 'measure';
+const goalRoutines = g => treeActivities(g).filter(isRoutine);
 
 // A routine is complete (for whatever waits for it) once it has ended.
 const isComplete = (kind, item) => (kind === 'goal' ? item.status === 'achieved'
@@ -462,7 +467,8 @@ function goalScope(goalId) {
    from its start date to its due date, if any. Weeks start on Monday. */
 
 const isRoutine = a => !!a?.repeat;
-const weekday = iso => (new Date(iso + 'T00:00Z').getUTCDay() + 6) % 7;
+// Monday = 0 (day 0 of the epoch, 1 January 1970, was a Thursday).
+const weekday = iso => (dayNum(iso) + 3) % 7;
 const addDays = (iso, n) => dayStr(dayNum(iso) + n);
 const daysBetween = (from, to) => Array.from({ length: Math.max(0, dayNum(to) - dayNum(from) + 1) }, (_, i) => addDays(from, i));
 const routineStart = a => a.startDate || a.createdAt || today();
@@ -475,7 +481,7 @@ const runsOn = (a, iso) => iso >= routineStart(a) && !(a.dueDate && iso > a.dueD
 function periodOf(a, iso) {
   if (routineUnit(a) === 'month') {
     const [y, m] = iso.split('-').map(Number);
-    return { from: iso.slice(0, 8) + '01', to: dayStr(Date.UTC(y, m, 0) / DAY_MS) };
+    return { from: iso.slice(0, 8) + '01', to: isoOf(y, m, 0) };
   }
   const from = addDays(iso, -weekday(iso));
   return { from, to: addDays(from, 6) };
@@ -539,7 +545,7 @@ function routineStreak(a) {
 // only once met; today counts only once ticked.
 function consistency(a, from = '') {
   const now = today();
-  const start = [routineStart(a), from || ''].sort().pop();
+  const start = from > routineStart(a) ? from : routineStart(a);
   const end = a.dueDate && a.dueDate < now ? a.dueDate : now;
   if (start > end) return null;
   let kept = 0, total = 0;
@@ -560,7 +566,8 @@ function consistency(a, from = '') {
   return total ? kept / total : null;
 }
 
-const weekdayName = (i, style = 'short') => new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString(locale(), { weekday: style, timeZone: 'UTC' });
+// 1 January 2024 was a Monday.
+const weekdayName = (i, style = 'short') => fmtDay(isoOf(2024, 0, 1 + i), { weekday: style });
 function scheduleText(a) {
   if (!a.repeat.days) return tp(routineUnit(a) === 'month' ? 'rt.perMonth' : 'rt.perWeek', a.repeat.times);
   if (a.repeat.days.length === 7) return t('rt.daily');
@@ -583,7 +590,7 @@ function toggleCheckin(id, iso) {
 // This week, Monday to Sunday: tap a past day or today to tick or untick it.
 function routineWeek(a) {
   const now = today(), from = addDays(now, -weekday(now));
-  const fmt = iso => new Date(iso + 'T00:00Z').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const fmt = iso => fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long' });
   return `<div class="rt-week" role="group" aria-label="${esc(t('rt.weekLabel'))}">${daysBetween(from, addDays(from, 6)).map(d => {
     const on = checkedOn(a, d), off = d > now || !runsOn(a, d);
     const cls = ['rt-day', a.repeat.days && isDueDay(a, d) ? 'due' : '', on ? 'on' : '', d === now ? 'today' : ''].filter(Boolean).join(' ');
@@ -592,7 +599,7 @@ function routineWeek(a) {
 }
 
 function routineCard(a) {
-  const p = periodProgress(a), streak = routineStreak(a), st = routineState(a);
+  const p = periodProgress(a), streak = routineStreak(a), st = activityState(a);
   const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
   const blocked = blockers(a), now = today();
   const when = a.dueDate && a.dueDate < now ? `<span class="tag">${t('rt.ended')}</span>`
@@ -600,7 +607,7 @@ function routineCard(a) {
   return `<article class="card activity routine st-${st}" data-open="${a.id}">
     <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched">${esc(scheduleText(a))}</span></div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
-    ${progressBar(p.target ? Math.min(1, p.done / p.target) * 100 : 0, esc(periodText(a, p)))}
+    ${progressBar(p.target ? clamp(p.done / p.target * 100, 0, 100) : 0, esc(periodText(a, p)))}
     ${routineWeek(a)}
     <div class="meta">
       ${streak.n ? `<span class="tag ok">${esc(streakText(streak))}</span>` : ''}
@@ -743,15 +750,18 @@ function renderDashboard() {
   const avg = active.length ? active.reduce((s, g) => s + goalProgress(g), 0) / active.length : 0;
   // Routines have no status of their own: they get their own list, and the counts leave them out.
   const oneOff = db.activities.filter(a => !isRoutine(a));
-  const routines = db.activities.filter(activeRoutine).sort((a, b) => checkedOn(a, today()) - checkedOn(b, today()) || periodProgress(a).met - periodProgress(b).met);
+  // Not yet ticked today first, then those whose week or month is not met yet.
+  const now = today();
+  const routines = db.activities.filter(activeRoutine).map(a => ({ a, on: checkedOn(a, now), met: periodProgress(a).met }))
+    .sort((x, y) => x.on - y.on || x.met - y.met).map(x => x.a);
   const doneActs = oneOff.filter(a => a.status === 'done').length;
-  const overdue = oneOff.filter(a => a.status !== 'done' && a.dueDate && daysUntil(a.dueDate) < 0).length;
   const todo = oneOff.filter(a => a.status !== 'done').sort(byDueDate);
+  const overdue = todo.filter(a => a.dueDate && daysUntil(a.dueDate) < 0).length;
   const next = ui.nextAll ? todo : todo.slice(0, NEXT_FEW);
   const more = todo.length > NEXT_FEW ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
     ui.nextAll ? t('dash.showFewer') : t('dash.showAll', { n: todo.length })}</button>` : '';
 
-  const waiting = oneOff.filter(a => a.status !== 'done' && blockers(a).length).length;
+  const waiting = todo.filter(a => blockers(a).length).length;
   return `
     <section class="summary">
       <p class="summary-line">${tp('dash.headline', active.length, { pct: `<strong>${Math.round(avg)}&nbsp;%</strong>` })}</p>
@@ -787,9 +797,10 @@ function activityRow(a) {
 
 function goalCard(g) {
   const pct = goalProgress(g);
-  const acts = goalActivities(g).filter(a => !isRoutine(a));
+  const linked = goalActivities(g);
+  const acts = linked.filter(a => !isRoutine(a));
   const done = acts.filter(a => a.status === 'done').length;
-  const routines = byRoutines(g) ? goalRoutines(g) : goalActivities(g).filter(isRoutine);
+  const routines = byRoutines(g) ? goalRoutines(g) : linked.filter(isRoutine);
   const st = measuringState(g);
   const unit = g.unit ? ' ' + esc(g.unit) : '';
   const parent = relsFrom(g.id, 'subgoal')[0];
@@ -811,7 +822,7 @@ function goalCard(g) {
       ${g.status !== 'active' ? `<span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${t('goal.' + g.status)}</span>` : ''}
       ${waits.length ? waitsForTag(waits) : ''}
       ${deadlineTag(g.deadline, g.status === 'achieved')}
-      ${measured || !acts.length && routines.length ? '' : `<span>${t('goals.activities', { done, total: acts.length })}</span>`}
+      ${measured || (!acts.length && routines.length) ? '' : `<span>${t('goals.activities', { done, total: acts.length })}</span>`}
       ${routines.length ? `<span title="${esc(routines.map(a => `${a.title}: ${periodText(a)}`).join('\n'))}">⟳ ${esc(tp('goals.routines', routines.length))}</span>` : ''}
       ${st ? `<span title="${esc(t('goals.measuredBy'))}">◐ ${esc(st.title)}</span>` : ''}
     </div>
@@ -1202,7 +1213,7 @@ function renderMap() {
         ? t('acts.waitsFor', { n: blockers(item, 'goal').length })
         : `${Math.round(goalProgress(item))} %, ${item.deadline ? fmtDate(item.deadline) : t('map.noDeadline')}`;
     } else if (isRoutine(item)) {
-      st = routineState(item);
+      st = activityState(item);
       const streak = routineStreak(item);
       sub = periodText(item) + (streak.n ? ', ' + streakText(streak) : '');
     } else if (n.kind === 'activity') {
@@ -1765,7 +1776,7 @@ function openForm(kind, id = null, links = {}) {
     if (r.to) $('#f-to').value = r.to;
     fillRelTypes(r.type);
   }
-  if (kind === 'goal') updateSmartLive();
+  if (kind === 'goal') { updateProgressFields(); updateSmartLive(); }
   if (kind === 'activity') updateRepeatFields();
   modal.showModal();
   if (!item) setTimeout(() => modal.querySelector('input, select, textarea')?.focus(), 30);
@@ -1787,10 +1798,10 @@ function goalForm(g) {
       ${field('title', t('f.goal'), text('title', g.title, t('f.goalPh')))}
       ${field('specific', t('f.specific'), area('specific', g.specific, t('f.specificPh')))}`)}
     ${smartSection('M', `
-      ${field('progress', t('f.progress'), select('progress', { measure: t('f.progressMeasure'), activities: t('f.progressActs'), routines: t('f.progressRoutines') }, byActivities(g) ? 'activities' : byRoutines(g) ? 'routines' : 'measure'))}
-      <p class="hint" id="actsHint" ${byActivities(g) ? '' : 'hidden'}>${t('f.progressActsHint')}</p>
-      <p class="hint" id="routinesHint" ${byRoutines(g) ? '' : 'hidden'}>${t('f.progressRoutinesHint')}</p>
-      <div id="measureFields" ${byActivities(g) || byRoutines(g) ? 'hidden' : ''}>
+      ${field('progress', t('f.progress'), select('progress', { measure: t('f.progressMeasure'), activities: t('f.progressActs'), routines: t('f.progressRoutines') }, g.progress || 'measure'))}
+      <p class="hint" id="actsHint">${t('f.progressActsHint')}</p>
+      <p class="hint" id="routinesHint">${t('f.progressRoutinesHint')}</p>
+      <div id="measureFields">
       <div class="row2">
         ${field('metric', t('f.metric'), text('metric', g.metric, t('f.metricPh')))}
         ${field('unit', t('f.unit'), text('unit', g.unit, t('f.unitPh')))}
@@ -1862,18 +1873,30 @@ function repeatFields(a) {
   const mode = r.days ? 'days' : r.per || 'none';
   const days = r.days || [];
   const toggles = [0, 1, 2, 3, 4, 5, 6].map(i =>
-    `<button type="button" class="day-toggle" data-day="${i}" aria-pressed="${days.includes(i)}" aria-label="${esc(weekdayName(i, 'long'))}">${esc(weekdayName(i))}</button>`).join('');
-  const stats = isRoutine(a) && a.id ? [
-    tp('rt.checkins', Object.values(a.checkins || {}).filter(v => v === 1).length),
-    routineStreak(a).n ? streakText(routineStreak(a)) : '',
-    consistency(a) !== null ? t('rt.consistency', { pct: `${Math.round(consistency(a) * 100)} %` }) : '',
-  ].filter(Boolean).join(' · ') : '';
+    `<button type="button" class="chip day-toggle" data-day="${i}" aria-pressed="${days.includes(i)}" aria-label="${esc(weekdayName(i, 'long'))}">${esc(weekdayName(i))}</button>`).join('');
+  let stats = '';
+  if (isRoutine(a) && a.id) {
+    const streak = routineStreak(a), kept = consistency(a);
+    stats = [
+      tp('rt.checkins', Object.values(a.checkins || {}).filter(v => v === 1).length),
+      streak.n ? streakText(streak) : '',
+      kept !== null ? t('rt.consistency', { pct: `${Math.round(kept * 100)} %` }) : '',
+    ].filter(Boolean).join(' · ');
+  }
   return `<div class="repeat-box">
     ${field('repeat', t('f.repeat'), select('repeat', { none: t('f.repeatNone'), week: t('f.repeatWeek'), month: t('f.repeatMonth'), days: t('f.repeatDays') }, mode), t('f.repeatHint'))}
     <div id="repeatTimes" ${mode === 'week' || mode === 'month' ? '' : 'hidden'}>${field('times', t('f.times'), num('times', r.times ?? 3))}</div>
     <div id="repeatDays" ${mode === 'days' ? '' : 'hidden'}>${field('days', t('f.days'), `<div class="day-toggles" role="group" aria-label="${esc(t('f.days'))}">${toggles}</div><input type="hidden" name="days" value="${days.join(',')}">`)}</div>
     ${stats ? `<p class="hint rt-stats">${esc(stats)}</p>` : ''}
   </div>`;
+}
+
+// The metric fields, or the hint for measuring by activities or routines.
+function updateProgressFields() {
+  const by = $('#f-progress').value;
+  $('#measureFields').hidden = by !== 'measure';
+  $('#actsHint').hidden = by !== 'activities';
+  $('#routinesHint').hidden = by !== 'routines';
 }
 
 // A routine has no status; the repeat details show only for the kind of schedule chosen.
@@ -1990,8 +2013,8 @@ function submitForm() {
       startDate: v.startDate, deadline: v.deadline, status: v.status, category: v.category.trim(),
     });
     // The metric fields are kept while measuring by activities, in case the goal switches back.
-    if (v.progress === 'activities' || v.progress === 'routines') g.progress = v.progress;
-    else delete g.progress;
+    if (ownMetric(v)) delete g.progress;
+    else g.progress = v.progress;
     if (!existing) db.goals.push(g);
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
@@ -2223,10 +2246,7 @@ $('#modalForm').addEventListener('change', e => {
   if (e.target.id === 'f-from' || e.target.id === 'f-to') return fillRelTypes();
   if (e.target.id === 'f-repeat') return updateRepeatFields();
   if (e.target.id !== 'f-progress') return;
-  const by = e.target.value;
-  $('#measureFields').hidden = by !== 'measure';
-  $('#actsHint').hidden = by !== 'activities';
-  $('#routinesHint').hidden = by !== 'routines';
+  updateProgressFields();
   updateSmartLive();
 });
 // Weekday toggles of a routine: the chosen days are kept in a hidden field.
@@ -2240,19 +2260,21 @@ $('#modalForm').addEventListener('click', e => {
 
 // Link lists: the list opens while the search box (or one of its items) has focus, typing filters it,
 // a click on an item adds it and a chosen item's × removes it.
-$('#modalForm').addEventListener('focusin', e => { if (e.target.matches('.picker-search')) showPickList(e.target.closest('[data-picker]'), true); });
+const shownOpts = picker => [...picker.querySelectorAll('.pick-opt:not([hidden])')];
+['focusin', 'input'].forEach(type => $('#modalForm').addEventListener(type, e => {
+  if (e.target.matches('.picker-search')) showPickList(e.target.closest('[data-picker]'), true);
+}));
 $('#modalForm').addEventListener('focusout', e => {
   const picker = e.target.closest('[data-picker]');
   if (picker && !(e.relatedTarget && picker.contains(e.relatedTarget) && e.relatedTarget.closest('.pick-list, .picker-search'))) showPickList(picker, false);
 });
-$('#modalForm').addEventListener('input', e => { if (e.target.matches('.picker-search')) showPickList(e.target.closest('[data-picker]'), true); });
 // Pressing an item must not move focus away from the search box first (that would close the list).
 $('#modalForm').addEventListener('pointerdown', e => { if (e.target.closest('.pick-opt')) e.preventDefault(); });
 $('#modalForm').addEventListener('keydown', e => {
   const picker = e.target.closest?.('[data-picker]');
   if (!picker || !e.target.closest('.picker-search, .pick-opt')) return;
   const search = picker.querySelector('.picker-search');
-  const shown = [...picker.querySelectorAll('.pick-opt:not([hidden])')];
+  const shown = shownOpts(picker);
   const i = shown.indexOf(e.target);
   if (e.key === 'Escape' && !picker.querySelector('.pick-list').hidden) {
     // Close the list, not the form.
@@ -2274,8 +2296,8 @@ $('#modalForm').addEventListener('keydown', e => {
 $('#modalForm').addEventListener('click', e => {
   const opt = e.target.closest('.pick-opt');
   if (opt) {
-    const picker = opt.closest('[data-picker]'), shown = [...picker.querySelectorAll('.pick-opt:not([hidden])')];
-    const next = shown[shown.indexOf(opt) + 1] || shown[shown.indexOf(opt) - 1];
+    const picker = opt.closest('[data-picker]'), shown = shownOpts(picker), at = shown.indexOf(opt);
+    const next = shown[at + 1] || shown[at - 1];
     pickItem(opt);
     // Keep the keyboard in the list; after a click, typing goes on in the search box.
     return (document.activeElement === opt && next ? next : picker.querySelector('.picker-search')).focus();
@@ -2319,20 +2341,18 @@ function openCalendar(field) {
 
 function drawCalendar() {
   const { y, m, box } = cal;
-  const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7; // Monday first
+  const lead = weekday(isoOf(y, m, 1)); // Monday first
   const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const chosen = parseDateInput(box.value), now = today();
-  const fmt = (iso, opts) => new Date(iso + 'T00:00Z').toLocaleDateString(locale(), { ...opts, timeZone: 'UTC' });
-  // 1 January 2024 was a Monday.
-  const weekdays = Array.from({ length: 7 }, (_, i) => `<span class="cal-wd" aria-hidden="true">${esc(fmt(isoOf(2024, 0, 1 + i), { weekday: 'short' }))}</span>`).join('');
+  const weekdays = Array.from({ length: 7 }, (_, i) => `<span class="cal-wd" aria-hidden="true">${esc(weekdayName(i))}</span>`).join('');
   const cells = Array.from({ length: days }, (_, i) => {
     const iso = isoOf(y, m, i + 1);
-    return `<button type="button" data-cal-day="${iso}" class="${iso === now ? 'today' : ''}" aria-pressed="${iso === chosen}" tabindex="${iso === cal.focus ? 0 : -1}" aria-label="${esc(fmt(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}">${i + 1}</button>`;
+    return `<button type="button" data-cal-day="${iso}" class="${iso === now ? 'today' : ''}" aria-pressed="${iso === chosen}" tabindex="${iso === cal.focus ? 0 : -1}" aria-label="${esc(fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}">${i + 1}</button>`;
   }).join('');
   cal.field.querySelector('.cal').innerHTML = `
     <div class="cal-head">
       <button type="button" data-cal-move="-1" aria-label="${esc(t('cal.prev'))}">‹</button>
-      <strong aria-live="polite">${esc(fmt(isoOf(y, m, 1), { month: 'long', year: 'numeric' }))}</strong>
+      <strong aria-live="polite">${esc(fmtDay(isoOf(y, m, 1), { month: 'long', year: 'numeric' }))}</strong>
       <button type="button" data-cal-move="1" aria-label="${esc(t('cal.next'))}">›</button>
     </div>
     <div class="cal-grid">${weekdays}${'<span></span>'.repeat(lead)}${cells}</div>
@@ -2518,7 +2538,7 @@ function sampleData() {
       { id: a[21], status: 'todo', startDate: d(21), dueDate: d(30) },   // fittings
       { id: a[22], status: 'todo', startDate: d(40), dueDate: d(60) },   // insulate the attic
       { id: a[23], status: 'todo', startDate: d(-35), repeat: { times: 3, per: 'week' },   // run 3 times a week (routine)
-        checkins: ticks(-35, (n, wd) => [1, 3, 5].includes(wd) && !(n > -22 && n <= -15) || (n > -22 && n <= -15 && wd === 2)) },
+        checkins: ticks(-35, (n, wd) => (n > -22 && n <= -15 ? wd === 2 : [1, 3, 5].includes(wd))) },   // one lean week
       { id: a[24], status: 'todo', startDate: d(-28), repeat: { days: [0, 3] },   // strength training (routine)
         checkins: ticks(-28, (n, wd) => [0, 3].includes(wd) && n !== missed) },
     ], txt.activities),
@@ -2857,9 +2877,9 @@ document.addEventListener('pointermove', e => {
   // Keep the drag until the click it may produce has been swallowed below.
   setTimeout(() => { pan = null; });
 }));
-// The click that ends a drag must not select a box.
+// The click that ends a drag (panning, or linking two boxes) must not select a box.
 document.addEventListener('click', e => {
-  if (pan?.moved) { e.stopPropagation(); e.preventDefault(); }
+  if (pan?.moved || linkDrag?.moved) { e.stopPropagation(); e.preventDefault(); }
 }, true);
 
 /* ---------- Linking two map boxes ----------
@@ -2873,8 +2893,12 @@ function startMapLink(id) {
   render();
 }
 
+// Whether any relationship fits two items, in either direction.
+const canLink = (a, b) => possibleTypes(a, b).length > 0 || possibleTypes(b, a).length > 0;
+const LINK_MARKS = ['link-source', 'link-target', 'link-bad'];
+
 function linkItems(from, to) {
-  if (!possibleTypes(from, to).length && !possibleTypes(to, from).length)
+  if (!canLink(from, to))
     return toast(t('map.linkNone', { a: findEntity(from).item.title, b: findEntity(to).item.title }));
   openForm('relation', null, { from, to });
 }
@@ -2910,36 +2934,33 @@ document.addEventListener('pointermove', e => {
   const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-map-node]');
   const to = over && over !== src ? over.dataset.mapNode : null;
   if (to === linkDrag.target) return;
-  svg.querySelector('.link-target, .link-bad')?.classList.remove('link-target', 'link-bad');
+  svg.querySelector('.link-target, .link-bad')?.classList.remove(...LINK_MARKS.slice(1));
   linkDrag.target = to;
-  if (to) over.classList.add(possibleTypes(linkDrag.from, to).length || possibleTypes(to, linkDrag.from).length ? 'link-target' : 'link-bad');
+  if (to) over.classList.add(canLink(linkDrag.from, to) ? 'link-target' : 'link-bad');
 });
 // Clears the drag's line and marks; the drag itself is kept until the click it may produce has been swallowed.
 function endLinkDrag() {
   const done = linkDrag;
   if (!done) return {};
+  done.ended = true;
   done.line?.remove();
-  document.querySelectorAll('.link-source, .link-target, .link-bad').forEach(n => n.classList.remove('link-source', 'link-target', 'link-bad'));
+  document.querySelectorAll(LINK_MARKS.map(c => '.' + c).join()).forEach(n => n.classList.remove(...LINK_MARKS));
   $('.map-wrap')?.classList.remove('linking');
   setTimeout(() => { if (linkDrag === done) linkDrag = null; });
   return done;
 }
 document.addEventListener('pointerup', e => {
   if (!linkDrag || e.pointerId !== linkDrag.id || linkDrag.ended) return;
-  linkDrag.ended = true;
   const { moved, from } = endLinkDrag();
   if (!moved) return;
   const to = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-map-node]')?.dataset.mapNode;
   if (to && to !== from) linkItems(from, to);
 });
-document.addEventListener('pointercancel', e => { if (linkDrag && e.pointerId === linkDrag.id) { linkDrag.ended = true; endLinkDrag(); } });
-document.addEventListener('click', e => {
-  if (linkDrag?.moved) { e.stopPropagation(); e.preventDefault(); }
-}, true);
+document.addEventListener('pointercancel', e => { if (linkDrag && e.pointerId === linkDrag.id) endLinkDrag(); });
 // Escape drops a link being dragged or picked.
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || modal.open || !ctxMenu.hidden) return;
-  if (linkDrag?.moved && !linkDrag.ended) { linkDrag.ended = true; endLinkDrag(); }
+  if (linkDrag?.moved && !linkDrag.ended) endLinkDrag();
   else if (ui.mapLinkFrom) { ui.mapLinkFrom = null; render(); }
 });
 
