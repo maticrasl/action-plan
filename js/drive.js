@@ -254,10 +254,7 @@ function setSyncStatus(status) {
 function syncTime(iso) {
   const d = new Date(iso);
   const sameDay = d.toDateString() === new Date().toDateString();
-  const time = d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
-  if (sameDay) return time;
-  if (I18N[lang].dateFormat) return `${fmtDate(isoDate(d))} ${time}`;
-  return d.toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(locale(), sameDay ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 function syncStatusText() {

@@ -38,26 +38,46 @@ window.moreTests = async ({ step, assert }) => {
     return reno.map(g => `${g.title}=${Math.round(goalProgress(g))}% ${goalState(g)}`).join(', ');
   });
 
-  await step('dates: dd/mm/yyyy in Slovenian, locale style in English', () => {
+  await step('date fields: dd/mm/yyyy typing, picker and validation', () => {
+    const ok = [['7/3/2026', '2026-03-07'], ['07/03/2026', '2026-03-07'], ['7.3.2026', '2026-03-07'], ['7. 3. 2026', '2026-03-07'], ['29/02/2028', '2028-02-29'], ['2026-03-07', '2026-03-07']];
+    ok.forEach(([s, iso]) => assert(parseDateInput(s) === iso, `${s} → ${parseDateInput(s)}`));
+    ['31/02/2026', '29/02/2027', '13/13/2026', '7/3/26', 'tomorrow', '', '2026-3-7'].forEach(s => assert(parseDateInput(s) === null, `${s} should be rejected`));
+    assert(dateInput('2026-03-07') === '07/03/2026' && dateInput('') === '', 'shown as dd/mm/yyyy');
+
+    fresh('Dates');
     changeLanguage('sl');
-    const sl = [fmtDate('2026-03-07'), fmtDate('2026-12-24'), fmtDate('')];
-    const yesterday = new Date(Date.now() - 86400000);
-    const sync = syncTime(yesterday.toISOString());
-    loadSample();
-    const shown = [];
-    for (const v of ['dashboard', 'goals', 'states', 'graphs', 'activities', 'timeline', 'map']) {
-      setView(v);
-      const text = viewEl.textContent;
-      assert(!/\d{1,2}\. ?[a-zčšž]{3,}\.? \d{4}/i.test(text), `${v} still has a month-name date: ${text.match(/\d{1,2}\. ?[a-zčšž]{3,}\.? \d{4}/i)}`);
-      shown.push(...(text.match(/\b\d{2}\/\d{2}\/\d{4}\b/g) || []));
-    }
+    openForm('activity');
+    const due = $('#f-dueDate');
+    assert(due.type === 'text' && due.placeholder === 'dd/mm/llll' && $('[data-field="dueDate"] .date-pick').title === 'Izberi datum', 'Slovenian dd/mm/llll field');
+    const type = ch => { due.value += ch; due.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ch })); };
+    due.value = ''; due.focus();
+    '24102026'.split('').forEach(type);
+    const typed = due.value;
+    assert(typed === '24/10/2026', 'slashes added while typing: ' + typed);
+    due.value = ''; '7/3/2026'.split('').forEach(type);
+    assert(due.value === '7/3/2026', 'typed slashes kept: ' + due.value);
+    const pick = $('[data-field="startDate"] .date-pick input');
+    pick.value = '2026-03-01';
+    pick.dispatchEvent(new Event('change', { bubbles: true }));
+    assert($('#f-startDate').value === '01/03/2026', 'picker fills the field');
+    $('#f-title').value = 'Dated activity';
+    due.value = '31/02/2026';
+    submitForm();
+    const err = modal.querySelector('[data-field="dueDate"] .err').textContent;
+    assert(modal.open && err === t('err.date'), 'impossible date rejected: ' + err);
+    due.value = '7/3/2026';
+    submitForm();
+    const a = db.activities.find(x => x.title === 'Dated activity');
+    assert(a && a.startDate === '2026-03-01' && a.dueDate === '2026-03-07', 'stored as yyyy-mm-dd');
+    openForm('activity', a.id);
+    const shown = [$('#f-startDate').value, $('#f-dueDate').value];
+    modal.close();
     changeLanguage('en');
-    const en = fmtDate('2026-03-07');
-    eq(sl, ['07/03/2026', '24/12/2026', ''], 'Slovenian dates');
-    assert(sync.startsWith(`${String(yesterday.getDate()).padStart(2, '0')}/${String(yesterday.getMonth() + 1).padStart(2, '0')}/`) && /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(sync), 'sync time: ' + sync);
-    assert(en === '7 Mar 2026', 'English: ' + en);
-    assert(shown.length > 20, 'Slovenian views show dd/mm/yyyy dates');
-    return `${sl.slice(0, 2).join(', ')} | sync "${sync}" | en ${en} | ${shown.length} dates in views`;
+    openForm('goal');
+    const enPh = $('#f-deadline').placeholder, start = $('#f-startDate').value;
+    modal.close();
+    assert(enPh === 'dd/mm/yyyy' && start === dateInput(today()), 'English field and today as default start');
+    return `typed ${typed} | edit shows ${shown.join(', ')} | sl error "${err}"`;
   });
 
   await step('parseNum: separators, signs and junk', () => {
@@ -147,6 +167,17 @@ window.moreTests = async ({ step, assert }) => {
     assert([g, sg, pre].every(x => sc.goal.has(x.id)) && !sc.goal.has(falling.id), 'scope goals');
     assert(sc.activity.has(a.id) && sc.activity.has(sub.id) && !sc.activity.has(other.id), 'scope activities');
     assert(sc.state.has(st.id) && sc.state.has(s1.id), 'scope states');
+    // A sub-activity turned into a dependency stays in its goal's views (it waits for the goal's work).
+    const kid = mk('activity'), grandkid = mk('activity'), elsewhere = mk('activity');
+    rel(kid, a, 'subactivity'); rel(grandkid, kid, 'subactivity'); rel(elsewhere, other, 'subactivity');
+    const link = db.relations.find(r => r.from === kid.id && r.type === 'subactivity');
+    ui.mapGoal = g.id; setView('map');
+    openForm('relation', link.id); $('#f-type').value = 'depends'; submitForm();
+    assert(link.type === 'depends' && !modal.open, 'relation edited');
+    assert($(`[data-map-node="${kid.id}"]`) && $(`[data-map-node="${grandkid.id}"]`), 'still on the goal-focused map');
+    const sc2 = goalScope(g.id);
+    assert(sc2.activity.has(kid.id) && sc2.activity.has(grandkid.id) && !sc2.activity.has(elsewhere.id) && !sc2.activity.has(other.id), 'waiting activity and its sub-activities in scope only');
+    ui.mapGoal = '';
     return out.map(Math.round).join(',');
   });
 

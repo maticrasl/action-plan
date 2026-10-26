@@ -165,11 +165,6 @@ function daysUntil(date) {
 }
 function fmtDate(date) {
   if (!date) return '';
-  const format = I18N[lang].dateFormat;
-  if (format) {
-    const [y, m, d] = date.split('-');
-    return format.replace('dd', d).replace('mm', m).replace('yyyy', y);
-  }
   return new Date(date + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 function fmtNum(n) {
@@ -186,6 +181,18 @@ function parseNum(s) {
 }
 // A stored number ("78.5") as typed in the current language ("78,5" in Slovenian).
 const numInput = v => (isNum(v) ? String(v).replace('.', (1.5).toLocaleString(locale()).charAt(1)) : v ?? '');
+// Dates are typed as dd/mm/yyyy (also accepting dots, dashes or spaces, and yyyy-mm-dd) and stored as yyyy-mm-dd.
+function parseDateInput(s) {
+  s = String(s ?? '').trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/), d, mo, y;
+  if (m) [, y, mo, d] = m.map(Number);
+  else if ((m = s.match(/^(\d{1,2})[/.\-\s]+(\d{1,2})[/.\-\s]+(\d{4})$/))) [, d, mo, y] = m.map(Number);
+  else return null;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return dt.toISOString().slice(0, 10);
+}
+const dateInput = iso => (iso ? iso.split('-').reverse().join('/') : '');
 
 const itemCount = () => db.goals.length + db.states.length + db.activities.length;
 
@@ -357,7 +364,8 @@ function goalState(g) {
 }
 
 // Everything relevant to one goal: its sub-goals and prerequisite goals, the activity trees
-// working toward them (with their prerequisite chains), and the related current states.
+// working toward them (with their prerequisite chains), the activities waiting for those,
+// and the related current states.
 function goalScope(goalId) {
   const goal = new Set([goalId, ...descendants(goalId, 'subgoal')]);
   [...goal].forEach(id => relsFrom(id, 'depends').forEach(r => goal.add(r.to)));
@@ -370,6 +378,14 @@ function goalScope(goalId) {
     relsFrom(id, 'depends').forEach(r => addActivity(r.to));
   };
   db.relations.filter(r => r.type === 'contributes' && goal.has(r.to)).forEach(r => addActivity(r.from));
+  // Activities that wait for this work belong here too (with their sub-activities), e.g. a former
+  // sub-activity turned into a dependency – but without pulling in the rest of their own trees.
+  const addWaiting = id => {
+    if (activity.has(id)) return;
+    [id, ...descendants(id, 'subactivity')].forEach(x => activity.add(x));
+    relsTo(id, 'depends').forEach(r => addWaiting(r.from));
+  };
+  [...activity].forEach(id => relsTo(id, 'depends').forEach(r => addWaiting(r.from)));
 
   const state = new Set();
   db.relations.forEach(r => {
@@ -1401,7 +1417,12 @@ function field(name, label, input, hint = '') {
 const text = (name, v, ph = '') => `<input type="text" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}">`;
 // A text field rather than type="number", so both a decimal dot and comma work in every browser.
 const num = (name, v, ph = '') => `<input type="text" data-num id="f-${name}" name="${name}" value="${esc(numInput(v))}" placeholder="${esc(ph)}" inputmode="decimal" autocomplete="off">`;
-const date = (name, v) => `<input type="date" id="f-${name}" name="${name}" value="${esc(v)}">`;
+// A dd/mm/yyyy text field in every language (the browser's own date field follows the browser's language),
+// with a calendar button that opens the browser's date picker.
+const date = (name, v) => `<div class="date-field">
+  <input type="text" data-date id="f-${name}" name="${name}" value="${esc(dateInput(v))}" placeholder="${esc(t('f.datePh'))}" inputmode="numeric" autocomplete="off" maxlength="10">
+  <span class="date-pick" title="${esc(t('f.pickDate'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><input type="date" tabindex="-1" aria-label="${esc(t('f.pickDate'))}"></span>
+</div>`;
 const area = (name, v, ph = '') => `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
 const select = (name, opts, v) => `<select id="f-${name}" name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
 
@@ -1532,13 +1553,17 @@ function formValues() {
     if (k in v) v[k] = [].concat(v[k], val);
     else v[k] = val;
   }
-  // Number fields are stored with a dot; `bad` lists those that hold something other than a number.
-  const bad = [];
+  // Number fields are stored with a dot and dates as yyyy-mm-dd; `bad` maps fields that hold neither to their error.
+  const bad = {};
   modal.querySelectorAll('input[data-num]').forEach(i => {
     const n = parseNum(i.value);
     if (!i.value.trim()) v[i.name] = '';
-    else if (isNaN(n)) { v[i.name] = ''; bad.push(i.name); }
+    else if (isNaN(n)) { v[i.name] = ''; bad[i.name] = t('err.number'); }
     else v[i.name] = String(n);
+  });
+  modal.querySelectorAll('input[data-date]').forEach(i => {
+    v[i.name] = i.value.trim() ? parseDateInput(i.value) || '' : '';
+    if (i.value.trim() && !v[i.name]) bad[i.name] = t('err.date');
   });
   const arr = k => (v[k] === undefined ? [] : [].concat(v[k]));
   return { v, arr, bad };
@@ -1583,7 +1608,7 @@ function submitForm() {
     return finish(t(old ? 'toast.relUpdated' : 'toast.relAdded'));
   }
 
-  if (bad.length) return showErrors(Object.fromEntries(bad.map(k => [k, t('err.number')])));
+  if (Object.keys(bad).length) return showErrors(bad);
   if (!v.title || !v.title.trim()) return showErrors({ title: t('err.titleRequired') });
 
   if (kind === 'goal') {
@@ -1749,6 +1774,25 @@ function bindDragDrop() {
 
 $('#modalForm').addEventListener('submit', e => { e.preventDefault(); submitForm(); });
 $('#modalForm').addEventListener('input', updateSmartLive);
+// Date fields: slashes are added while typing digits, and the calendar button fills the field.
+$('#modalForm').addEventListener('input', e => {
+  const box = e.target;
+  if (!box.matches('[data-date]') || e.inputType !== 'insertText' || !/^\d$/.test(e.data) || box.selectionStart !== box.value.length) return;
+  if (/^\d{2}$|^\d{1,2}\/\d{2}$/.test(box.value)) box.value += '/';
+});
+$('#modalForm').addEventListener('click', e => {
+  const pick = e.target.closest('.date-pick input');
+  if (!pick) return;
+  pick.value = parseDateInput(pick.closest('.date-field').querySelector('[data-date]').value) || '';
+  try { pick.showPicker(); } catch (err) { /* the browser opens it itself */ }
+});
+$('#modalForm').addEventListener('change', e => {
+  const pick = e.target.closest('.date-pick input');
+  if (!pick || !pick.value) return;
+  const box = pick.closest('.date-field').querySelector('[data-date]');
+  box.value = dateInput(pick.value);
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+});
 modal.addEventListener('click', e => {
   if (e.target === modal || e.target.closest('[data-close]')) modal.close();
 });

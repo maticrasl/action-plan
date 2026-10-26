@@ -6,8 +6,6 @@
    Plural entries are objects keyed by Intl.PluralRules category
    (one / two / few / other) and are read with tp().
    To add a language, copy the `en` block and translate it.
-   `dateFormat` (optional) fixes how dates are written, e.g. 'dd/mm/yyyy';
-   without it dates follow the locale ("24 Oct 2026").
    ========================================================= */
 
 const I18N = {
@@ -253,6 +251,7 @@ const I18N = {
       'err.achievable': 'Explain why this is realistic: resources, skills, time.',
       'err.relevant': 'Explain why this goal matters to you.',
       'err.number': 'Enter a number, e.g. 78.5 or 78,5.',
+      'err.date': 'Enter a date as dd/mm/yyyy, e.g. 24/10/2026.',
       'err.deadline': 'Set a deadline.',
       'err.deadlineOrder': 'Deadline must be after the start date.',
       'err.unknown': 'Unknown item',
@@ -361,6 +360,8 @@ const I18N = {
       'f.relevant': 'Why does it matter?',
       'f.relevantPh': 'How it connects to your bigger priorities.',
       'f.startDate': 'Start date',
+      'f.datePh': 'dd/mm/yyyy',
+      'f.pickDate': 'Pick a date',
       'f.deadline': 'Deadline',
       'f.status': 'Status',
       'f.parent': 'Part of goal',
@@ -462,7 +463,6 @@ const I18N = {
   sl: {
     name: 'Slovenščina',
     locale: 'sl-SI',
-    dateFormat: 'dd/mm/yyyy',
     strings: {
       'app.name': 'Akcijski načrt',
       'app.file': 'akcijski-nacrt',
@@ -702,6 +702,7 @@ const I18N = {
       'err.achievable': 'Pojasnite, zakaj je cilj izvedljiv: viri, znanje, čas.',
       'err.relevant': 'Pojasnite, zakaj vam je ta cilj pomemben.',
       'err.number': 'Vnesite število, npr. 78,5 ali 78.5.',
+      'err.date': 'Vnesite datum v obliki dd/mm/llll, npr. 24/10/2026.',
       'err.deadline': 'Določite rok.',
       'err.deadlineOrder': 'Rok mora biti po začetnem datumu.',
       'err.unknown': 'Neznan element',
@@ -820,6 +821,8 @@ const I18N = {
       'f.relevant': 'Zakaj je pomemben?',
       'f.relevantPh': 'Kako se povezuje z vašimi širšimi prioritetami.',
       'f.startDate': 'Začetni datum',
+      'f.datePh': 'dd/mm/llll',
+      'f.pickDate': 'Izberi datum',
       'f.deadline': 'Rok',
       'f.status': 'Stanje',
       'f.parent': 'Del cilja',
