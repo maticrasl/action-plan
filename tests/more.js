@@ -698,6 +698,29 @@ window.moreTests = async ({ step, assert }) => {
     assert($('#toast').textContent === t('install.done'), 'installed toast');
   });
 
+  await step('overview: a few next actions first, expandable', () => {
+    const before = plans.current;
+    loadSample(); changeLanguage('en'); setView('dashboard');
+    const titles = [...$('#view').querySelectorAll('.section-title')].map(h => h.firstChild.textContent.trim());
+    assert(titles.join('|') === `${t('dash.next')}|${t('dash.goalsInProgress')}`, 'next actions above the goals');
+    const todo = db.activities.filter(a => a.status !== 'done').sort(byDueDate);
+    const shown = () => [...$('#view').querySelectorAll('.list > .row')].map(r => r.dataset.open);
+    const more = () => $('[data-next-more]');
+    assert(shown().join() === todo.slice(0, NEXT_FEW).map(a => a.id).join(), 'the first few by due date');
+    assert(more().textContent === t('dash.showAll', { n: todo.length }) && more().getAttribute('aria-expanded') === 'false', 'show all with the count');
+    more().click();
+    assert(shown().join() === todo.map(a => a.id).join(), 'expanded to all');
+    assert(more().textContent === t('dash.showFewer') && more().getAttribute('aria-expanded') === 'true' && document.activeElement === more(), 'show fewer, focus kept');
+    assert(prefs.get('nextAll') === true, 'remembered');
+    more().click();
+    assert(shown().length === NEXT_FEW && prefs.get('nextAll') === false, 'collapsed again');
+    // No button when everything fits.
+    todo.slice(NEXT_FEW - 1).forEach(a => (a.status = 'done')); render();
+    assert(shown().length === NEXT_FEW - 1 && !more(), 'no button for a short list');
+    deletePlan(plans.current); openPlan(before);
+    return `${todo.length} to do`;
+  });
+
   await step('first visit: language picker before the tour', () => {
     changeLanguage('en');
     let done = 0;

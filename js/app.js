@@ -38,7 +38,7 @@ const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(pr
 let db = emptyDb();
 const ui = {
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
-  mapHidden: new Set(), hideDone: false, tlPx: 8, mapScale: 1, tlDeps: true, search: '', mapSelected: null, help: false,
+  mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, search: '', mapSelected: null, help: false,
 };
 
 // Small per-device preferences (view, hidden relation types, hide-done, theme).
@@ -522,6 +522,8 @@ function render() {
   decorateHelp();
 }
 
+const NEXT_FEW = 3; // next actions shown on the overview until expanded
+
 function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
 
@@ -529,10 +531,10 @@ function renderDashboard() {
   const avg = active.length ? active.reduce((s, g) => s + goalProgress(g), 0) / active.length : 0;
   const doneActs = db.activities.filter(a => a.status === 'done').length;
   const overdue = db.activities.filter(a => a.status !== 'done' && a.dueDate && daysUntil(a.dueDate) < 0).length;
-  const next = db.activities
-    .filter(a => a.status !== 'done')
-    .sort(byDueDate)
-    .slice(0, 7);
+  const todo = db.activities.filter(a => a.status !== 'done').sort(byDueDate);
+  const next = ui.nextAll ? todo : todo.slice(0, NEXT_FEW);
+  const more = todo.length > NEXT_FEW ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
+    ui.nextAll ? t('dash.showFewer') : t('dash.showAll', { n: todo.length })}</button>` : '';
 
   const waiting = db.activities.filter(a => a.status !== 'done' && blockers(a).length).length;
   return `
@@ -545,11 +547,11 @@ function renderDashboard() {
       </ul>
     </section>
 
+    <h2 class="section-title">${t('dash.next')} <small>${next.length ? t('dash.sorted') : ''}</small></h2>
+    ${next.length ? `<div class="list">${next.map(activityRow).join('')}${more}</div>` : `<div class="empty">${t('dash.allDone')}</div>`}
+
     <h2 class="section-title">${t('dash.goalsInProgress')} <small>${active.length ? t('dash.clickToEdit') : ''}</small></h2>
     ${active.length ? `<div class="grid">${active.map(goalCard).join('')}</div>` : `<div class="empty">${t('dash.noActive')}</div>`}
-
-    <h2 class="section-title">${t('dash.next')} <small>${next.length ? t('dash.sorted') : ''}</small></h2>
-    ${next.length ? `<div class="list">${next.map(activityRow).join('')}</div>` : `<div class="empty">${t('dash.allDone')}</div>`}
   `;
 }
 
@@ -1777,9 +1779,15 @@ $('#addBtn').addEventListener('click', () => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom]');
+  const el = e.target.closest('[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   if (!el) return;
   e.stopPropagation();
+  if (el.hasAttribute('data-next-more')) {
+    ui.nextAll = !ui.nextAll;
+    prefs.set('nextAll', ui.nextAll);
+    render();
+    return $('[data-next-more]')?.focus();
+  }
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
   if (el.dataset.open) { const ent = findEntity(el.dataset.open); return ent && openForm(ent.kind, ent.item.id); }
   if (el.dataset.new) return el.dataset.new === 'relation' ? $('#addBtn').click() : openForm(el.dataset.new);
@@ -2619,6 +2627,7 @@ renderPlanSwitch();
 if (VIEWS[prefs.get('view')]) ui.view = prefs.get('view');
 ui.mapHidden = new Set([].concat(prefs.get('mapHidden', [])).filter(k => REL_TYPES[k]));
 ui.hideDone = prefs.get('hideDone', false) === true;
+ui.nextAll = prefs.get('nextAll', false) === true;
 ui.tlDeps = prefs.get('tlDeps', true) !== false;
 ui.tlPx = clamp(Number(prefs.get('tlPx', TL.ZOOM[prefs.get('tlZoom')] || TL.ZOOM.month)) || TL.ZOOM.month, TL.MIN, TL.MAX);
 ui.mapScale = clamp(Number(prefs.get('mapScale', 1)) || 1, MAP.MIN_SCALE, MAP.MAX_SCALE);

@@ -340,6 +340,12 @@ textarea { resize: vertical; min-height: 68px; }
   border-bottom: 1px solid var(--line);
 }
 .row:last-child { border-bottom: 0; }
+.list-more {
+  padding: 11px 16px; border: 0; background: none; color: var(--goal); font: inherit; font-size: 14.5px; font-weight: 700;
+  text-align: center; cursor: pointer;
+}
+.list-more:hover { background: color-mix(in srgb, var(--surface-2) 50%, var(--surface)); }
+.list-more:focus-visible { outline: none; box-shadow: inset var(--focus); }
 .row:hover { background: color-mix(in srgb, var(--surface-2) 50%, var(--surface)); }
 .row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .check {

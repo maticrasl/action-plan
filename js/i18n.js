@@ -294,6 +294,8 @@ const I18N = {
       'dash.noActive': 'No active goals.',
       'dash.next': 'Next actions',
       'dash.sorted': 'sorted by due date',
+      'dash.showAll': 'Show all ({n})',
+      'dash.showFewer': 'Show fewer',
       'dash.allDone': 'Nothing left to do. 🎉',
       'blocked': 'blocked',
       'blocked.title': { one: 'Waiting for {n} other activity', other: 'Waiting for {n} other activities' },
@@ -761,6 +763,8 @@ const I18N = {
       'dash.noActive': 'Ni aktivnih ciljev.',
       'dash.next': 'Naslednji koraki',
       'dash.sorted': 'razvrščeno po roku',
+      'dash.showAll': 'Prikaži vse ({n})',
+      'dash.showFewer': 'Prikaži manj',
       'dash.allDone': 'Vse je opravljeno. 🎉',
       'blocked': 'blokirano',
       'blocked.title': {
