@@ -112,6 +112,9 @@ const I18N = {
       'btn.tutorial': 'Take the tour',
       'btn.help': 'Help mode',
 
+      'langPick.title': 'Choose your language',
+      'langPick.text': 'You can change it any time in Settings.',
+      'langPick.continue': 'Continue',
       'tour.planName': 'Tutorial',
       'tour.count': 'Step {n} of {total}',
       'tour.start': 'Start',
@@ -557,6 +560,9 @@ const I18N = {
       'btn.tutorial': 'Vodeni ogled',
       'btn.help': 'Način pomoči',
 
+      'langPick.title': 'Izberite jezik',
+      'langPick.text': 'Kadar koli ga lahko spremenite v nastavitvah.',
+      'langPick.continue': 'Nadaljuj',
       'tour.planName': 'Vodič',
       'tour.count': 'Korak {n} od {total}',
       'tour.start': 'Začni',

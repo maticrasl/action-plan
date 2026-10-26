@@ -249,11 +249,65 @@ addEventListener('keydown', e => { if (e.key === 'Escape') closeHelpTip(); });
 addEventListener('resize', closeHelpTip);
 addEventListener('scroll', closeHelpTip, true);
 
+/* ---------- First visit: choose a language before the tour ---------- */
+
+// Switch language; the still-empty starter plan takes the new language's default name.
+function pickLanguage(code) {
+  const starter = plans.list.length === 1 && !itemCount() && plans.list[0].name === t('plan.defaultName');
+  changeLanguage(code);
+  if (!starter) return;
+  plans.list[0].name = t('plan.defaultName');
+  save();
+  renderPlanSwitch();
+}
+
+function chooseLanguage(done) {
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="tour-block dim lang-pick-block"></div>
+    <div class="tour-card centered lang-pick" role="dialog" aria-modal="true" aria-labelledby="langPickTitle" aria-describedby="langPickText"></div>`);
+  const card = $('.lang-pick');
+  const draw = () => {
+    card.innerHTML = `
+      <h2 id="langPickTitle">${t('langPick.title')}</h2>
+      <p id="langPickText">${t('langPick.text')}</p>
+      <div class="lang-options" role="group" aria-labelledby="langPickTitle">${Object.entries(I18N).map(([code, l]) =>
+        `<button type="button" class="btn" data-lang-pick="${code}" lang="${code}" aria-pressed="${code === lang}">${esc(l.name)}</button>`).join('')}</div>
+      <div class="tour-actions"><span class="grow"></span><button type="button" class="btn primary" data-lang-done>${t('langPick.continue')}</button></div>`;
+  };
+  const keys = e => {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'Tab') {
+      // Keep focus inside the card.
+      const btns = [...card.querySelectorAll('button')];
+      const i = btns.indexOf(document.activeElement);
+      btns[(i + (e.shiftKey ? -1 : 1) + btns.length) % btns.length].focus();
+    } else return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const close = () => {
+    removeEventListener('keydown', keys, true);
+    document.querySelectorAll('.lang-pick, .lang-pick-block').forEach(el => el.remove());
+    done();
+  };
+  card.addEventListener('click', e => {
+    const code = e.target.closest('[data-lang-pick]')?.dataset.langPick;
+    if (code) {
+      pickLanguage(code);
+      draw();
+      card.querySelector(`[data-lang-pick="${code}"]`).focus();
+    } else if (e.target.closest('[data-lang-done]')) close();
+  });
+  addEventListener('keydown', keys, true);
+  draw();
+  card.querySelector('[data-lang-done]').focus();
+}
+
 /* ---------- Boot (called from app.js) ---------- */
 
 function initTutorial(firstVisit) {
   $('#helpBtn').setAttribute('aria-pressed', ui.help);
   $('#helpBtn').addEventListener('click', () => setHelp(!ui.help));
   $('#tutorialBtn').addEventListener('click', startTour);
-  if (firstVisit && !prefs.get('tourSeen', false)) requestAnimationFrame(startTour);
+  if (firstVisit && !prefs.get('tourSeen', false)) requestAnimationFrame(() => chooseLanguage(startTour));
 }

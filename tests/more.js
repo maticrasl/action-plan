@@ -489,4 +489,36 @@ window.moreTests = async ({ step, assert }) => {
     const leftover = plansBefore.filter(id => localStorage.getItem(planKey(id)));
     assert(!leftover.length, 'old plans removed from storage');
   });
+
+  await step('first visit: language picker before the tour', () => {
+    changeLanguage('en');
+    let done = 0;
+    chooseLanguage(() => done++);
+    const card = $('.lang-pick');
+    assert(card && $('.lang-pick-block') && document.activeElement === $('[data-lang-done]'), 'picker open, Continue focused');
+    const options = [...card.querySelectorAll('[data-lang-pick]')].map(b => `${b.dataset.langPick}=${b.textContent}`).join(' ');
+    assert(card.querySelector('[data-lang-pick="en"]').getAttribute('aria-pressed') === 'true', 'current language marked');
+    card.querySelector('[data-lang-pick="sl"]').click();
+    assert(lang === 'sl' && localStorage.getItem(LANG_KEY) === 'sl', 'language switched and saved');
+    assert($('#langPickTitle').textContent === 'Izberite jezik' && card.querySelector('[data-lang-pick="sl"]').getAttribute('aria-pressed') === 'true', 'card redrawn in Slovenian');
+    assert(currentPlan().name === I18N.sl.strings['plan.defaultName'], 'empty starter plan renamed');
+    const tabs = [];
+    for (let i = 0; i < card.querySelectorAll('button').length + 1; i++) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+      tabs.push(document.activeElement.closest('.lang-pick') ? 'in' : 'out');
+    }
+    assert(!tabs.includes('out'), 'Tab stays in the card');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    assert(!$('.lang-pick') && !$('.lang-pick-block') && done === 1, 'Escape closes and continues');
+
+    // A plan with content keeps its name; Continue starts the tour in the chosen language.
+    mk('goal', { title: 'Keep my name' }); save();
+    chooseLanguage(startTour);
+    $('[data-lang-pick="en"]').click();
+    assert(currentPlan().name === I18N.sl.strings['plan.defaultName'], 'plan with items not renamed');
+    $('[data-lang-done]').click();
+    assert(!$('.lang-pick') && tour.step === 0 && $('#tourTitle').textContent === t('tour.welcome.title'), 'tour starts in English');
+    endTour(false);
+    return options;
+  });
 };

@@ -585,6 +585,9 @@ textarea { resize: vertical; min-height: 68px; }
 .tour-card .tour-count { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--blaze); }
 .tour-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 14px; }
 .tour-actions .grow { flex: 1; }
+.lang-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.lang-options .btn { flex: 1; }
+.lang-options .btn[aria-pressed="true"] { border-color: var(--blaze); box-shadow: inset 0 0 0 1px var(--blaze); }
 
 /* ---------- Tutorial: help mode ---------- */
 #helpBtn[aria-pressed="true"] { background: var(--goal-soft); color: var(--goal); }
