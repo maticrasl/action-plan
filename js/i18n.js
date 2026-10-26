@@ -355,6 +355,10 @@ const I18N = {
       'map.levels': { one: '{n} level', other: '{n} levels' },
 
       'f.none': '— none —',
+      'pick.none': 'Nothing chosen yet – tick items in the list below.',
+      'pick.noMatch': 'No matches',
+      'pick.search': 'Search: {name}',
+      'pick.remove': 'Remove “{name}”',
       'f.goal': 'Goal',
       'f.goalPh': 'e.g. Run a half marathon',
       'f.specific': 'What exactly will you accomplish?',
@@ -836,6 +840,10 @@ const I18N = {
       'map.levels': { one: '{n} raven', two: '{n} ravni', few: '{n} ravni', other: '{n} ravni' },
 
       'f.none': '— brez —',
+      'pick.none': 'Nič še ni izbrano – obkljukajte elemente na seznamu spodaj.',
+      'pick.noMatch': 'Ni zadetkov',
+      'pick.search': 'Iskanje: {name}',
+      'pick.remove': 'Odstrani »{name}«',
       'f.goal': 'Cilj',
       'f.goalPh': 'npr. Preteči polmaraton',
       'f.specific': 'Kaj natančno boste dosegli?',

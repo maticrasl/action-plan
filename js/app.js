@@ -1451,10 +1451,39 @@ const date = (name, v) => `<div class="date-field">
 const area = (name, v, ph = '') => `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
 const select = (name, opts, v) => `<select id="f-${name}" name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
 
-function checklist(name, label, items, selected, hint = '') {
+// A searchable list of checkboxes; the ticked items are shown above it, each removable on its own.
+// Goals are grouped by category.
+function checklist(name, label, kind, items, selected, hint = '') {
   if (!items.length) return '';
-  return `<div class="field"><span class="label">${label}</span><div class="check-list">${items.map(i =>
-    `<label><input type="checkbox" name="${name}" value="${i.id}" ${selected.includes(i.id) ? 'checked' : ''}> ${esc(i.title)}</label>`).join('')}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
+  const box = i => `<label data-pick-title="${esc(fold(i.title))}"><input type="checkbox" name="${name}" value="${i.id}" ${selected.includes(i.id) ? 'checked' : ''}> ${esc(i.title)}</label>`;
+  const groups = kind === 'goal' && items.some(i => i.category)
+    ? [...categories(), ''].map(c => [c, items.filter(i => (i.category || '') === c)]).filter(([, list]) => list.length)
+      .map(([c, list]) => `<div class="pick-group" role="group" aria-label="${esc(c || t('cat.none'))}"><div class="pick-head" aria-hidden="true">${esc(c || t('cat.none'))}</div>${list.map(box).join('')}</div>`).join('')
+    : items.map(box).join('');
+  return `<div class="field picker" data-picker="${kind}"><span class="label">${label}</span>
+    <div class="picked"></div>
+    <input type="search" class="picker-search" placeholder="${esc(t('search'))}" aria-label="${esc(t('pick.search', { name: label }))}" autocomplete="off">
+    <div class="check-list">${groups}<div class="pick-empty" hidden>${t('pick.noMatch')}</div></div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
+}
+
+// Lower case without accents, so "zivljenje" finds "Življenje".
+const fold = s => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+function drawPicked(picker) {
+  const ticked = [...picker.querySelectorAll('.check-list input:checked')];
+  picker.querySelector('.picked').innerHTML = ticked.length
+    ? ticked.map(i => {
+      const title = i.parentElement.textContent.trim();
+      return `<button type="button" class="tag ${picker.dataset.picker}" data-unpick="${i.value}" title="${esc(t('pick.remove', { name: title }))}" aria-label="${esc(t('pick.remove', { name: title }))}">${esc(title)}<span aria-hidden="true"> ×</span></button>`;
+    }).join('')
+    : `<span class="hint">${t('pick.none')}</span>`;
+}
+
+function filterPicker(picker) {
+  const q = fold(picker.querySelector('.picker-search').value.trim());
+  picker.querySelectorAll('.check-list label').forEach(l => (l.hidden = !!q && !l.dataset.pickTitle.includes(q)));
+  picker.querySelectorAll('.pick-group').forEach(g => (g.hidden = !g.querySelector('label:not([hidden])')));
+  picker.querySelector('.pick-empty').hidden = !!picker.querySelector('.check-list label:not([hidden])');
 }
 
 function smartSection(letter, body) {
@@ -1477,6 +1506,7 @@ function openForm(kind, id = null, links = {}) {
     if (r.type) $('#f-type').value = r.type;
     if (r.to) $('#f-to').value = r.to;
   }
+  modal.querySelectorAll('[data-picker]').forEach(drawPicked);
   if (kind === 'goal') updateSmartLive();
   modal.showModal();
   if (!item) setTimeout(() => modal.querySelector('input, select, textarea')?.focus(), 30);
@@ -1523,8 +1553,8 @@ function goalForm(g) {
       ${field('status', t('f.status'), select('status', statusLabels(GOAL_STATUS, 'goal.'), g.status || 'active'))}
       ${field('parent', t('f.parent'), select('parent', parents, parent))}
     </div>
-    ${checklist('activities', t('f.goalActivities'), db.activities, linkedFrom(g, 'contributes'))}
-    ${checklist('depends', t('f.goalDepends'), db.goals.filter(x => x.id !== g.id), linksOf(g, 'depends'))}`;
+    ${checklist('activities', t('f.goalActivities'), 'activity', db.activities, linkedFrom(g, 'contributes'))}
+    ${checklist('depends', t('f.goalDepends'), 'goal', db.goals.filter(x => x.id !== g.id), linksOf(g, 'depends'))}`;
 }
 
 function stateForm(s) {
@@ -1538,7 +1568,7 @@ function stateForm(s) {
       ${field('unit', t('f.unit'), text('unit', s.unit, t('f.unitPh')))}
       ${field('date', t('f.asOf'), date('date', s.date || today()))}
     </div>
-    ${checklist('goals', t('f.describesGoals'), db.goals, linked, t('f.describesHint'))}
+    ${checklist('goals', t('f.describesGoals'), 'goal', db.goals, linked, t('f.describesHint'))}
     ${history.length > 1 ? `<div class="field"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtDate(h.date)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}`;
 }
 
@@ -1560,9 +1590,9 @@ function activityForm(a) {
     </div>
     ${field('parent', t('f.parentActivity'), select('parent', parents, pick('subactivity')[0] || ''), t('f.parentActivityHint'))}
     ${children.length ? `<div class="field"><span class="label">${t('f.subActivities')}</span><div class="links">${children.map(linkTag).join('')}</div></div>` : ''}
-    ${checklist('goals', t('f.contributes'), db.goals, pick('contributes'))}
-    ${checklist('states', t('f.improves'), db.states, pick('improves'))}
-    ${checklist('depends', t('f.depends'), others, pick('depends'))}`;
+    ${checklist('goals', t('f.contributes'), 'goal', db.goals, pick('contributes'))}
+    ${checklist('states', t('f.improves'), 'state', db.states, pick('improves'))}
+    ${checklist('depends', t('f.depends'), 'activity', others, pick('depends'))}`;
 }
 
 function relationForm() {
@@ -1862,6 +1892,28 @@ $('#modalForm').addEventListener('change', e => {
   $('#measureFields').hidden = acts;
   $('#actsHint').hidden = !acts;
   updateSmartLive();
+});
+// Link lists: ticking redraws the chosen items, searching filters the list, a chosen item's × unticks it.
+$('#modalForm').addEventListener('change', e => {
+  const picker = e.target.closest('[data-picker]');
+  if (picker && e.target.type === 'checkbox') drawPicked(picker);
+});
+$('#modalForm').addEventListener('input', e => { if (e.target.matches('.picker-search')) filterPicker(e.target.closest('[data-picker]')); });
+$('#modalForm').addEventListener('keydown', e => {
+  // Enter in a list's search box ticks the only match instead of saving the form.
+  if (e.key !== 'Enter' || !e.target.matches('.picker-search')) return;
+  e.preventDefault();
+  const shown = [...e.target.closest('[data-picker]').querySelectorAll('.check-list label:not([hidden]) input')];
+  if (shown.length === 1) shown[0].click();
+});
+$('#modalForm').addEventListener('click', e => {
+  const x = e.target.closest('[data-unpick]');
+  if (!x) return;
+  const picker = x.closest('[data-picker]');
+  const box = picker.querySelector(`.check-list input[value="${x.dataset.unpick}"]`);
+  box.checked = false;
+  box.dispatchEvent(new Event('change', { bubbles: true }));
+  (picker.querySelector('[data-unpick]') || picker.querySelector('.picker-search')).focus();
 });
 // Date fields: slashes are added while typing digits.
 $('#modalForm').addEventListener('input', e => {

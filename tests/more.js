@@ -38,6 +38,49 @@ window.moreTests = async ({ step, assert }) => {
     return reno.map(g => `${g.title}=${Math.round(goalProgress(g))}% ${goalState(g)}`).join(', ');
   });
 
+  await step('link lists: chosen items on top, search, goals grouped by category', () => {
+    fresh('Pickers');
+    const g1 = mk('goal', { title: 'Run a marathon', category: 'Health' });
+    const g2 = mk('goal', { title: 'Save money', category: 'Finance' });
+    const g3 = mk('goal', { title: 'Življenje brez skrbi' });
+    mk('goal', { title: 'Sleep well', category: 'Health' });
+    const a = mk('activity', { title: 'Train' });
+    rel(a, g1, 'contributes');
+    openForm('activity', a.id);
+    const pk = modal.querySelector('.picker[data-picker="goal"]');
+    const heads = [...pk.querySelectorAll('.pick-head')].map(h => h.textContent);
+    eq(heads, ['Finance', 'Health', 'No category'], 'category groups');
+    const chosen = () => [...pk.querySelectorAll('[data-unpick]')].map(b => b.dataset.unpick);
+    eq(chosen(), [g1.id], 'linked goal shown as chosen');
+    const box = id => pk.querySelector(`.check-list input[value="${id}"]`);
+    box(g2.id).click();
+    eq(chosen(), [g2.id, g1.id], 'ticking adds it');
+    const search = pk.querySelector('.picker-search');
+    search.value = 'zivlj';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    const shown = [...pk.querySelectorAll('.check-list label:not([hidden])')].map(l => l.textContent.trim());
+    eq(shown, [g3.title], 'search ignores case and accents');
+    assert(pk.querySelectorAll('.pick-group:not([hidden])').length === 1, 'empty groups hidden');
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    assert(modal.open && box(g3.id).checked, 'Enter ticks the only match, form stays open');
+    search.value = 'nothing like this';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    assert(!pk.querySelector('.pick-empty').hidden, 'no matches message');
+    pk.querySelector(`[data-unpick="${g1.id}"]`).click();
+    assert(!box(g1.id).checked && !chosen().includes(g1.id), '× unticks');
+    submitForm();
+    eq(relsFrom(a.id, 'contributes').map(r => r.to).sort(), [g2.id, g3.id].sort(), 'saved links');
+    openForm('goal', g2.id);
+    const acts = modal.querySelector('.picker[data-picker="activity"]');
+    assert(!acts.querySelector('.pick-head') && acts.querySelector('[data-unpick]').textContent.includes('Train'), 'activities flat, contributing one chosen');
+    modal.close();
+    changeLanguage('sl');
+    openForm('activity');
+    assert(modal.querySelector('.picked .hint').textContent === I18N.sl.strings['pick.none'], 'Slovenian empty text');
+    modal.close();
+    changeLanguage('en');
+  });
+
   await step('date fields: dd/mm/yyyy typing, picker and validation', () => {
     const ok = [['7/3/2026', '2026-03-07'], ['07/03/2026', '2026-03-07'], ['7.3.2026', '2026-03-07'], ['7. 3. 2026', '2026-03-07'], ['29/02/2028', '2028-02-29'], ['2026-03-07', '2026-03-07']];
     ok.forEach(([s, iso]) => assert(parseDateInput(s) === iso, `${s} → ${parseDateInput(s)}`));
