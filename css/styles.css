@@ -409,6 +409,19 @@ textarea { resize: vertical; min-height: 68px; }
 .node.st-late rect { fill: var(--fill-late); }
 .node.st-blocked rect { fill: var(--fill-blocked); }
 .node.dim { opacity: .15; }
+/* Linking two boxes: a dashed line follows the pointer; the box under it shows whether a link fits. */
+.map-wrap.linking, .map-wrap.linking * { cursor: crosshair; -webkit-user-select: none; user-select: none; }
+.link-line { stroke: var(--goal); stroke-width: 2.5; stroke-dasharray: 6 4; pointer-events: none; }
+.node.link-source rect { stroke: var(--goal); stroke-width: 3.5; }
+.node.link-target rect { stroke: var(--ok); stroke-width: 4; }
+.map-wrap.linking .node.link-bad, .map-wrap.linking .node.link-bad * { cursor: not-allowed; }
+.node.link-bad rect { stroke: var(--bad); stroke-width: 3; stroke-dasharray: 5 4; }
+.link-bar {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 22; width: max-content; max-width: calc(100vw - 32px);
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px;
+  background: var(--ink); color: var(--bg); font-size: 14.5px; font-weight: 600; box-shadow: var(--shadow-pop);
+}
+.link-bar .btn { color: var(--bg); }
 .edge { fill: none; }
 /* Lines are clickable through a wide invisible twin; hover or focus thickens the visible line. */
 .edge-g { cursor: pointer; outline: none; }
@@ -558,18 +571,18 @@ textarea { resize: vertical; min-height: 68px; }
 .smart-block.ok legend .letter { background: var(--goal); color: var(--surface); }
 .smart-summary { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface-2); border-radius: var(--r-md); font-size: 14px; font-weight: 600; }
 
-.check-list { display: flex; flex-direction: column; gap: 1px; max-height: 184px; overflow-y: auto; border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: 6px; }
-.check-list label { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: var(--r-sm); cursor: pointer; font-size: 14.5px; }
-.check-list label:hover { background: var(--surface-2); }
-.check-list input { accent-color: var(--goal); width: 16px; height: 16px; }
-.check-list label[hidden], .pick-group[hidden] { display: none; }
+.pick-list { display: flex; flex-direction: column; gap: 1px; max-height: 240px; overflow-y: auto; border: 1px solid var(--line-strong); border-radius: var(--r-md); padding: 6px; background: var(--surface); }
+.pick-list[hidden], .pick-opt[hidden], .pick-group[hidden], .pick-empty[hidden] { display: none; }
+.pick-opt { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--ink); font: inherit; font-size: 14.5px; padding: 7px 8px; border-radius: var(--r-sm); cursor: pointer; }
+.pick-opt:hover, .pick-opt:focus-visible { background: var(--surface-2); outline: none; }
 .pick-head { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); padding: 8px 8px 2px; }
 .pick-group:first-child .pick-head { padding-top: 2px; }
 .pick-empty { font-size: 13.5px; color: var(--ink-3); padding: 6px 8px; }
 .picked { display: flex; flex-wrap: wrap; gap: 6px; }
-.picked .tag { border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; padding: 4px 10px; }
-.picked .tag span { opacity: .6; }
-.picked .tag:hover span, .picked .tag:focus-visible span { opacity: 1; }
+.picked .tag { display: inline-flex; align-items: center; gap: 2px; padding: 3px 4px 3px 10px; white-space: normal; }
+.picked .tag button { border: 0; background: none; color: inherit; font: inherit; font-size: 14px; line-height: 1; width: 20px; height: 20px; border-radius: 999px; cursor: pointer; opacity: .6; }
+.picked .tag button:hover, .picked .tag button:focus-visible { opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); }
+.picked .tag ~ .pick-none { display: none; }
 
 .history { display: flex; flex-direction: column; font-size: 14px; }
 .history div { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--line); }
@@ -634,6 +647,7 @@ textarea { resize: vertical; min-height: 68px; }
   .modal { width: 100vw; max-width: 100vw; max-height: 92vh; margin: auto 0 0; border-radius: 20px 20px 0 0; }
   .modal form { max-height: 92vh; }
   .toast { bottom: 148px; }
+  .link-bar { bottom: calc(76px + env(safe-area-inset-bottom)); border-radius: var(--r-lg); }
 }
 
 /* ---------- Tutorial: guided tour ---------- */

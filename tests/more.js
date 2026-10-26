@@ -38,7 +38,7 @@ window.moreTests = async ({ step, assert }) => {
     return reno.map(g => `${g.title}=${Math.round(goalProgress(g))}% ${goalState(g)}`).join(', ');
   });
 
-  await step('link lists: chosen items on top, search, goals grouped by category', () => {
+  await step('link lists: chosen items on top, search opens the list, goals grouped by category', () => {
     fresh('Pickers');
     const g1 = mk('goal', { title: 'Run a marathon', category: 'Health' });
     const g2 = mk('goal', { title: 'Save money', category: 'Finance' });
@@ -48,37 +48,151 @@ window.moreTests = async ({ step, assert }) => {
     rel(a, g1, 'contributes');
     openForm('activity', a.id);
     const pk = modal.querySelector('.picker[data-picker="goal"]');
-    const heads = [...pk.querySelectorAll('.pick-head')].map(h => h.textContent);
-    eq(heads, ['Finance', 'Health', 'No category'], 'category groups');
+    const list = pk.querySelector('.pick-list'), search = pk.querySelector('.picker-search');
+    assert(!modal.querySelector('input[type="checkbox"]'), 'no checkboxes');
+    assert(list.hidden && search.getAttribute('aria-expanded') === 'false', 'list closed at first');
     const chosen = () => [...pk.querySelectorAll('[data-unpick]')].map(b => b.dataset.unpick);
     eq(chosen(), [g1.id], 'linked goal shown as chosen');
-    const box = id => pk.querySelector(`.check-list input[value="${id}"]`);
-    box(g2.id).click();
-    eq(chosen(), [g2.id, g1.id], 'ticking adds it');
-    const search = pk.querySelector('.picker-search');
+    search.focus();
+    assert(!list.hidden && search.getAttribute('aria-expanded') === 'true', 'focusing the search opens the list');
+    const shown = () => [...pk.querySelectorAll('.pick-opt:not([hidden])')].map(o => o.dataset.pick);
+    eq([...pk.querySelectorAll('.pick-group:not([hidden]) .pick-head')].map(h => h.textContent), ['Finance', 'Health', 'No category'], 'category groups');
+    assert(!shown().includes(g1.id) && shown().length === 3, 'chosen goal not offered again');
+    pk.querySelector(`.pick-opt[data-pick="${g2.id}"]`).click();
+    eq(chosen(), [g1.id, g2.id], 'clicking adds it');
+    assert(!list.hidden && document.activeElement === search, 'list stays open, typing goes on');
     search.value = 'zivlj';
     search.dispatchEvent(new Event('input', { bubbles: true }));
-    const shown = [...pk.querySelectorAll('.check-list label:not([hidden])')].map(l => l.textContent.trim());
-    eq(shown, [g3.title], 'search ignores case and accents');
+    eq(shown(), [g3.id], 'search ignores case and accents');
     assert(pk.querySelectorAll('.pick-group:not([hidden])').length === 1, 'empty groups hidden');
     search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-    assert(modal.open && box(g3.id).checked, 'Enter ticks the only match, form stays open');
+    assert(modal.open && chosen().includes(g3.id), 'Enter adds the first match, form stays open');
     search.value = 'nothing like this';
     search.dispatchEvent(new Event('input', { bubbles: true }));
-    assert(!pk.querySelector('.pick-empty').hidden, 'no matches message');
+    assert(!pk.querySelector('.pick-empty').hidden && pk.querySelector('.pick-empty').textContent === 'No matches', 'no matches message');
+    search.value = '';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    assert(document.activeElement.matches('.pick-opt'), 'arrow down moves into the list');
+    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    assert(list.hidden && modal.open && document.activeElement === search, 'Escape closes the list, not the form');
+    modal.querySelector('#f-title').focus();
+    assert(list.hidden, 'leaving the search closes the list');
     pk.querySelector(`[data-unpick="${g1.id}"]`).click();
-    assert(!box(g1.id).checked && !chosen().includes(g1.id), '× unticks');
+    assert(!chosen().includes(g1.id), '× removes it');
+    search.focus();
+    assert(shown().includes(g1.id), 'removed goal offered again');
     submitForm();
     eq(relsFrom(a.id, 'contributes').map(r => r.to).sort(), [g2.id, g3.id].sort(), 'saved links');
     openForm('goal', g2.id);
     const acts = modal.querySelector('.picker[data-picker="activity"]');
-    assert(!acts.querySelector('.pick-head') && acts.querySelector('[data-unpick]').textContent.includes('Train'), 'activities flat, contributing one chosen');
+    assert(!acts.querySelector('.pick-head') && acts.querySelector('[data-unpick]').closest('.tag').textContent.includes('Train'), 'activities flat, contributing one chosen');
     modal.close();
     changeLanguage('sl');
     openForm('activity');
-    assert(modal.querySelector('.picked .hint').textContent === I18N.sl.strings['pick.none'], 'Slovenian empty text');
+    assert(modal.querySelector('.pick-none').textContent === I18N.sl.strings['pick.none'], 'Slovenian empty text');
     modal.close();
     changeLanguage('en');
+  });
+
+  await step('map: drag from one box to another to link them; touch picks by tapping', async () => {
+    fresh('Linking');
+    const g = mk('goal', { title: 'Big goal' }), g2 = mk('goal', { title: 'Other goal' });
+    const a = mk('activity', { title: 'Do it' }), s = mk('state', { title: 'Now' });
+    rel(a, g, 'related'); rel(s, g, 'measures'); rel(g2, g, 'related');
+    save();
+    setView('map');
+    const node = id => $(`[data-map-node="${id}"]`);
+    const mid = id => { const r = node(id).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+    const ev = (type, el, p) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'mouse', button: 0, clientX: p.x, clientY: p.y }));
+    const drag = (fromId, end, hover) => {
+      const p0 = mid(fromId);
+      ev('pointerdown', node(fromId), p0);
+      ev('pointermove', document, { x: p0.x + 20, y: p0.y + 20 });
+      if (hover) ev('pointermove', document, hover);
+      ev('pointerup', document, end);
+    };
+    node(a.id).scrollIntoView({ block: 'center' });
+    // Drag activity → goal: the form offers only what fits (contributes; related already exists).
+    const p0 = mid(a.id), pg = mid(g.id);
+    ev('pointerdown', node(a.id), p0);
+    ev('pointermove', document, { x: p0.x + 30, y: p0.y - 30 });
+    assert($('.link-line') && node(a.id).classList.contains('link-source') && $('.map-wrap').classList.contains('linking'), 'line drawn while dragging');
+    assert(!$('.map-wrap').classList.contains('panning'), 'dragging a box does not pan');
+    ev('pointermove', document, pg);
+    assert(node(g.id).classList.contains('link-target'), 'target box marked');
+    ev('pointerup', document, pg);
+    assert(!$('.link-line') && !$('.link-source, .link-target'), 'line removed');
+    await tick();
+    assert(modal.open && $('#f-from').value === a.id && $('#f-to').value === g.id, 'relationship form opened for the two items');
+    eq([...$('#f-type').options].map(o => o.value), ['contributes'], 'only fitting types');
+    submitForm();
+    assert(relsFrom(a.id, 'contributes').some(r => r.to === g.id), 'link saved');
+
+    // Goal dragged onto an activity: offered in the other direction, saved the right way round.
+    const before = db.relations.length;
+    drag(g2.id, mid(a.id));
+    await tick();
+    eq([...$('#f-type').options].map(o => o.value), ['related', 'rev:contributes'], 'both directions listed');
+    $('#f-type').value = 'rev:contributes';
+    submitForm();
+    assert(db.relations.length === before + 1 && relsFrom(a.id, 'contributes').some(r => r.to === g2.id), 'reverse type saved activity → goal');
+
+    // Released outside a box, on itself, or on the background: nothing happens.
+    const n = db.relations.length;
+    const wrap = $('.map-wrap').getBoundingClientRect();
+    drag(a.id, { x: wrap.left + 3, y: wrap.top + 3 });
+    await tick();
+    drag(a.id, mid(a.id));
+    await tick();
+    assert(!modal.open && db.relations.length === n && !$('.link-line'), 'dropped outside: no link');
+    // A click on a box without dragging still highlights it.
+    ev('pointerdown', node(s.id), mid(s.id)); ev('pointerup', document, mid(s.id));
+    await tick();
+    node(s.id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert(ui.mapSelected === s.id && !modal.open, 'plain click highlights');
+    ui.mapSelected = null; render();
+    // Escape drops a link in progress.
+    const ps = mid(s.id);
+    ev('pointerdown', node(s.id), ps);
+    ev('pointermove', document, { x: ps.x + 40, y: ps.y });
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert(!$('.link-line'), 'Escape removes the line');
+    ev('pointerup', document, mid(g.id));
+    await tick();
+    assert(!modal.open, 'released after Escape: no form');
+    // Nothing fits (state → goal "measures" exists, "related" too): a message instead of the form.
+    rel(s, g, 'related');
+    render();
+    drag(s.id, mid(g.id));
+    await tick();
+    assert(!modal.open && $('#toast').textContent.includes('can’t be linked'), 'no possible link: message');
+
+    // Touch: "Link to…" from the long-press menu, then tap the other box.
+    openCtxMenu(g2.id, 10, 10);
+    ctxMenu.querySelector('[data-ctx="link"]').click();
+    assert(ui.mapLinkFrom === g2.id && $('.link-bar') && node(g2.id).classList.contains('link-source'), 'pick mode with a banner');
+    node(g.id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert(!ui.mapLinkFrom && modal.open && $('#f-from').value === g2.id && $('#f-to').value === g.id, 'tap on the other box opens the form');
+    eq([...$('#f-type').options].map(o => o.value), ['subgoal', 'depends', 'rev:subgoal', 'rev:depends'], 'goal ↔ goal types (related exists)');
+    modal.close();
+    startMapLink(g2.id);
+    $('.map-legend').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert(!ui.mapLinkFrom && !$('.link-bar') && !modal.open, 'tapping elsewhere cancels');
+    startMapLink(g2.id);
+    $('[data-map-link-cancel]').click();
+    assert(!ui.mapLinkFrom && !modal.open, 'Cancel button');
+    startMapLink(g2.id);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert(!ui.mapLinkFrom, 'Escape cancels');
+    // The timeline's "Link to…" still opens the form.
+    setView('timeline');
+    runCtxAction('link', a.id);
+    assert(modal.open && $('#f-from').value === a.id && !ui.mapLinkFrom, 'timeline opens the form');
+    modal.close();
+    const i = TOUR_STEPS.findIndex(x => x.key === 'mapLink');
+    assert(TOUR_STEPS[i - 1].key === 'map' && TOUR_STEPS[i].view === 'map', 'tour step after the map');
+    assert(t('tour.mapLink.text').includes('drag') && I18N.sl.strings['tour.mapLink.text'].includes('povlecite'), 'tour text in both languages');
   });
 
   await step('date fields: dd/mm/yyyy typing, picker and validation', () => {

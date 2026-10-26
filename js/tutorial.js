@@ -24,6 +24,7 @@ const TOUR_STEPS = [
   { key: 'activities', view: 'activities', target: ['.board'] },
   { key: 'timeline', view: 'timeline', target: ['.tl-scroll'] },
   { key: 'map', view: 'map', target: ['.map-wrap'] },
+  { key: 'mapLink', view: 'map', target: ['.map-wrap .node.activity', '.map-wrap'] },
   { key: 'add', target: ['#addBtn'] },
   { key: 'sidebar', target: ['#navToggle'], optional: true },
   { key: 'more', target: ['#navMore'], optional: true },

@@ -25,6 +25,7 @@ const REL_TYPES = {
   related:     { from: '*',                  to: '*',          color: 'var(--ink-2)', dash: true },
 };
 const ACYCLIC = new Set(['depends', 'subgoal', 'subactivity']);
+const SYMMETRIC = new Set(['related']);
 const PARENT_REL = { goal: 'subgoal', activity: 'subactivity' };
 
 const ACTIVITY_STATUS = ['todo', 'doing', 'done'];
@@ -264,6 +265,15 @@ function addRelation(from, to, type) {
   if (err) return err;
   db.relations.push({ id: uid(), from, to, type });
   return null;
+}
+
+// Relationship types that can link `from` → `to`; an edited relationship (`ignoreId`) does not count against itself.
+function possibleTypes(from, to, ignoreId) {
+  const all = db.relations;
+  db.relations = all.filter(r => r.id !== ignoreId);
+  // "Related" goes both ways, so it already exists when it links the two items the other way round.
+  const twoWay = k => SYMMETRIC.has(k) && db.relations.some(r => r.type === k && r.from === to && r.to === from);
+  try { return Object.keys(REL_TYPES).filter(k => !canRelate(from, to, k) && !twoWay(k)); } finally { db.relations = all; }
 }
 
 // Replace all outgoing links of one type from an entity.
@@ -982,7 +992,8 @@ function renderMap() {
     }
     const title = item.title.length > 22 ? item.title.slice(0, 21) + '…' : item.title;
     const dim = sel && !near.has(n.id) ? 'dim' : '';
-    return `<g class="node ${n.kind}${st ? ' st-' + st : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
+    const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
+    return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
       <rect width="${NW}" height="${NH}" rx="10" style="${n.id === sel ? 'stroke-width:3' : ''}"></rect>
       <text x="12" y="23">${esc(title)}</text>
       <text class="sub" x="12" y="41">${esc(sub)}</text>
@@ -1021,9 +1032,16 @@ function renderMap() {
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
       <defs>${markers}</defs>${bandSvg}${edges}${nodes}
     </svg></div>
+    ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
     ${relNote}
   `;
+}
+
+// Shown while linking by tapping: the next box tapped becomes the other end.
+function mapLinkBar(id) {
+  return `<div class="link-bar" role="status"><span class="grow">${esc(t('map.linkPick', { name: findEntity(id).item.title }))}</span>
+    <button type="button" class="btn small ghost" data-map-link-cancel>${t('btn.cancel')}</button></div>`;
 }
 
 function mapSelection(id) {
@@ -1451,39 +1469,59 @@ const date = (name, v) => `<div class="date-field">
 const area = (name, v, ph = '') => `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
 const select = (name, opts, v) => `<select id="f-${name}" name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
 
-// A searchable list of checkboxes; the ticked items are shown above it, each removable on its own.
-// Goals are grouped by category.
+// A link list: the chosen items are shown as removable tags; the search box below them opens
+// a list of the other items (goals grouped by category) that typing filters and a click adds.
 function checklist(name, label, kind, items, selected, hint = '') {
   if (!items.length) return '';
-  const box = i => `<label data-pick-title="${esc(fold(i.title))}"><input type="checkbox" name="${name}" value="${i.id}" ${selected.includes(i.id) ? 'checked' : ''}> ${esc(i.title)}</label>`;
-  const groups = kind === 'goal' && items.some(i => i.category)
+  const opt = i => `<button type="button" class="pick-opt" role="option" data-pick="${i.id}" data-pick-title="${esc(fold(i.title))}" ${selected.includes(i.id) ? 'data-picked' : ''}>${esc(i.title)}</button>`;
+  const options = kind === 'goal' && items.some(i => i.category)
     ? [...categories(), ''].map(c => [c, items.filter(i => (i.category || '') === c)]).filter(([, list]) => list.length)
-      .map(([c, list]) => `<div class="pick-group" role="group" aria-label="${esc(c || t('cat.none'))}"><div class="pick-head" aria-hidden="true">${esc(c || t('cat.none'))}</div>${list.map(box).join('')}</div>`).join('')
-    : items.map(box).join('');
-  return `<div class="field picker" data-picker="${kind}"><span class="label">${label}</span>
-    <div class="picked"></div>
-    <input type="search" class="picker-search" placeholder="${esc(t('search'))}" aria-label="${esc(t('pick.search', { name: label }))}" autocomplete="off">
-    <div class="check-list">${groups}<div class="pick-empty" hidden>${t('pick.noMatch')}</div></div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
+      .map(([c, list]) => `<div class="pick-group" role="group" aria-label="${esc(c || t('cat.none'))}"><div class="pick-head" aria-hidden="true">${esc(c || t('cat.none'))}</div>${list.map(opt).join('')}</div>`).join('')
+    : items.map(opt).join('');
+  const chips = items.filter(i => selected.includes(i.id)).map(i => pickedTag(name, kind, i)).join('');
+  return `<div class="field picker" data-picker="${kind}" data-name="${name}"><span class="label">${label}</span>
+    <div class="picked">${chips}<span class="hint pick-none">${t('pick.none')}</span></div>
+    <input type="search" class="picker-search" placeholder="${esc(t('pick.add'))}" aria-label="${esc(t('pick.search', { name: label }))}" autocomplete="off" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+    <div class="pick-list" role="listbox" aria-label="${esc(label)}" hidden>${options}<div class="pick-empty"></div></div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
 }
+
+// A chosen item: its hidden input carries the link when the form is saved.
+const pickedTag = (name, kind, item) =>
+  `<span class="tag ${kind}" data-picked-id="${item.id}"><input type="hidden" name="${name}" value="${item.id}">${esc(item.title)}<button type="button" data-unpick="${item.id}" title="${esc(t('pick.remove', { name: item.title }))}" aria-label="${esc(t('pick.remove', { name: item.title }))}">×</button></span>`;
 
 // Lower case without accents, so "zivljenje" finds "Življenje".
 const fold = s => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
-function drawPicked(picker) {
-  const ticked = [...picker.querySelectorAll('.check-list input:checked')];
-  picker.querySelector('.picked').innerHTML = ticked.length
-    ? ticked.map(i => {
-      const title = i.parentElement.textContent.trim();
-      return `<button type="button" class="tag ${picker.dataset.picker}" data-unpick="${i.value}" title="${esc(t('pick.remove', { name: title }))}" aria-label="${esc(t('pick.remove', { name: title }))}">${esc(title)}<span aria-hidden="true"> ×</span></button>`;
-    }).join('')
-    : `<span class="hint">${t('pick.none')}</span>`;
-}
-
+// Shows the items that match the search and are not chosen yet, and empty groups not at all.
 function filterPicker(picker) {
   const q = fold(picker.querySelector('.picker-search').value.trim());
-  picker.querySelectorAll('.check-list label').forEach(l => (l.hidden = !!q && !l.dataset.pickTitle.includes(q)));
-  picker.querySelectorAll('.pick-group').forEach(g => (g.hidden = !g.querySelector('label:not([hidden])')));
-  picker.querySelector('.pick-empty').hidden = !!picker.querySelector('.check-list label:not([hidden])');
+  const opts = [...picker.querySelectorAll('.pick-opt')];
+  opts.forEach(o => (o.hidden = o.hasAttribute('data-picked') || (!!q && !o.dataset.pickTitle.includes(q))));
+  picker.querySelectorAll('.pick-group').forEach(g => (g.hidden = !g.querySelector('.pick-opt:not([hidden])')));
+  const empty = picker.querySelector('.pick-empty');
+  empty.hidden = opts.some(o => !o.hidden);
+  empty.textContent = opts.every(o => o.hasAttribute('data-picked')) ? t('pick.allChosen') : t('pick.noMatch');
+}
+
+function showPickList(picker, open) {
+  const list = picker.querySelector('.pick-list');
+  if (open) filterPicker(picker);
+  list.hidden = !open;
+  picker.querySelector('.picker-search').setAttribute('aria-expanded', open);
+}
+
+function pickItem(opt) {
+  const picker = opt.closest('[data-picker]');
+  const { item } = findEntity(opt.dataset.pick);
+  opt.setAttribute('data-picked', '');
+  picker.querySelector('.pick-none').insertAdjacentHTML('beforebegin', pickedTag(picker.dataset.name, picker.dataset.picker, item));
+  filterPicker(picker);
+}
+
+function unpickItem(picker, id) {
+  picker.querySelector(`[data-picked-id="${id}"]`).remove();
+  picker.querySelector(`.pick-opt[data-pick="${id}"]`).removeAttribute('data-picked');
+  filterPicker(picker);
 }
 
 function smartSection(letter, body) {
@@ -1503,10 +1541,9 @@ function openForm(kind, id = null, links = {}) {
   if (kind === 'relation') {
     const r = item || links;
     if (r.from) $('#f-from').value = r.from;
-    if (r.type) $('#f-type').value = r.type;
     if (r.to) $('#f-to').value = r.to;
+    fillRelTypes(r.type);
   }
-  modal.querySelectorAll('[data-picker]').forEach(drawPicked);
   if (kind === 'goal') updateSmartLive();
   modal.showModal();
   if (!item) setTimeout(() => modal.querySelector('input, select, textarea')?.focus(), 30);
@@ -1602,8 +1639,25 @@ function relationForm() {
   }).join('');
   return `
     ${field('from', t('f.from'), `<select id="f-from" name="from">${groups}</select>`)}
-    ${field('type', t('f.relationship'), select('type', Object.fromEntries(Object.keys(REL_TYPES).map(k => [k, `${relLabel(k)}${relSignature(k) ? ` (${relSignature(k)})` : ''}`])), 'contributes'))}
+    ${field('type', t('f.relationship'), '<select id="f-type" name="type"></select>')}
     ${field('to', t('f.to'), `<select id="f-to" name="to">${groups}</select>`)}`;
+}
+
+// Only the relationship types that fit the chosen items are offered: those from → to, and under
+// a second heading those to → from (picking one of these swaps the two items when saved).
+function fillRelTypes(keep = $('#f-type').value) {
+  const from = $('#f-from').value, to = $('#f-to').value;
+  const title = id => findEntity(id)?.item.title || '';
+  const group = (a, b, types, pre) => types.length
+    ? `<optgroup label="${esc(`${title(a)} → ${title(b)}`)}">${types.map(k => `<option value="${pre}${k}">${esc(relLabel(k))}</option>`).join('')}</optgroup>` : '';
+  const fwd = possibleTypes(from, to, formCtx.id), rev = possibleTypes(to, from, formCtx.id).filter(k => !(SYMMETRIC.has(k) && fwd.includes(k)));
+  const box = $('#f-type');
+  box.innerHTML = fwd.length || rev.length ? group(from, to, fwd, '') + group(to, from, rev, 'rev:') : `<option value="">${esc(t('rel.nonePossible'))}</option>`;
+  if ([...box.options].some(o => o.value === keep)) box.value = keep;
+  // Explain an empty list right away rather than on saving.
+  const f = box.closest('.field');
+  f.classList.toggle('invalid', !box.value);
+  f.querySelector('.err').textContent = box.value ? '' : from === to ? t('err.self') : t('rel.noneBetween');
 }
 
 function formValues() {
@@ -1656,6 +1710,8 @@ function submitForm() {
 
   if (kind === 'relation') {
     // An edited relationship is validated without itself, and put back unchanged if the edit is invalid.
+    if (!v.type) return showErrors({ type: v.from === v.to ? t('err.self') : t('rel.noneBetween') });
+    if (v.type.startsWith('rev:')) Object.assign(v, { type: v.type.slice(4), from: v.to, to: v.from });
     const at = id ? db.relations.findIndex(r => r.id === id) : -1;
     const old = at >= 0 ? db.relations.splice(at, 1)[0] : null;
     const err = canRelate(v.from, v.to, v.type);
@@ -1751,6 +1807,7 @@ function cycleStatus(id) {
 
 function setView(view) {
   ui.view = view;
+  ui.mapLinkFrom = null;
   ui.search = '';
   ui.mapRefocus = true;
   prefs.set('view', view);
@@ -1810,6 +1867,15 @@ $('#addBtn').addEventListener('click', () => {
 
 viewEl.addEventListener('click', e => {
   const el = e.target.closest('[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
+  if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
+    const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
+    e.stopPropagation();
+    ui.mapLinkFrom = null;
+    render();
+    if (to && to !== from) linkItems(from, to);
+    return;
+  }
   if (!el) return;
   e.stopPropagation();
   if (el.hasAttribute('data-next-more')) {
@@ -1887,33 +1953,61 @@ function bindDragDrop() {
 $('#modalForm').addEventListener('submit', e => { e.preventDefault(); submitForm(); });
 $('#modalForm').addEventListener('input', updateSmartLive);
 $('#modalForm').addEventListener('change', e => {
+  if (e.target.id === 'f-from' || e.target.id === 'f-to') return fillRelTypes();
   if (e.target.id !== 'f-progress') return;
   const acts = e.target.value === 'activities';
   $('#measureFields').hidden = acts;
   $('#actsHint').hidden = !acts;
   updateSmartLive();
 });
-// Link lists: ticking redraws the chosen items, searching filters the list, a chosen item's × unticks it.
-$('#modalForm').addEventListener('change', e => {
+// Link lists: the list opens while the search box (or one of its items) has focus, typing filters it,
+// a click on an item adds it and a chosen item's × removes it.
+$('#modalForm').addEventListener('focusin', e => { if (e.target.matches('.picker-search')) showPickList(e.target.closest('[data-picker]'), true); });
+$('#modalForm').addEventListener('focusout', e => {
   const picker = e.target.closest('[data-picker]');
-  if (picker && e.target.type === 'checkbox') drawPicked(picker);
+  if (picker && !(e.relatedTarget && picker.contains(e.relatedTarget) && e.relatedTarget.closest('.pick-list, .picker-search'))) showPickList(picker, false);
 });
-$('#modalForm').addEventListener('input', e => { if (e.target.matches('.picker-search')) filterPicker(e.target.closest('[data-picker]')); });
+$('#modalForm').addEventListener('input', e => { if (e.target.matches('.picker-search')) showPickList(e.target.closest('[data-picker]'), true); });
+// Pressing an item must not move focus away from the search box first (that would close the list).
+$('#modalForm').addEventListener('pointerdown', e => { if (e.target.closest('.pick-opt')) e.preventDefault(); });
 $('#modalForm').addEventListener('keydown', e => {
-  // Enter in a list's search box ticks the only match instead of saving the form.
-  if (e.key !== 'Enter' || !e.target.matches('.picker-search')) return;
-  e.preventDefault();
-  const shown = [...e.target.closest('[data-picker]').querySelectorAll('.check-list label:not([hidden]) input')];
-  if (shown.length === 1) shown[0].click();
+  const picker = e.target.closest?.('[data-picker]');
+  if (!picker || !e.target.closest('.picker-search, .pick-opt')) return;
+  const search = picker.querySelector('.picker-search');
+  const shown = [...picker.querySelectorAll('.pick-opt:not([hidden])')];
+  const i = shown.indexOf(e.target);
+  if (e.key === 'Escape' && !picker.querySelector('.pick-list').hidden) {
+    // Close the list, not the form.
+    e.preventDefault();
+    e.stopPropagation();
+    search.focus();
+    showPickList(picker, false);
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (picker.querySelector('.pick-list').hidden) return showPickList(picker, true);
+    const next = i + (e.key === 'ArrowDown' ? 1 : -1);
+    (next < 0 ? search : shown[Math.min(next, shown.length - 1)] || search).focus();
+  } else if (e.key === 'Enter' && e.target === search) {
+    // Enter adds the first match instead of saving the form.
+    e.preventDefault();
+    if (shown[0]) pickItem(shown[0]);
+  }
 });
 $('#modalForm').addEventListener('click', e => {
+  const opt = e.target.closest('.pick-opt');
+  if (opt) {
+    const picker = opt.closest('[data-picker]'), shown = [...picker.querySelectorAll('.pick-opt:not([hidden])')];
+    const next = shown[shown.indexOf(opt) + 1] || shown[shown.indexOf(opt) - 1];
+    pickItem(opt);
+    // Keep the keyboard in the list; after a click, typing goes on in the search box.
+    return (document.activeElement === opt && next ? next : picker.querySelector('.picker-search')).focus();
+  }
   const x = e.target.closest('[data-unpick]');
   if (!x) return;
   const picker = x.closest('[data-picker]');
-  const box = picker.querySelector(`.check-list input[value="${x.dataset.unpick}"]`);
-  box.checked = false;
-  box.dispatchEvent(new Event('change', { bubbles: true }));
-  (picker.querySelector('[data-unpick]') || picker.querySelector('.picker-search')).focus();
+  const tags = [...picker.querySelectorAll('[data-unpick]')], at = tags.indexOf(x);
+  unpickItem(picker, x.dataset.unpick);
+  (tags[at + 1] || tags[at - 1] || picker.querySelector('.picker-search')).focus();
 });
 // Date fields: slashes are added while typing digits.
 $('#modalForm').addEventListener('input', e => {
@@ -2310,7 +2404,7 @@ function runCtxAction(act, id) {
     return render();
   }
   if (verb === 'add') return openForm(arg, null, { [type]: [id], category: kind === 'goal' ? item.category : '' });
-  if (verb === 'link') return openForm('relation', null, { from: id });
+  if (verb === 'link') return ui.view === 'map' ? startMapLink(id) : openForm('relation', null, { from: id });
   if (verb === 'status') {
     item.status = arg;
     save();
@@ -2443,7 +2537,7 @@ viewEl.addEventListener('touchstart', e => {
 // Click and drag with the mouse pans the map and the timeline (touch screens pan natively).
 let pan = null;
 viewEl.addEventListener('pointerdown', e => {
-  const wrap = e.pointerType === 'mouse' && e.button === 0 && e.target.closest(ZOOM_SEL);
+  const wrap = e.pointerType === 'mouse' && e.button === 0 && !e.target.closest('[data-map-node]') && e.target.closest(ZOOM_SEL);
   if (!wrap) return;
   const r = wrap.getBoundingClientRect();
   if (e.clientX - r.left - wrap.clientLeft >= wrap.clientWidth || e.clientY - r.top - wrap.clientTop >= wrap.clientHeight) return; // scrollbar
@@ -2473,6 +2567,87 @@ document.addEventListener('pointermove', e => {
 document.addEventListener('click', e => {
   if (pan?.moved) { e.stopPropagation(); e.preventDefault(); }
 }, true);
+
+/* ---------- Linking two map boxes ----------
+   With a mouse, drag from one box to another; releasing anywhere but another box drops the link.
+   On touch screens (where dragging scrolls), choose "Link to…" in a box's long-press menu, then tap
+   the other box. Either way the relationship form opens with only the types that fit the two items. */
+
+function startMapLink(id) {
+  ui.mapLinkFrom = id;
+  ui.mapSelected = null;
+  render();
+}
+
+function linkItems(from, to) {
+  if (!possibleTypes(from, to).length && !possibleTypes(to, from).length)
+    return toast(t('map.linkNone', { a: findEntity(from).item.title, b: findEntity(to).item.title }));
+  openForm('relation', null, { from, to });
+}
+
+let linkDrag = null; // { from, id, x, y, moved, line, target }
+// A point on the screen in the map's own coordinates.
+function mapPoint(svg, x, y) {
+  const p = svg.createSVGPoint();
+  Object.assign(p, { x, y });
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+viewEl.addEventListener('pointerdown', e => {
+  const node = e.pointerType === 'mouse' && e.button === 0 && e.target.closest('[data-map-node]');
+  if (node) linkDrag = { from: node.dataset.mapNode, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+});
+document.addEventListener('pointermove', e => {
+  if (!linkDrag || e.pointerId !== linkDrag.id) return;
+  const svg = $('.map-wrap svg'), src = $(`[data-map-node="${linkDrag.from}"]`);
+  if (!svg || !src) return endLinkDrag();
+  if (!linkDrag.moved) {
+    if (Math.hypot(e.clientX - linkDrag.x, e.clientY - linkDrag.y) < 5) return;
+    linkDrag.moved = true;
+    const r = src.getBoundingClientRect(), c = mapPoint(svg, r.left + r.width / 2, r.top + r.height / 2);
+    svg.insertAdjacentHTML('beforeend', `<line class="link-line" x1="${c.x}" y1="${c.y}" x2="${c.x}" y2="${c.y}"></line>`);
+    linkDrag.line = svg.lastElementChild;
+    src.classList.add('link-source');
+    $('.map-wrap').classList.add('linking');
+    getSelection().removeAllRanges();
+  }
+  const p = mapPoint(svg, e.clientX, e.clientY);
+  linkDrag.line.setAttribute('x2', p.x);
+  linkDrag.line.setAttribute('y2', p.y);
+  const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-map-node]');
+  const to = over && over !== src ? over.dataset.mapNode : null;
+  if (to === linkDrag.target) return;
+  svg.querySelector('.link-target, .link-bad')?.classList.remove('link-target', 'link-bad');
+  linkDrag.target = to;
+  if (to) over.classList.add(possibleTypes(linkDrag.from, to).length || possibleTypes(to, linkDrag.from).length ? 'link-target' : 'link-bad');
+});
+// Clears the drag's line and marks; the drag itself is kept until the click it may produce has been swallowed.
+function endLinkDrag() {
+  const done = linkDrag;
+  if (!done) return {};
+  done.line?.remove();
+  document.querySelectorAll('.link-source, .link-target, .link-bad').forEach(n => n.classList.remove('link-source', 'link-target', 'link-bad'));
+  $('.map-wrap')?.classList.remove('linking');
+  setTimeout(() => { if (linkDrag === done) linkDrag = null; });
+  return done;
+}
+document.addEventListener('pointerup', e => {
+  if (!linkDrag || e.pointerId !== linkDrag.id || linkDrag.ended) return;
+  linkDrag.ended = true;
+  const { moved, from } = endLinkDrag();
+  if (!moved) return;
+  const to = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-map-node]')?.dataset.mapNode;
+  if (to && to !== from) linkItems(from, to);
+});
+document.addEventListener('pointercancel', e => { if (linkDrag && e.pointerId === linkDrag.id) { linkDrag.ended = true; endLinkDrag(); } });
+document.addEventListener('click', e => {
+  if (linkDrag?.moved) { e.stopPropagation(); e.preventDefault(); }
+}, true);
+// Escape drops a link being dragged or picked.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || modal.open || !ctxMenu.hidden) return;
+  if (linkDrag?.moved && !linkDrag.ended) { linkDrag.ended = true; endLinkDrag(); }
+  else if (ui.mapLinkFrom) { ui.mapLinkFrom = null; render(); }
+});
 
 // Safari: trackpad pinch on macOS arrives as gesture events; on iOS they duplicate the touches above.
 let gesture = null;

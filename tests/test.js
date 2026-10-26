@@ -84,7 +84,7 @@
     openForm('state', s.id);
     $('#f-value').value = '4';
     $('#f-date').value = '2099-01-02';
-    [...modal.querySelectorAll('input[name="goals"]')].find(i => i.parentElement.textContent.includes('Test goal one')).checked = true;
+    [...modal.querySelectorAll('[data-name="goals"] .pick-opt')].find(o => o.textContent.includes('Test goal one')).click();
     submitForm();
     assert(s.history.length === 2 && relsFrom(s.id, 'measures').length === 1);
     return `history=${s.history.length}`;
@@ -109,16 +109,26 @@
   await step('relation form: add, invalid, edit, delete', () => {
     const g = db.goals.find(x => x.title === 'Test goal one');
     const a = db.activities.find(x => x.title === 'Child act');
+    const pick = (f, id) => { $(f).value = id; $(f).dispatchEvent(new Event('change', { bubbles: true })); };
+    const types = () => [...$('#f-type').options].map(o => o.value);
     openForm('relation', null, { from: a.id });
+    pick('#f-to', g.id);
+    assert(types().includes('contributes') && !types().includes('subgoal') && !types().includes('measures'), 'only fitting types: ' + types());
     $('#f-type').value = 'contributes';
-    $('#f-to').value = g.id;
     submitForm();
     const r = db.relations.find(x => x.from === a.id && x.to === g.id && x.type === 'contributes');
     assert(r, 'relation added');
     openForm('relation');
-    $('#f-from').value = g.id; $('#f-type').value = 'contributes'; $('#f-to').value = g.id;
+    pick('#f-from', g.id); pick('#f-to', g.id);
+    assert(types().join() === '', 'nothing links an item to itself');
     submitForm();
-    const err = modal.querySelector('[data-field="to"] .err').textContent; modal.close();
+    const err = modal.querySelector('[data-field="type"] .err').textContent;
+    assert(modal.open && err === t('err.self'), 'self link refused');
+    // A type that only fits the other way round swaps the two items.
+    const g2 = db.goals.find(x => !canRelate(a.id, x.id, 'contributes'));
+    pick('#f-from', g2.id); pick('#f-to', a.id);
+    assert(types().includes('rev:contributes') && !types().includes('contributes'), 'reverse group: ' + types());
+    modal.close();
     openForm('relation', r.id);
     $('#f-type').value = 'related';
     submitForm();
