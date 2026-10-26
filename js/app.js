@@ -293,9 +293,12 @@ function smartCheck(g) {
   const errs = {};
   if (!g.title || g.title.trim().length < 4) errs.title = t('err.title');
   if (!g.specific || g.specific.trim().length < 15) errs.specific = t('err.specific');
-  if (!g.metric || !g.metric.trim()) errs.metric = t('err.metric');
-  if (!isNum(g.target)) errs.target = t('err.target');
-  else if (isNum(g.baseline) && Number(g.baseline) === Number(g.target)) errs.target = t('err.targetSame');
+  // A goal measured by its activities needs no metric or target of its own.
+  if (!byActivities(g)) {
+    if (!g.metric || !g.metric.trim()) errs.metric = t('err.metric');
+    if (!isNum(g.target)) errs.target = t('err.target');
+    else if (isNum(g.baseline) && Number(g.baseline) === Number(g.target)) errs.target = t('err.targetSame');
+  }
   if (!g.achievable || g.achievable.trim().length < 10) errs.achievable = t('err.achievable');
   if (!g.relevant || g.relevant.trim().length < 10) errs.relevant = t('err.relevant');
   if (!g.deadline) errs.deadline = t('err.deadline');
@@ -318,6 +321,7 @@ function measuringState(g) {
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || null;
 }
 function goalCurrent(g) {
+  if (byActivities(g)) return countedActivities(g).filter(a => a.status === 'done').length;
   const st = measuringState(g);
   if (st) return Number(st.value);
   if (isNum(g.current)) return Number(g.current);
@@ -325,6 +329,10 @@ function goalCurrent(g) {
 }
 function goalProgress(g) {
   if (g.status === 'achieved') return 100;
+  if (byActivities(g)) {
+    const total = countedActivities(g).length;
+    return total ? (goalCurrent(g) / total) * 100 : 0;
+  }
   const b = isNum(g.baseline) ? Number(g.baseline) : 0;
   const target = Number(g.target);
   if (!isNum(g.target) || target === b) return 0;
@@ -336,6 +344,16 @@ function goalActivities(g) {
   const ids = new Set();
   relsTo(g.id, 'contributes').forEach(r => [r.from, ...descendants(r.from, 'subactivity')].forEach(id => ids.add(id)));
   return db.activities.filter(a => ids.has(a.id));
+}
+
+// Goals can measure progress by their activities instead of a metric (`progress: 'activities'`).
+const byActivities = g => g.progress === 'activities';
+// The activities such a goal counts: the actual pieces of work (activities without sub-activities
+// of their own) under the goal and its sub-goals.
+function countedActivities(g) {
+  const goals = [g, ...descendants(g.id, 'subgoal').map(id => db.goals.find(x => x.id === id)).filter(Boolean)];
+  const ids = new Set(goals.flatMap(x => goalActivities(x).map(a => a.id)));
+  return db.activities.filter(a => ids.has(a.id) && !relsTo(a.id, 'subactivity').length);
 }
 
 const isComplete = (kind, item) => (kind === 'goal' ? item.status === 'achieved' : item.status === 'done');
@@ -554,17 +572,21 @@ function goalCard(g) {
   const unit = g.unit ? ' ' + esc(g.unit) : '';
   const parent = relsFrom(g.id, 'subgoal')[0];
   const waits = g.status === 'achieved' ? [] : blockers(g, 'goal');
+  const measured = byActivities(g), counted = measured ? countedActivities(g).length : 0;
   return `<article class="card goal" data-open="${g.id}">
     <div class="card-head"><h3>${esc(g.title)}</h3>${smartBadge(g)}</div>
     ${g.category ? `<div><button type="button" class="tag cat" data-category="${esc(g.category)}">${esc(g.category)}</button></div>` : ''}
     <p class="desc">${esc(g.specific)}</p>
-    ${trail(pct, `${fmtNum(isNum(g.baseline) ? g.baseline : 0)}${unit}`, `${fmtNum(g.target)}${unit}`)}
-    <div class="meta"><span>${esc(g.metric)}: <strong>${fmtNum(goalCurrent(g))}${unit}</strong></span></div>
+    ${measured
+    ? `${trail(pct, '0', esc(tp('goals.actsTotal', counted)))}
+    <div class="meta"><span>${t('f.progressActs')}: <strong>${goalCurrent(g)} / ${counted}</strong></span></div>`
+    : `${trail(pct, `${fmtNum(isNum(g.baseline) ? g.baseline : 0)}${unit}`, `${fmtNum(g.target)}${unit}`)}
+    <div class="meta"><span>${esc(g.metric)}: <strong>${fmtNum(goalCurrent(g))}${unit}</strong></span></div>`}
     <div class="meta">
       ${g.status !== 'active' ? `<span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${t('goal.' + g.status)}</span>` : ''}
       ${waits.length ? waitsForTag(waits) : ''}
       ${deadlineTag(g.deadline, g.status === 'achieved')}
-      <span>${t('goals.activities', { done, total: acts.length })}</span>
+      ${measured ? '' : `<span>${t('goals.activities', { done, total: acts.length })}</span>`}
       ${st ? `<span title="${esc(t('goals.measuredBy'))}">◐ ${esc(st.title)}</span>` : ''}
     </div>
     ${parent ? `<div class="links"><span class="meta">${t('goals.partOf')}</span>${linkTag(parent.to)}</div>` : ''}
@@ -1232,7 +1254,7 @@ function changeTag(s, change) {
 function graphCard(s, width) {
   const points = stateSeries(s);
   const targets = relsFrom(s.id, 'measures').map(r => db.goals.find(g => g.id === r.to))
-    .filter(g => g && isNum(g.target))
+    .filter(g => g && !byActivities(g) && isNum(g.target))
     .map(g => ({ goal: g, value: Number(g.target), end: g.deadline ? dayNum(g.deadline) : null }));
   const change = stateChange(s, points, targets);
   const unit = s.unit || '';
@@ -1472,6 +1494,9 @@ function goalForm(g) {
       ${field('title', t('f.goal'), text('title', g.title, t('f.goalPh')))}
       ${field('specific', t('f.specific'), area('specific', g.specific, t('f.specificPh')))}`)}
     ${smartSection('M', `
+      ${field('progress', t('f.progress'), select('progress', { measure: t('f.progressMeasure'), activities: t('f.progressActs') }, byActivities(g) ? 'activities' : 'measure'))}
+      <p class="hint" id="actsHint" ${byActivities(g) ? '' : 'hidden'}>${t('f.progressActsHint')}</p>
+      <div id="measureFields" ${byActivities(g) ? 'hidden' : ''}>
       <div class="row2">
         ${field('metric', t('f.metric'), text('metric', g.metric, t('f.metricPh')))}
         ${field('unit', t('f.unit'), text('unit', g.unit, t('f.unitPh')))}
@@ -1480,6 +1505,7 @@ function goalForm(g) {
         ${field('baseline', t('f.baseline'), num('baseline', g.baseline ?? '', '0'))}
         ${field('current', t('f.current'), num('current', g.current ?? '', ''), st ? esc(t('f.currentFrom', { name: st.title })) : t('f.currentHint'))}
         ${field('target', t('f.target'), num('target', g.target ?? ''))}
+      </div>
       </div>`)}
     ${smartSection('A', field('achievable', t('f.achievable'), area('achievable', g.achievable, t('f.achievablePh'))))}
     ${smartSection('R', field('relevant', t('f.relevant'), area('relevant', g.relevant, t('f.relevantPh'))))}
@@ -1558,7 +1584,7 @@ function formValues() {
   modal.querySelectorAll('input[data-num]').forEach(i => {
     const n = parseNum(i.value);
     if (!i.value.trim()) v[i.name] = '';
-    else if (isNaN(n)) { v[i.name] = ''; bad[i.name] = t('err.number'); }
+    else if (isNaN(n)) { v[i.name] = ''; if (!i.closest('[hidden]')) bad[i.name] = t('err.number'); }
     else v[i.name] = String(n);
   });
   modal.querySelectorAll('input[data-date]').forEach(i => {
@@ -1620,6 +1646,9 @@ function submitForm() {
       achievable: v.achievable.trim(), relevant: v.relevant.trim(),
       startDate: v.startDate, deadline: v.deadline, status: v.status, category: v.category.trim(),
     });
+    // The metric fields are kept while measuring by activities, in case the goal switches back.
+    if (v.progress === 'activities') g.progress = 'activities';
+    else delete g.progress;
     if (!existing) db.goals.push(g);
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
@@ -1774,6 +1803,13 @@ function bindDragDrop() {
 
 $('#modalForm').addEventListener('submit', e => { e.preventDefault(); submitForm(); });
 $('#modalForm').addEventListener('input', updateSmartLive);
+$('#modalForm').addEventListener('change', e => {
+  if (e.target.id !== 'f-progress') return;
+  const acts = e.target.value === 'activities';
+  $('#measureFields').hidden = acts;
+  $('#actsHint').hidden = !acts;
+  updateSmartLive();
+});
 // Date fields: slashes are added while typing digits, and the calendar button fills the field.
 $('#modalForm').addEventListener('input', e => {
   const box = e.target;
@@ -1843,7 +1879,7 @@ function importJson(file) {
 function sampleData() {
   const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
   const [halfMarathon, fund, tenK, weight, course, spanish, sell, trip, bathroom, heating] = Array.from({ length: 10 }, uid);
-  const [fitness, savings, spending, bodyWeight, itemsSold, bathroomWork, heatingBill] = Array.from({ length: 7 }, uid);
+  const [fitness, savings, spending, bodyWeight, itemsSold, heatingBill] = Array.from({ length: 6 }, uid);
   const a = Array.from({ length: 23 }, uid);
   // Numbers and dates live here; the wording (and word units) come from the active language (i18n.js → sample).
   const txt = I18N[lang].sample;
@@ -1858,7 +1894,7 @@ function sampleData() {
       { id: spanish, baseline: '0', current: '', target: '1500', startDate: d(30), deadline: d(300), status: 'active' },
       { id: sell, baseline: '0', current: '', target: '10', startDate: d(-40), deadline: d(-3), status: 'active' },
       { id: trip, baseline: '0', current: '', target: '14', startDate: d(60), deadline: d(400), status: 'active' },
-      { id: bathroom, baseline: '0', current: '', target: '5', startDate: d(-25), deadline: d(45), status: 'active' },
+      { id: bathroom, progress: 'activities', startDate: d(-25), deadline: d(45), status: 'active' },
       { id: heating, unit: '€', baseline: '180', current: '', target: '120', startDate: d(-60), deadline: d(180), status: 'active' },
     ], txt.goals),
     states: withText([
@@ -1867,7 +1903,6 @@ function sampleData() {
       { id: spending, value: '2000', unit: '€', date: d(-5), history: [{ date: d(-5), value: '2000' }] },
       { id: bodyWeight, value: '78', unit: 'kg', date: d(-1), history: [{ date: d(-30), value: '81' }, { date: d(-1), value: '78' }] },
       { id: itemsSold, value: '6', date: d(-4), history: [{ date: d(-20), value: '2' }, { date: d(-4), value: '6' }] },
-      { id: bathroomWork, value: '2', date: d(-3), history: [{ date: d(-25), value: '0' }, { date: d(-12), value: '1' }, { date: d(-3), value: '2' }] },
       { id: heatingBill, value: '165', unit: '€', date: d(-5), history: [{ date: d(-60), value: '180' }, { date: d(-30), value: '172' }, { date: d(-5), value: '165' }] },
     ], txt.states),
     activities: withText([
@@ -1907,7 +1942,7 @@ function sampleData() {
   rel(fitness, 'measures', halfMarathon); rel(fitness, 'measures', tenK); rel(savings, 'measures', fund);
   rel(bodyWeight, 'measures', weight); rel(itemsSold, 'measures', sell);
   rel(spending, 'related', savings);
-  rel(bathroomWork, 'measures', bathroom); rel(heatingBill, 'measures', heating);
+  rel(heatingBill, 'measures', heating);
   // Activities → goals
   rel(a[0], 'contributes', halfMarathon); rel(a[1], 'contributes', halfMarathon); rel(a[1], 'contributes', tenK);
   rel(a[2], 'contributes', halfMarathon); rel(a[3], 'contributes', tenK); rel(a[4], 'contributes', fund);
@@ -1918,7 +1953,7 @@ function sampleData() {
   // Activities → current states
   rel(a[1], 'improves', fitness); rel(a[5], 'improves', spending); rel(a[6], 'improves', spending);
   rel(a[12], 'improves', bodyWeight); rel(a[13], 'improves', itemsSold);
-  rel(a[18], 'improves', bathroomWork); rel(a[22], 'improves', heatingBill);
+  rel(a[22], 'improves', heatingBill);
   // Training plan → two phases → a key session in phase two (three levels deep).
   rel(a[7], 'subactivity', a[1]); rel(a[8], 'subactivity', a[1]); rel(a[9], 'subactivity', a[8]);
   rel(a[10], 'subactivity', a[5]); rel(a[11], 'subactivity', a[5]);

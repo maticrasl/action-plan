@@ -26,7 +26,7 @@
     return `${en.length} keys each`;
   });
 
-  await step('load sample plan', () => { loadSample(); assert(db.goals.length === 10 && db.activities.length === 23 && db.states.length === 7); return `${db.relations.length} relations`; });
+  await step('load sample plan', () => { loadSample(); assert(db.goals.length === 10 && db.activities.length === 23 && db.states.length === 6); return `${db.relations.length} relations`; });
 
   for (const code of ['en', 'sl']) {
     await step(`views render with sample (${code})`, () => {

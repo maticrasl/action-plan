@@ -181,6 +181,53 @@ window.moreTests = async ({ step, assert }) => {
     return out.map(Math.round).join(',');
   });
 
+  await step('goals measured by their activities', () => {
+    fresh('ByActivities');
+    const g = mk('goal', { title: 'Counted goal', specific: 'Finish all the work for this goal', achievable: 'Small steps each week', relevant: 'It matters to me', deadline: '2099-01-01', progress: 'activities', target: '10', metric: 'Old metric' });
+    const sub = mk('goal'), elsewhere = mk('goal');
+    const parent = mk('activity'), k1 = mk('activity'), k2 = mk('activity'), viaSub = mk('activity'), other = mk('activity');
+    rel(sub, g, 'subgoal'); rel(parent, g, 'contributes'); rel(k1, parent, 'subactivity'); rel(k2, parent, 'subactivity');
+    rel(viaSub, sub, 'contributes'); rel(other, elsewhere, 'contributes');
+    eq(countedActivities(g).map(a => a.id).sort(), [k1.id, k2.id, viaSub.id].sort(), 'only the actual work, sub-goals included');
+    const pcts = [goalProgress(g)];
+    k1.status = 'done'; pcts.push(goalProgress(g));
+    parent.status = 'done'; pcts.push(goalProgress(g)); // a parent with parts does not count itself
+    k2.status = viaSub.status = 'done'; pcts.push(goalProgress(g));
+    eq(pcts.map(Math.round), [0, 33, 33, 100], 'progress');
+    k2.status = viaSub.status = 'todo';
+    assert(goalProgress({ ...emptyDb(), id: 'none', progress: 'activities' }) === 0, 'no activities: 0 %');
+    const c = smartCheck({ ...g, metric: '', target: '' });
+    assert(c.M && !c.errs.metric && !c.errs.target, 'M met without a metric');
+    save();
+
+    setView('goals');
+    const card = viewEl.querySelector(`.card.goal[data-open="${g.id}"]`).textContent;
+    assert(card.includes('1 / 3') && card.includes('3 activities') && !card.includes('Old metric'), 'card shows the activity count: ' + card.replace(/\s+/g, ' '));
+
+    openForm('goal', g.id);
+    assert($('#f-progress').value === 'activities' && $('#measureFields').hidden && !$('#actsHint').hidden, 'form opens in activity mode');
+    const live = () => $('#smartLive').querySelector('b:nth-child(2)').classList.contains('on');
+    const m0 = live();
+    $('#f-progress').value = 'measure'; $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
+    assert(!$('#measureFields').hidden && $('#actsHint').hidden, 'switching shows the metric fields');
+    $('#f-metric').value = ''; $('#modalForm').dispatchEvent(new Event('input'));
+    const m1 = live();
+    $('#f-progress').value = 'activities'; $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#f-baseline').value = 'junk'; // hidden fields are not validated
+    submitForm();
+    assert(!modal.open && g.progress === 'activities' && g.target === '10', 'saved in activity mode, metric fields kept');
+    assert(m0 && !m1, 'live SMART badge follows the mode');
+
+    openForm('goal', g.id);
+    $('#f-progress').value = 'measure'; $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#f-metric').value = 'Pages'; $('#f-baseline').value = '0'; $('#f-target').value = '10';
+    submitForm();
+    assert(!modal.open && !('progress' in g) && g.metric === 'Pages', 'switched back to a measurement');
+    openForm('goal');
+    assert($('#f-progress').value === 'measure', 'new goals start with a measurement');
+    modal.close();
+  });
+
   await step('SMART check edge cases', () => {
     const good = { title: 'Read books', specific: 'Read twelve books this year', metric: 'Books', baseline: '0', target: '12', achievable: 'One a month', relevant: 'I want to learn', deadline: '2099-12-31' };
     const c = smartCheck(good);
