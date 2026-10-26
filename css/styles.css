@@ -169,7 +169,6 @@ svg { flex: none; }
 .topbar h1 { font-size: 32px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-actions { display: flex; gap: 8px; align-items: center; }
 .view { padding: 6px 36px 56px; max-width: 1240px; width: 100%; overflow-x: clip; }
-.mobile-only { display: none !important; }
 
 .lang-switch { display: flex; padding: 3px; border-radius: 999px; background: var(--surface-2); }
 .lang-switch button {
@@ -194,7 +193,6 @@ svg { flex: none; }
 .btn.danger { background: transparent; border-color: transparent; color: var(--bad); }
 .btn.danger:hover { background: color-mix(in srgb, var(--bad) 10%, transparent); }
 .btn.small { padding: 4px 12px; font-size: 13px; }
-.btn.block { width: 100%; justify-content: flex-start; }
 .add-btn .plus { font-size: 18px; line-height: 1; margin-top: -2px; }
 .icon-btn {
   border: 0; background: transparent; width: 36px; height: 36px; border-radius: 999px; cursor: pointer;
@@ -485,7 +483,6 @@ textarea { resize: vertical; min-height: 68px; }
 .ctx-menu button.danger { color: var(--bad); }
 @media (pointer: coarse) { .ctx-menu button { padding-top: 11px; padding-bottom: 11px; } }
 
-
 /* ---------- Dialogs ---------- */
 .modal {
   border: 1px solid var(--line); padding: 0; border-radius: 18px; background: var(--surface); color: var(--ink);
@@ -524,7 +521,6 @@ textarea { resize: vertical; min-height: 68px; }
 .history { display: flex; flex-direction: column; font-size: 14px; }
 .history div { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--line); }
 
-
 .toast {
   position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 16px); opacity: 0;
   background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px;
@@ -551,7 +547,6 @@ textarea { resize: vertical; min-height: 68px; }
   .topbar h1 { font-size: 22px; }
   .topbar-actions { gap: 2px; }
   .view { padding: 4px 16px 132px; }
-  .mobile-only { display: inline-grid !important; }
   /* The add button becomes a floating action above the tab bar */
   .add-btn {
     position: fixed; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 21;
@@ -592,7 +587,6 @@ textarea { resize: vertical; min-height: 68px; }
 .tour-actions .grow { flex: 1; }
 
 /* ---------- Tutorial: help mode ---------- */
-#helpBtn svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 #helpBtn[aria-pressed="true"] { background: var(--goal-soft); color: var(--goal); }
 .help-banner {
   display: flex; gap: 12px; align-items: center; margin-bottom: 16px; padding: 12px 14px;

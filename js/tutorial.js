@@ -67,13 +67,17 @@ function showStep(i) {
   const first = tour.step === 0;
   const last = tour.step === tour.steps.length - 1;
   const btn = (act, cls, label) => `<button type="button" class="btn ${cls}" data-tour="${act}">${label}</button>`;
+  let actions;
+  if (last) actions = `${btn('keep', 'ghost', t('tour.keep'))}<span class="grow"></span>${btn('finish', 'primary', t('tour.finish'))}`;
+  else {
+    actions = `${btn('skip', 'ghost', t('tour.skip'))}<span class="grow"></span>` +
+      `${first ? '' : btn('back', 'ghost', t('tour.back'))}${btn('next', 'primary', t(first ? 'tour.start' : 'tour.next'))}`;
+  }
   $('.tour-card').innerHTML = `
     <p class="tour-count">${t('tour.count', { n: tour.step + 1, total: tour.steps.length })}</p>
     <h2 id="tourTitle">${t(`tour.${s.key}.title`)}</h2>
     <p id="tourText">${t(`tour.${s.key}.text`)}</p>
-    <div class="tour-actions">${last
-      ? `${btn('keep', 'ghost', t('tour.keep'))}<span class="grow"></span>${btn('finish', 'primary', t('tour.finish'))}`
-      : `${btn('skip', 'ghost', t('tour.skip'))}<span class="grow"></span>${first ? '' : btn('back', 'ghost', t('tour.back'))}${btn('next', 'primary', first ? t('tour.start') : t('tour.next'))}`}
+    <div class="tour-actions">${actions}
     </div>`;
   bringIntoView(firstVisible(s.target));
   placeTour();

@@ -146,6 +146,7 @@ function normalize(data) {
 /* ---------- Utilities ---------- */
 
 const $ = (sel, root = document) => root.querySelector(sel);
+const viewEl = $('#view');
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -180,6 +181,8 @@ function parseNum(s) {
 }
 // A stored number ("78.5") as typed in the current language ("78,5" in Slovenian).
 const numInput = v => (isNum(v) ? String(v).replace('.', (1.5).toLocaleString(locale()).charAt(1)) : v ?? '');
+
+const itemCount = () => db.goals.length + db.states.length + db.activities.length;
 
 function collection(kind) {
   return { goal: db.goals, state: db.states, activity: db.activities }[kind];
@@ -269,6 +272,7 @@ function removeEntity(kind, id) {
   const list = collection(kind);
   list.splice(list.findIndex(x => x.id === id), 1);
   db.relations = db.relations.filter(r => r.from !== id && r.to !== id);
+  if (ui.mapSelected === id) ui.mapSelected = null;
 }
 
 /* ---------- SMART & progress ---------- */
@@ -403,6 +407,22 @@ function hideDoneToggle() {
   return `<button class="chip" data-hide-done aria-pressed="${ui.hideDone}">${t('acts.hideDone')}</button>`;
 }
 
+// "waits for n" tag listing the unfinished items something waits for.
+function waitsForTag(waits) {
+  return `<span class="tag bad" title="${esc(waits.map(w => w.title).join(', '))}">${t('acts.waitsFor', { n: waits.length })}</span>`;
+}
+
+function statusLegend() {
+  return NODE_STATES.map(s => `<span><i class="swatch st-${s}"></i>${esc(t('nodeState.' + s))}</span>`).join('');
+}
+
+// The selected item and everything directly linked to it.
+function neighbourhood(sel, rels) {
+  const near = new Set(sel ? [sel] : []);
+  if (sel) rels.forEach(r => { if (r.from === sel) near.add(r.to); if (r.to === sel) near.add(r.from); });
+  return near;
+}
+
 function linkTag(id) {
   const e = findEntity(id);
   if (!e) return '';
@@ -418,7 +438,7 @@ function statusCheck(a) {
 function emptyState(title, text, kind) {
   return `<div class="empty"><h3>${title}</h3><div>${text}</div>
     <button class="btn primary" data-new="${kind}"><span aria-hidden="true">+</span> ${t('add.' + kind)}</button>
-    ${db.goals.length + db.activities.length + db.states.length === 0 ? `<div><button class="btn ghost" data-sample>${t('btn.sampleAlt')}</button></div>` : ''}</div>`;
+    ${itemCount() === 0 ? `<div><button class="btn ghost" data-sample>${t('btn.sampleAlt')}</button></div>` : ''}</div>`;
 }
 
 const byDueDate = (a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
@@ -451,7 +471,7 @@ function render() {
   const old = ui.mapRefocus ? null : $('.map-wrap, .tl-scroll');
   const prevScroll = old && { left: old.scrollLeft, top: old.scrollTop };
   ui.mapRefocus = false;
-  $('#view').innerHTML = v.render();
+  viewEl.innerHTML = v.render();
   if (ui.view === 'activities') bindDragDrop();
   // Keep the map / timeline where the user left it; on first show, centre on the goals / today.
   const wrap = $('.map-wrap, .tl-scroll');
@@ -463,15 +483,12 @@ function render() {
 }
 
 function renderDashboard() {
+  if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
+
   const active = db.goals.filter(g => g.status !== 'achieved' && g.status !== 'paused');
   const avg = active.length ? active.reduce((s, g) => s + goalProgress(g), 0) / active.length : 0;
   const doneActs = db.activities.filter(a => a.status === 'done').length;
   const overdue = db.activities.filter(a => a.status !== 'done' && a.dueDate && daysUntil(a.dueDate) < 0).length;
-
-  if (!db.goals.length && !db.activities.length && !db.states.length) {
-    return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
-  }
-
   const next = db.activities
     .filter(a => a.status !== 'done')
     .sort(byDueDate)
@@ -524,7 +541,7 @@ function goalCard(g) {
     <div class="meta"><span>${esc(g.metric)}: <strong>${fmtNum(goalCurrent(g))}${unit}</strong></span></div>
     <div class="meta">
       ${g.status !== 'active' ? `<span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${t('goal.' + g.status)}</span>` : ''}
-      ${waits.length ? `<span class="tag bad" title="${esc(waits.map(w => w.title).join(', '))}">${t('acts.waitsFor', { n: waits.length })}</span>` : ''}
+      ${waits.length ? waitsForTag(waits) : ''}
       ${deadlineTag(g.deadline, g.status === 'achieved')}
       <span>${t('goals.activities', { done, total: acts.length })}</span>
       ${st ? `<span title="${esc(t('goals.measuredBy'))}">◐ ${esc(st.title)}</span>` : ''}
@@ -616,6 +633,9 @@ function categoryChips() {
   return `<div class="chips cat-chips" role="group" aria-label="${esc(t('f.category'))}">${chip('', t('cat.all'))}${cats.map(c => chip(c, c, db.goals.filter(g => g.category === c).length)).join('')}</div>`;
 }
 
+// The ui field holding each view's goal filter, by the goal picker's data-goal-select value.
+const GOAL_FILTERS = { activity: 'activityGoal', map: 'mapGoal', timeline: 'timelineGoal', graphs: 'graphGoal' };
+
 // Goal picker limited to the selected category, grouped by category otherwise.
 function goalSelect(target, value) {
   const option = g => `<option value="${g.id}" ${value === g.id ? 'selected' : ''}>${esc(g.title)}</option>`;
@@ -643,7 +663,7 @@ function activityCard(a) {
     ${children.length ? progressBar(childrenDone / children.length * 100, t('acts.subDone', { done: childrenDone, total: children.length })) : ''}
     <div class="meta">
       ${deadlineTag(a.dueDate, a.status === 'done')}
-      ${blocked.length ? `<span class="tag bad" title="${esc(blocked.map(b => b.title).join(', '))}">${t('acts.waitsFor', { n: blocked.length })}</span>` : ''}
+      ${blocked.length ? waitsForTag(blocked) : ''}
     </div>
     ${parent ? `<div class="links"><span class="meta">${t('acts.partOf')}</span>${linkTag(parent.to)}</div>` : ''}
     ${goals ? `<div class="links">${goals}</div>` : ''}
@@ -873,8 +893,7 @@ function layoutMap(items, rels) {
 }
 
 function renderMap() {
-  const total = db.goals.length + db.states.length + db.activities.length;
-  if (!total) return emptyState(t('map.emptyTitle'), t('map.emptyText'), 'goal');
+  if (!itemCount()) return emptyState(t('map.emptyTitle'), t('map.emptyText'), 'goal');
 
   const scope = scopeFor(ui.mapGoal);
   const keep = kind => item => (!scope || scope[kind].has(item.id)) && !(kind === 'activity' && ui.hideDone && item.status === 'done');
@@ -889,8 +908,7 @@ function renderMap() {
   const { node, layers, bands, chains, W, H } = layoutMap(items, rels);
 
   const sel = ui.mapSelected && visible.has(ui.mapSelected) ? ui.mapSelected : null;
-  const near = new Set(sel ? [sel] : []);
-  if (sel) rels.forEach(r => { if (r.from === sel) near.add(r.to); if (r.to === sel) near.add(r.from); });
+  const near = neighbourhood(sel, rels);
 
   // Each line sits in a group with a wide invisible twin, so it is easy to hit; clicking it edits the relationship.
   const edges = chains.map(c => {
@@ -939,9 +957,10 @@ function renderMap() {
     const count = db.relations.filter(r => r.type === k).length;
     return `<button class="chip rel-toggle" data-rel-toggle="${k}" aria-pressed="${!ui.mapHidden.has(k)}" title="${esc(relSignature(k))}"><i class="${d.dash ? 'dash' : ''}" style="border-color:${d.color}"></i>${esc(relLabel(k))}<span class="count">${count}</span></button>`;
   }).join('');
-  const stateLegend = NODE_STATES.map(s => `<span><i class="swatch st-${s}"></i>${esc(t('nodeState.' + s))}</span>`).join('');
   const goalNodes = items.goal.length ? items.goal : Object.values(items).flat();
   const focusX = Math.round(goalNodes.reduce((s, x) => s + node[x.id].x, 0) / goalNodes.length * ui.mapScale);
+  let relNote = '';
+  if (!rels.length) relNote = db.relations.length ? `<div class="empty">${t('map.noneShown')}</div>` : emptyState(t('map.relEmptyTitle'), t('map.relEmptyText'), 'relation');
   const zoomBtn = (dir, label) => `<button type="button" class="icon-btn" data-map-zoom="${dir}" aria-label="${esc(t('map.zoom.' + dir))}" title="${esc(t('map.zoom.' + dir))}">${label}</button>`;
 
   return `
@@ -949,7 +968,7 @@ function renderMap() {
     <div class="toolbar">${goalSelect('map', ui.mapGoal)}${hideDoneToggle()}</div>
     <div class="map-controls">
       <div class="chips" role="group" aria-label="${esc(t('map.toggles'))}"><span class="ctl-label">${t('map.show')}</span>${toggles}</div>
-      <div class="map-legend"><span class="ctl-label">${t('map.status')}</span>${stateLegend}
+      <div class="map-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}
         <div class="zoom-ctl" role="group" aria-label="${esc(t('map.zoom'))}">${zoomBtn('out', '−')}${zoomBtn('reset', `<span class="zoom-pct">${Math.round(ui.mapScale * 100)} %</span>`)}${zoomBtn('in', '+')}</div>
       </div>
     </div>
@@ -957,7 +976,7 @@ function renderMap() {
       <defs>${markers}</defs>${bandSvg}${edges}${nodes}
     </svg></div>
     ${sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
-    ${rels.length ? '' : db.relations.length ? `<div class="empty">${t('map.noneShown')}</div>` : emptyState(t('map.relEmptyTitle'), t('map.relEmptyText'), 'relation')}
+    ${relNote}
   `;
 }
 
@@ -1057,8 +1076,7 @@ function renderTimeline() {
   }
 
   const sel = ui.mapSelected && rows.some(r => r.item?.id === ui.mapSelected) ? ui.mapSelected : null;
-  const near = new Set(sel ? [sel] : []);
-  if (sel) db.relations.forEach(r => { if (r.from === sel) near.add(r.to); if (r.to === sel) near.add(r.from); });
+  const near = neighbourhood(sel, db.relations);
 
   const geo = {};
   const body = rows.map((r, i) => {
@@ -1113,7 +1131,7 @@ function renderTimeline() {
       <button class="chip" data-tl-deps aria-pressed="${ui.tlDeps}">${t('tl.deps')}</button>
       <div class="chips" role="group" aria-label="${esc(t('tl.zoom'))}">${zoom}</div>
     </div>
-    <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${NODE_STATES.map(s => `<span><i class="swatch st-${s}"></i>${esc(t('nodeState.' + s))}</span>`).join('')}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
+    <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
     <div class="map-legend tl-legend"><span class="ctl-label">${t('tl.links')}</span>${['contributes', 'subactivity', 'subgoal', ...(ui.tlDeps ? ['depends'] : [])].map(k =>
       `<span><i class="line-key${REL_TYPES[k].dash ? ' dash' : ''}" style="--rel:${REL_TYPES[k].color}"></i>${esc(relLabel(k))}</span>`).join('')}</div>
     ${rows.length ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + 145)}" data-from="${from}">
@@ -1172,7 +1190,12 @@ function stateChange(s, points, targets) {
   return { first, delta, pct, good: aim && delta ? Math.sign(delta) === aim : null };
 }
 
-const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + fmtNum(Math.abs(n));
+function signed(n) {
+  let sign = '±';
+  if (n > 0) sign = '+';
+  else if (n < 0) sign = '−';
+  return sign + fmtNum(Math.abs(n));
+}
 const withUnit = (n, unit) => (unit ? `${n} ${unit}` : n);
 
 function changeTag(s, change) {
@@ -1211,7 +1234,7 @@ function graphCard(s, width) {
   const dateTicks = [x0, x1];
   const todayN = dayNum(today());
   if (todayN > x0 && todayN < x1 && px(todayN) - px(x0) > 80 && px(x1) - px(todayN) > 80) dateTicks.push(todayN);
-  const xAxis = dateTicks.map((d, i) => `<text class="gr-axis" x="${px(d)}" y="${GR.H - 6}" text-anchor="${i === 0 ? 'start' : i === 1 ? 'end' : 'middle'}">${esc(fmtDate(dayStr(d)))}</text>`).join('');
+  const xAxis = dateTicks.map((d, i) => `<text class="gr-axis" x="${px(d)}" y="${GR.H - 6}" text-anchor="${['start', 'end', 'middle'][i]}">${esc(fmtDate(dayStr(d)))}</text>`).join('');
   const todayLine = todayN > x0 && todayN <= x1 ? `<line class="gr-today" x1="${px(todayN)}" x2="${px(todayN)}" y1="${GR.T}" y2="${GR.H - GR.B}"/>` : '';
 
   const targetLines = targets.map(tg => {
@@ -1286,8 +1309,8 @@ function renderGraphs() {
   const withData = list.filter(s => stateSeries(s).length);
   const without = list.filter(s => !stateSeries(s).length);
   // Cards take the full width of the view; charts are drawn at that pixel width so text stays crisp.
-  const view = $('#view');
-  const width = clamp(view.clientWidth - parseFloat(getComputedStyle(view).paddingLeft) - parseFloat(getComputedStyle(view).paddingRight) - 38, GR.MIN_W, GR.MAX_W);
+  const viewStyle = getComputedStyle(viewEl);
+  const width = clamp(viewEl.clientWidth - parseFloat(viewStyle.paddingLeft) - parseFloat(viewStyle.paddingRight) - 38, GR.MIN_W, GR.MAX_W);
   Object.keys(grCharts).forEach(k => delete grCharts[k]);
   return `${categoryChips()}
     <div class="toolbar">${goalSelect('graphs', ui.graphGoal)}${searchBox()}</div>
@@ -1331,23 +1354,19 @@ function nearestPoint(plot, clientX) {
   return best;
 }
 
-$('#view').addEventListener('pointermove', e => {
+['pointermove', 'pointerdown'].forEach(type => viewEl.addEventListener(type, e => {
   const plot = e.target.closest('.gr-plot');
   if (plot) showGraphPoint(plot, nearestPoint(plot, e.clientX));
-});
-$('#view').addEventListener('pointerdown', e => {
-  const plot = e.target.closest('.gr-plot');
-  if (plot) showGraphPoint(plot, nearestPoint(plot, e.clientX));
-});
-$('#view').addEventListener('pointerout', e => {
+}));
+viewEl.addEventListener('pointerout', e => {
   const plot = e.target.closest('.gr-plot');
   if (plot && !plot.contains(e.relatedTarget) && document.activeElement !== plot) hideGraphPoint(plot);
 });
-$('#view').addEventListener('focusin', e => {
+viewEl.addEventListener('focusin', e => {
   if (e.target.matches('.gr-plot')) showGraphPoint(e.target, grCharts[e.target.closest('[data-gr]').dataset.gr].points.length - 1);
 });
-$('#view').addEventListener('focusout', e => { if (e.target.matches('.gr-plot')) hideGraphPoint(e.target); });
-$('#view').addEventListener('keydown', e => {
+viewEl.addEventListener('focusout', e => { if (e.target.matches('.gr-plot')) hideGraphPoint(e.target); });
+viewEl.addEventListener('keydown', e => {
   const plot = e.target.closest?.('.gr-plot');
   if (!plot) return;
   const n = grCharts[plot.closest('[data-gr]').dataset.gr].points.length;
@@ -1395,7 +1414,8 @@ function smartSection(letter, body) {
 // for a new relationship, { from: id } pre-selects its source.
 function openForm(kind, id = null, links = {}) {
   formCtx = { kind, id };
-  const item = !id ? null : kind === 'relation' ? db.relations.find(r => r.id === id) : findEntity(id)?.item;
+  let item = null;
+  if (id) item = kind === 'relation' ? db.relations.find(r => r.id === id) : findEntity(id)?.item;
   $('#deleteBtn').hidden = !item;
   $('#modalTitle').textContent = t((item ? 'edit.' : 'new.') + kind);
   $('#modalBody').innerHTML = { goal: goalForm, state: stateForm, activity: activityForm, relation: relationForm }[kind](item || { links });
@@ -1649,11 +1669,11 @@ document.querySelectorAll('.nav-item[data-view]').forEach(b => b.addEventListene
 
 $('#addBtn').addEventListener('click', () => {
   const kind = VIEWS[ui.view].add;
-  if (kind === 'relation' && db.goals.length + db.states.length + db.activities.length < 2) return toast(t('err.needTwo'));
+  if (kind === 'relation' && itemCount() < 2) return toast(t('err.needTwo'));
   openForm(kind);
 });
 
-$('#view').addEventListener('click', e => {
+viewEl.addEventListener('click', e => {
   const el = e.target.closest('[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom]');
   if (!el) return;
   e.stopPropagation();
@@ -1674,7 +1694,7 @@ $('#view').addEventListener('click', e => {
     const scale = { in: ui.mapScale * 1.25, out: ui.mapScale / 1.25, reset: 1 }[el.dataset.mapZoom];
     return zoomMap(scale, r.left + wrap.clientWidth / 2, r.top + wrap.clientHeight / 2);
   }
-  if (el.hasAttribute('data-tl-deps')) { ui.tlDeps = !ui.tlDeps; prefs.set('tlDeps', ui.tlDeps); return render(); }
+  if (el.hasAttribute('data-tl-deps')) return setToggle('tlDeps', !ui.tlDeps);
   const node = nodeId(el);
   if (node) { ui.mapSelected = ui.mapSelected === node ? null : node; return render(); }
   if (el.hasAttribute('data-map-clear')) { ui.mapSelected = null; return render(); }
@@ -1685,14 +1705,10 @@ $('#view').addEventListener('click', e => {
     prefs.set('mapHidden', [...ui.mapHidden]);
     return render();
   }
-  if (el.hasAttribute('data-hide-done')) {
-    ui.hideDone = !ui.hideDone;
-    prefs.set('hideDone', ui.hideDone);
-    return render();
-  }
+  if (el.hasAttribute('data-hide-done')) return setToggle('hideDone', !ui.hideDone);
 });
 
-$('#view').addEventListener('input', e => {
+viewEl.addEventListener('input', e => {
   if (e.target.matches('[data-search]')) {
     ui.search = e.target.value;
     const pos = e.target.selectionStart;
@@ -1702,9 +1718,9 @@ $('#view').addEventListener('input', e => {
     box.setSelectionRange(pos, pos);
   }
 });
-$('#view').addEventListener('change', e => {
+viewEl.addEventListener('change', e => {
   if (e.target.matches('[data-goal-select]')) {
-    ui[{ activity: 'activityGoal', map: 'mapGoal', timeline: 'timelineGoal', graphs: 'graphGoal' }[e.target.dataset.goalSelect]] = e.target.value;
+    ui[GOAL_FILTERS[e.target.dataset.goalSelect]] = e.target.value;
     ui.mapRefocus = true;
     render();
   }
@@ -1741,7 +1757,6 @@ $('#deleteBtn').addEventListener('click', () => {
   const item = findEntity(id)?.item;
   if (!item || !confirm(t('confirm.delete', { name: item.title }))) return;
   removeEntity(kind, id);
-  if (ui.mapSelected === id) ui.mapSelected = null;
   finish(t('toast.deleted.' + kind));
 });
 
@@ -1859,10 +1874,17 @@ const settings = $('#settings');
 // Display options shown as switches: how to read each one and what changing it does.
 const SETTINGS = {
   help: { get: () => ui.help, set: v => setHelp(v) },
-  hideDone: { get: () => ui.hideDone, set: v => { ui.hideDone = v; prefs.set('hideDone', v); render(); } },
-  tlDeps: { get: () => ui.tlDeps, set: v => { ui.tlDeps = v; prefs.set('tlDeps', v); render(); } },
+  hideDone: { get: () => ui.hideDone, set: v => setToggle('hideDone', v) },
+  tlDeps: { get: () => ui.tlDeps, set: v => setToggle('tlDeps', v) },
   navCollapsed: { get: () => ui.navCollapsed, set: v => setNavCollapsed(v) },
 };
+
+// A remembered on/off display option (hideDone, tlDeps).
+function setToggle(key, on) {
+  ui[key] = on;
+  prefs.set(key, on);
+  render();
+}
 
 function renderSettings() {
   settings.querySelectorAll('[data-setting]').forEach(box => (box.checked = SETTINGS[box.dataset.setting].get()));
@@ -1987,16 +2009,14 @@ function runCtxAction(act, id) {
   }
   if (verb === 'delete' && confirm(t('confirm.delete', { name: item.title }))) {
     removeEntity(kind, id);
-    if (ui.mapSelected === id) ui.mapSelected = null;
-    ['activityGoal', 'mapGoal', 'timelineGoal', 'graphGoal'].forEach(k => { if (ui[k] === id) ui[k] = ''; });
+    Object.values(GOAL_FILTERS).forEach(k => { if (ui[k] === id) ui[k] = ''; });
     save();
     render();
     toast(t('toast.deleted.' + kind));
   }
 }
 
-const mapView = $('#view');
-mapView.addEventListener('contextmenu', e => {
+viewEl.addEventListener('contextmenu', e => {
   const node = e.target.closest(NODE_SEL);
   if (!node) return;
   e.preventDefault();
@@ -2005,17 +2025,17 @@ mapView.addEventListener('contextmenu', e => {
 
 // Long-press for touch screens (iOS Safari never fires contextmenu).
 let press = null;
-mapView.addEventListener('pointerdown', e => {
+viewEl.addEventListener('pointerdown', e => {
   const node = e.target.closest(NODE_SEL);
   if (!node || e.pointerType === 'mouse') return;
   const p = { x: e.clientX, y: e.clientY, fired: false };
   p.timer = setTimeout(() => { p.fired = true; openCtxMenu(nodeId(node), p.x, p.y + 12); }, LONG_PRESS_MS);
   press = p;
 });
-mapView.addEventListener('pointermove', e => {
+viewEl.addEventListener('pointermove', e => {
   if (press && !press.fired && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) { clearTimeout(press.timer); press = null; }
 });
-['pointerup', 'pointercancel'].forEach(type => mapView.addEventListener(type, () => press && clearTimeout(press.timer)));
+['pointerup', 'pointercancel'].forEach(type => viewEl.addEventListener(type, () => press && clearTimeout(press.timer)));
 // The click that ends a long-press must not also toggle highlighting or hit a menu item.
 document.addEventListener('click', e => {
   if (press?.fired) { e.stopPropagation(); e.preventDefault(); }
@@ -2071,11 +2091,11 @@ function queueZoom(wrap, factor, cx, cy) {
 const ZOOM_SEL = '.map-wrap, .tl-scroll';
 
 // Ctrl + wheel; trackpad pinch in Chrome, Edge and Firefox also arrives as ctrl + wheel.
-mapView.addEventListener('wheel', e => {
+viewEl.addEventListener('wheel', e => {
   const wrap = e.ctrlKey && e.target.closest(ZOOM_SEL);
   if (!wrap) return;
   e.preventDefault();
-  const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+  const dy = e.deltaY * ([1, 16, 400][e.deltaMode] ?? 1); // deltaMode: pixels, lines or pages
   queueZoom(wrap, Math.exp(-clamp(dy, -100, 100) * 0.0025), e.clientX, e.clientY);
 }, { passive: false });
 
@@ -2098,7 +2118,7 @@ function pinchEnd(e) {
   });
   pinch = null;
 }
-mapView.addEventListener('touchstart', e => {
+viewEl.addEventListener('touchstart', e => {
   const wrap = e.touches.length === 2 && e.target.closest(ZOOM_SEL);
   if (!wrap) return;
   pinch = { wrap, gap: touchGap(e.touches), targets: new Set([...e.touches].map(x => x.target)) };
@@ -2111,7 +2131,7 @@ mapView.addEventListener('touchstart', e => {
 
 // Click and drag with the mouse pans the map and the timeline (touch screens pan natively).
 let pan = null;
-mapView.addEventListener('pointerdown', e => {
+viewEl.addEventListener('pointerdown', e => {
   const wrap = e.pointerType === 'mouse' && e.button === 0 && e.target.closest(ZOOM_SEL);
   if (!wrap) return;
   const r = wrap.getBoundingClientRect();
@@ -2155,7 +2175,7 @@ function gestureEnd() {
   gesture.target.removeEventListener('gestureend', gestureEnd);
   gesture = null;
 }
-mapView.addEventListener('gesturestart', e => {
+viewEl.addEventListener('gesturestart', e => {
   const wrap = e.target.closest?.(ZOOM_SEL);
   if (!wrap) return;
   e.preventDefault();
@@ -2164,7 +2184,7 @@ mapView.addEventListener('gesturestart', e => {
   e.target.addEventListener('gestureend', gestureEnd);
 });
 
-mapView.addEventListener('keydown', e => {
+viewEl.addEventListener('keydown', e => {
   if (e.target.closest?.('[data-rel-edit]') && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
     return openForm('relation', e.target.closest('[data-rel-edit]').dataset.relEdit);
@@ -2181,7 +2201,7 @@ mapView.addEventListener('keydown', e => {
   }
 });
 
-mapView.addEventListener('dblclick', e => {
+viewEl.addEventListener('dblclick', e => {
   const id = nodeId(e.target.closest(NODE_SEL));
   const ent = id && findEntity(id);
   if (ent) openForm(ent.kind, id);

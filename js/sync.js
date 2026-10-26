@@ -75,6 +75,19 @@ function newerOf(x, y) {
   return itemContent(x) >= itemContent(y) ? x : y;
 }
 
+// Newest first; ties are broken by id so every device keeps the same one.
+function newestFirst(p, q) {
+  if (stamp(p) !== stamp(q)) return stamp(q) > stamp(p) ? 1 : -1;
+  return q.id.localeCompare(p.id);
+}
+
+// Tombstones from both sides: the later deletion of an id wins.
+function mergeDeleted(a, b) {
+  const deleted = { ...a };
+  Object.entries(b).forEach(([id, at]) => { if (!deleted[id] || at > deleted[id]) deleted[id] = at; });
+  return deleted;
+}
+
 // Current states: measurements from both versions are kept (one per date, the newer version's
 // value wins on a clash), and the state's value follows its latest measurement.
 function mergeState(x, y) {
@@ -90,16 +103,14 @@ function mergeState(x, y) {
 
 function mergePlans(a, b) {
   const out = emptyDb();
-
-  // Tombstones: the later deletion of an id wins.
-  const deleted = { ...(a.deleted || {}) };
-  Object.entries(b.deleted || {}).forEach(([id, at]) => { if (!deleted[id] || at > deleted[id]) deleted[id] = at; });
+  const deleted = mergeDeleted(a.deleted || {}, b.deleted || {});
 
   for (const c of SYNC_COLLS) {
     const byId = new Map();
     for (const x of [...a[c], ...b[c]]) {
       const cur = byId.get(x.id);
-      byId.set(x.id, !cur ? x : c === 'states' ? mergeState(cur, x) : newerOf(cur, x));
+      if (!cur) byId.set(x.id, x);
+      else byId.set(x.id, c === 'states' ? mergeState(cur, x) : newerOf(cur, x));
     }
     // An item survives a deletion only if it was edited after it.
     out[c] = [...byId.values()].filter(x => !(deleted[x.id] && deleted[x.id] >= stamp(x)));
@@ -117,7 +128,7 @@ function repairRelations(data) {
   const key = r => `${r.from}|${r.type}|${r.to}`;
   const rels = data.relations
     .filter(r => ids.has(r.from) && ids.has(r.to))
-    .sort((p, q) => (stamp(q) === stamp(p) ? q.id.localeCompare(p.id) : stamp(q) > stamp(p) ? 1 : -1)); // newest first
+    .sort(newestFirst);
   const kept = [], seen = new Set(), hasParent = new Set();
   const parentTypes = new Set(Object.values(PARENT_REL));
   // Does `start` already reach `target` through kept links of this type?
@@ -157,8 +168,7 @@ function lastTouched(entry, data) {
 }
 
 function mergeStores(a, b) {
-  const deleted = { ...(a.plans.deleted || {}) };
-  Object.entries(b.plans.deleted || {}).forEach(([id, at]) => { if (!deleted[id] || at > deleted[id]) deleted[id] = at; });
+  const deleted = mergeDeleted(a.plans.deleted || {}, b.plans.deleted || {});
   const entries = new Map();
   [...a.plans.list, ...b.plans.list].forEach(p => {
     const cur = entries.get(p.id);
@@ -166,8 +176,8 @@ function mergeStores(a, b) {
   });
   const list = [], data = {};
   entries.forEach((p, id) => {
-    const da = a.data[id], dbb = b.data[id];
-    const plan = da && dbb ? mergePlans(da, dbb) : da || dbb || emptyDb();
+    const dataA = a.data[id], dataB = b.data[id];
+    const plan = dataA && dataB ? mergePlans(dataA, dataB) : dataA || dataB || emptyDb();
     if (deleted[id] && deleted[id] >= lastTouched(p, plan)) return;
     list.push(p);
     data[id] = plan;

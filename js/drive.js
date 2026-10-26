@@ -216,8 +216,8 @@ async function syncNow(interactive = false) {
     prefs.set('lastSync', new Date().toISOString());
     setSyncStatus('synced');
   } catch (e) {
-    if (!(e instanceof SyncError)) console.error(e);
-    setSyncStatus(e instanceof SyncError ? (e.code === 'auth' ? 'paused' : e.code) : 'error');
+    if (e instanceof SyncError) setSyncStatus(e.code === 'auth' ? 'paused' : e.code);
+    else { console.error(e); setSyncStatus('error'); }
   } finally {
     syncState.busy = false;
     if (syncState.again) { syncState.again = false; scheduleSync(); }
@@ -272,15 +272,17 @@ function renderSync() {
   btn.hidden = !connected;
   btn.dataset.status = syncState.status;
   btn.title = syncStatusText();
-  btn.setAttribute('aria-label', syncStatusText());
+  btn.setAttribute('aria-label', btn.title);
   const action = (act, label, cls = '') => `<button type="button" class="btn small ${cls}" data-sync="${act}">${label}</button>`;
-  $('#syncSection .sync-body').innerHTML = !syncConfigured()
-    ? `<p class="hint">${t('sync.notConfigured')}</p>`
-    : !connected
-      ? `<p class="hint">${t('sync.intro')}</p><div class="set-actions">${action('connect', t('sync.connect'))}</div>`
-      : `<p class="sync-status" data-status="${syncState.status}"><i aria-hidden="true"></i>${esc(syncStatusText())}</p>
-        <div class="set-actions">${action('now', t('sync.now'))}${action('disconnect', t('sync.disconnect'), 'ghost')}</div>
-        <p class="hint">${t('sync.clockHint')}</p>`;
+  let html;
+  if (!syncConfigured()) html = `<p class="hint">${t('sync.notConfigured')}</p>`;
+  else if (!connected) html = `<p class="hint">${t('sync.intro')}</p><div class="set-actions">${action('connect', t('sync.connect'))}</div>`;
+  else {
+    html = `<p class="sync-status" data-status="${syncState.status}"><i aria-hidden="true"></i>${esc(syncStatusText())}</p>
+      <div class="set-actions">${action('now', t('sync.now'))}${action('disconnect', t('sync.disconnect'), 'ghost')}</div>
+      <p class="hint">${t('sync.clockHint')}</p>`;
+  }
+  $('#syncSection .sync-body').innerHTML = html;
 }
 
 function initSync() {
