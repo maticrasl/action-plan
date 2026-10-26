@@ -214,7 +214,7 @@ svg { flex: none; }
 .chip.active, .chip[data-hide-done][aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .search { flex: 1; min-width: 160px; max-width: 320px; }
 
-input[type=text], input[type=number], input[type=date], input[type=search], select, textarea {
+input[type=text], input[type=date], input[type=search], select, textarea {
   width: 100%; border: 1px solid var(--line-strong); background: var(--surface);
   border-radius: var(--r-md); padding: 9px 12px; outline: none;
 }

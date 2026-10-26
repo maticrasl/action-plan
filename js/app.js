@@ -169,6 +169,17 @@ function fmtDate(date) {
 function fmtNum(n) {
   return Number(n).toLocaleString(locale(), { maximumFractionDigits: 2 });
 }
+// A number typed with a decimal dot or comma ("78.5", "78,5", "1 234,5", "1,234.5"); NaN if it isn't one.
+function parseNum(s) {
+  let v = String(s ?? '').trim().replace(/[\s  ']/g, '').replace(/^−/, '-');
+  const dot = v.lastIndexOf('.'), comma = v.lastIndexOf(',');
+  // With both, the last one is the decimal separator and the other groups thousands.
+  if (dot >= 0 && comma >= 0) v = dot > comma ? v.replace(/,/g, '') : v.replace(/\./g, '').replace(',', '.');
+  else v = v.replace(',', '.');
+  return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(v) ? Number(v) : NaN;
+}
+// A stored number ("78.5") as typed in the current language ("78,5" in Slovenian).
+const numInput = v => (isNum(v) ? String(v).replace('.', (1.5).toLocaleString(locale()).charAt(1)) : v ?? '');
 
 function collection(kind) {
   return { goal: db.goals, state: db.states, activity: db.activities }[kind];
@@ -1364,7 +1375,8 @@ function field(name, label, input, hint = '') {
   return `<div class="field" data-field="${name}"><label for="f-${name}">${label}</label>${input}${hint ? `<div class="hint">${hint}</div>` : ''}<div class="err"></div></div>`;
 }
 const text = (name, v, ph = '') => `<input type="text" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}">`;
-const num = (name, v, ph = '') => `<input type="number" step="any" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}" inputmode="decimal">`;
+// A text field rather than type="number", so both a decimal dot and comma work in every browser.
+const num = (name, v, ph = '') => `<input type="text" data-num id="f-${name}" name="${name}" value="${esc(numInput(v))}" placeholder="${esc(ph)}" inputmode="decimal" autocomplete="off">`;
 const date = (name, v) => `<input type="date" id="f-${name}" name="${name}" value="${esc(v)}">`;
 const area = (name, v, ph = '') => `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
 const select = (name, opts, v) => `<select id="f-${name}" name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
@@ -1495,8 +1507,16 @@ function formValues() {
     if (k in v) v[k] = [].concat(v[k], val);
     else v[k] = val;
   }
+  // Number fields are stored with a dot; `bad` lists those that hold something other than a number.
+  const bad = [];
+  modal.querySelectorAll('input[data-num]').forEach(i => {
+    const n = parseNum(i.value);
+    if (!i.value.trim()) v[i.name] = '';
+    else if (isNaN(n)) { v[i.name] = ''; bad.push(i.name); }
+    else v[i.name] = String(n);
+  });
   const arr = k => (v[k] === undefined ? [] : [].concat(v[k]));
-  return { v, arr };
+  return { v, arr, bad };
 }
 
 function showErrors(errs) {
@@ -1521,7 +1541,7 @@ function updateSmartLive() {
 
 function submitForm() {
   const { kind, id } = formCtx;
-  const { v, arr } = formValues();
+  const { v, arr, bad } = formValues();
   const existing = id ? findEntity(id)?.item : null;
 
   if (kind === 'relation') {
@@ -1538,6 +1558,7 @@ function submitForm() {
     return finish(t(old ? 'toast.relUpdated' : 'toast.relAdded'));
   }
 
+  if (bad.length) return showErrors(Object.fromEntries(bad.map(k => [k, t('err.number')])));
   if (!v.title || !v.title.trim()) return showErrors({ title: t('err.titleRequired') });
 
   if (kind === 'goal') {
