@@ -374,6 +374,36 @@ textarea { resize: vertical; min-height: 68px; }
 .col .card { margin-bottom: 8px; }
 .col.drop { outline: 2px dashed var(--goal); outline-offset: -4px; }
 
+/* ---------- Routines ---------- */
+.routines { margin-bottom: 18px; }
+.routines-title { font-size: 15px; padding: 0 6px 10px; display: flex; align-items: center; gap: 8px; }
+.routines-title::before { content: "⟳"; color: var(--goal); font-size: 16px; }
+.routines-title span { color: var(--ink-3); font-weight: 600; }
+.routine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 12px; }
+.card.routine { border-left: 4px solid var(--line-strong); }
+.card.routine.st-doing { border-left-color: var(--warn); }
+.card.routine.st-done { border-left-color: var(--ok); }
+.card.routine.st-late { border-left-color: var(--bad); }
+.card.routine.st-blocked { border-left-color: var(--ink-3); }
+.rt-sched { flex: none; }
+.rt-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.rt-day {
+  height: 34px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--surface);
+  color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; display: grid; place-items: center;
+}
+.rt-day.due { border-color: var(--goal); color: var(--ink); }
+.rt-day.today { box-shadow: inset 0 -3px 0 var(--goal); }
+.rt-day.on { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.rt-day:hover:not(:disabled) { border-color: var(--ink-2); }
+.rt-day:disabled { opacity: .35; cursor: default; }
+.routine-row .meta { font-size: 12.5px; margin-left: 6px; }
+.repeat-box { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; border: 1px dashed var(--line-strong); border-radius: var(--r-md); }
+.repeat-box [hidden] { display: none; }
+.day-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.day-toggle { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.day-toggle[aria-pressed="true"] { background: var(--goal); border-color: var(--goal); color: var(--surface); }
+.rt-stats { margin: 0; }
+
 /* ---------- Map ---------- */
 .map-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
 .ctl-label { font-size: 13.5px; font-weight: 700; color: var(--ink-2); margin-right: 4px; }

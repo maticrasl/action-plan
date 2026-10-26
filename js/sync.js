@@ -101,6 +101,16 @@ function mergeState(x, y) {
   return merged;
 }
 
+// Routines: check-ins from both versions are kept per date (the newer version wins on a clash,
+// so un-ticking a day carries over too).
+function mergeActivity(x, y) {
+  const newer = newerOf(x, y), older = newer === x ? y : x;
+  if (!newer.checkins && !older.checkins) return newer;
+  return { ...newer, checkins: { ...older.checkins, ...newer.checkins } };
+}
+
+const MERGE_ITEM = { states: mergeState, activities: mergeActivity };
+
 function mergePlans(a, b) {
   const out = emptyDb();
   const deleted = mergeDeleted(a.deleted || {}, b.deleted || {});
@@ -110,7 +120,7 @@ function mergePlans(a, b) {
     for (const x of [...a[c], ...b[c]]) {
       const cur = byId.get(x.id);
       if (!cur) byId.set(x.id, x);
-      else byId.set(x.id, c === 'states' ? mergeState(cur, x) : newerOf(cur, x));
+      else byId.set(x.id, (MERGE_ITEM[c] || newerOf)(cur, x));
     }
     // An item survives a deletion only if it was edited after it.
     out[c] = [...byId.values()].filter(x => !(deleted[x.id] && deleted[x.id] >= stamp(x)));

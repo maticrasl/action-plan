@@ -236,6 +236,188 @@ window.moreTests = async ({ step, assert }) => {
     eq(I18N.sl.strings['planDel.goals'].few.replace('{n}', 3), '3 cilji');
   });
 
+  await step('routines: periods, streaks, consistency and states', () => {
+    const now = today(), monday = addDays(now, -weekday(now));
+    const r = (repeat, p = {}) => ({ id: uid(), title: 'r', status: 'todo', repeat, checkins: {}, ...p });
+    eq(periodOf(r({ times: 2, per: 'month' }), '2028-02-10'), { from: '2028-02-01', to: '2028-02-29' }, 'month period');
+    eq(periodOf(r({ times: 2, per: 'week' }), '2026-10-29'), { from: '2026-10-26', to: '2026-11-01' }, 'week starts on Monday');
+    assert(weekday('2026-10-26') === 0 && weekday('2026-11-01') === 6, 'weekday: Monday 0');
+
+    // 3× a week since three weeks before this Monday: met, missed, met; nothing yet this week.
+    const tick = (a, ...isos) => isos.forEach(d => (a.checkins[d] = 1));
+    const w = n => addDays(monday, -7 * n);
+    const run = r({ times: 3, per: 'week' }, { startDate: w(3) });
+    tick(run, w(3), addDays(w(3), 2), addDays(w(3), 4), w(2), addDays(w(2), 1), w(1), addDays(w(1), 3), addDays(w(1), 6));
+    eq(periodProgress(run), { from: monday, to: addDays(monday, 6), done: 0, target: 3, met: false }, 'this week');
+    eq(routineStreak(run), { n: 1, unit: 'week' }, 'streak: last week only');
+    eq(consistency(run), 2 / 3, 'two of three finished weeks');
+    eq(consistency(run, w(1)), 1, 'from last week');
+    run.checkins[now] = 1;
+    assert(periodProgress(run).done === 1 && routineState(run) === 'doing', 'ticked today: in progress');
+    // Once this week is met it counts, and the streak goes on.
+    const extra = [1, 2].map(n => addDays(now, -n)).filter(d => d >= monday);
+    const fill = [...extra, addDays(now, 1), addDays(now, 2)].slice(0, 2);
+    tick(run, ...fill);
+    if (periodProgress(run).met) {
+      eq(routineStreak(run), { n: 2, unit: 'week' }, 'streak with this week');
+      eq(consistency(run), 3 / 4, 'this week counted once met');
+      assert(routineState(run) === 'done', 'met: done');
+    }
+    // 7× a week with nothing ticked can no longer be met after Monday.
+    const daily7 = r({ times: 7, per: 'week' }, { startDate: w(1) });
+    eq(routineState(daily7), weekday(now) > 0 ? 'late' : 'todo', 'count mode late');
+
+    // Every day for ten days, one day missed three days ago.
+    const daily = r({ days: [0, 1, 2, 3, 4, 5, 6] }, { startDate: addDays(now, -10) });
+    for (let n = 1; n <= 10; n++) if (n !== 3) daily.checkins[addDays(now, -n)] = 1;
+    eq(routineStreak(daily), { n: 2, unit: 'day' }, 'days streak: today not ticked yet does not break it');
+    eq(consistency(daily), 9 / 10, 'days consistency');
+    if (weekday(now) >= 3) eq(routineState(daily), 'late', 'missed a due day this week');
+    daily.checkins[now] = 1;
+    eq(routineStreak(daily).n, 3, 'today ticked');
+    // Only the due days count in days mode.
+    const monThu = r({ days: [0, 3] }, { startDate: w(2) });
+    tick(monThu, addDays(w(1), 1), addDays(w(1), 2));
+    eq(consistency(monThu, '', ), 0, 'ticks on other days do not count');
+
+    // Not started, ended, and what waits for it.
+    assert(routineState(r({ times: 1, per: 'week' }, { startDate: addDays(now, 3) })) === 'todo', 'not started');
+    fresh('Routine deps');
+    const ended = mk('activity', { repeat: { times: 1, per: 'week' }, checkins: {}, startDate: addDays(now, -30), dueDate: addDays(now, -1) });
+    const going = mk('activity', { repeat: { times: 1, per: 'week' }, checkins: {}, startDate: addDays(now, -30) });
+    const after = mk('activity');
+    rel(after, ended, 'depends'); rel(after, going, 'depends');
+    assert(routineState(ended) === 'done' && isComplete('activity', ended) && !isComplete('activity', going), 'ended routine is complete');
+    eq(blockers(after).map(x => x.id), [going.id], 'waits only for the running routine');
+    return `streak ${routineStreak(run).n}, consistency ${Math.round(consistency(run) * 100)} %`;
+  });
+
+  await step('routines: form, board, overview, goal progress, menu, map and sync', async () => {
+    fresh('Routines UI');
+    const now = today();
+    const g = mk('goal', { title: 'Move more', progress: 'routines', startDate: addDays(now, -14), deadline: addDays(now, 90), category: 'Health' });
+    const oneOff = mk('activity', { title: 'Buy shoes', status: 'todo' });
+    // Create a routine in the form: specific days.
+    openForm('activity');
+    $('#f-title').value = 'Strength';
+    const repeat = $('#f-repeat');
+    assert(!modal.querySelector('[data-field="status"]').hidden && $('#repeatDays').hidden, 'one-off by default');
+    repeat.value = 'days'; repeat.dispatchEvent(new Event('change', { bubbles: true }));
+    assert(modal.querySelector('[data-field="status"]').hidden && !$('#repeatDays').hidden && $('#repeatTimes').hidden, 'days shown, status hidden');
+    submitForm();
+    assert(modal.open && modal.querySelector('[data-field="days"] .err').textContent === t('err.days'), 'needs a day');
+    modal.querySelectorAll('.day-toggle')[0].click(); modal.querySelectorAll('.day-toggle')[3].click();
+    [...modal.querySelectorAll('[data-name="goals"] .pick-opt')].find(o => o.textContent === 'Move more').click();
+    submitForm();
+    const st = db.activities.find(a => a.title === 'Strength');
+    assert(!modal.open && st && JSON.stringify(st.repeat) === '{"days":[0,3]}' && st.startDate === now, 'saved as a routine from today');
+    // A number of times per week, with validation.
+    openForm('activity');
+    $('#f-title').value = 'Run';
+    $('#f-repeat').value = 'week'; $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#f-times').value = '9';
+    submitForm();
+    assert(modal.querySelector('[data-field="times"] .err').textContent === t('err.times', { max: 7 }), 'at most 7 a week');
+    $('#f-times').value = '3';
+    $('#f-startDate').value = dateInput(addDays(now, -14));
+    [...modal.querySelectorAll('[data-name="goals"] .pick-opt')].find(o => o.textContent === 'Move more').click();
+    submitForm();
+    const run = db.activities.find(a => a.title === 'Run');
+    assert(JSON.stringify(run.repeat) === '{"times":3,"per":"week"}', 'count routine saved');
+
+    // Board: routines above the columns, ticking days on the week strip.
+    setView('activities');
+    assert($('.routines') && $('.routines').querySelectorAll('.card.routine').length === 2, 'routines strip');
+    assert(!$('.board').querySelector(`[data-open="${run.id}"]`) && $('.board').querySelector(`[data-open="${oneOff.id}"]`), 'columns hold one-offs only');
+    const day = d => $(`.card.routine[data-open="${run.id}"] [data-checkin][data-date="${d}"]`);
+    assert(day(now) && !day(now).disabled, 'today can be ticked');
+    const future = addDays(now, 1);
+    if (weekday(now) < 6) assert(day(future).disabled, 'future days cannot');
+    day(now).click();
+    assert(checkedOn(run, now) && day(now).getAttribute('aria-pressed') === 'true' && !modal.open, 'ticked without opening the form');
+    day(now).click();
+    assert(!checkedOn(run, now) && run.checkins[now] === 0, 'unticked (kept as 0 for sync)');
+    // Meeting the week says so.
+    const monday = addDays(now, -weekday(now));
+    const past = daysBetween(monday, addDays(now, -1)).slice(-2);
+    past.forEach(d => (run.checkins[d] = 1));
+    render();
+    if (past.length === 2) {
+      day(now).click();
+      assert($('#toast').textContent === t('rt.metWeek'), 'week met message');
+      run.checkins[now] = 0; render();
+    }
+
+    // Overview: its own list; counts and next actions leave routines out.
+    setView('dashboard');
+    const rows = [...$('.routine-list').querySelectorAll('.routine-row')].map(r => r.dataset.open);
+    assert(rows.includes(run.id) && rows.includes(st.id), 'routines on the overview');
+    assert(![...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].some(r => r.dataset.open === run.id), 'not in next actions');
+    assert($('.facts').textContent.includes(t('dash.factDone', { done: 0, total: 1 })), 'one-off counts only');
+    $(`.routine-row[data-open="${run.id}"] [data-checkin]`).click();
+    assert(checkedOn(run, now) && !modal.open, 'done today from the overview');
+
+    // Goal measured by routines: the average of their consistency since the goal started.
+    const vals = [run, st].map(a => consistency(a, g.startDate)).filter(v => v !== null);
+    const expected = vals.length ? vals.reduce((x, y) => x + y, 0) / vals.length * 100 : 0;
+    assert(Math.abs(goalProgress(g) - expected) < 1e-9, `goal progress ${goalProgress(g)} = ${expected}`);
+    assert(smartCheck(g).M, 'measurable without a metric');
+    openForm('goal', g.id);
+    assert($('#f-progress').value === 'routines' && $('#measureFields').hidden && !$('#routinesHint').hidden, 'goal form: by routines');
+    $('#f-progress').value = 'activities'; $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
+    assert($('#routinesHint').hidden && !$('#actsHint').hidden, 'hints follow the choice');
+    modal.close();
+    assert(!countedActivities(g).some(isRoutine), 'activity counts leave routines out');
+
+    // Context menu: done today; map box shows this week.
+    openCtxMenu(st.id, 10, 10);
+    const item = ctxMenu.querySelector('[data-ctx="checkin"]');
+    assert(item && !ctxMenu.querySelector('[data-ctx^="status:"]'), 'menu: done today, no statuses');
+    item.click();
+    assert(checkedOn(st, now), 'ticked from the menu');
+    setView('map');
+    assert($(`[data-map-node="${run.id}"] .sub`).textContent.includes(t('rt.week', { done: periodProgress(run).done, target: 3 })), 'map shows this week');
+    // Switching repeat off keeps the check-ins.
+    openForm('activity', run.id);
+    $('#f-repeat').value = 'none'; $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
+    submitForm();
+    assert(!isRoutine(run) && run.checkins[now] === 1, 'one-off again, check-ins kept');
+
+    // Sync: check-ins from both devices are kept; the newer version wins on the same day.
+    const base = { id: 'x', title: 'X', status: 'todo', repeat: { times: 3, per: 'week' } };
+    const older = { ...base, updatedAt: '2099-01-01', checkins: { '2099-01-01': 1, '2099-01-02': 1 } };
+    const newer = { ...base, updatedAt: '2099-01-03', checkins: { '2099-01-02': 0, '2099-01-03': 1 } };
+    const m = mergePlans({ ...emptyDb(), activities: [older] }, { ...emptyDb(), activities: [newer] }).activities[0];
+    eq(m.checkins, { '2099-01-01': 1, '2099-01-02': 0, '2099-01-03': 1 }, 'merged check-ins');
+    eq(mergePlans({ ...emptyDb(), activities: [newer] }, { ...emptyDb(), activities: [older] }).activities[0].checkins, m.checkins, 'symmetric');
+  });
+
+  await step('routines: sample plan, tour and wording', () => {
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code);
+      loadSample();
+      const exercise = db.goals.find(g => byRoutines(g));
+      const routines = db.activities.filter(isRoutine);
+      assert(exercise && goalRoutines(exercise).length === 2 && routines.length === 3, `${code}: goal by routines, three routines`);
+      assert(goalProgress(exercise) > 50 && goalProgress(exercise) < 100, `${code}: consistency ${goalProgress(exercise)}`);
+      assert(routines.every(a => routineStreak(a).n >= 0 && consistency(a) !== null), `${code}: routines have history`);
+      setView('activities');
+      assert($('.routines .card.routine') && !$('.routines').textContent.includes('rt.'), `${code}: strip rendered`);
+      setView('dashboard');
+      assert($('.routine-list') && !$('.routine-list').textContent.includes('rt.'), `${code}: overview list`);
+    }
+    const sl = I18N.sl.strings;
+    eq([1, 2, 3, 5].map(n => tp('rt.perWeek', n)), ['enkrat na teden', 'dvakrat na teden', '3-krat na teden', '5-krat na teden'], 'Slovenian schedule');
+    eq(tp('rt.streak.week', 2), '2 tedna zapored', 'Slovenian streak');
+    changeLanguage('en');
+    eq([1, 3].map(n => tp('rt.perWeek', n)), ['once a week', '3× a week']);
+    assert(scheduleText({ repeat: { days: [0, 3] } }) === 'every Mon, Thu' && scheduleText({ repeat: { days: [0, 1, 2, 3, 4, 5, 6] } }) === 'every day', 'day schedules');
+    const i = TOUR_STEPS.findIndex(x => x.key === 'routines');
+    assert(TOUR_STEPS[i - 1].key === 'activities' && TOUR_STEPS[i].target[0] === '.routines', 'tour step after activities');
+    assert(t('tour.routines.text').includes('streak') && sl['tour.routines.text'].includes('niz'), 'tour text');
+    return db.activities.filter(isRoutine).map(a => `${a.title}: ${periodText(a)}, ${streakText(routineStreak(a))}`).join(' | ');
+  });
+
   await step('date fields: dd/mm/yyyy typing, picker and validation', () => {
     const ok = [['7/3/2026', '2026-03-07'], ['07/03/2026', '2026-03-07'], ['7.3.2026', '2026-03-07'], ['7. 3. 2026', '2026-03-07'], ['29/02/2028', '2028-02-29'], ['2026-03-07', '2026-03-07']];
     ok.forEach(([s, iso]) => assert(parseDateInput(s) === iso, `${s} → ${parseDateInput(s)}`));
@@ -900,9 +1082,9 @@ window.moreTests = async ({ step, assert }) => {
     const before = plans.current;
     loadSample(); changeLanguage('en'); setView('dashboard');
     const titles = [...$('#view').querySelectorAll('.section-title')].map(h => h.firstChild.textContent.trim());
-    assert(titles.join('|') === `${t('dash.next')}|${t('dash.goalsInProgress')}`, 'next actions above the goals');
-    const todo = db.activities.filter(a => a.status !== 'done').sort(byDueDate);
-    const shown = () => [...$('#view').querySelectorAll('.list > .row')].map(r => r.dataset.open);
+    assert(titles.join('|') === `${t('dash.next')}|${t('rt.title')}|${t('dash.goalsInProgress')}`, 'next actions, routines, then the goals');
+    const todo = db.activities.filter(a => a.status !== 'done' && !isRoutine(a)).sort(byDueDate);
+    const shown = () => [...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].map(r => r.dataset.open);
     const more = () => $('[data-next-more]');
     assert(shown().join() === todo.slice(0, NEXT_FEW).map(a => a.id).join(), 'the first few by due date');
     assert(more().textContent === t('dash.showAll', { n: todo.length }) && more().getAttribute('aria-expanded') === 'false', 'show all with the count');
