@@ -168,6 +168,7 @@ svg { flex: none; }
 .nav-item svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .nav-item:hover { opacity: 1; background: rgba(255,255,255,.06); }
 .nav-item.active { opacity: 1; background: rgba(255,255,255,.1); box-shadow: inset 3px 0 0 var(--blaze); }
+.nav-more, .nav-sheet { display: none; }
 .nav-footer { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.1); }
 
 .main { min-width: 0; display: flex; flex-direction: column; }
@@ -581,6 +582,22 @@ textarea { resize: vertical; min-height: 68px; }
   .plan-name { display: inline-block; }
   .nav-item { flex-direction: column; gap: 3px; padding: 6px 2px; font-size: 11px; flex: 1; align-items: center; text-align: center; }
   .nav-item.active { box-shadow: inset 0 3px 0 var(--blaze); border-radius: 0 0 var(--r-md) var(--r-md); }
+  /* Graphs, timeline and map sit in the "More" menu, so the bar keeps five tabs. */
+  .nav-extra { display: none; }
+  .nav-more { display: flex; }
+  .nav-sheet:not([hidden]) {
+    display: flex; flex-direction: column; position: absolute; right: 8px; bottom: calc(100% + 8px); min-width: 200px; padding: 6px;
+    background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--shadow-pop); animation: rise .12s ease-out;
+  }
+  .nav-sheet button {
+    display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border: 0; background: none;
+    border-radius: var(--r-md); color: inherit; font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer;
+  }
+  .nav-sheet button:hover { background: var(--surface-2); }
+  .nav-sheet button:focus-visible { outline: none; box-shadow: var(--focus); }
+  .nav-sheet button.active { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--blaze); }
+  .nav-sheet svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   /* No backdrop-filter here: it would become the containing block of the fixed add button. */
   .topbar { padding: calc(14px + env(safe-area-inset-top)) 16px 10px; gap: 8px; backdrop-filter: none; background: var(--bg); }
   .topbar h1 { font-size: 22px; }

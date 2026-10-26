@@ -644,6 +644,38 @@ window.moreTests = async ({ step, assert }) => {
     openPlan(first);
   });
 
+  await step('phone tab bar: graphs, timeline and map under More', () => {
+    setView('goals');
+    // The tests run at desktop width; show the menu as a phone would.
+    const phone = document.head.appendChild(document.createElement('style'));
+    phone.textContent = '.nav-more { display: flex } .nav-sheet:not([hidden]) { display: flex }';
+    const more = $('#navMore'), sheet = $('#navSheet');
+    assert(sheet.hidden && more.getAttribute('aria-expanded') === 'false' && !more.classList.contains('active'), 'closed at first');
+    more.click();
+    const items = [...sheet.querySelectorAll('[data-sheet-view]')].map(b => b.dataset.sheetView);
+    assert(!sheet.hidden && more.getAttribute('aria-expanded') === 'true', 'opens');
+    assert(items.join() === 'graphs,timeline,map', 'lists the extra views');
+    assert(sheet.querySelector('[data-sheet-view="timeline"]').textContent.trim() === t('nav.timeline'), 'with labels');
+    assert(document.activeElement === sheet.querySelector('button'), 'first item focused');
+    sheet.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    assert(document.activeElement.dataset.sheetView === 'map', 'arrows wrap');
+    sheet.querySelector('[data-sheet-view="timeline"]').click();
+    assert(ui.view === 'timeline' && sheet.hidden && more.classList.contains('active'), 'picks a view, closes, More marked');
+    more.click();
+    assert(document.activeElement.dataset.sheetView === 'timeline', 'current view focused');
+    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert(sheet.hidden && document.activeElement === more, 'Escape closes and refocuses More');
+    more.click();
+    $('#view').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    assert(sheet.hidden, 'click outside closes');
+    more.click(); more.click();
+    assert(sheet.hidden, 'More toggles');
+    setView('goals');
+    assert(!more.classList.contains('active'), 'More unmarked on a main tab');
+    phone.remove();
+    return items.join();
+  });
+
   await step('first visit: language picker before the tour', () => {
     changeLanguage('en');
     let done = 0;

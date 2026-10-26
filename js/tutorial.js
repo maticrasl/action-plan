@@ -25,6 +25,7 @@ const TOUR_STEPS = [
   { key: 'map', view: 'map', target: ['.map-wrap'] },
   { key: 'add', target: ['#addBtn'] },
   { key: 'sidebar', target: ['#navToggle'], optional: true },
+  { key: 'more', target: ['#navMore'], optional: true },
   { key: 'settings', target: ['#settingsBtn'] },
   { key: 'sync', target: ['#syncBtn'], optional: true },
   { key: 'help', target: ['#helpBtn'] },
