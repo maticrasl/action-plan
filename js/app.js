@@ -1793,9 +1793,9 @@ function importJson(file) {
 // The sample plan's data (also used by the guided tour in tutorial.js).
 function sampleData() {
   const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
-  const [halfMarathon, fund, tenK, weight, course, spanish, sell, trip] = Array.from({ length: 8 }, uid);
-  const [fitness, savings, spending, bodyWeight, itemsSold] = Array.from({ length: 5 }, uid);
-  const a = Array.from({ length: 16 }, uid);
+  const [halfMarathon, fund, tenK, weight, course, spanish, sell, trip, bathroom, heating] = Array.from({ length: 10 }, uid);
+  const [fitness, savings, spending, bodyWeight, itemsSold, bathroomWork, heatingBill] = Array.from({ length: 7 }, uid);
+  const a = Array.from({ length: 23 }, uid);
   // Numbers and dates live here; the wording (and word units) come from the active language (i18n.js → sample).
   const txt = I18N[lang].sample;
   const withText = (list, texts) => list.map((x, i) => ({ ...x, ...texts[i] }));
@@ -1809,6 +1809,8 @@ function sampleData() {
       { id: spanish, baseline: '0', current: '', target: '1500', startDate: d(30), deadline: d(300), status: 'active' },
       { id: sell, baseline: '0', current: '', target: '10', startDate: d(-40), deadline: d(-3), status: 'active' },
       { id: trip, baseline: '0', current: '', target: '14', startDate: d(60), deadline: d(400), status: 'active' },
+      { id: bathroom, baseline: '0', current: '', target: '5', startDate: d(-25), deadline: d(45), status: 'active' },
+      { id: heating, unit: '€', baseline: '180', current: '', target: '120', startDate: d(-60), deadline: d(180), status: 'active' },
     ], txt.goals),
     states: withText([
       { id: fitness, value: '8', unit: 'km', date: d(-2), history: [{ date: d(-30), value: '5' }, { date: d(-2), value: '8' }] },
@@ -1816,6 +1818,8 @@ function sampleData() {
       { id: spending, value: '2000', unit: '€', date: d(-5), history: [{ date: d(-5), value: '2000' }] },
       { id: bodyWeight, value: '78', unit: 'kg', date: d(-1), history: [{ date: d(-30), value: '81' }, { date: d(-1), value: '78' }] },
       { id: itemsSold, value: '6', date: d(-4), history: [{ date: d(-20), value: '2' }, { date: d(-4), value: '6' }] },
+      { id: bathroomWork, value: '2', date: d(-3), history: [{ date: d(-25), value: '0' }, { date: d(-12), value: '1' }, { date: d(-3), value: '2' }] },
+      { id: heatingBill, value: '165', unit: '€', date: d(-5), history: [{ date: d(-60), value: '180' }, { date: d(-30), value: '172' }, { date: d(-5), value: '165' }] },
     ], txt.states),
     activities: withText([
       { id: a[0], status: 'done', startDate: d(-30), dueDate: d(-20) },   // running shoes
@@ -1834,6 +1838,13 @@ function sampleData() {
       { id: a[13], status: 'doing', startDate: d(-15), dueDate: d(10) },  // list items for sale
       { id: a[14], status: 'done', startDate: d(-90), dueDate: d(-12) },  // finish course modules
       { id: a[15], status: 'todo', startDate: d(30), dueDate: d(35) },   // choose a language app
+      { id: a[16], status: 'done', startDate: d(-25), dueDate: d(-15) },  // contractor quotes
+      { id: a[17], status: 'done', startDate: d(-12), dueDate: d(-4) },   // remove old tiles
+      { id: a[18], status: 'doing', startDate: d(-3), dueDate: d(30) },   // bathroom works
+      { id: a[19], status: 'doing', startDate: d(-3), dueDate: d(8) },    // new plumbing
+      { id: a[20], status: 'todo', startDate: d(9), dueDate: d(20) },    // tiling
+      { id: a[21], status: 'todo', startDate: d(21), dueDate: d(30) },   // fittings
+      { id: a[22], status: 'todo', startDate: d(40), dueDate: d(60) },   // insulate the attic
     ], txt.activities),
     relations: [],
   };
@@ -1842,23 +1853,30 @@ function sampleData() {
   // and a trip that waits for two other goals.
   rel(tenK, 'subgoal', halfMarathon); rel(weight, 'subgoal', halfMarathon); rel(sell, 'subgoal', fund);
   rel(fund, 'depends', course); rel(trip, 'depends', spanish); rel(trip, 'depends', fund);
+  rel(heating, 'related', bathroom);
   // Current states
   rel(fitness, 'measures', halfMarathon); rel(fitness, 'measures', tenK); rel(savings, 'measures', fund);
   rel(bodyWeight, 'measures', weight); rel(itemsSold, 'measures', sell);
   rel(spending, 'related', savings);
+  rel(bathroomWork, 'measures', bathroom); rel(heatingBill, 'measures', heating);
   // Activities → goals
   rel(a[0], 'contributes', halfMarathon); rel(a[1], 'contributes', halfMarathon); rel(a[1], 'contributes', tenK);
   rel(a[2], 'contributes', halfMarathon); rel(a[3], 'contributes', tenK); rel(a[4], 'contributes', fund);
   rel(a[5], 'contributes', fund); rel(a[6], 'contributes', fund); rel(a[12], 'contributes', weight);
   rel(a[13], 'contributes', sell); rel(a[14], 'contributes', course); rel(a[15], 'contributes', spanish);
+  rel(a[16], 'contributes', bathroom); rel(a[17], 'contributes', bathroom); rel(a[18], 'contributes', bathroom);
+  rel(a[22], 'contributes', heating);
   // Activities → current states
   rel(a[1], 'improves', fitness); rel(a[5], 'improves', spending); rel(a[6], 'improves', spending);
   rel(a[12], 'improves', bodyWeight); rel(a[13], 'improves', itemsSold);
+  rel(a[18], 'improves', bathroomWork); rel(a[22], 'improves', heatingBill);
   // Training plan → two phases → a key session in phase two (three levels deep).
   rel(a[7], 'subactivity', a[1]); rel(a[8], 'subactivity', a[1]); rel(a[9], 'subactivity', a[8]);
   rel(a[10], 'subactivity', a[5]); rel(a[11], 'subactivity', a[5]);
+  rel(a[19], 'subactivity', a[18]); rel(a[20], 'subactivity', a[18]); rel(a[21], 'subactivity', a[18]);
   // Dependency chains
   rel(a[1], 'depends', a[0]); rel(a[8], 'depends', a[7]); rel(a[3], 'depends', a[7]); rel(a[11], 'depends', a[10]);
+  rel(a[17], 'depends', a[16]); rel(a[18], 'depends', a[16]); rel(a[20], 'depends', a[19]); rel(a[21], 'depends', a[20]);
   return data;
 }
 
