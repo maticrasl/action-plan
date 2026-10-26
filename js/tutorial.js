@@ -15,6 +15,7 @@
    target is hidden at the start (the sidebar toggle on phones, the sync button when sync is off). */
 
 const TOUR_STEPS = [
+  { key: 'about' },
   { key: 'welcome' },
   { key: 'dashboard', view: 'dashboard', target: ['.summary'] },
   { key: 'goals', view: 'goals', target: ['.card.goal'] },
@@ -72,7 +73,7 @@ function showStep(i) {
   if (last) actions = `${btn('keep', 'ghost', t('tour.keep'))}<span class="grow"></span>${btn('finish', 'primary', t('tour.finish'))}`;
   else {
     actions = `${btn('skip', 'ghost', t('tour.skip'))}<span class="grow"></span>` +
-      `${first ? '' : btn('back', 'ghost', t('tour.back'))}${btn('next', 'primary', t(first ? 'tour.start' : 'tour.next'))}`;
+      `${first ? '' : btn('back', 'ghost', t('tour.back'))}${btn('next', 'primary', t(s.key === 'welcome' ? 'tour.start' : 'tour.next'))}`;
   }
   $('.tour-card').innerHTML = `
     <p class="tour-count">${t('tour.count', { n: tour.step + 1, total: tour.steps.length })}</p>

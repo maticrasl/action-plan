@@ -708,8 +708,10 @@ window.moreTests = async ({ step, assert }) => {
     const more = () => $('[data-next-more]');
     assert(shown().join() === todo.slice(0, NEXT_FEW).map(a => a.id).join(), 'the first few by due date');
     assert(more().textContent === t('dash.showAll', { n: todo.length }) && more().getAttribute('aria-expanded') === 'false', 'show all with the count');
+    window.scrollTo(0, 0);
     more().click();
     assert(shown().join() === todo.map(a => a.id).join(), 'expanded to all');
+    assert(window.scrollY === 0 && document.documentElement.scrollHeight > innerHeight, 'page stays where it was');
     assert(more().textContent === t('dash.showFewer') && more().getAttribute('aria-expanded') === 'true' && document.activeElement === more(), 'show fewer, focus kept');
     assert(prefs.get('nextAll') === true, 'remembered');
     more().click();
@@ -748,7 +750,11 @@ window.moreTests = async ({ step, assert }) => {
     $('[data-lang-pick="en"]').click();
     assert(currentPlan().name === I18N.sl.strings['plan.defaultName'], 'plan with items not renamed');
     $('[data-lang-done]').click();
-    assert(!$('.lang-pick') && tour.step === 0 && $('#tourTitle').textContent === t('tour.welcome.title'), 'tour starts in English');
+    assert(!$('.lang-pick') && tour.step === 0 && $('#tourTitle').textContent === t('tour.about.title'), 'tour starts in English');
+    assert($('[data-tour="next"]').textContent === t('tour.next') && !$('[data-tour="back"]'), 'about slide first, Next');
+    assert(t('tour.about.text').includes('SMART'), 'describes the app');
+    $('[data-tour="next"]').click();
+    assert($('#tourTitle').textContent === t('tour.welcome.title') && $('[data-tour="next"]').textContent === t('tour.start'), 'then the tour intro with Start');
     endTour(false);
     return options;
   });

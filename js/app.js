@@ -1786,7 +1786,8 @@ viewEl.addEventListener('click', e => {
     ui.nextAll = !ui.nextAll;
     prefs.set('nextAll', ui.nextAll);
     render();
-    return $('[data-next-more]')?.focus();
+    // Keep the page where it is; the button moves to the end of the list.
+    return $('[data-next-more]')?.focus({ preventScroll: true });
   }
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
   if (el.dataset.open) { const ent = findEntity(el.dataset.open); return ent && openForm(ent.kind, ent.item.id); }
@@ -1917,7 +1918,7 @@ function drawCalendar() {
     </div>`;
 }
 
-const focusDay = () => cal.field.querySelector(`.cal-grid [data-cal-day="${cal.focus}"]`).focus({ preventScroll: true });
+const focusDay = () => cal.field.querySelector(`.cal-grid [data-cal-day="${cal.focus}"]`).focus();
 
 // Show the month of `iso` with that day focused.
 function moveCalendar(iso) {
