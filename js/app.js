@@ -319,8 +319,8 @@ function smartCheck(g) {
   const errs = {};
   if (!g.title || g.title.trim().length < 4) errs.title = t('err.title');
   if (!g.specific || g.specific.trim().length < 15) errs.specific = t('err.specific');
-  // A goal measured by its activities needs no metric or target of its own.
-  if (!byActivities(g)) {
+  // A goal measured by its activities or routines needs no metric or target of its own.
+  if (!byActivities(g) && !byRoutines(g)) {
     if (!g.metric || !g.metric.trim()) errs.metric = t('err.metric');
     if (!isNum(g.target)) errs.target = t('err.target');
     else if (isNum(g.baseline) && Number(g.baseline) === Number(g.target)) errs.target = t('err.targetSame');
@@ -347,6 +347,7 @@ function measuringState(g) {
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || null;
 }
 function goalCurrent(g) {
+  if (byRoutines(g)) return Math.round(goalProgress(g));
   if (byActivities(g)) return countedActivities(g).filter(a => a.status === 'done').length;
   const st = measuringState(g);
   if (st) return Number(st.value);
@@ -355,6 +356,10 @@ function goalCurrent(g) {
 }
 function goalProgress(g) {
   if (g.status === 'achieved') return 100;
+  if (byRoutines(g)) {
+    const kept = goalRoutines(g).map(a => consistency(a, g.startDate)).filter(v => v !== null);
+    return kept.length ? (kept.reduce((sum, v) => sum + v, 0) / kept.length) * 100 : 0;
+  }
   if (byActivities(g)) {
     const total = countedActivities(g).length;
     return total ? (goalCurrent(g) / total) * 100 : 0;
@@ -379,10 +384,21 @@ const byActivities = g => g.progress === 'activities';
 function countedActivities(g) {
   const goals = [g, ...descendants(g.id, 'subgoal').map(id => db.goals.find(x => x.id === id)).filter(Boolean)];
   const ids = new Set(goals.flatMap(x => goalActivities(x).map(a => a.id)));
-  return db.activities.filter(a => ids.has(a.id) && !relsTo(a.id, 'subactivity').length);
+  return db.activities.filter(a => ids.has(a.id) && !isRoutine(a) && !relsTo(a.id, 'subactivity').length);
 }
 
-const isComplete = (kind, item) => (kind === 'goal' ? item.status === 'achieved' : item.status === 'done');
+// Goals can also measure progress by how consistently their routines are kept (`progress: 'routines'`):
+// the routines working toward the goal and its sub-goals.
+const byRoutines = g => g.progress === 'routines';
+function goalRoutines(g) {
+  const goals = [g, ...descendants(g.id, 'subgoal').map(id => db.goals.find(x => x.id === id)).filter(Boolean)];
+  const ids = new Set(goals.flatMap(x => goalActivities(x).map(a => a.id)));
+  return db.activities.filter(a => ids.has(a.id) && isRoutine(a));
+}
+
+// A routine is complete (for whatever waits for it) once it has ended.
+const isComplete = (kind, item) => (kind === 'goal' ? item.status === 'achieved'
+  : isRoutine(item) ? !!item.dueDate && item.dueDate < today() : item.status === 'done');
 
 // Unfinished items this one waits for – its own dependencies and those inherited from its parents.
 function blockers(item, kind = 'activity') {
@@ -394,6 +410,7 @@ function blockers(item, kind = 'activity') {
 }
 
 function activityState(a) {
+  if (isRoutine(a)) return routineState(a);
   if (a.status === 'done') return 'done';
   if (blockers(a).length) return 'blocked';
   if (a.dueDate && daysUntil(a.dueDate) < 0) return 'late';
@@ -438,6 +455,174 @@ function goalScope(goalId) {
   });
   return { goal, activity, state };
 }
+
+/* ---------- Routines: activities that repeat ----------
+   `repeat` is { times, per: 'week' | 'month' } (any days) or { days: [0..6] } (Monday = 0);
+   `checkins` maps a date to 1 (done) or 0 (unticked, kept so sync can merge it). A routine runs
+   from its start date to its due date, if any. Weeks start on Monday. */
+
+const isRoutine = a => !!a?.repeat;
+const weekday = iso => (new Date(iso + 'T00:00Z').getUTCDay() + 6) % 7;
+const addDays = (iso, n) => dayStr(dayNum(iso) + n);
+const daysBetween = (from, to) => Array.from({ length: Math.max(0, dayNum(to) - dayNum(from) + 1) }, (_, i) => addDays(from, i));
+const routineStart = a => a.startDate || a.createdAt || today();
+const checkedOn = (a, iso) => a.checkins?.[iso] === 1;
+const isDueDay = (a, iso) => !a.repeat.days || a.repeat.days.includes(weekday(iso));
+const routineUnit = a => a.repeat.per === 'month' ? 'month' : 'week';
+const runsOn = (a, iso) => iso >= routineStart(a) && !(a.dueDate && iso > a.dueDate);
+
+// The week (or month) around a date.
+function periodOf(a, iso) {
+  if (routineUnit(a) === 'month') {
+    const [y, m] = iso.split('-').map(Number);
+    return { from: iso.slice(0, 8) + '01', to: dayStr(Date.UTC(y, m, 0) / DAY_MS) };
+  }
+  const from = addDays(iso, -weekday(iso));
+  return { from, to: addDays(from, 6) };
+}
+
+// Check-ins in the period around `iso` against what the period asks for. Specific days count only
+// when they are due; days before the start or after the end do not count.
+function periodProgress(a, iso = today()) {
+  const { from, to } = periodOf(a, iso);
+  const days = daysBetween(from, to).filter(d => runsOn(a, d));
+  if (a.repeat.days) {
+    const due = days.filter(d => isDueDay(a, d));
+    const done = due.filter(d => checkedOn(a, d)).length;
+    return { from, to, done, target: due.length, met: due.length > 0 && done >= due.length };
+  }
+  const done = days.filter(d => checkedOn(a, d)).length;
+  return { from, to, done, target: a.repeat.times, met: done >= a.repeat.times };
+}
+
+function routineState(a) {
+  const now = today();
+  if (a.dueDate && a.dueDate < now) return 'done';
+  if (routineStart(a) > now) return 'todo';
+  if (blockers(a).length) return 'blocked';
+  const p = periodProgress(a, now);
+  if (p.met) return 'done';
+  if (a.repeat.days) {
+    if (daysBetween(p.from, addDays(now, -1)).some(d => runsOn(a, d) && isDueDay(a, d) && !checkedOn(a, d))) return 'late';
+  } else {
+    // Days left to tick in this period, today included unless it is ticked already.
+    const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
+    if (p.target - p.done > left) return 'late';
+  }
+  return p.done ? 'doing' : 'todo';
+}
+
+// Periods met in a row (count) or due days ticked in a row (days); the current period or today
+// counts once done, and does not break the streak before that.
+function routineStreak(a) {
+  const now = today(), start = routineStart(a);
+  let n = 0;
+  if (a.repeat.days) {
+    for (let d = now; d >= start && n < 3660; d = addDays(d, -1)) {
+      if (!isDueDay(a, d) || (a.dueDate && d > a.dueDate)) continue;
+      if (checkedOn(a, d)) n++;
+      else if (d !== now) break;
+    }
+    return { n, unit: 'day' };
+  }
+  let p = periodOf(a, now);
+  if (!periodProgress(a, now).met) p = periodOf(a, addDays(p.from, -1));
+  while (p.to >= start && periodProgress(a, p.from).met && n < 600) {
+    n++;
+    p = periodOf(a, addDays(p.from, -1));
+  }
+  return { n, unit: routineUnit(a) };
+}
+
+// Share (0–1) of periods met (count) or due days ticked (days) since `from`, or null when there is
+// nothing to judge yet. The running period – and a first period cut short by the start – count
+// only once met; today counts only once ticked.
+function consistency(a, from = '') {
+  const now = today();
+  const start = [routineStart(a), from || ''].sort().pop();
+  const end = a.dueDate && a.dueDate < now ? a.dueDate : now;
+  if (start > end) return null;
+  let kept = 0, total = 0;
+  if (a.repeat.days) {
+    daysBetween(start, end).filter(d => isDueDay(a, d)).forEach(d => {
+      if (d === now && !checkedOn(a, d)) return;
+      total++;
+      if (checkedOn(a, d)) kept++;
+    });
+  } else {
+    for (let p = periodOf(a, start); p.from <= end; p = periodOf(a, addDays(p.to, 1))) {
+      const { met } = periodProgress(a, p.from);
+      if (!met && (p.to >= now || p.from < start)) continue;
+      total++;
+      if (met) kept++;
+    }
+  }
+  return total ? kept / total : null;
+}
+
+const weekdayName = (i, style = 'short') => new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString(locale(), { weekday: style, timeZone: 'UTC' });
+function scheduleText(a) {
+  if (!a.repeat.days) return tp(routineUnit(a) === 'month' ? 'rt.perMonth' : 'rt.perWeek', a.repeat.times);
+  if (a.repeat.days.length === 7) return t('rt.daily');
+  return t('rt.onDays', { days: [...a.repeat.days].sort().map(i => weekdayName(i)).join(', ') });
+}
+const periodText = (a, p = periodProgress(a)) => t(routineUnit(a) === 'month' ? 'rt.month' : 'rt.week', { done: p.done, target: p.target });
+const streakText = ({ n, unit }) => tp('rt.streak.' + unit, n);
+
+function toggleCheckin(id, iso) {
+  const a = db.activities.find(x => x.id === id);
+  if (!a || !isRoutine(a) || !runsOn(a, iso) || iso > today()) return;
+  const wasMet = periodProgress(a, iso).met;
+  a.checkins = { ...a.checkins, [iso]: checkedOn(a, iso) ? 0 : 1 };
+  save();
+  render();
+  if (!wasMet && periodProgress(a, iso).met) toast(t(routineUnit(a) === 'month' ? 'rt.metMonth' : 'rt.metWeek'));
+  $(`[data-checkin="${id}"][data-date="${iso}"]`)?.focus();
+}
+
+// This week, Monday to Sunday: tap a past day or today to tick or untick it.
+function routineWeek(a) {
+  const now = today(), from = addDays(now, -weekday(now));
+  const fmt = iso => new Date(iso + 'T00:00Z').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  return `<div class="rt-week" role="group" aria-label="${esc(t('rt.weekLabel'))}">${daysBetween(from, addDays(from, 6)).map(d => {
+    const on = checkedOn(a, d), off = d > now || !runsOn(a, d);
+    const cls = ['rt-day', a.repeat.days && isDueDay(a, d) ? 'due' : '', on ? 'on' : '', d === now ? 'today' : ''].filter(Boolean).join(' ');
+    return `<button type="button" class="${cls}" data-checkin="${a.id}" data-date="${d}" aria-pressed="${on}" ${off ? 'disabled' : ''} aria-label="${esc(t(on ? 'rt.dayOn' : 'rt.dayOff', { date: fmt(d) }))}"><span aria-hidden="true">${esc(weekdayName(weekday(d), 'narrow'))}</span></button>`;
+  }).join('')}</div>`;
+}
+
+function routineCard(a) {
+  const p = periodProgress(a), streak = routineStreak(a), st = routineState(a);
+  const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
+  const blocked = blockers(a), now = today();
+  const when = a.dueDate && a.dueDate < now ? `<span class="tag">${t('rt.ended')}</span>`
+    : routineStart(a) > now ? `<span class="tag">${t('rt.starts', { date: fmtDate(routineStart(a)) })}</span>` : '';
+  return `<article class="card activity routine st-${st}" data-open="${a.id}">
+    <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched">${esc(scheduleText(a))}</span></div>
+    ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
+    ${progressBar(p.target ? Math.min(1, p.done / p.target) * 100 : 0, esc(periodText(a, p)))}
+    ${routineWeek(a)}
+    <div class="meta">
+      ${streak.n ? `<span class="tag ok">${esc(streakText(streak))}</span>` : ''}
+      ${when}
+      ${blocked.length ? waitsForTag(blocked) : ''}
+    </div>
+    ${goals ? `<div class="links">${goals}</div>` : ''}
+  </article>`;
+}
+
+// A routine on the overview: tick today off and see this period at a glance.
+function routineRow(a) {
+  const now = today(), on = checkedOn(a, now), p = periodProgress(a), streak = routineStreak(a);
+  return `<div class="row routine-row" data-open="${a.id}">
+    <button type="button" class="check ${on ? 'done' : ''}" data-checkin="${a.id}" data-date="${now}" aria-pressed="${on}" aria-label="${esc(t('rt.doneToday', { name: a.title }))}" title="${esc(t('rt.doneToday', { name: a.title }))}">${on ? '✓' : ''}</button>
+    <span class="grow">${esc(a.title)} <span class="meta">${esc(scheduleText(a))}</span></span>
+    <span class="tag ${p.met ? 'ok' : ''}">${esc(periodText(a, p))}</span>
+    ${streak.n ? `<span class="tag">${esc(streakText(streak))}</span>` : ''}
+  </div>`;
+}
+
+const activeRoutine = a => isRoutine(a) && runsOn(a, today());
 
 /* ---------- Small render helpers ---------- */
 
@@ -556,19 +741,22 @@ function renderDashboard() {
 
   const active = db.goals.filter(g => g.status !== 'achieved' && g.status !== 'paused');
   const avg = active.length ? active.reduce((s, g) => s + goalProgress(g), 0) / active.length : 0;
-  const doneActs = db.activities.filter(a => a.status === 'done').length;
-  const overdue = db.activities.filter(a => a.status !== 'done' && a.dueDate && daysUntil(a.dueDate) < 0).length;
-  const todo = db.activities.filter(a => a.status !== 'done').sort(byDueDate);
+  // Routines have no status of their own: they get their own list, and the counts leave them out.
+  const oneOff = db.activities.filter(a => !isRoutine(a));
+  const routines = db.activities.filter(activeRoutine).sort((a, b) => checkedOn(a, today()) - checkedOn(b, today()) || periodProgress(a).met - periodProgress(b).met);
+  const doneActs = oneOff.filter(a => a.status === 'done').length;
+  const overdue = oneOff.filter(a => a.status !== 'done' && a.dueDate && daysUntil(a.dueDate) < 0).length;
+  const todo = oneOff.filter(a => a.status !== 'done').sort(byDueDate);
   const next = ui.nextAll ? todo : todo.slice(0, NEXT_FEW);
   const more = todo.length > NEXT_FEW ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
     ui.nextAll ? t('dash.showFewer') : t('dash.showAll', { n: todo.length })}</button>` : '';
 
-  const waiting = db.activities.filter(a => a.status !== 'done' && blockers(a).length).length;
+  const waiting = oneOff.filter(a => a.status !== 'done' && blockers(a).length).length;
   return `
     <section class="summary">
       <p class="summary-line">${tp('dash.headline', active.length, { pct: `<strong>${Math.round(avg)}&nbsp;%</strong>` })}</p>
       <ul class="facts">
-        <li>${t('dash.factDone', { done: doneActs, total: db.activities.length })}</li>
+        <li>${t('dash.factDone', { done: doneActs, total: oneOff.length })}</li>
         ${overdue ? `<li class="fact-late">${tp('dash.factLate', overdue)}</li>` : ''}
         ${waiting ? `<li class="fact-waiting">${tp('dash.factWaiting', waiting)}</li>` : ''}
       </ul>
@@ -576,6 +764,9 @@ function renderDashboard() {
 
     <h2 class="section-title">${t('dash.next')} <small>${next.length ? t('dash.sorted') : ''}</small></h2>
     ${next.length ? `<div class="list">${next.map(activityRow).join('')}${more}</div>` : `<div class="empty">${t('dash.allDone')}</div>`}
+
+    ${routines.length ? `<h2 class="section-title">${t('rt.title')} <small>${t('rt.dashHint')}</small></h2>
+    <div class="list routine-list">${routines.map(routineRow).join('')}</div>` : ''}
 
     <h2 class="section-title">${t('dash.goalsInProgress')} <small>${active.length ? t('dash.clickToEdit') : ''}</small></h2>
     ${active.length ? `<div class="grid">${active.map(goalCard).join('')}</div>` : `<div class="empty">${t('dash.noActive')}</div>`}
@@ -596,8 +787,9 @@ function activityRow(a) {
 
 function goalCard(g) {
   const pct = goalProgress(g);
-  const acts = goalActivities(g);
+  const acts = goalActivities(g).filter(a => !isRoutine(a));
   const done = acts.filter(a => a.status === 'done').length;
+  const routines = byRoutines(g) ? goalRoutines(g) : goalActivities(g).filter(isRoutine);
   const st = measuringState(g);
   const unit = g.unit ? ' ' + esc(g.unit) : '';
   const parent = relsFrom(g.id, 'subgoal')[0];
@@ -607,7 +799,10 @@ function goalCard(g) {
     <div class="card-head"><h3>${esc(g.title)}</h3>${smartBadge(g)}</div>
     ${g.category ? `<div><button type="button" class="tag cat" data-category="${esc(g.category)}">${esc(g.category)}</button></div>` : ''}
     <p class="desc">${esc(g.specific)}</p>
-    ${measured
+    ${byRoutines(g)
+    ? `${trail(pct, '0 %', '100 %')}
+    <div class="meta"><span>${t('goals.consistency')}: <strong>${Math.round(pct)} %</strong></span></div>`
+    : measured
     ? `${trail(pct, '0', esc(tp('goals.actsTotal', counted)))}
     <div class="meta"><span>${t('f.progressActs')}: <strong>${goalCurrent(g)} / ${counted}</strong></span></div>`
     : `${trail(pct, `${fmtNum(isNum(g.baseline) ? g.baseline : 0)}${unit}`, `${fmtNum(g.target)}${unit}`)}
@@ -616,7 +811,8 @@ function goalCard(g) {
       ${g.status !== 'active' ? `<span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${t('goal.' + g.status)}</span>` : ''}
       ${waits.length ? waitsForTag(waits) : ''}
       ${deadlineTag(g.deadline, g.status === 'achieved')}
-      ${measured ? '' : `<span>${t('goals.activities', { done, total: acts.length })}</span>`}
+      ${measured || !acts.length && routines.length ? '' : `<span>${t('goals.activities', { done, total: acts.length })}</span>`}
+      ${routines.length ? `<span title="${esc(routines.map(a => `${a.title}: ${periodText(a)}`).join('\n'))}">⟳ ${esc(tp('goals.routines', routines.length))}</span>` : ''}
       ${st ? `<span title="${esc(t('goals.measuredBy'))}">◐ ${esc(st.title)}</span>` : ''}
     </div>
     ${parent ? `<div class="links"><span class="meta">${t('goals.partOf')}</span>${linkTag(parent.to)}</div>` : ''}
@@ -663,7 +859,9 @@ function renderStates() {
 function renderActivities() {
   if (!db.activities.length) return emptyState(t('acts.emptyTitle'), t('acts.emptyText'), 'activity');
   const scope = scopeFor(ui.activityGoal);
-  const list = db.activities.filter(matchesSearch).filter(a => !scope || scope.activity.has(a.id));
+  const all = db.activities.filter(matchesSearch).filter(a => !scope || scope.activity.has(a.id));
+  const list = all.filter(a => !isRoutine(a));
+  const routines = all.filter(a => isRoutine(a) && !(ui.hideDone && isComplete('activity', a)));
   const statuses = ACTIVITY_STATUS.filter(s => !(ui.hideDone && s === 'done'));
   const cols = statuses.map(status => {
     const items = list.filter(a => a.status === status).sort(byDueDate);
@@ -675,6 +873,8 @@ function renderActivities() {
       ${hideDoneToggle()}
       ${searchBox()}
     </div>
+    ${routines.length ? `<section class="routines" aria-labelledby="routinesTitle"><h3 class="routines-title" id="routinesTitle">${t('rt.title')}<span>${routines.length}</span></h3>
+      <div class="routine-grid">${routines.map(routineCard).join('')}</div></section>` : ''}
     <div class="board" style="--cols:${statuses.length}">${cols}</div>`;
 }
 
@@ -1001,6 +1201,10 @@ function renderMap() {
       sub = st === 'blocked'
         ? t('acts.waitsFor', { n: blockers(item, 'goal').length })
         : `${Math.round(goalProgress(item))} %, ${item.deadline ? fmtDate(item.deadline) : t('map.noDeadline')}`;
+    } else if (isRoutine(item)) {
+      st = routineState(item);
+      const streak = routineStreak(item);
+      sub = periodText(item) + (streak.n ? ', ' + streakText(streak) : '');
     } else if (n.kind === 'activity') {
       st = activityState(item);
       sub = (st === 'blocked' ? t('acts.waitsFor', { n: blockers(item).length }) : t('activity.' + item.status)) + (item.dueDate ? ', ' + fmtDate(item.dueDate) : '');
@@ -1562,6 +1766,7 @@ function openForm(kind, id = null, links = {}) {
     fillRelTypes(r.type);
   }
   if (kind === 'goal') updateSmartLive();
+  if (kind === 'activity') updateRepeatFields();
   modal.showModal();
   if (!item) setTimeout(() => modal.querySelector('input, select, textarea')?.focus(), 30);
 }
@@ -1582,9 +1787,10 @@ function goalForm(g) {
       ${field('title', t('f.goal'), text('title', g.title, t('f.goalPh')))}
       ${field('specific', t('f.specific'), area('specific', g.specific, t('f.specificPh')))}`)}
     ${smartSection('M', `
-      ${field('progress', t('f.progress'), select('progress', { measure: t('f.progressMeasure'), activities: t('f.progressActs') }, byActivities(g) ? 'activities' : 'measure'))}
+      ${field('progress', t('f.progress'), select('progress', { measure: t('f.progressMeasure'), activities: t('f.progressActs'), routines: t('f.progressRoutines') }, byActivities(g) ? 'activities' : byRoutines(g) ? 'routines' : 'measure'))}
       <p class="hint" id="actsHint" ${byActivities(g) ? '' : 'hidden'}>${t('f.progressActsHint')}</p>
-      <div id="measureFields" ${byActivities(g) ? 'hidden' : ''}>
+      <p class="hint" id="routinesHint" ${byRoutines(g) ? '' : 'hidden'}>${t('f.progressRoutinesHint')}</p>
+      <div id="measureFields" ${byActivities(g) || byRoutines(g) ? 'hidden' : ''}>
       <div class="row2">
         ${field('metric', t('f.metric'), text('metric', g.metric, t('f.metricPh')))}
         ${field('unit', t('f.unit'), text('unit', g.unit, t('f.unitPh')))}
@@ -1642,11 +1848,41 @@ function activityForm(a) {
       ${field('startDate', t('f.startDate'), date('startDate', a.startDate))}
       ${field('dueDate', t('f.dueDate'), date('dueDate', a.dueDate))}
     </div>
+    ${repeatFields(a)}
     ${field('parent', t('f.parentActivity'), select('parent', parents, pick('subactivity')[0] || ''), t('f.parentActivityHint'))}
     ${children.length ? `<div class="field"><span class="label">${t('f.subActivities')}</span><div class="links">${children.map(linkTag).join('')}</div></div>` : ''}
     ${checklist('goals', t('f.contributes'), 'goal', db.goals, pick('contributes'))}
     ${checklist('states', t('f.improves'), 'state', db.states, pick('improves'))}
     ${checklist('depends', t('f.depends'), 'activity', others, pick('depends'))}`;
+}
+
+// Whether and how an activity repeats; a repeating activity is a routine.
+function repeatFields(a) {
+  const r = a.repeat || {};
+  const mode = r.days ? 'days' : r.per || 'none';
+  const days = r.days || [];
+  const toggles = [0, 1, 2, 3, 4, 5, 6].map(i =>
+    `<button type="button" class="day-toggle" data-day="${i}" aria-pressed="${days.includes(i)}" aria-label="${esc(weekdayName(i, 'long'))}">${esc(weekdayName(i))}</button>`).join('');
+  const stats = isRoutine(a) && a.id ? [
+    tp('rt.checkins', Object.values(a.checkins || {}).filter(v => v === 1).length),
+    routineStreak(a).n ? streakText(routineStreak(a)) : '',
+    consistency(a) !== null ? t('rt.consistency', { pct: `${Math.round(consistency(a) * 100)} %` }) : '',
+  ].filter(Boolean).join(' · ') : '';
+  return `<div class="repeat-box">
+    ${field('repeat', t('f.repeat'), select('repeat', { none: t('f.repeatNone'), week: t('f.repeatWeek'), month: t('f.repeatMonth'), days: t('f.repeatDays') }, mode), t('f.repeatHint'))}
+    <div id="repeatTimes" ${mode === 'week' || mode === 'month' ? '' : 'hidden'}>${field('times', t('f.times'), num('times', r.times ?? 3))}</div>
+    <div id="repeatDays" ${mode === 'days' ? '' : 'hidden'}>${field('days', t('f.days'), `<div class="day-toggles" role="group" aria-label="${esc(t('f.days'))}">${toggles}</div><input type="hidden" name="days" value="${days.join(',')}">`)}</div>
+    ${stats ? `<p class="hint rt-stats">${esc(stats)}</p>` : ''}
+  </div>`;
+}
+
+// A routine has no status; the repeat details show only for the kind of schedule chosen.
+function updateRepeatFields() {
+  const mode = $('#f-repeat')?.value;
+  if (!mode) return;
+  $('#repeatTimes').hidden = mode !== 'week' && mode !== 'month';
+  $('#repeatDays').hidden = mode !== 'days';
+  modal.querySelector('[data-field="status"]').hidden = mode !== 'none';
 }
 
 function relationForm() {
@@ -1754,7 +1990,7 @@ function submitForm() {
       startDate: v.startDate, deadline: v.deadline, status: v.status, category: v.category.trim(),
     });
     // The metric fields are kept while measuring by activities, in case the goal switches back.
-    if (v.progress === 'activities') g.progress = 'activities';
+    if (v.progress === 'activities' || v.progress === 'routines') g.progress = v.progress;
     else delete g.progress;
     if (!existing) db.goals.push(g);
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
@@ -1780,9 +2016,22 @@ function submitForm() {
 
   if (kind === 'activity') {
     if (v.startDate && v.dueDate && v.startDate > v.dueDate) return showErrors({ dueDate: t('err.startAfterDue') });
+    let repeat = null;
+    if (v.repeat === 'week' || v.repeat === 'month') {
+      const n = Number(v.times), max = v.repeat === 'week' ? 7 : 31;
+      if (!Number.isInteger(n) || n < 1 || n > max) return showErrors({ times: t('err.times', { max }) });
+      repeat = { times: n, per: v.repeat };
+    } else if (v.repeat === 'days') {
+      const days = String(v.days || '').split(',').filter(Boolean).map(Number).sort();
+      if (!days.length) return showErrors({ days: t('err.days') });
+      repeat = { days };
+    }
     const a = Object.assign(existing || { id: uid(), createdAt: today() }, {
       title: v.title.trim(), description: v.description.trim(), status: v.status, startDate: v.startDate, dueDate: v.dueDate,
     });
+    // A routine keeps its check-ins even when it stops repeating, in case it is switched back.
+    if (repeat) Object.assign(a, { repeat, status: 'todo', startDate: a.startDate || today(), checkins: a.checkins || {} });
+    else delete a.repeat;
     if (!existing) db.activities.push(a);
     setLinks(a.id, 'subactivity', v.parent ? [v.parent] : []);
     setLinks(a.id, 'contributes', arr('goals'));
@@ -1883,7 +2132,7 @@ $('#addBtn').addEventListener('click', () => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-checkin],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -1902,6 +2151,7 @@ viewEl.addEventListener('click', e => {
     // Keep the page where it is; the button moves to the end of the list.
     return $('[data-next-more]')?.focus({ preventScroll: true });
   }
+  if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date);
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
   if (el.dataset.open) { const ent = findEntity(el.dataset.open); return ent && openForm(ent.kind, ent.item.id); }
   if (el.dataset.new) return el.dataset.new === 'relation' ? $('#addBtn').click() : openForm(el.dataset.new);
@@ -1971,12 +2221,23 @@ $('#modalForm').addEventListener('submit', e => { e.preventDefault(); submitForm
 $('#modalForm').addEventListener('input', updateSmartLive);
 $('#modalForm').addEventListener('change', e => {
   if (e.target.id === 'f-from' || e.target.id === 'f-to') return fillRelTypes();
+  if (e.target.id === 'f-repeat') return updateRepeatFields();
   if (e.target.id !== 'f-progress') return;
-  const acts = e.target.value === 'activities';
-  $('#measureFields').hidden = acts;
-  $('#actsHint').hidden = !acts;
+  const by = e.target.value;
+  $('#measureFields').hidden = by !== 'measure';
+  $('#actsHint').hidden = by !== 'activities';
+  $('#routinesHint').hidden = by !== 'routines';
   updateSmartLive();
 });
+// Weekday toggles of a routine: the chosen days are kept in a hidden field.
+$('#modalForm').addEventListener('click', e => {
+  const day = e.target.closest('.day-toggle');
+  if (!day) return;
+  day.setAttribute('aria-pressed', day.getAttribute('aria-pressed') !== 'true');
+  const box = day.closest('.field');
+  box.querySelector('input[name="days"]').value = [...box.querySelectorAll('.day-toggle[aria-pressed="true"]')].map(b => b.dataset.day).join(',');
+});
+
 // Link lists: the list opens while the search box (or one of its items) has focus, typing filters it,
 // a click on an item adds it and a chosen item's × removes it.
 $('#modalForm').addEventListener('focusin', e => { if (e.target.matches('.picker-search')) showPickList(e.target.closest('[data-picker]'), true); });
@@ -2198,9 +2459,14 @@ function importJson(file) {
 // The sample plan's data (also used by the guided tour in tutorial.js).
 function sampleData() {
   const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
-  const [halfMarathon, fund, tenK, weight, course, spanish, sell, trip, bathroom, heating] = Array.from({ length: 10 }, uid);
+  const [halfMarathon, fund, tenK, weight, course, spanish, sell, trip, bathroom, heating, exercise] = Array.from({ length: 11 }, uid);
   const [fitness, savings, spending, bodyWeight, itemsSold, heatingBill] = Array.from({ length: 6 }, uid);
-  const a = Array.from({ length: 23 }, uid);
+  const a = Array.from({ length: 25 }, uid);
+  // Routine check-ins on the past days `from`..yesterday that `keep(daysAgo, weekday)` picks.
+  const ticks = (from, keep) => Object.fromEntries(Array.from({ length: -from }, (_, i) => from + i)
+    .filter(n => keep(n, weekday(d(n)))).map(n => [d(n), 1]));
+  // Strength training on Mondays and Thursdays, one session missed two weeks ago.
+  const missed = Array.from({ length: 7 }, (_, i) => -14 + i).find(n => [0, 3].includes(weekday(d(n))));
   // Numbers and dates live here; the wording (and word units) come from the active language (i18n.js → sample).
   const txt = I18N[lang].sample;
   const withText = (list, texts) => list.map((x, i) => ({ ...x, ...texts[i] }));
@@ -2216,6 +2482,7 @@ function sampleData() {
       { id: trip, baseline: '0', current: '', target: '14', startDate: d(60), deadline: d(400), status: 'active' },
       { id: bathroom, progress: 'activities', startDate: d(-25), deadline: d(45), status: 'active' },
       { id: heating, unit: '€', baseline: '180', current: '', target: '120', startDate: d(-60), deadline: d(180), status: 'active' },
+      { id: exercise, progress: 'routines', startDate: d(-35), deadline: d(150), status: 'active' },
     ], txt.goals),
     states: withText([
       { id: fitness, value: '8', unit: 'km', date: d(-2), history: [{ date: d(-30), value: '5' }, { date: d(-2), value: '8' }] },
@@ -2232,7 +2499,8 @@ function sampleData() {
       { id: a[3], status: 'todo', startDate: d(21), dueDate: d(28) },    // 10 km test race
       { id: a[4], status: 'done', startDate: d(-60), dueDate: d(-55) },   // automate savings
       { id: a[5], status: 'todo', startDate: d(-14), dueDate: d(-1) },    // cancel subscriptions (late)
-      { id: a[6], status: 'doing', startDate: d(-20), dueDate: d(14) },   // cook at home
+      { id: a[6], status: 'todo', startDate: d(-20), dueDate: d(60), repeat: { times: 5, per: 'week' },   // cook at home (routine)
+        checkins: ticks(-20, (n, wd) => wd < 5 && n % 9 !== 0) },
       { id: a[7], status: 'doing', startDate: d(-30), dueDate: d(26) },   // weeks 1–8
       { id: a[8], status: 'todo', startDate: d(27), dueDate: d(88) },    // weeks 9–16
       { id: a[9], status: 'todo', dueDate: d(75) },    // long run
@@ -2249,6 +2517,10 @@ function sampleData() {
       { id: a[20], status: 'todo', startDate: d(9), dueDate: d(20) },    // tiling
       { id: a[21], status: 'todo', startDate: d(21), dueDate: d(30) },   // fittings
       { id: a[22], status: 'todo', startDate: d(40), dueDate: d(60) },   // insulate the attic
+      { id: a[23], status: 'todo', startDate: d(-35), repeat: { times: 3, per: 'week' },   // run 3 times a week (routine)
+        checkins: ticks(-35, (n, wd) => [1, 3, 5].includes(wd) && !(n > -22 && n <= -15) || (n > -22 && n <= -15 && wd === 2)) },
+      { id: a[24], status: 'todo', startDate: d(-28), repeat: { days: [0, 3] },   // strength training (routine)
+        checkins: ticks(-28, (n, wd) => [0, 3].includes(wd) && n !== missed) },
     ], txt.activities),
     relations: [],
   };
@@ -2270,6 +2542,8 @@ function sampleData() {
   rel(a[13], 'contributes', sell); rel(a[14], 'contributes', course); rel(a[15], 'contributes', spanish);
   rel(a[16], 'contributes', bathroom); rel(a[17], 'contributes', bathroom); rel(a[18], 'contributes', bathroom);
   rel(a[22], 'contributes', heating);
+  rel(a[23], 'contributes', exercise); rel(a[24], 'contributes', exercise); rel(exercise, 'related', halfMarathon);
+  rel(a[23], 'improves', fitness);
   // Activities → current states
   rel(a[1], 'improves', fitness); rel(a[5], 'improves', spending); rel(a[6], 'improves', spending);
   rel(a[12], 'improves', bodyWeight); rel(a[13], 'improves', itemsSold);
@@ -2372,6 +2646,8 @@ function ctxOptions(kind, item) {
       opt('add:goal:subgoal', t('ctx.addSubgoal')),
       opt('add:activity:contributes', t('ctx.addActivityGoal')),
     );
+  } else if (isRoutine(item)) {
+    if (runsOn(item, today())) options.push('-', opt('checkin', t('rt.doneTodayShort'), { checked: checkedOn(item, today()) }));
   } else if (kind === 'activity') {
     options.push(
       '-',
@@ -2414,6 +2690,7 @@ function runCtxAction(act, id) {
   const { kind, item } = ent;
   const [verb, arg, type] = act.split(':');
   if (verb === 'edit') return openForm(kind, id);
+  if (verb === 'checkin') return toggleCheckin(id, today());
   if (verb === 'highlight') { ui.mapSelected = id; return render(); }
   if (verb === 'focus') {
     Object.assign(ui, { [ui.view === 'timeline' ? 'timelineGoal' : 'mapGoal']: id, mapRefocus: true });
