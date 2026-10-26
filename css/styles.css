@@ -148,7 +148,18 @@ svg { flex: none; }
 .nav .plan-actions .icon-btn { color: var(--nav-ink); opacity: .7; }
 .nav .plan-actions .icon-btn:hover { opacity: 1; background: rgba(255,255,255,.08); }
 .title-block { min-width: 0; }
-.plan-name { display: none; margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-name { display: none; position: relative; max-width: 100%; margin: 0 0 0 -6px; }
+.plan-name select {
+  appearance: none; -webkit-appearance: none; width: auto; max-width: 100%; min-height: 32px; padding: 4px 26px 4px 6px;
+  border: 0; border-radius: var(--r-md); background: none; color: var(--ink-2); box-shadow: none;
+  font: inherit; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+}
+.plan-name select:hover, .plan-name select:focus-visible { background: var(--surface-2); color: var(--ink); }
+.plan-name svg {
+  position: absolute; right: 6px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); pointer-events: none;
+  fill: none; stroke: var(--ink-2); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .nav-item {
   display: flex; align-items: center; gap: 12px; padding: 9px 12px;
   border: 0; background: none; border-radius: var(--r-md); cursor: pointer; text-align: left;
@@ -566,7 +577,8 @@ textarea { resize: vertical; min-height: 68px; }
     flex-direction: row; justify-content: space-around; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
   }
   .brand, .nav-footer, .nav .plan-switch { display: none; }
-  .plan-name { display: block; }
+  .title-block { flex: 1; }
+  .plan-name { display: inline-block; }
   .nav-item { flex-direction: column; gap: 3px; padding: 6px 2px; font-size: 11px; flex: 1; align-items: center; text-align: center; }
   .nav-item.active { box-shadow: inset 0 3px 0 var(--blaze); border-radius: 0 0 var(--r-md) var(--r-md); }
   /* No backdrop-filter here: it would become the containing block of the fixed add button. */

@@ -64,7 +64,12 @@
     <main class="main">
       <header class="topbar">
         <div class="title-block">
-          <p id="planName" class="plan-name"></p>
+          <!-- On phones the sidebar's plan switcher is hidden, so the plan name above the title switches plans. -->
+          <label class="plan-name">
+            <span class="sr-only" data-i18n="plan.label">Action plan</span>
+            <select id="planName" data-plan-select></select>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+          </label>
           <h1 id="viewTitle"></h1>
         </div>
         <div class="topbar-actions">

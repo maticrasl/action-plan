@@ -628,6 +628,22 @@ window.moreTests = async ({ step, assert }) => {
     assert(!leftover.length, 'old plans removed from storage');
   });
 
+  await step('plans: the plan name above the title switches plans (phones)', () => {
+    const first = plans.current;
+    createPlan('Second plan');
+    const pick = $('#planName');
+    assert(pick.matches('select[data-plan-select]') && pick.closest('label').textContent.includes(t('plan.label')), 'labelled select');
+    assert(pick.options.length === plans.list.length && pick.value === plans.current, 'lists every plan, current selected');
+    assert(pick.selectedOptions[0].textContent === 'Second plan', 'shows the current plan name');
+    pick.value = first; pick.dispatchEvent(new Event('change', { bubbles: true }));
+    assert(plans.current === first && $('#planName').value === first, 'switches the plan');
+    assert([...document.querySelectorAll('[data-plan-select]')].every(s => s.value === first), 'all switchers agree');
+    const second = plans.list.find(p => p.name === 'Second plan');
+    deletePlan(second.id);
+    assert(![...$('#planName').options].some(o => o.value === second.id), 'deleted plan gone');
+    openPlan(first);
+  });
+
   await step('first visit: language picker before the tour', () => {
     changeLanguage('en');
     let done = 0;

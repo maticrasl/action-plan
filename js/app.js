@@ -2449,7 +2449,7 @@ function renderPlanSwitch() {
   document.querySelectorAll('.plan-switch').forEach(box => {
     box.innerHTML = `<label class="plan-label">${t('plan.label')}<select data-plan-select>${options}</select></label><div class="plan-actions">${actions}</div>`;
   });
-  $('#planName').textContent = currentPlan().name;
+  $('#planName').innerHTML = options;
 }
 
 document.addEventListener('change', e => {
