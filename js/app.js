@@ -120,6 +120,22 @@ function openPlan(id) {
   render();
 }
 
+// Plan names are unique, ignoring case and spaces around them.
+const nameTaken = (name, exceptId) => plans.list.some(p => p.id !== exceptId && p.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
+// The name itself if it is free, else with the first free number added: "Sample plan 2".
+function uniqueName(name) {
+  let n = 2;
+  while (nameTaken(n === 2 ? name : `${name} ${n - 1}`)) n++;
+  return n === 2 ? name : `${name} ${n - 1}`;
+}
+
+// Asks for a plan name until it is free (or the user cancels); `exceptId` is the plan being renamed.
+function askPlanName(question, suggestion, exceptId) {
+  let name = prompt(question, suggestion)?.trim();
+  while (name && nameTaken(name, exceptId)) name = prompt(`${t('plan.nameTaken', { name })}\n${question}`, name)?.trim();
+  return name;
+}
+
 function createPlan(name, data = emptyDb()) {
   const id = uid();
   plans.list.push({ id, name });
@@ -521,6 +537,7 @@ function render() {
   const old = ui.mapRefocus ? null : $('.map-wrap, .tl-scroll');
   const prevScroll = old && { left: old.scrollLeft, top: old.scrollTop };
   ui.mapRefocus = false;
+  viewEl.dataset.view = ui.view;
   viewEl.innerHTML = v.render();
   if (ui.view === 'activities') bindDragDrop();
   // Keep the map / timeline where the user left it; on first show, centre on the goals / today.
@@ -2167,7 +2184,7 @@ function importJson(file) {
       const raw = JSON.parse(reader.result);
       // Imports always become a new plan, so nothing is overwritten.
       const name = (typeof raw.name === 'string' && raw.name.trim()) || file.name.replace(/\.json$/i, '');
-      createPlan(name, normalize(raw));
+      createPlan(uniqueName(name), normalize(raw));
       toast(t('toast.imported'));
     } catch (e) {
       toast(t('err.import'));
@@ -2268,7 +2285,7 @@ function sampleData() {
 }
 
 function loadSample() {
-  createPlan(t('plan.sampleName'), sampleData());
+  createPlan(uniqueName(t('plan.sampleName')), sampleData());
   toast(t('toast.sample'));
 }
 
@@ -2739,10 +2756,10 @@ document.addEventListener('click', e => {
   if (!act) return;
   const plan = currentPlan();
   if (act === 'new') {
-    const name = prompt(t('plan.newPrompt'), t('plan.defaultName'))?.trim();
+    const name = askPlanName(t('plan.newPrompt'), uniqueName(t('plan.defaultName')));
     if (name) { createPlan(name); toast(t('toast.planCreated')); }
   } else if (act === 'rename') {
-    const name = prompt(t('plan.renamePrompt'), plan.name)?.trim();
+    const name = askPlanName(t('plan.renamePrompt'), plan.name, plan.id);
     if (name) { plan.name = name; save(); renderPlanSwitch(); toast(t('toast.planRenamed')); }
   } else if (act === 'delete') {
     openPlanDelete(plan);

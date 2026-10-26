@@ -51,7 +51,7 @@ function startTour() {
   tour.steps = TOUR_STEPS.filter(s => !s.optional || firstVisible(s.target));
   tour.prevPlan = plans.current;
   tour.prevView = ui.view;
-  createPlan(t('tour.planName'), sampleData());
+  createPlan(uniqueName(t('tour.planName')), sampleData());
   tour.planId = plans.current;
   document.body.insertAdjacentHTML('beforeend', `
     <div class="tour-block"></div>
@@ -87,9 +87,20 @@ function showStep(i) {
   $('.tour-card .btn.primary').focus();
 }
 
-// Scroll so the target's top sits just under the (sticky) top bar.
+// The map and timeline scroll on their own; a target inside them (a map box) is only partly on screen.
+const SCROLLER = '.map-wrap, .tl-scroll';
+const scrollerOf = el => el.parentElement?.closest(SCROLLER) || null;
+
+// Scroll so the target's top sits just under the (sticky) top bar; a target inside the map or
+// timeline is first scrolled to the middle of it.
 function bringIntoView(el) {
   if (!el || el.closest('.topbar, .nav') || getComputedStyle(el).position === 'fixed') return;
+  const wrap = scrollerOf(el);
+  if (wrap) {
+    const r = el.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    wrap.scrollLeft += r.left + r.width / 2 - (w.left + wrap.clientLeft + wrap.clientWidth / 2);
+    wrap.scrollTop += r.top + r.height / 2 - (w.top + wrap.clientTop + wrap.clientHeight / 2);
+  }
   const r = el.getBoundingClientRect();
   const top = $('.topbar').getBoundingClientRect().bottom + 8;
   if (r.top < top || r.bottom > innerHeight) window.scrollBy(0, r.top - top);
@@ -108,10 +119,12 @@ function placeTour() {
   // Spotlight the target, clipped to the viewport (the map and timeline can be huge).
   const vw = document.documentElement.clientWidth;
   const vh = innerHeight;
+  // ... and to the map or timeline it sits in, so the spotlight never lands beside it.
   const r = target.getBoundingClientRect();
+  const w = scrollerOf(target)?.getBoundingClientRect() || { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
   const box = {
-    left: Math.max(r.left - SPOT_PAD, 4), top: Math.max(r.top - SPOT_PAD, 4),
-    right: Math.min(r.right + SPOT_PAD, vw - 4), bottom: Math.min(r.bottom + SPOT_PAD, vh - 4),
+    left: Math.max(r.left - SPOT_PAD, w.left, 4), top: Math.max(r.top - SPOT_PAD, w.top, 4),
+    right: Math.min(r.right + SPOT_PAD, w.right, vw - 4), bottom: Math.min(r.bottom + SPOT_PAD, w.bottom, vh - 4),
   };
   // A target taller than the screen (the board on a phone) is cut off to leave room for the card below it.
   const room = vh - card.offsetHeight - EDGE - 12;

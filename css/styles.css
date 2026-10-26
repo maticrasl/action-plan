@@ -181,6 +181,8 @@ svg { flex: none; }
 .topbar h1 { font-size: 32px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-actions { display: flex; gap: 8px; align-items: center; }
 .view { padding: 6px 36px 56px; max-width: 1240px; width: 100%; overflow-x: clip; }
+/* The map and the timeline use the whole width of the screen. */
+.view[data-view="map"], .view[data-view="timeline"] { max-width: none; }
 
 .lang-switch { display: flex; padding: 3px; border-radius: 999px; background: var(--surface-2); }
 .lang-switch button {

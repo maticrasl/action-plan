@@ -241,6 +241,21 @@
     $('[data-plan="new"]').click(); assert(plans.list.length === n0 + 1 && currentPlan().name === 'Prompted plan');
     window.prompt = () => 'Renamed plan';
     $('[data-plan="rename"]').click(); assert(currentPlan().name === 'Renamed plan');
+    // Names are unique: a taken one is asked again, with the reason.
+    const asked = [];
+    const answers = ['renamed plan ', 'Other name'];
+    window.prompt = msg => { asked.push(msg); return answers.shift(); };
+    $('[data-plan="new"]').click();
+    assert(plans.list.length === n0 + 2 && currentPlan().name === 'Other name', 'taken name rejected');
+    assert(asked[1].startsWith(t('plan.nameTaken', { name: 'renamed plan' })), 'says why: ' + asked[1]);
+    window.prompt = (() => { const a = ['Renamed plan', null]; return () => a.shift(); })();
+    $('[data-plan="rename"]').click();
+    assert(currentPlan().name === 'Other name', 'rename to a taken name refused (then cancelled)');
+    window.prompt = () => 'OTHER NAME';
+    $('[data-plan="rename"]').click();
+    assert(currentPlan().name === 'OTHER NAME', 'a plan keeps its own name (case change allowed)');
+    deletePlan(plans.current);
+    window.prompt = () => 'Prompted plan';
     const sel = $('[data-plan-select]'); sel.value = plans.list[0].id; sel.dispatchEvent(new Event('change', { bubbles: true }));
     assert(plans.current === plans.list[0].id);
     sel.value = plans.list[n0].id; $('[data-plan-select]').value = plans.list[n0].id; $('[data-plan-select]').dispatchEvent(new Event('change', { bubbles: true }));
@@ -315,6 +330,25 @@
       res.push(`${s.key}${s.target ? '=' + s.target.join('|') : ''}${ok ? '' : '!MISSING'}`);
       assert(ok, 'target missing for ' + s.key);
       assert($('.tour-card h2').textContent && !$('.tour-card h2').textContent.startsWith('tour.'), 'title for ' + s.key);
+      // The spotlight sits on the target and inside the map it may be in, also when the map was
+      // scrolled so the target was out of sight. (Read from its style: it glides there.)
+      const spotOk = () => {
+        const el = firstVisible(s.target), st = $('.tour-spot').style;
+        if (!el || el.closest('.topbar, .nav')) return;
+        const spot = { left: parseFloat(st.left), top: parseFloat(st.top), width: parseFloat(st.width), height: parseFloat(st.height) };
+        const r = el.getBoundingClientRect(), w = el.parentElement.closest('.map-wrap, .tl-scroll')?.getBoundingClientRect() || r;
+        const cx = spot.left + spot.width / 2, cy = spot.top + spot.height / 2;
+        const inside = (b, pad) => cx >= b.left - pad && cx <= b.right + pad && cy >= b.top - pad && cy <= b.bottom + pad;
+        assert(spot.width > 0 && inside(r, SPOT_PAD) && inside(w, 0), `spotlight on the target for ${s.key}: spot ${JSON.stringify(spot)} target ${JSON.stringify(r)}`);
+      };
+      spotOk();
+      const wrap = firstVisible(s.target)?.parentElement.closest('.map-wrap');
+      if (wrap) {
+        wrap.scrollLeft = wrap.scrollWidth;
+        wrap.scrollTop = wrap.scrollHeight;
+        showStep(i);
+        spotOk();
+      }
     }
     $('[data-tour="finish"]').click();
     assert(tour.step === -1 && plans.list.length === planCount, 'tour plan removed');

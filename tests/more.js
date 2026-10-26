@@ -236,6 +236,21 @@ window.moreTests = async ({ step, assert }) => {
     eq(I18N.sl.strings['planDel.goals'].few.replace('{n}', 3), '3 cilji');
   });
 
+  await step('plan names: samples numbered, map and timeline full width', () => {
+    const base = t('plan.sampleName');
+    plans.list.filter(p => p.name.startsWith(base)).forEach(p => deletePlan(p.id));
+    loadSample(); loadSample(); loadSample();
+    const names = plans.list.map(p => p.name).filter(n => n.startsWith(base));
+    eq(names, [base, base + ' 2', base + ' 3'], 'sample plans numbered');
+    eq(uniqueName('Nothing like it'), 'Nothing like it', 'free name kept');
+    eq(uniqueName(base.toUpperCase()), base.toUpperCase() + ' 4', 'case is ignored');
+    // The map and timeline are not limited to the page width the other views use.
+    // (The test window is narrower than that limit, so the limit itself is checked.)
+    const limit = v => { setView(v); return getComputedStyle(viewEl).maxWidth; };
+    eq(['map', 'timeline', 'goals', 'dashboard'].map(limit), ['none', 'none', '1240px', '1240px'], 'width limits');
+    setView('dashboard');
+  });
+
   await step('date fields: dd/mm/yyyy typing, picker and validation', () => {
     const ok = [['7/3/2026', '2026-03-07'], ['07/03/2026', '2026-03-07'], ['7.3.2026', '2026-03-07'], ['7. 3. 2026', '2026-03-07'], ['29/02/2028', '2028-02-29'], ['2026-03-07', '2026-03-07']];
     ok.forEach(([s, iso]) => assert(parseDateInput(s) === iso, `${s} → ${parseDateInput(s)}`));
