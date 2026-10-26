@@ -165,6 +165,11 @@ function daysUntil(date) {
 }
 function fmtDate(date) {
   if (!date) return '';
+  const format = I18N[lang].dateFormat;
+  if (format) {
+    const [y, m, d] = date.split('-');
+    return format.replace('dd', d).replace('mm', m).replace('yyyy', y);
+  }
   return new Date(date + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 function fmtNum(n) {

@@ -38,6 +38,28 @@ window.moreTests = async ({ step, assert }) => {
     return reno.map(g => `${g.title}=${Math.round(goalProgress(g))}% ${goalState(g)}`).join(', ');
   });
 
+  await step('dates: dd/mm/yyyy in Slovenian, locale style in English', () => {
+    changeLanguage('sl');
+    const sl = [fmtDate('2026-03-07'), fmtDate('2026-12-24'), fmtDate('')];
+    const yesterday = new Date(Date.now() - 86400000);
+    const sync = syncTime(yesterday.toISOString());
+    loadSample();
+    const shown = [];
+    for (const v of ['dashboard', 'goals', 'states', 'graphs', 'activities', 'timeline', 'map']) {
+      setView(v);
+      const text = viewEl.textContent;
+      assert(!/\d{1,2}\. ?[a-zčšž]{3,}\.? \d{4}/i.test(text), `${v} still has a month-name date: ${text.match(/\d{1,2}\. ?[a-zčšž]{3,}\.? \d{4}/i)}`);
+      shown.push(...(text.match(/\b\d{2}\/\d{2}\/\d{4}\b/g) || []));
+    }
+    changeLanguage('en');
+    const en = fmtDate('2026-03-07');
+    eq(sl, ['07/03/2026', '24/12/2026', ''], 'Slovenian dates');
+    assert(sync.startsWith(`${String(yesterday.getDate()).padStart(2, '0')}/${String(yesterday.getMonth() + 1).padStart(2, '0')}/`) && /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(sync), 'sync time: ' + sync);
+    assert(en === '7 Mar 2026', 'English: ' + en);
+    assert(shown.length > 20, 'Slovenian views show dd/mm/yyyy dates');
+    return `${sl.slice(0, 2).join(', ')} | sync "${sync}" | en ${en} | ${shown.length} dates in views`;
+  });
+
   await step('parseNum: separators, signs and junk', () => {
     const ok = [['78.5', 78.5], ['78,5', 78.5], ['1 234,5', 1234.5], ['1,234.5', 1234.5], ['1.234,5', 1234.5], ['−3', -3], ['+2', 2], ['.5', 0.5], [' 7 ', 7], ["1'000", 1000], ['0', 0]];
     ok.forEach(([s, v]) => assert(parseNum(s) === v, `${s} → ${parseNum(s)}`));

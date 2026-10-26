@@ -6,6 +6,8 @@
    Plural entries are objects keyed by Intl.PluralRules category
    (one / two / few / other) and are read with tp().
    To add a language, copy the `en` block and translate it.
+   `dateFormat` (optional) fixes how dates are written, e.g. 'dd/mm/yyyy';
+   without it dates follow the locale ("24 Oct 2026").
    ========================================================= */
 
 const I18N = {
@@ -460,6 +462,7 @@ const I18N = {
   sl: {
     name: 'Slovenščina',
     locale: 'sl-SI',
+    dateFormat: 'dd/mm/yyyy',
     strings: {
       'app.name': 'Akcijski načrt',
       'app.file': 'akcijski-nacrt',
