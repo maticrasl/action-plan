@@ -120,6 +120,23 @@
     </form>
   </dialog>
 
+  <dialog id="planDelete" class="modal plan-delete" aria-labelledby="planDeleteTitle">
+    <form method="dialog" id="planDeleteForm" novalidate>
+      <header class="modal-head">
+        <h2 id="planDeleteTitle" data-i18n="planDel.title">Delete this plan?</h2>
+        <button type="button" class="icon-btn" data-plan-delete-close data-i18n-aria="btn.close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="modal-body" id="planDeleteBody"></div>
+      <footer class="modal-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-plan-delete-close data-i18n="btn.cancel">Cancel</button>
+        <button type="submit" class="btn danger solid" id="planDeleteBtn" data-i18n="planDel.confirm" disabled>Delete plan permanently</button>
+      </footer>
+    </form>
+  </dialog>
+
   <dialog id="settings" class="modal settings" aria-labelledby="settingsTitle">
     <header class="modal-head">
       <h2 id="settingsTitle" data-i18n="settings.title">Settings</h2>

@@ -244,7 +244,10 @@
     const sel = $('[data-plan-select]'); sel.value = plans.list[0].id; sel.dispatchEvent(new Event('change', { bubbles: true }));
     assert(plans.current === plans.list[0].id);
     sel.value = plans.list[n0].id; $('[data-plan-select]').value = plans.list[n0].id; $('[data-plan-select]').dispatchEvent(new Event('change', { bubbles: true }));
-    $('[data-plan="delete"]').click(); assert(plans.list.length === n0);
+    $('[data-plan="delete"]').click();
+    $('#planDeleteName').value = currentPlan().name;
+    $('#planDeleteName').dispatchEvent(new Event('input', { bubbles: true }));
+    $('#planDeleteBtn').click(); assert(plans.list.length === n0 && !$('#planDelete').open);
     return plans.list.map(p => p.name).join(',');
   });
 

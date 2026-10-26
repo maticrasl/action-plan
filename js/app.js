@@ -2744,10 +2744,56 @@ document.addEventListener('click', e => {
   } else if (act === 'rename') {
     const name = prompt(t('plan.renamePrompt'), plan.name)?.trim();
     if (name) { plan.name = name; save(); renderPlanSwitch(); toast(t('toast.planRenamed')); }
-  } else if (act === 'delete' && confirm(t('plan.confirmDelete', { name: plan.name }))) {
-    deletePlan(plan.id);
-    toast(t('toast.planDeleted'));
+  } else if (act === 'delete') {
+    openPlanDelete(plan);
   }
+});
+
+/* ---------- Deleting a plan: spells out what is lost and asks for the plan's name ---------- */
+
+const planDel = $('#planDelete');
+
+function openPlanDelete(plan) {
+  closeCtxMenu();
+  planDel.dataset.id = plan.id;
+  const count = (key, n) => (n ? `<li>${esc(tp(key, n))}</li>` : '');
+  const measured = db.states.reduce((sum, s) => sum + (s.history || []).length, 0);
+  const contents = count('planDel.goals', db.goals.length) + count('planDel.states', db.states.length) + count('planDel.measurements', measured)
+    + count('planDel.activities', db.activities.length) + count('planDel.relations', db.relations.length);
+  const last = plans.list.length === 1;
+  $('#planDeleteBody').innerHTML = `
+    <div class="del-warn" role="alert">
+      <p>${t('planDel.lead', { name: `<span class="del-name">${esc(plan.name)}</span>` })}</p>
+      ${contents ? `<ul>${contents}</ul>` : `<p>${t('planDel.empty')}</p>`}
+    </div>
+    <ul class="del-points">
+      <li class="strong">${t('planDel.noUndo')}</li>
+      <li>${t(syncConnected() ? 'planDel.synced' : 'planDel.local')}</li>
+      <li>${t(last ? 'planDel.last' : 'planDel.others')}</li>
+    </ul>
+    <button type="button" class="btn small del-backup" data-plan-backup>${t('planDel.backup')}</button>
+    <div class="field">
+      <label for="planDeleteName">${t('planDel.type', { name: `<span class="del-name">${esc(plan.name)}</span>` })}</label>
+      <input type="text" id="planDeleteName" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="planDeleteHint">
+      <div class="hint" id="planDeleteHint">${t('planDel.typeHint')}</div>
+    </div>`;
+  $('#planDeleteBtn').disabled = true;
+  planDel.showModal();
+  $('#planDeleteName').focus();
+}
+
+const planDelNameOk = () => $('#planDeleteName').value.trim() === plans.list.find(p => p.id === planDel.dataset.id)?.name;
+planDel.addEventListener('input', () => ($('#planDeleteBtn').disabled = !planDelNameOk()));
+planDel.addEventListener('click', e => {
+  if (e.target === planDel || e.target.closest('[data-plan-delete-close]')) planDel.close();
+  if (e.target.closest('[data-plan-backup]')) exportJson();
+});
+$('#planDeleteForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!planDelNameOk()) return;
+  planDel.close();
+  deletePlan(planDel.dataset.id);
+  toast(t('toast.planDeleted'));
 });
 
 /* ---------- Language & theme (in Settings) ---------- */

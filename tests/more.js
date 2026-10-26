@@ -195,6 +195,47 @@ window.moreTests = async ({ step, assert }) => {
     assert(t('tour.mapLink.text').includes('drag') && I18N.sl.strings['tour.mapLink.text'].includes('povlecite'), 'tour text in both languages');
   });
 
+  await step('deleting a plan: consequences spelled out, name must be typed', () => {
+    fresh('Old plan');
+    const g = mk('goal'), s = mk('state', { history: [{ date: d(-1), value: '1' }, { date: d(0), value: '2' }] });
+    mk('activity'); rel(s, g, 'measures');
+    save();
+    const id = plans.current, count = plans.list.length;
+    $('[data-plan="delete"]').click();
+    const dlg = $('#planDelete'), btn = $('#planDeleteBtn'), box = $('#planDeleteName');
+    assert(dlg.open && document.activeElement === box, 'dialog open, name field focused');
+    const text = $('#planDeleteBody').textContent;
+    ['Old plan', '1 goal', '1 current state', '2 recorded measurements', '1 activity', '1 relationship', 'can’t be undone', 'only in this browser', 'other plans are not affected']
+      .forEach(x => assert(text.includes(x), 'mentions ' + x));
+    assert(btn.disabled, 'delete disabled at first');
+    const type = v => { box.value = v; box.dispatchEvent(new Event('input', { bubbles: true })); };
+    type('old plan');
+    assert(btn.disabled, 'wrong case not accepted');
+    type('Old pla');
+    $('#planDeleteForm').dispatchEvent(new Event('submit', { cancelable: true }));
+    assert(dlg.open && plans.list.length === count, 'submit with a wrong name does nothing');
+    dlg.querySelector('.btn.ghost[data-plan-delete-close]').click();
+    assert(!dlg.open && plans.current === id && plans.list.length === count, 'Cancel keeps the plan');
+    $('[data-plan="delete"]').click();
+    const box2 = $('#planDeleteName');
+    assert(box2.value === '' && btn.disabled, 'field empty again');
+    box2.value = '  Old plan ';
+    box2.dispatchEvent(new Event('input', { bubbles: true }));
+    assert(!btn.disabled, 'exact name (spaces around ignored) enables delete');
+    btn.click();
+    assert(!dlg.open && plans.list.length === count - 1 && !plans.list.some(p => p.id === id), 'plan deleted');
+    // The only plan: says an empty one replaces it; Slovenian plurals.
+    plans.list.slice(1).forEach(p => deletePlan(p.id));
+    changeLanguage('sl');
+    openPlanDelete(currentPlan());
+    const sl = $('#planDeleteBody').textContent;
+    assert(sl.includes(I18N.sl.strings['planDel.last']), 'only plan: replaced by an empty one (Slovenian)');
+    $('#planDelete').close();
+    changeLanguage('en');
+    eq(tp('planDel.goals', 2), '2 goals');
+    eq(I18N.sl.strings['planDel.goals'].few.replace('{n}', 3), '3 cilji');
+  });
+
   await step('date fields: dd/mm/yyyy typing, picker and validation', () => {
     const ok = [['7/3/2026', '2026-03-07'], ['07/03/2026', '2026-03-07'], ['7.3.2026', '2026-03-07'], ['7. 3. 2026', '2026-03-07'], ['29/02/2028', '2028-02-29'], ['2026-03-07', '2026-03-07']];
     ok.forEach(([s, iso]) => assert(parseDateInput(s) === iso, `${s} → ${parseDateInput(s)}`));
