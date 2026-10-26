@@ -56,10 +56,48 @@ window.moreTests = async ({ step, assert }) => {
     assert(typed === '24/10/2026', 'slashes added while typing: ' + typed);
     due.value = ''; '7/3/2026'.split('').forEach(type);
     assert(due.value === '7/3/2026', 'typed slashes kept: ' + due.value);
-    const pick = $('[data-field="startDate"] .date-pick input');
-    pick.value = '2026-03-01';
-    pick.dispatchEvent(new Event('change', { bubbles: true }));
-    assert($('#f-startDate').value === '01/03/2026', 'picker fills the field');
+    // The calendar: Monday first, opens on the field's date, picks into the field.
+    const calBtn = f => $(`[data-field="${f}"] [data-cal-open]`);
+    const key = k => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    $('#f-startDate').value = '15/02/2026';
+    calBtn('startDate').click();
+    const cal1 = $('[data-field="startDate"] .cal');
+    const head = cal1.querySelector('.cal-head strong').textContent;
+    const weekdays = [...cal1.querySelectorAll('.cal-wd')].map(w => w.textContent);
+    const blanks = cal1.querySelectorAll('.cal-grid > span:not(.cal-wd)').length;
+    assert(calBtn('startDate').getAttribute('aria-expanded') === 'true' && document.activeElement.dataset.calDay === '2026-02-15', 'opens on the field date, day focused');
+    assert(/^pon/i.test(weekdays[0]) && /^ned/i.test(weekdays[6]) && blanks === 6, `Monday first: ${weekdays} blanks=${blanks}`); // 1 Feb 2026 is a Sunday
+    assert(cal1.querySelector('[data-cal-day="2026-02-15"]').getAttribute('aria-pressed') === 'true', 'chosen day marked');
+    key('ArrowRight'); key('ArrowDown'); key('PageDown');
+    const kb = document.activeElement.dataset.calDay;
+    assert(kb === '2026-03-23', 'arrow and page keys: ' + kb);
+    key('ArrowLeft');
+    $('[data-field="startDate"] [data-cal-move="-1"]').click(); const back = $('[data-field="startDate"] .cal-head strong').textContent;
+    $('[data-field="startDate"] [data-cal-move="1"]').click();
+    assert(document.activeElement.dataset.calMove === "1" && /feb/i.test(back), "month buttons: " + back);
+    const moved = $('[data-field="startDate"] .cal-head strong').textContent;
+    $('[data-field="startDate"] [data-cal-day="2026-03-01"]').click();
+    assert($('#f-startDate').value === '01/03/2026' && !$('.cal') && document.activeElement === $('#f-startDate'), 'picked day fills the field and closes');
+    // An empty end date opens on the start date's month (also after the start was set by the calendar).
+    due.value = '';
+    calBtn('dueDate').click();
+    const dueHead = $('[data-field="dueDate"] .cal-head strong').textContent;
+    assert(document.activeElement.dataset.calDay === '2026-03-01', 'due calendar opens at the start date');
+    key('Escape');
+    assert(!$('.cal') && modal.open && document.activeElement === calBtn('dueDate'), 'Escape closes only the calendar');
+    calBtn('dueDate').click();
+    modal.dispatchEvent(new Event('cancel', { cancelable: true }));
+    assert(!$('.cal') && modal.open, 'dialog cancel closes only the calendar');
+    calBtn('dueDate').click(); calBtn('startDate').click();
+    assert(document.querySelectorAll('.cal').length === 1 && $('[data-field="startDate"] .cal'), 'one calendar at a time');
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    assert(!$('.cal'), 'click outside closes');
+    calBtn('dueDate').click();
+    $('[data-field="dueDate"] [data-cal-pick=""]').click();
+    assert(due.value === '' && !$('.cal'), 'clear empties the field');
+    calBtn('dueDate').click();
+    $('[data-field="dueDate"] .cal-foot [data-cal-pick]').click();
+    assert(due.value === dateInput(today()), 'today button');
     $('#f-title').value = 'Dated activity';
     due.value = '31/02/2026';
     submitForm();
@@ -77,7 +115,7 @@ window.moreTests = async ({ step, assert }) => {
     const enPh = $('#f-deadline').placeholder, start = $('#f-startDate').value;
     modal.close();
     assert(enPh === 'dd/mm/yyyy' && start === dateInput(today()), 'English field and today as default start');
-    return `typed ${typed} | edit shows ${shown.join(', ')} | sl error "${err}"`;
+    return `typed ${typed} | calendar ${head} → ${moved}, due opens ${dueHead}, ${weekdays.join(" ")} | edit shows ${shown.join(", ")} | sl error "${err}"`;
   });
 
   await step('parseNum: separators, signs and junk', () => {

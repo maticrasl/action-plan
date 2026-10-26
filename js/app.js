@@ -1439,11 +1439,11 @@ function field(name, label, input, hint = '') {
 const text = (name, v, ph = '') => `<input type="text" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}">`;
 // A text field rather than type="number", so both a decimal dot and comma work in every browser.
 const num = (name, v, ph = '') => `<input type="text" data-num id="f-${name}" name="${name}" value="${esc(numInput(v))}" placeholder="${esc(ph)}" inputmode="decimal" autocomplete="off">`;
-// A dd/mm/yyyy text field in every language (the browser's own date field follows the browser's language),
-// with a calendar button that opens the browser's date picker.
+// A dd/mm/yyyy text field in every language, with the app's own calendar (weeks start on Monday);
+// the browser's date field and picker follow the browser's language instead.
 const date = (name, v) => `<div class="date-field">
   <input type="text" data-date id="f-${name}" name="${name}" value="${esc(dateInput(v))}" placeholder="${esc(t('f.datePh'))}" inputmode="numeric" autocomplete="off" maxlength="10">
-  <span class="date-pick" title="${esc(t('f.pickDate'))}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><input type="date" tabindex="-1" aria-label="${esc(t('f.pickDate'))}"></span>
+  <button type="button" class="date-pick" data-cal-open title="${esc(t('f.pickDate'))}" aria-label="${esc(t('f.pickDate'))}" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></button>
 </div>`;
 const area = (name, v, ph = '') => `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
 const select = (name, opts, v) => `<select id="f-${name}" name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
@@ -1462,6 +1462,7 @@ function smartSection(letter, body) {
 // for a new relationship, { from: id } pre-selects its source.
 function openForm(kind, id = null, links = {}) {
   formCtx = { kind, id };
+  cal = null;
   let item = null;
   if (id) item = kind === 'relation' ? db.relations.find(r => r.id === id) : findEntity(id)?.item;
   $('#deleteBtn').hidden = !item;
@@ -1810,25 +1811,129 @@ $('#modalForm').addEventListener('change', e => {
   $('#actsHint').hidden = !acts;
   updateSmartLive();
 });
-// Date fields: slashes are added while typing digits, and the calendar button fills the field.
+// Date fields: slashes are added while typing digits.
 $('#modalForm').addEventListener('input', e => {
   const box = e.target;
   if (!box.matches('[data-date]') || e.inputType !== 'insertText' || !/^\d$/.test(e.data) || box.selectionStart !== box.value.length) return;
   if (/^\d{2}$|^\d{1,2}\/\d{2}$/.test(box.value)) box.value += '/';
 });
-$('#modalForm').addEventListener('click', e => {
-  const pick = e.target.closest('.date-pick input');
-  if (!pick) return;
-  pick.value = parseDateInput(pick.closest('.date-field').querySelector('[data-date]').value) || '';
-  try { pick.showPicker(); } catch (err) { /* the browser opens it itself */ }
-});
-$('#modalForm').addEventListener('change', e => {
-  const pick = e.target.closest('.date-pick input');
-  if (!pick || !pick.value) return;
-  const box = pick.closest('.date-field').querySelector('[data-date]');
-  box.value = dateInput(pick.value);
+
+/* ---------- Calendar for date fields ----------
+   Opens below the field on the field's date, else (for an end date) on the form's start date, else today. */
+
+let cal = null; // { field, box, y, m, focus: 'yyyy-mm-dd' }
+const isoOf = (y, m, d) => new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+
+function openCalendar(field) {
+  closeCalendar();
+  const box = field.querySelector('[data-date]');
+  const start = box.id === 'f-startDate' ? null : parseDateInput($('#f-startDate')?.value);
+  const focus = parseDateInput(box.value) || start || today();
+  const [y, m] = focus.split('-').map(Number);
+  cal = { field, box, y, m: m - 1, focus };
+  field.insertAdjacentHTML('beforeend', `<div class="cal" role="dialog" aria-label="${esc(t('f.pickDate'))}"></div>`);
+  field.querySelector('[data-cal-open]').setAttribute('aria-expanded', 'true');
+  drawCalendar();
+  // Keep the calendar inside the form: open it to the left when the field is near the right edge.
+  const el = field.querySelector('.cal'), form = $('#modalForm').getBoundingClientRect();
+  if (el.getBoundingClientRect().right > form.right - 8) el.classList.add('right');
+  focusDay();
+  el.scrollIntoView({ block: 'nearest' });
+}
+
+function drawCalendar() {
+  const { y, m, box } = cal;
+  const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7; // Monday first
+  const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const chosen = parseDateInput(box.value), now = today();
+  const fmt = (iso, opts) => new Date(iso + 'T00:00Z').toLocaleDateString(locale(), { ...opts, timeZone: 'UTC' });
+  // 1 January 2024 was a Monday.
+  const weekdays = Array.from({ length: 7 }, (_, i) => `<span class="cal-wd" aria-hidden="true">${esc(fmt(isoOf(2024, 0, 1 + i), { weekday: 'short' }))}</span>`).join('');
+  const cells = Array.from({ length: days }, (_, i) => {
+    const iso = isoOf(y, m, i + 1);
+    return `<button type="button" data-cal-day="${iso}" class="${iso === now ? 'today' : ''}" aria-pressed="${iso === chosen}" tabindex="${iso === cal.focus ? 0 : -1}" aria-label="${esc(fmt(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}">${i + 1}</button>`;
+  }).join('');
+  cal.field.querySelector('.cal').innerHTML = `
+    <div class="cal-head">
+      <button type="button" data-cal-move="-1" aria-label="${esc(t('cal.prev'))}">‹</button>
+      <strong aria-live="polite">${esc(fmt(isoOf(y, m, 1), { month: 'long', year: 'numeric' }))}</strong>
+      <button type="button" data-cal-move="1" aria-label="${esc(t('cal.next'))}">›</button>
+    </div>
+    <div class="cal-grid">${weekdays}${'<span></span>'.repeat(lead)}${cells}</div>
+    <div class="cal-foot">
+      <button type="button" class="btn small ghost" data-cal-pick="${now}">${t('cal.today')}</button>
+      <button type="button" class="btn small ghost" data-cal-pick="">${t('cal.clear')}</button>
+    </div>`;
+}
+
+const focusDay = () => cal.field.querySelector(`.cal-grid [data-cal-day="${cal.focus}"]`).focus({ preventScroll: true });
+
+// Show the month of `iso` with that day focused.
+function moveCalendar(iso) {
+  const [y, m] = iso.split('-').map(Number);
+  Object.assign(cal, { y, m: m - 1, focus: iso });
+  drawCalendar();
+}
+
+function closeCalendar(refocus = false) {
+  if (!cal) return;
+  const { field } = cal;
+  cal = null;
+  field.querySelector('.cal')?.remove();
+  field.querySelector('[data-cal-open]')?.setAttribute('aria-expanded', 'false');
+  if (refocus) field.querySelector('[data-cal-open]')?.focus();
+}
+
+function pickDate(iso) {
+  const { box } = cal;
+  box.value = dateInput(iso);
+  closeCalendar();
   box.dispatchEvent(new Event('input', { bubbles: true }));
+  box.focus();
+}
+
+$('#modalForm').addEventListener('click', e => {
+  const open = e.target.closest('[data-cal-open]');
+  if (open) return cal?.field === open.closest('.date-field') ? closeCalendar() : openCalendar(open.closest('.date-field'));
+  if (!cal) return;
+  const day = e.target.closest('[data-cal-day], [data-cal-pick]');
+  if (day) return pickDate(day.dataset.calDay ?? day.dataset.calPick);
+  const move = e.target.closest('[data-cal-move]');
+  if (move) {
+    const n = Number(move.dataset.calMove);
+    const d = Number(cal.focus.slice(8));
+    // Same day in the other month, or its last day.
+    const last = new Date(Date.UTC(cal.y, cal.m + n + 1, 0)).getUTCDate();
+    moveCalendar(isoOf(cal.y, cal.m + n, Math.min(d, last)));
+    cal.field.querySelector(`[data-cal-move="${n}"]`).focus();
+  }
 });
+$('#modalForm').addEventListener('keydown', e => {
+  if (!cal || !cal.field.querySelector('.cal').contains(e.target)) return;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    return closeCalendar(true);
+  }
+  if (!e.target.matches('[data-cal-day]')) return;
+  const [y, m, d] = cal.focus.split('-').map(Number);
+  const to = {
+    ArrowLeft: [y, m - 1, d - 1], ArrowRight: [y, m - 1, d + 1], ArrowUp: [y, m - 1, d - 7], ArrowDown: [y, m - 1, d + 7],
+    PageUp: [y, m - 2, Math.min(d, new Date(Date.UTC(y, m - 1, 0)).getUTCDate())],
+    PageDown: [y, m, Math.min(d, new Date(Date.UTC(y, m + 1, 0)).getUTCDate())],
+  }[e.key];
+  if (!to) return;
+  e.preventDefault();
+  moveCalendar(isoOf(...to));
+  focusDay();
+});
+// Escape closes the calendar, not the whole form; so does a click anywhere else.
+modal.addEventListener('cancel', e => {
+  if (!cal) return;
+  e.preventDefault();
+  closeCalendar(true);
+});
+document.addEventListener('pointerdown', e => { if (cal && !cal.field.contains(e.target)) closeCalendar(); });
 modal.addEventListener('click', e => {
   if (e.target === modal || e.target.closest('[data-close]')) modal.close();
 });

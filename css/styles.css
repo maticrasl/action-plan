@@ -223,12 +223,29 @@ textarea { resize: vertical; min-height: 68px; }
 .date-field input[data-date] { padding-right: 44px; }
 .date-pick {
   position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px;
-  display: grid; place-items: center; border-radius: var(--r-md); color: var(--ink-2);
+  display: grid; place-items: center; border: 0; background: none; border-radius: var(--r-md); color: var(--ink-2); cursor: pointer;
 }
 .date-pick:hover { background: var(--surface-2); color: var(--ink); }
 .date-pick svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-/* The browser's own date input lies invisibly over the icon, so a tap opens its picker everywhere. */
-.date-pick input[type=date] { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.date-pick[aria-expanded="true"] { background: var(--surface-2); color: var(--ink); }
+/* Calendar */
+.cal {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: 284px; max-width: calc(100vw - 48px); padding: 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
+}
+.cal.right { left: auto; right: 0; }
+.cal button:not(.btn) { border: 0; background: none; color: var(--ink); border-radius: var(--r-md); cursor: pointer; font: inherit; }
+.cal button:not(.btn):hover { background: var(--surface-2); }
+.cal button:focus-visible { outline: none; box-shadow: var(--focus); }
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
+.cal-head strong { font-size: 14.5px; text-transform: capitalize; }
+.cal-head button:not(.btn) { width: 34px; height: 34px; font-size: 20px; line-height: 1; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.cal-wd { padding: 4px 0; font-size: 11.5px; font-weight: 700; color: var(--ink-2); text-transform: capitalize; }
+.cal-grid button:not(.btn) { height: 34px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.cal-grid button.today { font-weight: 800; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.cal-grid button[aria-pressed="true"], .cal-grid button[aria-pressed="true"]:hover { background: var(--goal); color: var(--surface); }
+.cal-foot { display: flex; justify-content: space-between; margin-top: 8px; }
 
 /* ---------- Cards ---------- */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
