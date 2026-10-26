@@ -676,6 +676,28 @@ window.moreTests = async ({ step, assert }) => {
     return items.join();
   });
 
+  await step('install: offered in Settings when the browser allows it', async () => {
+    changeLanguage('en');
+    assert($('#installSection').hidden, 'hidden until the browser offers it');
+    let prompted = 0;
+    const offer = new Event('beforeinstallprompt', { cancelable: true });
+    offer.prompt = () => prompted++;
+    offer.userChoice = Promise.resolve({ outcome: 'accepted' });
+    window.dispatchEvent(offer);
+    assert(offer.defaultPrevented, 'browser banner held back');
+    assert(!$('#installSection').hidden && !$('#installBtn').hidden && $('#installHint').textContent === t('install.hint'), 'section and button shown');
+    changeLanguage('sl');
+    assert($('#installHint').textContent === I18N.sl.strings['install.hint'] && $('#installBtn').textContent === 'Namesti aplikacijo', 'translated');
+    changeLanguage('en');
+    $('#installBtn').click();
+    await new Promise(r => setTimeout(r, 0));
+    assert(prompted === 1 && $('#installBtn').hidden && $('#installSection').hidden, 'prompt shown once, then hidden');
+    $('#installBtn').click();
+    assert(prompted === 1, 'no second prompt');
+    window.dispatchEvent(new Event('appinstalled'));
+    assert($('#toast').textContent === t('install.done'), 'installed toast');
+  });
+
   await step('first visit: language picker before the tour', () => {
     changeLanguage('en');
     let done = 0;

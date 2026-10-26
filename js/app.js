@@ -2532,6 +2532,7 @@ function changeLanguage(code) {
   applyNavCollapsed();
   renderSync();
   renderPlanSwitch();
+  renderInstall();
   if (modal.open) modal.close();
   render();
 }
@@ -2567,6 +2568,44 @@ $('#themeSeg').addEventListener('click', e => {
   applyTheme();
 });
 
+/* ---------- Install as an app ----------
+   Browsers that can install it (Chrome, Edge, Samsung Internet) offer it through `beforeinstallprompt`;
+   on iPhone and iPad it is Safari's Share → Add to Home Screen. */
+
+let installPrompt = null;
+const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function renderInstall() {
+  const ios = !installPrompt && isIos();
+  $('#installSection').hidden = isInstalled() || !(installPrompt || ios);
+  $('#installHint').textContent = t(ios ? 'install.iosHint' : 'install.hint');
+  $('#installBtn').hidden = !installPrompt;
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); // offer it in Settings instead of the browser's own banner
+  installPrompt = e;
+  renderInstall();
+});
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  renderInstall();
+  toast(t('install.done'));
+});
+$('#installBtn').addEventListener('click', async () => {
+  if (!installPrompt) return;
+  const prompt = installPrompt;
+  installPrompt = null; // a prompt can only be shown once
+  prompt.prompt();
+  await prompt.userChoice.catch(() => null);
+  renderInstall();
+});
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => { /* the app works without it, just not offline */ });
+}
+
 /* ---------- Boot ---------- */
 
 applyStaticI18n();
@@ -2587,6 +2626,7 @@ ui.category = typeof prefs.get('category') === 'string' ? prefs.get('category') 
 ui.help = prefs.get('help', false) === true;
 ui.navCollapsed = prefs.get('navCollapsed', false) === true;
 applyNavCollapsed();
+renderInstall();
 render();
 initTutorial(firstVisit);
 initSync();
