@@ -2856,4 +2856,47 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('en');
     return t('tl.alsoUnder', { goals: 'G1, G2' });
   });
+  /* ---------- Touch: the first tap after a long-press counts ---------- */
+
+  await step('touch: after a long-press, the first tap on a menu item works (no click ends the press)', async () => {
+    fresh('Long press');
+    const g = mk('goal', { title: 'Goal' }), g2 = mk('goal', { title: 'Other goal' });
+    save();
+    setView('map');
+    const node = id => $(`[data-map-node="${id}"]`);
+    const touch = (type, el, x = 50, y = 50) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7, clientX: x, clientY: y }));
+    const tapMenu = act => {
+      const b = ctxMenu.querySelector(`[data-ctx="${act}"]`);
+      touch('pointerdown', b); touch('pointerup', b);
+      b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    };
+    const longPress = async (el, withClick) => {
+      touch('pointerdown', el);
+      await new Promise(r => setTimeout(r, LONG_PRESS_MS + 80));
+      touch('pointerup', el);
+      // iOS sends a click when the finger lifts; Android usually does not.
+      if (withClick) el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    };
+    for (const withClick of [false, true]) {
+      ui.mapSelected = null; ui.mapLinkFrom = null; render();
+      await longPress(node(g2.id), withClick);
+      assert(!ctxMenu.hidden && ctxMenu.dataset.id === g2.id, `${withClick ? 'with' : 'without'} a lifting click: menu open`);
+      eq(ui.mapSelected, null, 'the press itself does not select the box');
+      tapMenu('link');
+      assert(ui.mapLinkFrom === g2.id && ctxMenu.hidden, `${withClick ? 'with' : 'without'} a lifting click: one tap on “Link to…” starts linking`);
+      ui.mapLinkFrom = null; render();
+      // Any menu item, not only Link to…
+      await longPress(node(g.id), withClick);
+      tapMenu('edit');
+      assert(modal.open && formCtx.id === g.id, `${withClick ? 'with' : 'without'} a lifting click: one tap on Edit opens it`);
+      modal.close();
+    }
+    // A short tap still selects as before.
+    ui.mapSelected = null; render();
+    touch('pointerdown', node(g.id)); touch('pointerup', node(g.id));
+    node(g.id).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    eq(ui.mapSelected, g.id, 'a short tap selects');
+    deletePlan(plans.current);
+    return 'ok';
+  });
 };

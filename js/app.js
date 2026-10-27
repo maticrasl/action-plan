@@ -3301,11 +3301,14 @@ viewEl.addEventListener('pointermove', e => {
   if (press && !press.fired && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) { clearTimeout(press.timer); press = null; }
 });
 ['pointerup', 'pointercancel'].forEach(type => viewEl.addEventListener(type, () => press && clearTimeout(press.timer)));
-// The click that ends a long-press must not also toggle highlighting or hit a menu item.
+// The click that ends a long-press must not also toggle highlighting or hit a menu item. Phones often
+// send no click at all when the finger lifts, so a new touch ends the wait; otherwise the first tap on
+// the menu would be swallowed instead.
 document.addEventListener('click', e => {
   if (press?.fired) { e.stopPropagation(); e.preventDefault(); }
   press = null;
 }, true);
+document.addEventListener('pointerdown', () => { if (press?.fired) press = null; }, true);
 
 /* ---------- Zoom: ctrl + scroll, pinch, trackpad gestures ---------- */
 // The map scales as a whole; the timeline only stretches its time axis. Both keep the point under the
