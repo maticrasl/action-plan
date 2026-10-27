@@ -2719,7 +2719,7 @@ window.moreTests = async ({ step, assert }) => {
   await step('timeline: help mentions the keys, in both languages', () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
-      for (const key of ['tl.hint', 'help.view.timeline']) [/Delete/, /Enter/, /Esc/].forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
+      for (const key of ['help.view.timeline']) [/Delete/, /Enter/, /Esc/].forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
     }
     changeLanguage('en');
     return t('tl.hint');
@@ -2898,5 +2898,95 @@ window.moreTests = async ({ step, assert }) => {
     eq(ui.mapSelected, g.id, 'a short tap selects');
     deletePlan(plans.current);
     return 'ok';
+  });
+  /* ---------- A menu for relationship lines: long-press, right-click or the menu key ---------- */
+
+  await step('lines: a long-press, right-click or menu key opens Edit, Remove and Deselect', async () => {
+    fresh('Line menu');
+    const g = mk('goal', { title: 'Goal' }), a = mk('activity', { title: 'Act' }), b = mk('activity', { title: 'Other' });
+    rel(a, g, 'contributes'); rel(b, g, 'contributes');
+    save();
+    setView('map');
+    const r = () => db.relations.find(x => x.from === a.id);
+    const line = () => $(`[data-rel-edit="${r().id}"]`);
+    const touch = (type, el) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 9, clientX: 60, clientY: 60 }));
+    const longPress = async el => { touch('pointerdown', el); await new Promise(res => setTimeout(res, LONG_PRESS_MS + 80)); touch('pointerup', el); };
+    const tapMenu = act => {
+      const btn = ctxMenu.querySelector(`[data-ctx="${act}"]`);
+      touch('pointerdown', btn); touch('pointerup', btn);
+      btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    };
+    const items = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(x => x.textContent);
+
+    await longPress(line());
+    assert(!ctxMenu.hidden, 'long-press opens a menu');
+    eq(items(), [t('btn.edit'), t('btn.remove'), t('btn.deselect')], 'the three options');
+    assert(ctxMenu.textContent.includes('Act') && ctxMenu.textContent.includes('Goal') && ctxMenu.textContent.includes(t('kind.relation')), 'names the relationship');
+    eq(ui.mapRel, r().id, 'the line is selected too');
+    assert(line().classList.contains('sel'), 'drawn as selected');
+    // Selecting redraws the map, which puts its scroll back; that must not close the menu.
+    await new Promise(res => setTimeout(res, 300));
+    assert(!ctxMenu.hidden, 'still open a moment later');
+    await new Promise(res => setTimeout(res, 300));
+    $('.map-wrap').dispatchEvent(new Event('scroll'));
+    assert(ctxMenu.hidden, 'a real scroll later still closes it');
+    await longPress(line());
+    tapMenu('rel-edit');
+    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'relation' && formCtx.id === r().id, 'one tap on Edit opens it');
+    modal.close();
+
+    await longPress(line());
+    tapMenu('rel-deselect');
+    assert(ctxMenu.hidden && ui.mapRel === null && !line().classList.contains('sel'), 'Deselect');
+    eq(db.relations.length, 2, 'nothing removed');
+
+    // Right-click (desktop, and Android's long-press) opens the same menu.
+    line().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 80, clientY: 80 }));
+    assert(!ctxMenu.hidden && ui.mapRel === r().id, 'right-click opens it and selects');
+    eq(items().length, 3, 'same options');
+    press('Escape', ctxMenu);
+    assert(ctxMenu.hidden, 'Escape closes the menu');
+    // The menu key on a focused line.
+    line().focus();
+    press('ContextMenu', line());
+    assert(!ctxMenu.hidden && items().length === 3, 'the menu key opens it');
+    closeCtxMenu();
+
+    await longPress(line());
+    const id = r().id;
+    tapMenu('rel-remove');
+    assert(ctxMenu.hidden && !db.relations.some(x => x.id === id), 'Remove removes it');
+    eq($('#toast').textContent, t('toast.relRemoved'), 'says so');
+    assert(findEntity(a.id) && findEntity(g.id) && db.relations.length === 1, 'the items and the other line stay');
+
+    // Boxes keep their own menu.
+    const box = $(`[data-map-node="${a.id}"]`);
+    await longPress(box);
+    assert(!ctxMenu.hidden && ctxMenu.querySelector('[data-ctx="edit"]') && !ctxMenu.querySelector('[data-ctx="rel-edit"]'), 'a box still opens the item menu');
+    closeCtxMenu();
+
+    // Timeline dependency arrows have the same menu.
+    rel(b, a, 'depends');
+    a.startDate = d(-3); a.dueDate = d(3); b.startDate = d(4); b.dueDate = d(9); g.startDate = d(-5); g.deadline = d(30);
+    save(); ui.tlDeps = true; setView('timeline');
+    const dep = $('.tl-deps [data-rel-edit]');
+    await longPress(dep);
+    assert(!ctxMenu.hidden && items().length === 3, 'timeline arrow: menu');
+    tapMenu('rel-remove');
+    assert(!db.relations.some(x => x.type === 'depends'), 'timeline arrow removed');
+    deletePlan(plans.current);
+    return items().join(', ');
+  });
+
+  await step('map and timeline hints are short; the details are in the help', () => {
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code);
+      for (const k of ['map.hint', 'tl.hint']) assert(t(k).length <= 150, `${code} ${k} is ${t(k).length} characters`);
+      for (const k of ['help.view.map', 'help.view.timeline']) [/Delete/, /Enter/, /Esc/, /Ctrl/].forEach(w => assert(w.test(t(k)), `${code} ${k} mentions ${w}`));
+      assert(/collapse|strn/i.test(t('help.view.timeline')), `${code}: folding in the timeline help`);
+    }
+    changeLanguage('en');
+    setView('map');
+    return `${t('map.hint')} | ${t('tl.hint')}`;
   });
 };

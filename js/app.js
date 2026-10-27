@@ -3232,6 +3232,7 @@ function openCtxMenu(id, x, y) {
   const ent = findEntity(id);
   if (!ent) return;
   ctxMenu.dataset.id = id;
+  ctxMenu.dataset.rel = '';
   ctxMenu.setAttribute('aria-label', t('ctx.label', { name: ent.item.title }));
   ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag ${ent.kind}">${t('kind.' + ent.kind)}</span><strong>${esc(ent.item.title)}</strong></div>` +
     ctxOptions(ent.kind, ent.item).map(o => o === '-' ? '<hr>' :
@@ -3243,10 +3244,41 @@ function openCtxMenu(id, x, y) {
   ctxMenu.querySelector('button').focus();
 }
 
+let ctxOpenedAt = 0;
+
 function closeCtxMenu(refocus = false) {
   if (ctxMenu.hidden) return;
   ctxMenu.hidden = true;
-  if (refocus) $(`[data-map-node="${ctxMenu.dataset.id}"], [data-tl-node="${ctxMenu.dataset.id}"]`)?.focus();
+  if (refocus) $(ctxMenu.dataset.rel ? `[data-rel-edit="${ctxMenu.dataset.rel}"]` : `[data-map-node="${ctxMenu.dataset.id}"], [data-tl-node="${ctxMenu.dataset.id}"]`)?.focus();
+}
+
+// A relationship line's menu (long-press, right-click or the menu key): it selects the line and
+// offers what the selection row below offers.
+function openRelMenu(relId, x, y) {
+  const r = db.relations.find(x => x.id === relId);
+  if (!r) return;
+  Object.assign(ui, { mapRel: relId, mapSelected: null });
+  render();
+  ctxMenu.dataset.id = '';
+  ctxMenu.dataset.rel = relId;
+  ctxMenu.setAttribute('aria-label', t('map.relLabel', { rel: relText(r) }));
+  const item = (act, label, danger) => `<button type="button" tabindex="-1" data-ctx="${act}" class="${danger ? 'danger' : ''}" role="menuitem">${esc(label)}</button>`;
+  ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag">${t('kind.relation')}</span><strong>${esc(relText(r))}</strong></div>` +
+    item('rel-edit', t('btn.edit')) + item('rel-remove', t('btn.remove'), true) + item('rel-deselect', t('btn.deselect'));
+  ctxMenu.hidden = false;
+  ctxOpenedAt = performance.now();
+  const { width, height } = ctxMenu.getBoundingClientRect();
+  ctxMenu.style.left = `${Math.max(8, Math.min(x, innerWidth - width - 8))}px`;
+  ctxMenu.style.top = `${Math.max(8, Math.min(y, innerHeight - height - 8))}px`;
+  ctxMenu.querySelector('button').focus();
+}
+
+function runRelAction(act, relId) {
+  closeCtxMenu();
+  if (act === 'rel-edit') return openForm('relation', relId);
+  if (act === 'rel-remove') return removeRelation(relId);
+  ui.mapRel = null;
+  render();
 }
 
 function runCtxAction(act, id) {
@@ -3282,19 +3314,24 @@ function runCtxAction(act, id) {
 }
 
 viewEl.addEventListener('contextmenu', e => {
-  const node = e.target.closest(NODE_SEL);
-  if (!node) return;
+  const node = e.target.closest(NODE_SEL), line = e.target.closest('[data-rel-edit]');
+  if (!node && !line) return;
   e.preventDefault();
-  openCtxMenu(nodeId(node), e.clientX, e.clientY);
+  if (line) openRelMenu(line.dataset.relEdit, e.clientX, e.clientY);
+  else openCtxMenu(nodeId(node), e.clientX, e.clientY);
 });
 
 // Long-press for touch screens (iOS Safari never fires contextmenu).
 let press = null;
 viewEl.addEventListener('pointerdown', e => {
-  const node = e.target.closest(NODE_SEL);
-  if (!node || e.pointerType === 'mouse') return;
+  const node = e.target.closest(NODE_SEL), line = e.target.closest('[data-rel-edit]');
+  if ((!node && !line) || e.pointerType === 'mouse') return;
   const p = { x: e.clientX, y: e.clientY, fired: false };
-  p.timer = setTimeout(() => { p.fired = true; openCtxMenu(nodeId(node), p.x, p.y + 12); }, LONG_PRESS_MS);
+  p.timer = setTimeout(() => {
+    p.fired = true;
+    if (line) openRelMenu(line.dataset.relEdit, p.x, p.y + 12);
+    else openCtxMenu(nodeId(node), p.x, p.y + 12);
+  }, LONG_PRESS_MS);
   press = p;
 });
 viewEl.addEventListener('pointermove', e => {
@@ -3536,7 +3573,13 @@ viewEl.addEventListener('gesturestart', e => {
 });
 
 viewEl.addEventListener('keydown', e => {
-  if (e.target.closest?.('[data-rel-edit]') && (e.key === 'Enter' || e.key === ' ')) {
+  const line = e.target.closest?.('[data-rel-edit]');
+  if (line && (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10'))) {
+    e.preventDefault();
+    const box = line.getBoundingClientRect();
+    return openRelMenu(line.dataset.relEdit, box.left + box.width / 2, box.top + box.height / 2);
+  }
+  if (line && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
     return openForm('relation', e.target.closest('[data-rel-edit]').dataset.relEdit);
   }
@@ -3589,7 +3632,8 @@ document.addEventListener('keydown', e => {
 
 ctxMenu.addEventListener('click', e => {
   const b = e.target.closest('[data-ctx]');
-  if (b) runCtxAction(b.dataset.ctx, ctxMenu.dataset.id);
+  if (b && ctxMenu.dataset.rel) runRelAction(b.dataset.ctx, ctxMenu.dataset.rel);
+  else if (b) runCtxAction(b.dataset.ctx, ctxMenu.dataset.id);
 });
 ctxMenu.addEventListener('keydown', e => {
   const items = [...ctxMenu.querySelectorAll('button')];
@@ -3605,7 +3649,9 @@ ctxMenu.addEventListener('keydown', e => {
 });
 document.addEventListener('pointerdown', e => { if (!ctxMenu.contains(e.target)) closeCtxMenu(); });
 addEventListener('resize', () => closeCtxMenu());
-document.addEventListener('scroll', () => closeCtxMenu(), true);
+// Scrolling closes the menu, but not the scroll a redraw makes right after it opened (a line's
+// menu selects the line, which redraws the map and puts its scroll position back).
+document.addEventListener('scroll', () => { if (performance.now() - ctxOpenedAt > 400) closeCtxMenu(); }, true);
 
 /* ---------- Plan switcher (sidebar on desktop, menu on mobile) ---------- */
 

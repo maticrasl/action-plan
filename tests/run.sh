@@ -9,7 +9,7 @@ cp "$HERE/pre.js" "$HERE/more.js" "$HERE/test.js" "$D/js/"
 sed -i 's#<script src="js/i18n.js"></script>#<script src="js/pre.js"></script>\n  <script src="js/i18n.js"></script>#; s#<script src="js/app.js"></script>#<script src="js/app.js"></script>\n  <script src="js/more.js"></script>\n  <script src="js/test.js"></script>#' "$D/index.html"
 CHROME="${CHROME:-/c/Program Files/Google/Chrome/Application/chrome.exe}"
 WIN=$(cygpath -w "$D" 2>/dev/null || echo "$D")
-"$CHROME" --headless=new --disable-gpu --no-first-run --user-data-dir="$WIN/profile" --window-size=1280,900 --virtual-time-budget=15000 --dump-dom "file:///${WIN//\//}/index.html" 2>/dev/null > "$D/dom.html"
+"$CHROME" --headless=new --disable-gpu --no-first-run --user-data-dir="$WIN/profile" --window-size=1280,900 --virtual-time-budget=40000 --dump-dom "file:///${WIN//\//}/index.html" 2>/dev/null > "$D/dom.html"
 python - "$D/dom.html" <<'PY'
 import sys, re, html
 s = open(sys.argv[1], encoding='utf-8').read()
