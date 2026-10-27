@@ -456,6 +456,9 @@ textarea { resize: vertical; min-height: 68px; }
 .node text { fill: var(--ink); font-size: 13px; font-weight: 600; }
 .node .sub { fill: var(--ink-2); font-size: 11.5px; font-weight: 400; }
 .node.goal rect { stroke: var(--goal); stroke-width: 2.5; }
+.node-track, .node-progress { stroke-width: 4; stroke-linecap: round; }
+.node-track { stroke: color-mix(in srgb, var(--ink) 12%, transparent); }
+.node-progress { stroke: var(--ok); }
 .node.state rect { stroke: var(--state); stroke-dasharray: 0; }
 .node.activity rect { stroke: var(--line-strong); }
 .node:hover rect { stroke-width: 3; }
@@ -563,8 +566,8 @@ textarea { resize: vertical; min-height: 68px; }
   background: var(--surface); overflow: hidden; display: flex; align-items: center; z-index: 1;
 }
 .tl-bar span { position: relative; padding: 0 8px; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tl-bar.goal { top: 7px; height: 26px; border: 2px solid var(--goal); border-radius: 8px; }
-.tl-progress { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--goal); }
+.tl-bar.goal { top: 7px; height: 26px; border: 1.5px solid var(--goal); border-radius: 8px; }
+.tl-progress { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--ok); border-radius: 0 2px 0 0; }
 .tl-bar.st-done, .tl-milestone.st-done, .tl-dot.st-done { background: var(--fill-done); }
 .tl-bar.st-doing, .tl-milestone.st-doing, .tl-dot.st-doing { background: var(--fill-doing); }
 .tl-bar.st-late, .tl-milestone.st-late, .tl-dot.st-late { background: var(--fill-late); }
@@ -577,14 +580,27 @@ textarea { resize: vertical; min-height: 68px; }
 /* The selected bar can be dragged to new dates; its grips change one end only. */
 .tl-drag { cursor: grab; box-shadow: 0 0 0 3px color-mix(in srgb, var(--goal) 35%, transparent); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .tl-grip { position: absolute; top: 4px; height: 32px; z-index: 2; cursor: ew-resize; -webkit-touch-callout: none; }
-/* Red [ ] brackets round the selected bar mark the ends that can be dragged. */
+/* Red [ ] trim handles cap the ends of the selected bar: a solid spine with grip lines,
+   thin arms hugging the bar's corners. */
+.tl-grip::before, .tl-grip::after { content: ''; position: absolute; pointer-events: none; }
 .tl-grip::after {
-  content: ''; position: absolute; top: 0; height: 32px; width: 8px; box-sizing: border-box;
-  border: 3px solid var(--bad); pointer-events: none;
+  --c: var(--bad); top: 1px; height: 30px; width: 14px; box-sizing: border-box; border: 2px solid var(--c);
+  filter: drop-shadow(0 0 .5px var(--surface)) drop-shadow(0 1px 2px rgb(0 0 0 / .3));
+  transition: filter .12s ease-out, border-color .12s ease-out;
 }
-.tl-grip[data-tl-edge="start"]::after { left: 7px; border-right: 0; border-radius: 3px 0 0 3px; }
-.tl-grip[data-tl-edge="end"]::after { right: 7px; border-left: 0; border-radius: 0 3px 3px 0; }
-.tl-grip:hover::after, .tl-resizing .tl-grip::after { border-width: 4px; }
+.tl-grip[data-tl-edge="start"]::after { left: 4px; border-left-width: 7px; border-right: 0; border-radius: 7px 0 0 7px; }
+.tl-grip[data-tl-edge="end"]::after { right: 4px; border-right-width: 7px; border-left: 0; border-radius: 0 7px 7px 0; }
+/* Two grip lines down the middle of the spine. */
+.tl-grip::before {
+  top: 11px; height: 10px; width: 4px; z-index: 1; border-radius: 1px;
+  background: linear-gradient(90deg, rgb(255 255 255 / .9) 0 1.2px, transparent 1.2px 2.8px, rgb(255 255 255 / .9) 2.8px);
+}
+.tl-grip[data-tl-edge="start"]::before { left: 5.5px; }
+.tl-grip[data-tl-edge="end"]::before { right: 5.5px; }
+.tl-grip:hover::after, .tl-resizing .tl-grip::after {
+  --c: color-mix(in srgb, var(--bad) 85%, var(--ink));
+  filter: drop-shadow(0 0 .5px var(--surface)) drop-shadow(0 0 4px color-mix(in srgb, var(--bad) 55%, transparent));
+}
 .tl-drag-tip {
   position: fixed; z-index: 55; transform: translateY(-100%); pointer-events: none; white-space: nowrap;
   background: var(--ink); color: var(--bg); padding: 5px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;

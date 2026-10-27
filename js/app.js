@@ -1372,12 +1372,15 @@ function renderMap() {
 
   const nodes = Object.values(node).map(n => {
     const { item } = findEntity(n.id);
-    let st = '', sub;
+    let st = '', sub, bar = '', pct = '';
     if (n.kind === 'goal') {
       st = goalState(item);
-      sub = st === 'blocked'
-        ? t('acts.waitsFor', { n: blockers(item, 'goal').length })
-        : `${Math.round(goalProgress(item))} %, ${item.deadline ? fmtDate(item.deadline) : t('map.noDeadline')}`;
+      sub = st === 'blocked' ? t('acts.waitsFor', { n: blockers(item, 'goal').length }) : item.deadline ? fmtDate(item.deadline) : t('map.noDeadline');
+      // Progress shows as a green bar along the bottom of the box; the number stays in the tooltip.
+      const p = goalProgress(item);
+      pct = ` – ${Math.round(p)} %`;
+      const y = NH - 8, end = 14 + (NW - 28) * Math.min(p, 100) / 100;
+      bar = `<line class="node-track" x1="14" x2="${NW - 14}" y1="${y}" y2="${y}"></line>${p > 0 ? `<line class="node-progress" x1="14" x2="${end.toFixed(1)}" y1="${y}" y2="${y}"></line>` : ''}`;
     } else if (isRoutine(item)) {
       st = activityState(item);
       const streak = routineStreak(item);
@@ -1394,8 +1397,8 @@ function renderMap() {
     return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
       <rect width="${NW}" height="${NH}" rx="10" style="${n.id === sel ? 'stroke-width:3' : ''}"></rect>
       <text x="12" y="23">${esc(title)}</text>
-      <text class="sub" x="12" y="41">${esc(sub)}</text>
-      <title>${esc(item.title)}${st ? ' – ' + esc(t('nodeState.' + st)) : ''}</title>
+      <text class="sub" x="12" y="${bar ? 38 : 41}">${esc(sub)}</text>${bar}
+      <title>${esc(item.title)}${pct}${st ? ' – ' + esc(t('nodeState.' + st)) : ''}</title>
     </g>`;
   }).join('');
 
