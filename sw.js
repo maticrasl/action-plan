@@ -6,7 +6,7 @@
 const CACHE = 'actionplan-v1';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
-  'js/i18n.js', 'js/config.js', 'js/tutorial.js', 'js/sync.js', 'js/drive.js', 'js/app.js',
+  'js/i18n.js', 'js/config.js', 'js/templates.js', 'js/tutorial.js', 'js/sync.js', 'js/drive.js', 'js/app.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-192.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
 ];
 const FONTS = ['https://fonts.googleapis.com', 'https://fonts.gstatic.com'];

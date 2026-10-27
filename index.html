@@ -233,6 +233,7 @@
         <div class="set-actions">
           <button type="button" class="btn small" id="exportBtn" data-i18n="btn.export">Export plan</button>
           <label class="btn small"><span data-i18n="btn.import">Import plan</span><input type="file" id="importInput" accept=".json,application/json" hidden></label>
+          <button type="button" class="btn small" id="templatesBtn" data-i18n="btn.templates">Start from a template</button>
           <button type="button" class="btn small" id="sampleBtn" data-i18n="btn.sample">Load sample plan</button>
         </div>
       </section>
@@ -248,11 +249,26 @@
     </div>
   </dialog>
 
+  <dialog id="templates" class="modal templates" aria-labelledby="templatesTitle">
+    <header class="modal-head">
+      <h2 id="templatesTitle" data-i18n="tpl.title">Plan templates</h2>
+      <button type="button" class="icon-btn" data-templates-close data-i18n-aria="btn.close" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="hint" data-i18n="tpl.lead">Each template is a complete plan to adapt.</p>
+      <div class="chips" id="templateAreas" role="group" data-i18n-aria="tpl.areas" aria-label="Area"></div>
+      <div id="templateList"></div>
+    </div>
+  </dialog>
+
   <div id="ctxMenu" class="ctx-menu" role="menu" hidden></div>
   <div id="toast" class="toast" role="status"></div>
 
   <script src="js/i18n.js"></script>
   <script src="js/config.js"></script>
+  <script src="js/templates.js"></script>
   <script src="js/tutorial.js"></script>
   <script src="js/sync.js"></script>
   <script src="js/drive.js"></script>

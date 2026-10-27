@@ -38,6 +38,142 @@ window.moreTests = async ({ step, assert }) => {
     return reno.map(g => `${g.title}=${Math.round(goalProgress(g))}% ${goalState(g)}`).join(', ');
   });
 
+  /* ---------- Templates (templates.js) ---------- */
+
+  await step('templates: data is complete in both languages and every link names an item of the right kind', () => {
+    const TEXT = ['name', 'about', 'title', 'specific', 'metric', 'unit', 'achievable', 'relevant', 'description'];
+    const pairOk = (v, where) => assert(typeof v === 'string' ? v.trim() : Array.isArray(v) && v.length === TPL_LANGS.length && v.every(x => typeof x === 'string' && x.trim()), `text ${where}: ${JSON.stringify(v)}`);
+    const seen = new Set();
+    for (const tpl of TEMPLATES) {
+      assert(!seen.has(tpl.id) && TPL_AREAS.includes(tpl.area) && ['starter', 'ambitious'].includes(tpl.level), `${tpl.id}: id, area, level`);
+      seen.add(tpl.id);
+      assert(Array.isArray(tpl.name) && Array.isArray(tpl.about), `${tpl.id}: name and about in every language`);
+      const kinds = {};
+      for (const [coll, kind] of [['goals', 'goal'], ['states', 'state'], ['activities', 'activity']]) {
+        for (const x of tpl[coll]) {
+          assert(x.k && !kinds[x.k], `${tpl.id}: key ${x.k} unique`);
+          kinds[x.k] = kind;
+          assert(x.title, `${tpl.id}.${x.k}: title`);
+          TEXT.forEach(f => x[f] !== undefined && pairOk(x[f], `${tpl.id}.${x.k}.${f}`));
+        }
+      }
+      pairOk(tpl.name, tpl.id + '.name'); pairOk(tpl.about, tpl.id + '.about');
+      const links = { sub: 'goal', deps: null, measures: 'goal', goals: 'goal', improves: 'state', parent: 'activity' };
+      for (const x of [...tpl.goals, ...tpl.states, ...tpl.activities]) {
+        for (const [f, kind] of Object.entries(links)) {
+          [].concat(x[f] || []).forEach(k => assert(kinds[k] === (kind || kinds[x.k]), `${tpl.id}.${x.k}.${f} → ${k}`));
+        }
+      }
+      for (const g of tpl.goals) assert(g.progress || (isNum(g.baseline) && isNum(g.target) && g.baseline !== g.target), `${tpl.id}.${g.k}: baseline and target`);
+    }
+    const starters = TEMPLATES.filter(x => x.level === 'starter').length;
+    return `${TEMPLATES.length} templates (${starters} starter, ${TEMPLATES.length - starters} ambitious)`;
+  });
+
+  await step('templates: every template becomes a sound plan, in both languages, and every view draws it', () => {
+    const views = ['dashboard', 'goals', 'states', 'graphs', 'activities', 'timeline', 'map'];
+    const made = [];
+    let items = 0;
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code);
+      for (const tpl of TEMPLATES) {
+        const where = `${code} ${tpl.id}`;
+        useTemplate(tpl);
+        made.push(plans.current);
+        assert(currentPlan().name.startsWith(tplText(tpl.name)), `${where}: plan name`);
+        eq([db.goals.length, db.states.length, db.activities.length], [tpl.goals.length, tpl.states.length, tpl.activities.length], `${where}: counts`);
+        items += itemCount();
+        assert([...db.goals, ...db.states, ...db.activities].every(x => typeof x.title === 'string' && x.title), `${where}: titles`);
+        assert(db.goals.every(g => g.category === t('tpl.area.' + tpl.area)), `${where}: category`);
+        // Every link follows the rules, as if added by hand, and survives a merge.
+        const all = [...db.relations];
+        all.forEach(r => {
+          db.relations = all.filter(x => x !== r);
+          const err = canRelate(r.from, r.to, r.type);
+          assert(!err, `${where}: ${r.type} ${findEntity(r.from)?.item.title} → ${findEntity(r.to)?.item.title}: ${err}`);
+        });
+        db.relations = all;
+        assert(repairRelations(db).length === all.length, `${where}: merge repair keeps every relation`);
+        // Dates make sense: nothing ends before it starts, nothing is late on the first day,
+        // sub-activities sit inside their parent, and work starts once what it waits for is due.
+        const title = id => findEntity(id).item.title;
+        db.goals.forEach(g => assert(g.startDate <= g.deadline && goalState(g) !== 'late', `${where}: goal dates ${g.title}`));
+        db.activities.forEach(a => {
+          assert(!a.dueDate || a.startDate <= a.dueDate, `${where}: dates ${a.title}`);
+          assert(activityState(a) !== 'late', `${where}: late on day one ${a.title}`);
+          relsFrom(a.id, 'subactivity').forEach(r => {
+            const p = findEntity(r.to).item;
+            assert(a.startDate >= p.startDate && a.dueDate <= p.dueDate, `${where}: ${a.title} inside ${p.title}`);
+          });
+          effectiveDeps(a.id, 'activity').forEach(id => {
+            const dep = findEntity(id).item;
+            assert(a.startDate >= dep.dueDate, `${where}: ${a.title} starts before ${dep.title} is due`);
+          });
+          relsFrom(a.id, 'contributes').forEach(r => assert(a.dueDate <= findEntity(r.to).item.deadline, `${where}: ${a.title} due after ${title(r.to)}`));
+          // Every activity works toward a goal, directly or through its parent.
+          assert([a.id, ...ancestors(a.id, 'subactivity')].some(id => relsFrom(id, 'contributes').length), `${where}: ${a.title} serves no goal`);
+          if (isRoutine(a)) assert(scheduleText(a) && periodProgress(a).target >= 0, `${where}: routine ${a.title}`);
+        });
+        db.states.forEach(s => assert(relsFrom(s.id, 'measures').length || relsTo(s.id, 'improves').length, `${where}: state ${s.title} unlinked`));
+        db.goals.filter(byActivities).forEach(g => assert(countedActivities(g).length, `${where}: ${g.title} has activities to count`));
+        db.goals.filter(byRoutines).forEach(g => assert(goalRoutines(g).length, `${where}: ${g.title} has routines`));
+        assert(!hasProgress(db), `${where}: starts without progress`);
+        views.forEach(v => { setView(v); assert(viewEl.children.length, `${where}: ${v} empty`); });
+      }
+    }
+    changeLanguage('en');
+    made.forEach(deletePlan);
+    setView('dashboard');
+    return `${made.length} plans, ${items} items`;
+  });
+
+  await step('templates: picker from the empty plan and settings, filtered by area, opens a template as a new plan', () => {
+    fresh('Template picker');
+    setView('goals');
+    const offer = viewEl.querySelector('.empty [data-templates]');
+    assert(offer, 'an empty plan offers templates');
+    offer.click();
+    assert(tplDialog.open, 'picker open');
+    const cards = () => [...tplDialog.querySelectorAll('.tpl-card')];
+    eq(cards().length, TEMPLATES.length, 'all templates listed');
+    eq(tplDialog.querySelectorAll('[data-tpl-area]').length, TPL_AREAS.length + 1, 'a chip for each area and all');
+    tplDialog.querySelector('[data-tpl-area="money"]').click();
+    eq(cards().length, TEMPLATES.filter(x => x.area === 'money').length, 'only money templates');
+    eq(cards().map(c => c.querySelector('.tpl-level').classList.contains('starter')), [true, true, true, false], 'starter ones first');
+    assert(tplDialog.querySelector('[data-tpl-area="money"]').getAttribute('aria-pressed') === 'true', 'chip pressed');
+    tplDialog.querySelector('[data-tpl-area=""]').click();
+    eq(cards().length, TEMPLATES.length, 'all again');
+    const run = tplDialog.querySelector('[data-template="run-5k"]').closest('.tpl-card');
+    eq([...run.querySelectorAll('.tpl-meta span')].map(x => x.textContent), ['10 weeks', '1 goal', '1 state', '6 activities', '2 routines'], 'summary line');
+    const inside = run.querySelector('.tpl-inside').textContent;
+    assert(inside.includes('Buy running shoes') && inside.includes('Run 3 times a week') && !inside.includes('Weeks 1–3'), 'inside: main steps and routines, not sub-steps');
+    const before = plans.list.length, from = plans.current;
+    run.querySelector('[data-template]').click();
+    assert(!tplDialog.open && plans.list.length === before + 1 && plans.current !== from, 'a new plan, the empty one kept');
+    eq(currentPlan().name, 'Run 5 km', 'named after the template');
+    eq(db.activities.length, 8, 'activities');
+    assert($('#toast').textContent.includes('Run 5 km'), 'toast');
+    const made = plans.current;
+    useTemplate(TEMPLATES.find(x => x.id === 'run-5k'));
+    eq(currentPlan().name, 'Run 5 km 2', 'a second copy is numbered');
+    deletePlan(plans.current);
+    // From settings; Esc and the close button both close it.
+    $('#settingsBtn').click();
+    $('#templatesBtn').click();
+    assert(!settings.open && tplDialog.open, 'settings hand over to the picker');
+    tplDialog.querySelector('[data-templates-close]').click();
+    assert(!tplDialog.open, 'closed');
+    changeLanguage('sl');
+    openTemplates();
+    const sl = tplDialog.textContent;
+    assert(sl.includes('Za začetek') && sl.includes('Ambiciozno') && sl.includes('10 tednov1 cilj1 stanje6 aktivnosti2 rutini') && sl.includes('Preteči 5 km'), 'Slovene wording');
+    assert(sl.includes('2 leti') && sl.includes('3 leta'), 'years in Slovene');
+    tplDialog.close();
+    changeLanguage('en');
+    deletePlan(made);
+    return 'ok';
+  });
+
   await step('link lists: chosen items on top, search opens the list, goals grouped by category', () => {
     fresh('Pickers');
     const g1 = mk('goal', { title: 'Run a marathon', category: 'Health' });

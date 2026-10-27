@@ -898,7 +898,7 @@ function statusCheck(a) {
 function emptyState(title, text, kind) {
   return `<div class="empty"><h3>${title}</h3><div>${text}</div>
     <button class="btn primary" data-new="${kind}"><span aria-hidden="true">+</span> ${t('add.' + kind)}</button>
-    ${itemCount() === 0 ? `<div><button class="btn ghost" data-sample>${t('btn.sampleAlt')}</button></div>` : ''}</div>`;
+    ${itemCount() === 0 ? `<div class="empty-alt"><button class="btn ghost" data-templates>${t('btn.templatesAlt')}</button><button class="btn ghost" data-sample>${t('btn.sampleAlt')}</button></div>` : ''}</div>`;
 }
 
 const byDueDate = (a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
@@ -2608,7 +2608,7 @@ $('#addBtn').addEventListener('click', () => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -2642,6 +2642,7 @@ viewEl.addEventListener('click', e => {
   if (el.dataset.open) { const ent = findEntity(el.dataset.open); return ent && openForm(ent.kind, ent.item.id); }
   if (el.dataset.new) return el.dataset.new === 'relation' ? $('#addBtn').click() : openForm(el.dataset.new);
   if (el.hasAttribute('data-sample')) return loadSample();
+  if (el.hasAttribute('data-templates')) return openTemplates();
   if (el.dataset.goalFilter) { ui.goalFilter = el.dataset.goalFilter; return render(); }
   if (el.dataset.relEdit) {
     if (ui.mapRel === el.dataset.relEdit) return openForm('relation', el.dataset.relEdit);
@@ -3192,6 +3193,103 @@ function loadSample() {
   toast(t('toast.sample'));
 }
 
+/* ---------- Templates (templates.js): ready-made plans to start from ---------- */
+
+// A template's text in the active language: a pair [English, Slovene], or a plain string such as 'km'.
+const tplText = v => (Array.isArray(v) ? v[TPL_LANGS.indexOf(lang)] ?? v[0] : v);
+
+// Plan data from a template: dates counted from today, nothing done yet, no measurements.
+function templateData(tpl) {
+  const ids = {};
+  const id = k => (ids[k] ??= uid());
+  const day = n => addDays(today(), n);
+  const texts = (x, fields) => Object.fromEntries(fields.filter(f => x[f] !== undefined).map(f => [f, tplText(x[f])]));
+  const category = t('tpl.area.' + tpl.area);
+  const data = emptyDb();
+  const rel = (from, type, to) => data.relations.push({ id: uid(), from: id(from), to: id(to), type });
+  for (const g of tpl.goals) {
+    const measure = g.progress ? { progress: g.progress } : { baseline: String(g.baseline), current: '', target: String(g.target) };
+    data.goals.push({ id: id(g.k), category, ...texts(g, ['title', 'specific', 'metric', 'unit', 'achievable', 'relevant']),
+      ...measure, startDate: day(g.start || 0), deadline: day(g.end), status: 'active' });
+    if (g.sub) rel(g.k, 'subgoal', g.sub);
+    (g.deps || []).forEach(x => rel(g.k, 'depends', x));
+  }
+  for (const s of tpl.states) {
+    data.states.push({ id: id(s.k), ...texts(s, ['title', 'description', 'unit']), value: '', date: '', history: [] });
+    (s.measures || []).forEach(x => rel(s.k, 'measures', x));
+  }
+  for (const a of tpl.activities) {
+    data.activities.push({ id: id(a.k), ...texts(a, ['title', 'description']), status: 'todo', startDate: day(a.start),
+      ...(a.end !== undefined && { dueDate: day(a.end) }), ...(a.repeat && { repeat: { ...a.repeat } }) });
+    if (a.parent) rel(a.k, 'subactivity', a.parent);
+    (a.goals || []).forEach(x => rel(a.k, 'contributes', x));
+    (a.improves || []).forEach(x => rel(a.k, 'improves', x));
+    (a.deps || []).forEach(x => rel(a.k, 'depends', x));
+  }
+  return data;
+}
+
+function useTemplate(tpl) {
+  const name = uniqueName(tplText(tpl.name));
+  createPlan(name, templateData(tpl));
+  toast(t('toast.template', { name }));
+}
+
+// How long a template runs: weeks up to three months, then months, then whole years.
+function tplSpan(tpl) {
+  const days = Math.max(...tpl.goals.map(g => g.end));
+  if (days <= 91) return tp('tpl.weeks', Math.round(days / 7));
+  const months = Math.round(days / 30.44);
+  return months % 12 ? tp('tpl.months', months) : tp('tpl.years', months / 12);
+}
+
+const tplDialog = $('#templates');
+let tplArea = '';
+
+function tplCard(tpl) {
+  const routines = tpl.activities.filter(a => a.repeat);
+  const steps = tpl.activities.filter(a => !a.repeat && !a.parent);
+  const counts = [tp('tpl.goals', tpl.goals.length), tpl.states.length && tp('tpl.states', tpl.states.length),
+    tp('tpl.activities', tpl.activities.length - routines.length), routines.length && tp('tpl.routines', routines.length)].filter(Boolean);
+  const list = (label, items) => (items.length ? `<p><strong>${label}</strong></p><ul>${items.map(x => `<li>${esc(tplText(x.title))}</li>`).join('')}</ul>` : '');
+  return `<article class="tpl-card">
+    <div class="tpl-head"><h3>${esc(tplText(tpl.name))}</h3><span class="tag tpl-level ${tpl.level}">${t('tpl.level.' + tpl.level)}</span></div>
+    <p class="tpl-about">${esc(tplText(tpl.about))}</p>
+    <p class="tpl-meta">${[tplSpan(tpl), ...counts].map(x => `<span>${x}</span>`).join('')}</p>
+    <details class="tpl-inside"><summary>${t('tpl.inside')}</summary>
+      ${list(t('tpl.goalList'), tpl.goals)}${list(t('tpl.stepList'), steps)}${list(t('tpl.routineList'), routines)}</details>
+    <button type="button" class="btn small primary" data-template="${tpl.id}">${t('tpl.use')}</button>
+  </article>`;
+}
+
+// Templates by area (starter ones first), with chips to show a single area.
+function renderTemplates() {
+  const chip = (area, label) => `<button type="button" class="chip ${tplArea === area ? 'active' : ''}" data-tpl-area="${area}" aria-pressed="${tplArea === area}">${label}</button>`;
+  $('#templateAreas').innerHTML = chip('', t('tpl.area.all')) + TPL_AREAS.map(a => chip(a, t('tpl.area.' + a))).join('');
+  const levels = ['starter', 'ambitious'];
+  $('#templateList').innerHTML = TPL_AREAS.filter(a => !tplArea || a === tplArea).map(area => {
+    const list = TEMPLATES.filter(x => x.area === area).sort((a, b) => levels.indexOf(a.level) - levels.indexOf(b.level));
+    return `<section class="tpl-area"><h3>${t('tpl.area.' + area)}</h3><div class="tpl-grid">${list.map(tplCard).join('')}</div></section>`;
+  }).join('');
+}
+
+function openTemplates() {
+  closeCtxMenu();
+  if (settings.open) settings.close();
+  renderTemplates();
+  tplDialog.showModal();
+  tplDialog.querySelector('.modal-body').scrollTop = 0;
+}
+tplDialog.addEventListener('click', e => {
+  if (e.target === tplDialog || e.target.closest('[data-templates-close]')) return tplDialog.close();
+  const area = e.target.closest('[data-tpl-area]');
+  if (area) { tplArea = area.dataset.tplArea; renderTemplates(); return; }
+  const use = e.target.closest('[data-template]');
+  if (!use) return;
+  tplDialog.close();
+  useTemplate(TEMPLATES.find(x => x.id === use.dataset.template));
+});
+
 /* ---------- Settings (gear, top right): plan, language, theme, display options, data, help ---------- */
 
 const settings = $('#settings');
@@ -3235,6 +3333,7 @@ $('#importInput').addEventListener('change', e => {
   e.target.value = '';
 });
 $('#sampleBtn').addEventListener('click', () => { settings.close(); loadSample(); });
+$('#templatesBtn').addEventListener('click', openTemplates);
 
 /* ---------- Collapsible sidebar (desktop): only the icons stay visible ---------- */
 
