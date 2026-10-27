@@ -314,14 +314,13 @@ window.moreTests = async ({ step, assert }) => {
     const oneOff = mk('activity', { title: 'Buy shoes', status: 'todo' });
     const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
     const shown = sel => !modal.querySelector(sel).closest('[hidden]');
-    // Create a routine in the form: custom, specific days.
+    // Create a routine in the form: specific days.
     openForm('activity');
     $('#f-title').value = 'Strength';
-    assert(shown('[data-field="status"]') && !shown('#repeatCustom') && !shown('#repeatEnds'), 'one-off by default');
-    eq([...$('#f-repeat').options].map(o => o.value), ['none', 'day', 'week', 'month', 'year', 'flex', 'custom'], 'presets like a calendar');
-    assert($('#f-repeat [value="week"]').textContent === t('f.repeatWeekly', { day: weekdayName(weekday(now), 'long') }), 'weekly preset names the start weekday');
-    change('#f-repeat', 'custom');
-    assert(!shown('[data-field="status"]') && !shown('[data-field="dueDate"]') && shown('#repDays') && !shown('#repTimes') && shown('#repeatEnds'), 'days shown, status and due date hidden');
+    assert(shown('[data-field="status"]') && !shown('#repeatCustom') && !shown('#repeatEnds') && !shown('#repDays') && !shown('#repTimes'), 'one-off by default');
+    eq([...$('#f-repeat').options].map(o => o.value), ['none', 'week', 'month', 'days', 'custom'], 'kinds of repeat');
+    change('#f-repeat', 'days');
+    assert(!shown('[data-field="status"]') && !shown('[data-field="dueDate"]') && !shown('#repeatCustom') && shown('#repDays') && !shown('#repTimes') && shown('#repeatEnds'), 'days shown, status and due date hidden');
     modal.querySelector('.day-toggle[aria-pressed="true"]').click(); // the start's weekday is chosen by default
     submitForm();
     assert(modal.open && modal.querySelector('[data-field="days"] .err').textContent === t('err.days'), 'needs a day');
@@ -331,13 +330,15 @@ window.moreTests = async ({ step, assert }) => {
     const st = db.activities.find(a => a.title === 'Strength');
     assert(!modal.open && st && JSON.stringify(st.repeat) === '{"every":1,"unit":"week","days":[0,3]}' && st.startDate === now && !st.dueDate, 'saved as a routine from today');
     openForm('activity', st.id);
-    assert($('#f-repeat').value === 'custom' && $('#f-unit').value === 'week' && $('#f-on').value === 'days' && modal.querySelector('[name="ends"]:checked').value === 'never', 'form shows the saved recurrence');
+    assert($('#f-repeat').value === 'days' && modal.querySelector('[name="ends"]:checked').value === 'never', 'form shows the saved repeat');
+    change('#f-repeat', 'custom');
+    assert($('#f-unit').value === 'week' && $('#f-on').value === 'days' && shown('#repDays'), 'custom starts from specific days');
     modal.close();
-    // A number of times per week (the flexible preset), with validation.
+    // A number of times per week, with validation.
     openForm('activity');
     $('#f-title').value = 'Run';
-    change('#f-repeat', 'flex');
-    assert($('#f-repeat').value === 'custom' && $('#f-on').value === 'times' && shown('#repTimes') && !shown('#repDays'), 'flexible preset fills the custom fields');
+    change('#f-repeat', 'week');
+    assert(shown('#repTimes') && !shown('#repDays') && !shown('#repeatCustom'), 'times shown');
     $('#f-times').value = '9';
     submitForm();
     assert(modal.querySelector('[data-field="times"] .err').textContent === t('err.times', { max: 7 }), 'at most 7 a week');
@@ -353,10 +354,9 @@ window.moreTests = async ({ step, assert }) => {
     $('#f-title').value = 'Check-up';
     $('#f-startDate').value = dateInput('2099-01-28'); // the fourth and last Wednesday of January 2099
     $('#f-startDate').dispatchEvent(new Event('input', { bubbles: true }));
-    assert($('#f-repeat [value="month"]').textContent === t('f.repeatMonthly', { d: 28 }), 'monthly preset follows the start date');
     change('#f-repeat', 'month');
     change('#f-repeat', 'custom');
-    assert($('#f-unit').value === 'month' && shown('[data-field="on"]') && !shown('#repDays'), 'custom starts from the preset');
+    assert($('#f-unit').value === 'month' && $('#f-on').value === 'times' && shown('#repTimes') && !shown('#repDays'), 'custom starts from times per month');
     eq([...$('#f-on').options].map(o => o.value), ['day', 'weekday', 'last', 'times'], 'month options');
     $('#f-every').value = '2';
     $('#f-every').dispatchEvent(new Event('input', { bubbles: true }));
@@ -380,7 +380,8 @@ window.moreTests = async ({ step, assert }) => {
     submitForm();
     assert(check.dueDate === '2099-12-31' && !check.repeat.count, 'ends on a date');
     openForm('activity', check.id);
-    change('#f-repeat', 'year');
+    change('#f-unit', 'year');
+    $('#f-every').value = '1';
     submitForm();
     assert(JSON.stringify(check.repeat) === '{"every":1,"unit":"year"}' && scheduleText(check) === 'every year on 28 January', scheduleText(check));
     removeEntity('activity', check.id);

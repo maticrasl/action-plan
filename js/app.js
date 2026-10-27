@@ -1982,16 +1982,16 @@ function activityForm(a) {
     ${checklist('depends', t('f.depends'), 'activity', others, pick('depends'))}`;
 }
 
-// Whether and how an activity repeats; a repeating activity is a routine. Like a calendar: a few
-// presets that follow the start date, or a custom recurrence, and when it ends.
-const REPEAT_PRESETS = { day: { unit: 'day' }, week: { unit: 'week' }, month: { unit: 'month' }, year: { unit: 'year' } };
+// Whether and how an activity repeats; a repeating activity is a routine. The common kinds – a number
+// of times a week or month, or specific weekdays – or a custom recurrence, and when it ends.
+// Each common kind is a unit and what it falls on, as in the custom recurrence.
+const REPEAT_PRESETS = { week: { unit: 'week', on: 'times' }, month: { unit: 'month', on: 'times' }, days: { unit: 'week', on: 'days' } };
 
-function repeatPreset(r, start) {
+function repeatPreset(r) {
   if (!r) return 'none';
-  if (r.every !== 1 || r.times) return 'custom';
-  if (r.unit === 'week') return !r.days || (r.days.length === 1 && r.days[0] === weekday(start)) ? 'week' : 'custom';
-  if (r.unit === 'month') return !r.on || r.on === 'day' ? 'month' : 'custom';
-  return r.unit;
+  if (r.every !== 1) return 'custom';
+  if (r.times) return r.unit;
+  return r.unit === 'week' && r.days ? 'days' : 'custom';
 }
 
 // What a custom recurrence falls on, for its unit: weekdays or a day of the month, or any days a number of times.
@@ -2012,7 +2012,7 @@ const formStart = () => parseDateInput($('#f-startDate')?.value || '') || today(
 function repeatFields(a) {
   const r = isRoutine(a) ? sched(a) : null;
   const start = a.startDate || today();
-  const mode = repeatPreset(r, start);
+  const mode = repeatPreset(r);
   const unit = r?.unit || 'week';
   const on = r?.times ? 'times' : unit === 'week' ? 'days' : r?.on || 'day';
   const days = r?.days || [weekday(start)];
@@ -2029,8 +2029,8 @@ function repeatFields(a) {
       kept !== null ? t('rt.consistency', { pct: `${Math.round(kept * 100)} %` }) : '',
     ].filter(Boolean).join(' · ');
   }
-  // Labels that follow the start date or the interval are filled in by updateRepeatFields.
-  const presets = { none: t('f.repeatNone'), day: t('f.repeatDaily'), week: '', month: '', year: '', flex: t('f.repeatFlex'), custom: t('f.repeatCustom') };
+  const presets = { none: t('f.repeatNone'), week: t('f.repeatWeek'), month: t('f.repeatMonth'), days: t('f.repeatDays'), custom: t('f.repeatCustom') };
+  // Unit labels follow the interval; updateRepeatFields fills them in.
   const units = Object.fromEntries(['day', 'week', 'month', 'year'].map(u => [u, '']));
   return `<div class="repeat-box">
     ${field('repeat', t('f.repeat'), select('repeat', presets, mode), t('f.repeatHint'))}
@@ -2038,9 +2038,9 @@ function repeatFields(a) {
       <div class="field" data-field="every"><label for="f-every">${t('f.every')}</label>
         <div class="rep-every">${num('every', r?.every ?? 1)}${select('unit', units, unit).replace('<select', `<select aria-label="${esc(t('f.unit'))}"`)}</div><div class="err"></div></div>
       ${field('on', t('f.on'), select('on', repeatOnOptions(unit, start), on))}
-      <div id="repDays">${field('days', t('f.days'), `<div class="day-toggles" role="group" aria-label="${esc(t('f.days'))}">${toggles}</div><input type="hidden" name="days" value="${days.join(',')}">`)}</div>
-      <div id="repTimes">${field('times', t('f.times'), num('times', r?.times ?? 3), '<span id="timesHint"></span>')}</div>
     </div>
+    <div id="repDays">${field('days', t('f.days'), `<div class="day-toggles" role="group" aria-label="${esc(t('f.days'))}">${toggles}</div><input type="hidden" name="days" value="${days.join(',')}">`)}</div>
+    <div id="repTimes">${field('times', t('f.times'), num('times', r?.times ?? 3), '<span id="timesHint"></span>')}</div>
     <fieldset id="repeatEnds" class="rep-ends"><legend class="label">${t('f.ends')}</legend>
       ${radio('never', t('f.endsNever'))}
       <div class="field rep-end" data-field="endDate">${radio('on', t('f.endsOn'))}${date('endDate', r?.count ? '' : a.dueDate)}<div class="err"></div></div>
@@ -2058,31 +2058,28 @@ function updateProgressFields() {
   $('#routinesHint').hidden = by !== 'routines';
 }
 
-// A routine has no status or due date (when it ends takes its place); the custom recurrence shows
-// only what its unit needs, and the labels follow the start date and the interval.
+// A routine has no status or due date (when it ends takes its place); only the fields its kind of
+// repeat needs show, and the labels follow the start date and the interval.
 function updateRepeatFields(e) {
   const sel = $('#f-repeat');
   if (!sel) return;
   const unitSel = $('#f-unit'), onSel = $('#f-on');
-  // "A number of times a week" is a custom recurrence with its fields filled in;
-  // switching from a preset to custom starts from that preset's unit.
-  if (sel.value === 'flex') { sel.value = 'custom'; unitSel.value = 'week'; onSel.dataset.want = 'times'; }
-  else if (e?.target === sel && sel.value === 'custom' && REPEAT_PRESETS[sel.dataset.prev]) unitSel.value = sel.dataset.prev;
+  // Switching from a common kind to custom starts from what it was.
+  const was = REPEAT_PRESETS[sel.dataset.prev];
+  if (e?.target === sel && sel.value === 'custom' && was) { unitSel.value = was.unit; onSel.dataset.want = was.on; }
   sel.dataset.prev = sel.value;
-  const mode = sel.value, start = formStart(), unit = unitSel.value;
-  const every = Math.max(1, parseInt($('#f-every').value, 10) || 1);
-  sel.querySelector('[value="week"]').textContent = t('f.repeatWeekly', { day: weekdayName(weekday(start), 'long') });
-  sel.querySelector('[value="month"]').textContent = t('f.repeatMonthly', { d: monthDay(start) });
-  sel.querySelector('[value="year"]').textContent = t('f.repeatYearly', { date: fmtDay(start, { day: 'numeric', month: 'long' }) });
+  const mode = sel.value, preset = REPEAT_PRESETS[mode], start = formStart();
+  const every = preset ? 1 : Math.max(1, parseInt($('#f-every').value, 10) || 1);
   [...unitSel.options].forEach(o => (o.textContent = tp('f.unit.' + o.value, every)));
-  const opts = repeatOnOptions(unit, start), want = onSel.dataset.want || onSel.value;
+  const opts = repeatOnOptions(unitSel.value, start), want = onSel.dataset.want || onSel.value;
   delete onSel.dataset.want;
   onSel.innerHTML = Object.entries(opts).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('');
   onSel.value = want in opts ? want : Object.keys(opts)[0] || '';
+  const { unit, on } = preset || (mode === 'custom' ? { unit: unitSel.value, on: onSel.value } : {});
   $('#repeatCustom').hidden = mode !== 'custom';
   modal.querySelector('[data-field="on"]').hidden = !onSel.options.length;
-  $('#repDays').hidden = !(unit === 'week' && onSel.value === 'days');
-  $('#repTimes').hidden = onSel.value !== 'times';
+  $('#repDays').hidden = !(unit === 'week' && on === 'days');
+  $('#repTimes').hidden = on !== 'times';
   $('#timesHint').textContent = t('f.timesHint', { every: tp('rt.every.' + unit, every) });
   $('#countUnit').textContent = tp('f.endsCount', Math.max(1, parseInt($('#f-count').value, 10) || 1));
   $('#repeatEnds').hidden = mode === 'none';
@@ -2094,22 +2091,19 @@ function updateRepeatFields(e) {
 function readRepeat(v, start) {
   if (v.repeat === 'none') return {};
   const int = (x, max) => { const n = Number(x); return Number.isInteger(n) && n >= 1 && n <= max ? n : 0; };
-  let repeat;
-  if (REPEAT_PRESETS[v.repeat]) repeat = { every: 1, ...REPEAT_PRESETS[v.repeat] };
-  else {
-    const every = int(v.every, 99);
-    if (!every) return { errors: { every: t('err.times', { max: 99 }) } };
-    repeat = { every, unit: v.unit };
-    if (v.on === 'times') {
-      const max = every * (v.unit === 'week' ? 7 : 31), times = int(v.times, max);
-      if (!times) return { errors: { times: t('err.times', { max }) } };
-      repeat.times = times;
-    } else if (v.unit === 'week') {
-      const days = String(v.days || '').split(',').filter(Boolean).map(Number).sort();
-      if (!days.length) return { errors: { days: t('err.days') } };
-      repeat.days = days;
-    } else if (v.unit === 'month') repeat.on = v.on;
-  }
+  const { unit, on } = REPEAT_PRESETS[v.repeat] || v;
+  const every = REPEAT_PRESETS[v.repeat] ? 1 : int(v.every, 99);
+  if (!every) return { errors: { every: t('err.times', { max: 99 }) } };
+  const repeat = { every, unit };
+  if (on === 'times') {
+    const max = every * (unit === 'week' ? 7 : 31), times = int(v.times, max);
+    if (!times) return { errors: { times: t('err.times', { max }) } };
+    repeat.times = times;
+  } else if (unit === 'week') {
+    const days = String(v.days || '').split(',').filter(Boolean).map(Number).sort();
+    if (!days.length) return { errors: { days: t('err.days') } };
+    repeat.days = days;
+  } else if (unit === 'month') repeat.on = on;
   let dueDate = '';
   if (v.ends === 'on') {
     if (!v.endDate) return { errors: { endDate: t('err.endDate') } };
