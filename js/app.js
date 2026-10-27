@@ -649,7 +649,20 @@ function scheduleText(a) {
   if (s.unit === 'year') return t('rt.on', { every, what: fmtDay(start, { day: 'numeric', month: 'long' }) });
   return every;
 }
-const periodText = (a, p = periodProgress(a)) => t('rt.' + periodUnit(a), { done: p.done, target: p.target });
+// The first day from `from` on which a fixed routine is due, or '' when it is not due again.
+function nextDueDay(a, from = today()) {
+  const start = routineStart(a) > from ? routineStart(a) : from;
+  for (let d = start, i = 0; i < 36600 && runsOn(a, d); d = addDays(d, 1), i++) if (isDueDay(a, d)) return d;
+  return '';
+}
+
+// This period's progress; when nothing is due in it (an off week of every 2 weeks, before the
+// start), the next due day instead.
+function periodText(a, p = periodProgress(a)) {
+  if (p.target) return t('rt.' + periodUnit(a), { done: p.done, target: p.target });
+  const next = nextDueDay(a);
+  return next ? t('rt.next', { date: fmtDay(next, { weekday: 'short', day: 'numeric', month: 'short' }) }) : t('rt.ended');
+}
 const streakText = ({ n, unit }) => tp('rt.streak.' + unit, n);
 
 function toggleCheckin(id, iso) {

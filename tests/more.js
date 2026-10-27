@@ -489,6 +489,14 @@ window.moreTests = async ({ step, assert }) => {
     eq(periodOf(at({ every: 2, unit: 'week', times: 3 }), '2099-01-14'), { from: '2099-01-05', to: '2099-01-18' }, 'a two-week period');
     eq(periodOf(at({ every: 1, unit: 'year' }), '2099-06-01'), { from: '2099-01-01', to: '2099-12-31' }, 'a year');
     eq(lastOccurrence(at({ every: 2, unit: 'week', times: 3 }), 7), '2099-02-15', 'seven times at 3 per two weeks needs three periods');
+    // Nothing due this period: the next due day instead of 0 / 0.
+    const now = today(), lastWeek = addDays(now, -weekday(now) - 7);
+    const next = iso => t('rt.next', { date: fmtDay(iso, { weekday: 'short', day: 'numeric', month: 'short' }) });
+    const offWeek = at({ every: 2, unit: 'week', days: [weekday(now)] }, lastWeek);
+    eq(periodText(offWeek), next(addDays(now, 7)), 'off week shows the next due day');
+    eq(periodText(at({ every: 2, unit: 'week', days: [weekday(now)] }, addDays(lastWeek, 7))), t('rt.week', { done: 0, target: 1 }), 'on week shows progress');
+    eq(periodText(at({ every: 1, unit: 'month' }, addDays(now, 40))), next(addDays(now, 40)), 'not started yet');
+    eq(periodText({ ...offWeek, dueDate: addDays(now, 3) }), t('rt.ended'), 'not due again before it ends');
     const i = TOUR_STEPS.findIndex(x => x.key === 'routines');
     assert(TOUR_STEPS[i - 1].key === 'activities' && TOUR_STEPS[i].target[0] === '.routines', 'tour step after activities');
     assert(t('tour.routines.text').includes('streak') && sl['tour.routines.text'].includes('niz'), 'tour text');
