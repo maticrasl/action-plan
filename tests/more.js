@@ -2230,4 +2230,49 @@ window.moreTests = async ({ step, assert }) => {
     deletePlan(plans.current);
     return created;
   });
+  /* ---------- States: the description says what is measured, not where you are now ---------- */
+
+  await step('states: the description is what is measured, in both languages', () => {
+    const labels = {
+      en: ['What is measured', /how you measure it/i],
+      sl: ['Kaj merite', /kako jo merite/i],
+    };
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code);
+      fresh(`States ${code}`);
+      const s = mk('state', { title: 'Longest run', unit: 'km', description: 'My own words stay as they were.' });
+      openForm('state', s.id);
+      eq(modal.querySelector('[data-field="description"] label').textContent, labels[code][0], `${code} label`);
+      assert(labels[code][1].test($('#f-description').placeholder), `${code} placeholder: ${$('#f-description').placeholder}`);
+      eq($('#f-description').value, 'My own words stay as they were.', `${code}: existing text kept`);
+      submitForm();
+      eq(s.description, 'My own words stay as they were.', `${code}: saved unchanged`);
+      // The help no longer asks to describe where you stand today.
+      assert(!/where you stand today|kje ste danes/i.test(t('help.view.states') + t('tour.states.text')), `${code}: help and tour updated`);
+      assert(/measure|meri/i.test(t('help.view.states')) && /measure|meri/i.test(t('tour.states.text')), `${code}: they talk about measuring`);
+      deletePlan(plans.current);
+    }
+    changeLanguage('en');
+    return labels.en[0];
+  });
+
+  await step('states: sample descriptions stay true as new values come in', () => {
+    const out = [];
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code);
+      loadSample();
+      eq(db.states.length, 6, `${code}: six states`);
+      for (const s of db.states) {
+        assert(s.description && s.description.length > 20, `${code} ${s.title}: has a description`);
+        // A lasting description does not repeat a reading: no measured value or change appears in it.
+        const values = (s.history || []).map(h => h.value).concat(s.value).filter(Boolean);
+        assert(!values.some(v => new RegExp(`(^|\\D)${v}(\\D|$)`).test(s.description)), `${code} ${s.title}: no reading in “${s.description}”`);
+        assert(!/\b(so far|still|down \d|last month|doslej|še vedno|prejšnji mesec|shujšal)\b/i.test(s.description), `${code} ${s.title}: no snapshot wording in “${s.description}”`);
+      }
+      out.push(db.states[0].description);
+      deletePlan(plans.current);
+    }
+    changeLanguage('en');
+    return out.join(' | ');
+  });
 };
