@@ -2782,6 +2782,35 @@ window.moreTests = async ({ step, assert }) => {
   const fold = id => $(`[data-tl-fold="${id}"]`);
   const $$ = sel => [...document.querySelectorAll(sel)];
 
+  await step('timeline: prerequisites with no goal of their own sit under the activity that waits for them', () => {
+    fresh('Prereqs');
+    const g1 = mk('goal', { title: 'G1' }), g2 = mk('goal', { title: 'G2' });
+    const a = mk('activity', { title: 'A' }), b = mk('activity', { title: 'B' });
+    const p = mk('activity', { title: 'P' }), pp = mk('activity', { title: 'PP' });
+    const top = mk('activity', { title: 'Top' }), part = mk('activity', { title: 'Part' });
+    const owned = mk('activity', { title: 'Owned' }), waiter = mk('activity', { title: 'Waiter' });
+    rel(a, g1, 'contributes'); rel(b, g2, 'contributes'); rel(owned, g2, 'contributes');
+    rel(a, p, 'depends'); rel(p, pp, 'depends');      // a chain of prerequisites
+    rel(part, top, 'subactivity'); rel(a, part, 'depends'); // a prerequisite inside a tree brings the whole tree
+    rel(b, p, 'depends');                              // needed by work under two goals
+    rel(a, owned, 'depends');                          // has its own goal: stays there only
+    rel(waiter, a, 'depends');                         // waits for goal work, but is no prerequisite
+    const rows = timelineRows(null);
+    eq(rowsText(rows), `G1 A P PP Top Part G2 B P PP Owned [${t('tl.unlinked')}] Waiter`, 'rows');
+    const row = (title, goal) => rows.find(r => r.item?.title === title && r.goal === goal.id);
+    const ra = rows.indexOf(row('A', g1));
+    eq([row('P', g1).rel, row('P', g1).parent, row('P', g1).depth], ['depends', ra, row('A', g1).depth + 1], 'P hangs off A');
+    eq(row('PP', g1).parent, rows.indexOf(row('P', g1)), 'PP hangs off P');
+    eq([row('Part', g1).rel, row('Part', g1).parent], ['subactivity', rows.indexOf(row('Top', g1))], 'the tree keeps its shape');
+    eq(row('P', g1).also, ['G2'], 'listed under both goals, marked as such');
+    render(); setView('timeline');
+    assert($(`[data-tl-node="${p.id}"] .tl-elbow.dash`), 'drawn with a dashed dependency line');
+    assert([...document.querySelectorAll('.tl-legend span')].some(x => x.textContent === relLabel('depends')), 'the legend names it');
+    // A folded goal hides its prerequisites too, without sending them to the unlinked group.
+    eq(rowsText(timelineRows(null, new Set([g1.id, g2.id]))), `G1 G2 [${t('tl.unlinked')}] Waiter`, 'folded');
+    return rowsText(rows);
+  });
+
   await step('timeline: an activity that serves several goals is listed under each', () => {
     const { g1, g2, a, b, c } = foldFixture();
     eq(rowsText(timelineRows(null)), `G1 A A1 B G1a B G2 A A1 C G3 [${t('tl.unlinked')}] U`, 'under each goal, with its sub-activities');

@@ -1556,6 +1556,7 @@ const tlGrip = (edge, left, width) => {
 };
 
 // Rows in plan order: each top-level goal, its activity trees, then its sub-goals (recursively).
+// Prerequisites that work toward no goal themselves are listed under the activity that waits for them.
 // An activity that serves several goals is listed under each of them (its rows carry `also`: the
 // other goals it is under). A goal in `collapsed` keeps its own row but hides what is under it;
 // what it hides still counts as placed. Activities under no shown goal come last in their own
@@ -1566,6 +1567,11 @@ function timelineRows(scope, collapsed = new Set()) {
   const startKey = x => x.startDate || x.dueDate || x.deadline || '9999';
   const byStart = (a, b) => startKey(a).localeCompare(startKey(b));
   const kids = a => relsTo(a.id, 'subactivity').map(r => db.activities.find(x => x.id === r.from)).filter(Boolean).sort(byStart);
+  // Prerequisites with no goal of their own hang under the activity that waits for them (their whole tree, from its top).
+  const goals = db.goals.filter(g => visible('goal', g));
+  const owned = new Set(goals.flatMap(g => goalActivities(g).map(a => a.id)));
+  const prereqs = a => [...new Set(relsFrom(a.id, 'depends').map(r => [...ancestors(r.to, 'subactivity')].pop() || r.to))]
+    .filter(id => !owned.has(id)).map(id => db.activities.find(x => x.id === id)).filter(Boolean).sort(byStart);
   // `rel` is how a row hangs off the row at index `parent` (drawn as a connector in that relation's colour).
   // A hidden activity passes its own place in the tree on to its children; `hidden` walks without adding rows.
   const addActivity = (a, depth, rel, parent, goal, hidden, seen = new Set()) => {
@@ -1576,6 +1582,7 @@ function timelineRows(scope, collapsed = new Set()) {
     const show = !hidden && visible('activity', a) && !(ui.hideDone && a.status === 'done');
     const here = show ? rows.push({ kind: 'activity', item: a, depth, rel, parent, goal }) - 1 : parent;
     kids(a).forEach(c => (show ? addActivity(c, depth + 1, 'subactivity', here, goal, hidden, seen) : addActivity(c, depth, rel, parent, goal, hidden, seen)));
+    if (goal) prereqs(a).forEach(p => (show ? addActivity(p, depth + 1, 'depends', here, goal, hidden, seen) : addActivity(p, depth, rel, parent, goal, hidden, seen)));
   };
   const addGoal = (g, depth, rel, parent, hidden) => {
     if (placedGoals.has(g.id)) return;
@@ -1588,7 +1595,6 @@ function timelineRows(scope, collapsed = new Set()) {
     acts.forEach(a => addActivity(a, depth + 1, 'contributes', here, g.id, hidden || folded));
     subs.forEach(sg => addGoal(sg, depth + 1, 'subgoal', here, hidden || folded));
   };
-  const goals = db.goals.filter(g => visible('goal', g));
   const goalIds = new Set(goals.map(g => g.id));
   goals.filter(g => !ancestors(g.id, 'subgoal').some(p => goalIds.has(p))).sort(byStart).forEach(g => addGoal(g, 0));
 
@@ -1687,9 +1693,9 @@ function renderTimeline() {
     }
     const dim = (sel || relSel) && !near.has(item.id) ? 'dim' : '';
     const also = r.also ? t('tl.alsoUnder', { goals: r.also.join(', ') }) : '';
-    const fold = kind === 'goal' ? (r.fold ? foldBtn(item.id, item.title, r.collapsed) : '<span class="tl-fold-gap"></span>') : '';
+    const fold = kind === 'goal' ? (r.fold ? foldBtn(item.id, item.title, r.collapsed) : '') : '';
     return `<div class="tl-row ${kind} ${dim}${item.id === sel ? ' selected' : ''}" data-tl-node="${item.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc([item.title, dateText, also].filter(Boolean).join(', '))}">
-      <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow" style="--rel:${REL_TYPES[r.rel].color};--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}${fold}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-head-line"><span class="tl-title">${esc(item.title)}</span>${also ? `<span class="tl-also" title="${esc(also)}" aria-hidden="true">↻</span>` : ''}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
+      <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow${REL_TYPES[r.rel].dash ? ' dash' : ''}" style="--rel:${REL_TYPES[r.rel].color};--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}${fold}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-head-line"><span class="tl-title">${esc(item.title)}</span>${also ? `<span class="tl-also" title="${esc(also)}" aria-hidden="true">↻</span>` : ''}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
       <div class="tl-track">${bar}</div>
     </div>`;
   }).join('');
@@ -1719,7 +1725,7 @@ function renderTimeline() {
       <div class="chips" role="group" aria-label="${esc(t('tl.zoom'))}">${zoom}</div>
     </div>
     <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
-    <div class="map-legend tl-legend"><span class="ctl-label">${t('tl.links')}</span>${['contributes', 'subactivity', 'subgoal', ...(ui.tlDeps ? ['depends'] : [])].map(k =>
+    <div class="map-legend tl-legend"><span class="ctl-label">${t('tl.links')}</span>${['contributes', 'subactivity', 'subgoal', ...(ui.tlDeps || rows.some(r => r.rel === 'depends') ? ['depends'] : [])].map(k =>
       `<span><i class="line-key${REL_TYPES[k].dash ? ' dash' : ''}" style="--rel:${REL_TYPES[k].color}"></i>${esc(relLabel(k))}</span>`).join('')}</div>
     ${rows.length ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + 145)}" data-from="${from}" data-to="${to}">
       <div class="tl-inner" style="--tl-w:${W}px">
