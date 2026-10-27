@@ -1245,4 +1245,352 @@ window.moreTests = async ({ step, assert }) => {
     endTour(false);
     return options;
   });
+
+  /* ---------- Sharing plans: export as a full copy or a template, import with a progress check ---------- */
+
+  // A plan with progress of every kind: achieved and measured goals, measurements, done and started
+  // activities, routine check-ins (ticked and unticked), sync bookkeeping and a relation.
+  const progressPlan = () => {
+    const g1 = { id: uid(), title: 'Run 10 km', unit: 'km', baseline: '5', current: '7', target: '10', startDate: d(-30), deadline: d(40), status: 'active', category: 'Health', createdAt: d(-31), updatedAt: '2026-01-01T00:00:00.000Z' };
+    const g2 = { id: uid(), title: 'Read a book', baseline: '0', current: '1', target: '1', startDate: d(-20), deadline: d(-2), status: 'achieved', updatedAt: '2026-01-01T00:00:00.000Z' };
+    const g3 = { id: uid(), title: 'On hold', progress: 'activities', startDate: d(-10), status: 'paused' };
+    const s1 = { id: uid(), title: 'Longest run', unit: 'km', value: '7', date: d(-1), history: [{ date: d(-30), value: '5' }, { date: d(-1), value: '7' }], updatedAt: '2026-01-01T00:00:00.000Z' };
+    const s2 = { id: uid(), title: 'Weight', unit: 'kg', history: [] };
+    const a1 = { id: uid(), title: 'Buy shoes', status: 'done', startDate: d(-28), dueDate: d(-25) };
+    const a2 = { id: uid(), title: 'Training plan', status: 'doing', startDate: d(-21), dueDate: d(50), notes: 'Three runs a week' };
+    const a3 = { id: uid(), title: 'Someday', status: 'todo' };
+    const r1 = { id: uid(), title: 'Run', status: 'todo', startDate: d(-14), repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: { [d(-7)]: 1, [d(-4)]: 1, [d(-3)]: 0 } };
+    const rel1 = { id: uid(), from: a2.id, to: g1.id, type: 'contributes' };
+    return { name: 'Running', data: { goals: [g1, g2, g3], states: [s1, s2], activities: [a1, a2, a3, r1], relations: [rel1], deleted: { gone: '2026-01-01T00:00:00.000Z' } } };
+  };
+  const clone = x => JSON.parse(JSON.stringify(x));
+  const datesOf = data => [...data.goals, ...data.activities].flatMap(x => [x.startDate, x.deadline, x.dueDate]).filter(Boolean);
+  const addPlan = ({ name, data }) => { createPlan(uniqueName(name), normalize(clone(data))); return currentPlan(); };
+  // Captures what a download or share would hand over instead of saving it.
+  const capture = async run => {
+    const got = [];
+    const orig = URL.createObjectURL, click = HTMLAnchorElement.prototype.click;
+    URL.createObjectURL = b => { got.push({ blob: b }); return 'blob:x' + got.length; };
+    HTMLAnchorElement.prototype.click = function () { got[got.length - 1].name = this.download; };
+    try { await run(); } finally { URL.createObjectURL = orig; HTMLAnchorElement.prototype.click = click; }
+    for (const g of got) g.json = JSON.parse(await g.blob.text());
+    return got;
+  };
+  const fileOf = (obj, name = 'plan.json') => new File([typeof obj === 'string' ? obj : JSON.stringify(obj)], name, { type: 'application/json' });
+  const imp = $('#planImport'), exp = $('#planExport');
+
+  await step('plan files: resetting progress strips progress and keeps the structure', () => {
+    const { data } = progressPlan();
+    const before = clone(data);
+    const r = resetProgress(data);
+    eq(data, before, 'the original is left alone');
+    const [g1, g2, g3] = r.goals, [s1, s2] = r.states, [a1, a2, a3, r1] = r.activities;
+    assert(g1.current === '' && g2.current === '', 'goal current values cleared');
+    assert(g1.status === 'active' && g2.status === 'active', 'achieved goal active again');
+    assert(g3.status === 'paused', 'paused goal stays paused');
+    eq([g1.baseline, g1.target, g1.unit, g1.category, g1.title], ['5', '10', 'km', 'Health', 'Run 10 km'], 'goal metric and wording kept');
+    eq([g3.progress, g2.target], ['activities', '1'], 'progress mode and target kept');
+    assert(s1.value === '' && s1.date === '' && s1.history.length === 0, 'measurements cleared');
+    eq([s1.title, s1.unit, s2.unit], ['Longest run', 'km', 'kg'], 'states and units kept');
+    eq(r.activities.map(a => a.status), ['todo', 'todo', 'todo', 'todo'], 'activities to do again');
+    assert(!('checkins' in r1), 'check-ins removed');
+    eq(r1.repeat, before.activities[3].repeat, 'recurrence kept');
+    assert(a2.notes === 'Three runs a week', 'notes kept');
+    eq(r.relations, before.relations, 'relations kept');
+    eq([...r.goals, ...r.states, ...r.activities].map(x => x.id), [...before.goals, ...before.states, ...before.activities].map(x => x.id), 'ids kept, so relations still connect');
+    assert(![...r.goals, ...r.states, ...r.activities, ...r.relations].some(x => 'updatedAt' in x), 'sync stamps dropped');
+    eq(r.deleted, {}, 'deletion records dropped');
+    eq([g1.startDate, g1.deadline, a1.dueDate, r1.startDate], [before.goals[0].startDate, before.goals[0].deadline, before.activities[0].dueDate, before.activities[3].startDate], 'dates unchanged without shift');
+    assert(g1.createdAt === before.goals[0].createdAt, 'created date kept without shift');
+    assert(a3.startDate === undefined && a3.dueDate === undefined, 'undated activity stays undated');
+    eq(progressCounts(r), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'no progress left');
+    return `${r.goals.length} goals, ${r.activities.length} activities`;
+  });
+
+  await step('plan files: a template moves its dates by whole weeks to start this week', () => {
+    for (const offset of [-30, -400, 0, 3, 20, 365]) {
+      const { data } = progressPlan();
+      const move = x => { for (const k of ['startDate', 'deadline', 'dueDate', 'createdAt']) if (x[k]) x[k] = addDays(x[k], offset); };
+      [...data.goals, ...data.activities].forEach(move);
+      const r = resetProgress(data, { shift: true });
+      const was = datesOf(data), now = datesOf(r);
+      const first = now.slice().sort()[0];
+      assert(first >= today() && first <= addDays(today(), 6), `offset ${offset}: earliest ${first} lands this week`);
+      const by = dayNum(now[0]) - dayNum(was[0]);
+      assert(by % 7 === 0, `offset ${offset}: moved by whole weeks (${by})`);
+      assert(now.every((x, i) => dayNum(x) - dayNum(was[i]) === by), `offset ${offset}: every date moved the same`);
+      assert(now.every((x, i) => weekday(x) === weekday(was[i])), `offset ${offset}: weekdays kept, so weekly routines still fall on their days`);
+      assert(r.goals[0].createdAt === addDays(data.goals[0].createdAt, by), `offset ${offset}: created date moved too`);
+      assert(r.activities[2].startDate === undefined && r.activities[2].dueDate === undefined, 'undated stays undated');
+    }
+    const none = resetProgress({ goals: [{ id: 'g', title: 'No dates', status: 'active' }], states: [], activities: [], relations: [] }, { shift: true });
+    assert(none.goals[0].startDate === undefined && none.goals[0].deadline === undefined, 'a plan without dates is not given any');
+    const only = resetProgress({ goals: [], states: [], activities: [{ id: 'a', title: 'Due', status: 'todo', dueDate: d(-50) }], relations: [] }, { shift: true });
+    assert(only.activities[0].dueDate >= today() && only.activities[0].dueDate <= addDays(today(), 6), 'a due date alone counts as the earliest');
+    return 'six offsets checked';
+  });
+
+  await step('plan files: progress is counted for the import question', () => {
+    const { data } = progressPlan();
+    // 2 ticked check-ins (the unticked one does not count), 2 history entries + 2 goal current values,
+    // 1 done activity + 1 achieved goal, 1 activity in progress.
+    eq(progressCounts(data), { checkins: 2, measurements: 4, done: 2, started: 1 }, 'counts');
+    eq(progressCounts(emptyDb()), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'empty plan');
+    eq(progressCounts({ goals: [], states: [{ id: 's', title: 'x', value: '3', date: d(-1) }], activities: [], relations: [] }).measurements, 1, 'a value without history counts once');
+    eq(progressCounts({ goals: [], states: [{ id: 's', title: 'x', value: '', history: [] }], activities: [], relations: [] }).measurements, 0, 'an empty state does not');
+    eq(progressCounts(normalize(sampleData())).checkins > 0, true, 'the sample plan has check-ins');
+    return JSON.stringify(progressCounts(data));
+  });
+
+  await step('plan files: header, full copy and template', () => {
+    const plan = addPlan(progressPlan());
+    const full = planFile('full'), tpl = planFile('template');
+    eq([full.format, full.version, full.kind, full.name], ['actionplan-plan', 1, 'full', plan.name], 'full header');
+    eq([tpl.format, tpl.version, tpl.kind, tpl.name], ['actionplan-plan', 1, 'template', plan.name], 'template header');
+    assert(!isNaN(Date.parse(full.exportedAt)), 'export time recorded');
+    eq(full.goals, db.goals, 'full copy keeps everything');
+    eq(full.activities, db.activities, 'full copy keeps check-ins');
+    eq(progressCounts(tpl), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'template has no progress');
+    assert(datesOf(tpl).sort()[0] >= today(), 'template dates moved to now');
+    assert(db.goals[1].status === 'achieved' && db.activities[3].checkins, 'exporting a template leaves the plan alone');
+    deletePlan(plan.id);
+    return `${full.goals.length} goals`;
+  });
+
+  await step('plan files: reading checks the format', () => {
+    const { name, data } = progressPlan();
+    const ok = parsePlanFile(JSON.stringify({ format: 'actionplan-plan', version: 1, kind: 'template', name, ...data }), 'x.json');
+    eq([ok.name, ok.kind, ok.data.goals.length, ok.data.relations.length], [name, 'template', 3, 1], 'new format');
+    const old = parsePlanFile(JSON.stringify({ name: 'Old export', ...data }), 'old.json');
+    eq([old.name, old.kind, old.data.activities.length], ['Old export', 'full', 4], 'files exported before the header still import as full copies');
+    eq(parsePlanFile(JSON.stringify({ goals: [] }), 'My backup.JSON').name, 'My backup', 'name from the file when missing');
+    eq(parsePlanFile(JSON.stringify({ name: '   ', goals: [] }), 'blank.json').name, 'blank', 'blank name falls back to the file name');
+    eq(parsePlanFile(JSON.stringify({ format: 'actionplan-plan', version: 1, kind: 'weird', name: 'k', goals: [] }), 'k.json').kind, 'full', 'unknown kind read as full');
+    const reason = (text, msg) => { try { parsePlanFile(text, 'f.json'); } catch (e) { return e.code; } assert(false, `${msg}: accepted`); };
+    eq(reason('not json', 'text'), 'invalid', 'not JSON');
+    eq(reason('[1,2]', 'array'), 'invalid', 'an array');
+    eq(reason('null', 'null'), 'invalid', 'null');
+    eq(reason('{}', 'empty'), 'invalid', 'an empty object');
+    eq(reason('{"foo":1,"name":"x"}', 'other'), 'invalid', 'unrelated JSON');
+    eq(reason('{"goals":"many"}', 'wrong type'), 'invalid', 'collections that are not lists');
+    eq(reason(JSON.stringify({ format: 'something-else', goals: [] }), 'format'), 'invalid', 'another format');
+    eq(reason(JSON.stringify({ format: 'actionplan-sync', version: 1, plans: { list: [] }, data: {} }), 'sync'), 'invalid', 'the Drive sync file');
+    eq(reason(JSON.stringify({ format: 'actionplan-plan', version: 2, name: 'n', goals: [] }), 'newer'), 'version', 'a file from a newer version');
+    const junk = parsePlanFile(JSON.stringify({ name: 'J', goals: [{ id: 'g', title: 'ok', status: 'active' }], extra: 'x', states: 7 }), 'j.json');
+    assert(!('extra' in junk.data) && Array.isArray(junk.data.states) && junk.data.states.length === 0, 'unknown fields dropped, bad collections emptied');
+    return 'ok';
+  });
+
+  await step('export dialog: full copy or template, download or share', async () => {
+    const plan = addPlan(progressPlan());
+    const nav = { canShare: navigator.canShare, share: navigator.share };
+    navigator.canShare = undefined;
+    assert(document.querySelectorAll('[data-plan="export"]').length >= 1 && document.querySelectorAll('[data-plan="import"]').length >= 1, 'export and import beside the plan actions');
+    $('[data-plan="export"]').click();
+    assert(exp.open, 'export dialog opens');
+    assert(exp.querySelector('input[name="exportKind"][value="full"]').checked, 'full copy chosen at first');
+    assert(exp.textContent.includes(plan.name), 'names the plan');
+    assert($('#exportShareBtn').hidden, 'no Share where the browser cannot share files');
+    let got = await capture(() => $('#exportDownloadBtn').click());
+    await tick();
+    assert(!exp.open, 'closes after downloading');
+    eq([got.length, got[0].json.kind], [1, 'full'], 'one full file');
+    eq(got[0].json.activities, db.activities, 'full file has the progress');
+    assert(got[0].name === `${plan.name}-${today()}.json`, `file name ${got[0].name}`);
+    assert(got[0].blob.type === 'application/json', 'JSON type');
+
+    $('[data-plan="export"]').click();
+    exp.querySelector('input[name="exportKind"][value="template"]').click();
+    got = await capture(() => $('#exportDownloadBtn').click());
+    eq(got[0].json.kind, 'template', 'template file');
+    eq(progressCounts(got[0].json), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'template file has no progress');
+    assert(got[0].name === `${plan.name}-${t('export.templateFile')}-${today()}.json`, `template file name ${got[0].name}`);
+    $('[data-plan="export"]').click();
+    assert(exp.querySelector('input[name="exportKind"][value="full"]').checked, 'full copy chosen again next time');
+    exp.querySelector('[data-plan-export-close]').click();
+    assert(!exp.open, 'Cancel closes');
+
+    // Where files can be shared (phones), Share hands the file to the system share sheet.
+    const shared = [];
+    let fail = null;
+    navigator.canShare = o => !!o?.files?.length;
+    navigator.share = async o => { shared.push(o); if (fail) throw fail; };
+    try {
+      $('[data-plan="export"]').click();
+      assert(!$('#exportShareBtn').hidden, 'Share offered');
+      exp.querySelector('input[name="exportKind"][value="template"]').click();
+      got = await capture(async () => { $('#exportShareBtn').click(); await tick(); await tick(); });
+      eq(shared.length, 1, 'shared once');
+      const f = shared[0].files[0];
+      assert(f instanceof File && f.name === `${plan.name}-${t('export.templateFile')}-${today()}.json` && f.type === 'application/json', `shared file ${f.name}`);
+      eq(JSON.parse(await f.text()).kind, 'template', 'shared the template');
+      assert(shared[0].title === plan.name, 'share title is the plan name');
+      eq(got.length, 0, 'nothing downloaded');
+      assert(!exp.open, 'closes after sharing');
+
+      fail = new DOMException('cancelled', 'AbortError');
+      $('[data-plan="export"]').click();
+      got = await capture(async () => { $('#exportShareBtn').click(); await tick(); await tick(); });
+      eq(got.length, 0, 'cancelling the share sheet downloads nothing');
+
+      fail = new Error('share broke');
+      $('[data-plan="export"]').click();
+      got = await capture(async () => { $('#exportShareBtn').click(); await tick(); await tick(); });
+      eq([got.length, got[0]?.json.kind], [1, 'full'], 'a failed share falls back to a download');
+
+      navigator.canShare = () => false;
+      $('[data-plan="export"]').click();
+      assert($('#exportShareBtn').hidden, 'no Share when files cannot be shared');
+      exp.close();
+    } finally {
+      navigator.canShare = nav.canShare; navigator.share = nav.share;
+    }
+
+    // The Settings button opens the same dialog; the delete dialog's backup still downloads a full copy at once.
+    $('#exportBtn').click();
+    assert(exp.open, 'Settings → Export opens the dialog');
+    exp.close();
+    settings.close();
+    openPlanDelete(plan);
+    got = await capture(() => $('[data-plan-backup]').click());
+    eq([got.length, got[0].json.kind, exp.open], [1, 'full', false], 'backup before deleting is a full copy, no dialog');
+    planDel.close();
+    deletePlan(plan.id);
+    return 'download, template, share, fallback';
+  });
+
+  await step('import: templates and plans without progress come straight in', async () => {
+    const n0 = plans.list.length;
+    const { name, data } = progressPlan();
+    await importJson(fileOf({ format: 'actionplan-plan', version: 1, kind: 'template', name, ...resetProgress(data, { shift: true }) }));
+    assert(!imp.open && plans.list.length === n0 + 1 && currentPlan().name === name, 'template imported as a new plan');
+    assert(db.goals.length === 3 && db.relations.length === 1, 'with its content');
+    assert($('#toast').textContent === t('toast.imported'), 'toast');
+    await importJson(fileOf({ format: 'actionplan-plan', version: 1, kind: 'template', name, ...resetProgress(data) }));
+    assert(currentPlan().name === `${name} 2` && plans.list.length === n0 + 2, 'same name gets a number');
+    await importJson(fileOf({ format: 'actionplan-plan', version: 1, kind: 'full', name: 'Fresh', ...resetProgress(data) }));
+    assert(!imp.open && currentPlan().name === 'Fresh', 'a full copy without progress does not ask');
+    const ids = plans.list.slice(n0).map(p => p.id);
+    ids.forEach(deletePlan);
+    eq(plans.list.length, n0, 'cleaned up');
+    return 'ok';
+  });
+
+  await step('import: a full copy with progress asks to keep it or start fresh', async () => {
+    const n0 = plans.list.length, startId = plans.current;
+    const { name, data } = progressPlan();
+    const file = { format: 'actionplan-plan', version: 1, kind: 'full', name, ...data };
+
+    await importJson(fileOf(file));
+    assert(imp.open && plans.list.length === n0, 'asks before adding anything');
+    const text = imp.textContent;
+    for (const s of [tp('import.checkins', 2), tp('import.measurements', 4), tp('import.done', 2), tp('import.started', 1)]) assert(text.includes(s), `mentions “${s}”`);
+    assert(text.includes(name), 'names the plan');
+    $('#importKeepBtn').click();
+    await tick();
+    assert(!imp.open && plans.list.length === n0 + 1 && currentPlan().name === name, 'Keep progress adds the plan');
+    eq(progressCounts(db), progressCounts(data), 'with its progress');
+    eq(db.activities.find(a => a.repeat).checkins, data.activities[3].checkins, 'check-ins intact');
+    assert($('#toast').textContent === t('toast.imported'), 'toast');
+    const kept = plans.current;
+
+    await importJson(fileOf(file));
+    assert(imp.open, 'asks again');
+    $('#importFreshBtn').click();
+    await tick();
+    assert(!imp.open && plans.list.length === n0 + 2 && currentPlan().name === `${name} 2`, 'Start fresh adds the plan');
+    eq(progressCounts(db), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'without progress');
+    eq(datesOf(db), datesOf(data), 'dates left as they were');
+    eq([db.goals.length, db.states.length, db.activities.length, db.relations.length], [3, 2, 4, 1], 'structure intact');
+    assert($('#toast').textContent === t('toast.importedFresh'), 'fresh toast');
+
+    const before = plans.current;
+    await importJson(fileOf(file));
+    imp.querySelector('[data-plan-import-close]').click();
+    await tick();
+    assert(!imp.open && plans.list.length === n0 + 2 && plans.current === before, 'Cancel adds nothing');
+    await importJson(fileOf(file));
+    imp.dispatchEvent(new Event('cancel'));
+    imp.close();
+    await tick();
+    eq(plans.list.length, n0 + 2, 'Escape adds nothing');
+    $('#importKeepBtn').click();
+    eq(plans.list.length, n0 + 2, 'a stale Keep click after closing adds nothing');
+
+    // Files exported before the header count as full copies, so they are checked too.
+    await importJson(fileOf({ name: 'Legacy', ...data }, 'legacy.json'));
+    assert(imp.open, 'an old export with progress asks too');
+    $('#importKeepBtn').click();
+    await tick();
+    assert(currentPlan().name === 'Legacy' && progressCounts(db).checkins === 2, 'legacy kept');
+
+    // Bad files change nothing.
+    const n1 = plans.list.length, cur = plans.current;
+    await importJson(fileOf('not json', 'bad.json'));
+    assert(!imp.open && plans.list.length === n1 && plans.current === cur && $('#toast').textContent === t('err.import'), 'invalid file');
+    await importJson(fileOf({ format: 'actionplan-plan', version: 9, name: 'n', goals: [] }));
+    assert(plans.list.length === n1 && $('#toast').textContent === t('err.importVersion'), 'newer version explained');
+
+    plans.list.slice(n0).map(p => p.id).forEach(deletePlan);
+    openPlan(startId);
+    eq(plans.list.length, n0, 'cleaned up');
+    return text.replace(/\s+/g, ' ').trim().slice(0, 140);
+  });
+
+  await step('import: round trip, plan buttons and the file picker', async () => {
+    const src = addPlan(progressPlan());
+    const original = clone(db);
+    const [full] = await capture(() => exportJson());
+    await importJson(fileOf(full.json, full.name));
+    $('#importKeepBtn').click();
+    await tick();
+    assert(plans.current !== src.id && currentPlan().name === `${src.name} 2`, 'imported beside the original');
+    for (const k of ['goals', 'states', 'activities', 'relations']) eq(db[k], original[k], `${k} identical after a full round trip`);
+
+    openPlan(src.id);
+    const [tpl] = await capture(() => { $('[data-plan="export"]').click(); exp.querySelector('input[name="exportKind"][value="template"]').click(); $('#exportDownloadBtn').click(); });
+    await importJson(fileOf(tpl.json, tpl.name));
+    assert(!imp.open && currentPlan().name === `${src.name} 3`, 'a template round trip needs no question');
+    eq(db.goals.map(g => g.title), original.goals.map(g => g.title), 'template keeps the goals');
+
+    // The plan's Import button opens the file picker; it accepts .json files (Android greys out some otherwise).
+    const input = $('#importInput');
+    let picked = 0;
+    const origClick = input.click;
+    input.click = () => picked++;
+    $('[data-plan="import"]').click();
+    input.click = origClick;
+    eq(picked, 1, 'Import opens the file picker');
+    assert(input.accept.split(',').map(s => s.trim()).includes('.json') && input.accept.includes('application/json'), `accept="${input.accept}"`);
+
+    // Choosing a file in the picker imports it.
+    const dt = new DataTransfer();
+    dt.items.add(fileOf({ format: 'actionplan-plan', version: 1, kind: 'template', name: 'Picked', goals: [] }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 50));
+    assert(currentPlan().name === 'Picked' && input.value === '', 'picked file imported, picker reset');
+
+    const plansNow = plans.list.filter(p => [src.name, `${src.name} 2`, `${src.name} 3`, 'Picked'].includes(p.name)).map(p => p.id);
+    plansNow.forEach(deletePlan);
+    return 'round trips identical';
+  });
+
+  await step('sharing plans in Slovenian', async () => {
+    changeLanguage('sl');
+    const plan = addPlan(progressPlan());
+    $('[data-plan="export"]').click();
+    assert(exp.querySelector('h2').textContent === I18N.sl.strings['export.title'], 'export dialog in Slovenian');
+    assert($('[data-plan="export"]').title === I18N.sl.strings['plan.export'], 'button title in Slovenian');
+    const [tpl] = await capture(() => { exp.querySelector('input[name="exportKind"][value="template"]').click(); $('#exportDownloadBtn').click(); });
+    assert(tpl.name.includes(`-${I18N.sl.strings['export.templateFile']}-`), `Slovenian template file name ${tpl.name}`);
+    await importJson(fileOf({ format: 'actionplan-plan', version: 1, kind: 'full', name: 'Tek', ...progressPlan().data }));
+    const text = imp.textContent;
+    assert(text.includes(tp('import.checkins', 2)) && tp('import.checkins', 2) !== I18N.en.strings['import.checkins'].other.replace('{n}', 2), 'progress listed in Slovenian');
+    assert(text.includes(tp('import.measurements', 4)), 'Slovenian plural for four');
+    imp.close();
+    deletePlan(plan.id);
+    changeLanguage('en');
+    return text.replace(/\s+/g, ' ').trim().slice(0, 120);
+  });
 };

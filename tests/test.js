@@ -302,7 +302,8 @@
     URL.createObjectURL = orig; HTMLAnchorElement.prototype.click = click;
     const text = await blob.text();
     const n0 = plans.list.length;
-    importJson(new File([text], 'backup.json'));
+    await importJson(new File([text], 'backup.json'));
+    if ($('#planImport').open) $('#importKeepBtn').click();
     await new Promise(r => setTimeout(r, 50));
     assert(plans.list.length === n0 + 1 && db.goals.length === JSON.parse(text).goals.length);
     importJson(new File(['not json'], 'bad.json'));

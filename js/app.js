@@ -2670,31 +2670,150 @@ $('#deleteBtn').addEventListener('click', () => {
 
 /* ---------- Import / export / sample ---------- */
 
-function exportJson() {
-  const name = currentPlan().name;
-  const blob = new Blob([JSON.stringify({ name, ...db }, null, 2)], { type: 'application/json' });
+/* A plan file is { format, version, kind, name, exportedAt, goals, states, activities, relations }.
+   kind 'full' is an exact copy (a backup); 'template' is the same plan without progress, its dates
+   moved to start now, for sharing. Files exported before the header are read as full copies. */
+const PLAN_FORMAT = 'actionplan-plan';
+const PLAN_VERSION = 1;
+const PLAN_DATES = ['startDate', 'deadline', 'dueDate'];
+
+// A copy of plan data with the progress taken out: goals active again with no current value, no
+// measurements, activities to do, no check-ins, no sync bookkeeping. With `shift`, every date moves
+// by the same whole number of weeks (so weekly routines keep their days) to put the earliest one this week.
+function resetProgress(data, { shift = false } = {}) {
+  const d = normalize(JSON.parse(JSON.stringify(data)));
+  d.deleted = {};
+  const dated = [...d.goals, ...d.activities];
+  const first = dated.flatMap(x => PLAN_DATES.map(k => x[k])).filter(Boolean).sort()[0];
+  const by = shift && first ? Math.ceil((dayNum(today()) - dayNum(first)) / 7) * 7 : 0;
+  for (const x of [...dated, ...d.states, ...d.relations]) delete x.updatedAt;
+  for (const x of dated) for (const k of [...PLAN_DATES, 'createdAt']) if (by && x[k]) x[k] = addDays(x[k], by);
+  d.goals.forEach(g => { g.current = ''; if (g.status === 'achieved') g.status = 'active'; });
+  d.states.forEach(s => Object.assign(s, { value: '', date: '', history: [] }));
+  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; });
+  return d;
+}
+
+// How much progress plan data holds, as the import question lists it.
+function progressCounts(data) {
+  const ticks = a => Object.values(a.checkins || {}).filter(v => v === 1).length;
+  return {
+    checkins: data.activities.reduce((n, a) => n + ticks(a), 0),
+    measurements: data.states.reduce((n, s) => n + ((s.history || []).length || (isNum(s.value) ? 1 : 0)), 0)
+      + data.goals.filter(g => isNum(g.current)).length,
+    done: data.activities.filter(a => a.status === 'done').length + data.goals.filter(g => g.status === 'achieved').length,
+    started: data.activities.filter(a => a.status === 'doing').length,
+  };
+}
+const hasProgress = data => Object.values(progressCounts(data)).some(Boolean);
+
+function planFile(kind) {
+  const data = kind === 'template' ? resetProgress(db, { shift: true }) : db;
+  const { goals, states, activities, relations } = data;
+  return { format: PLAN_FORMAT, version: PLAN_VERSION, kind, name: currentPlan().name, exportedAt: new Date().toISOString(), goals, states, activities, relations };
+}
+
+// Reads a plan file; throws an error with code 'invalid' (not a plan) or 'version' (from a newer app).
+function parsePlanFile(text, fileName) {
+  const fail = code => Object.assign(new Error(code), { code });
+  let raw;
+  try { raw = JSON.parse(text); } catch (e) { throw fail('invalid'); }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw fail('invalid');
+  if (raw.format !== undefined && raw.format !== PLAN_FORMAT) throw fail('invalid');
+  if (raw.format && raw.version > PLAN_VERSION) throw fail('version');
+  if (!SYNC_COLLS.some(k => Array.isArray(raw[k]))) throw fail('invalid');
+  const name = (typeof raw.name === 'string' && raw.name.trim()) || fileName.replace(/\.json$/i, '');
+  return { name, kind: raw.kind === 'template' ? 'template' : 'full', data: normalize(raw) };
+}
+
+const planFileName = kind => {
+  const name = currentPlan().name.replace(/[\\/:*?"<>|]+/g, '').trim() || t('app.file');
+  return `${name}${kind === 'template' ? '-' + t('export.templateFile') : ''}-${today()}.json`;
+};
+
+function download(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `${name.replace(/[\\/:*?"<>|]+/g, '').trim() || t('app.file')}-${today()}.json`;
+  a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-function importJson(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
+// Downloads the plan, or hands it to the system share sheet where files can be shared (phones).
+// A cancelled share does nothing; a failed one falls back to a download.
+async function exportPlan(kind, share = false) {
+  const blob = new Blob([JSON.stringify(planFile(kind), null, 2)], { type: 'application/json' });
+  const name = planFileName(kind);
+  if (share) {
     try {
-      const raw = JSON.parse(reader.result);
-      // Imports always become a new plan, so nothing is overwritten.
-      const name = (typeof raw.name === 'string' && raw.name.trim()) || file.name.replace(/\.json$/i, '');
-      createPlan(uniqueName(name), normalize(raw));
-      toast(t('toast.imported'));
+      await navigator.share({ files: [new File([blob], name, { type: 'application/json' })], title: currentPlan().name });
+      return;
     } catch (e) {
-      toast(t('err.import'));
+      if (e?.name === 'AbortError') return;
     }
-  };
-  reader.readAsText(file);
+  }
+  download(blob, name);
 }
+const exportJson = () => exportPlan('full');
+const canShareFiles = () => {
+  try { return !!navigator.canShare?.({ files: [new File(['{}'], 'plan.json', { type: 'application/json' })] }); } catch (e) { return false; }
+};
+
+const planExp = $('#planExport');
+
+function openExport() {
+  closeCtxMenu();
+  $('#planExportName').textContent = currentPlan().name;
+  planExp.querySelector('input[name="exportKind"][value="full"]').checked = true;
+  $('#exportShareBtn').hidden = !canShareFiles();
+  planExp.showModal();
+}
+planExp.addEventListener('click', e => {
+  if (e.target === planExp || e.target.closest('[data-plan-export-close]')) return planExp.close();
+  const share = e.target.closest('#exportShareBtn');
+  if (!share && !e.target.closest('#exportDownloadBtn')) return;
+  const kind = planExp.querySelector('input[name="exportKind"]:checked').value;
+  planExp.close();
+  exportPlan(kind, !!share);
+});
+
+// Imports always become a new plan, so nothing is overwritten. A full copy that holds progress asks
+// first whether to keep it or start fresh (someone may have shared their own plan).
+const planImp = $('#planImport');
+let pendingImport = null;
+
+function addImported(name, data, msg = 'toast.imported') {
+  createPlan(uniqueName(name), data);
+  toast(t(msg));
+}
+
+async function importJson(file) {
+  let plan;
+  try {
+    plan = parsePlanFile(await file.text(), file.name);
+  } catch (e) {
+    return toast(t(e.code === 'version' ? 'err.importVersion' : 'err.import'));
+  }
+  if (plan.kind === 'template' || !hasProgress(plan.data)) return addImported(plan.name, plan.data);
+  pendingImport = plan;
+  const counts = progressCounts(plan.data);
+  const items = Object.entries(counts).filter(([, n]) => n).map(([k, n]) => `<li>${esc(tp('import.' + k, n))}</li>`).join('');
+  $('#planImportBody').innerHTML = `
+    <p>${t('import.lead', { name: `<strong>${esc(plan.name)}</strong>` })}</p>
+    <ul class="import-progress">${items}</ul>
+    <p class="hint">${t('import.hint')}</p>`;
+  planImp.showModal();
+}
+planImp.addEventListener('close', () => { pendingImport = null; });
+planImp.addEventListener('click', e => {
+  const keep = e.target.closest('#importKeepBtn'), fresh = e.target.closest('#importFreshBtn');
+  if (e.target === planImp || e.target.closest('[data-plan-import-close]')) return planImp.close();
+  if (!(keep || fresh) || !pendingImport || !planImp.open) return;
+  const { name, data } = pendingImport;
+  planImp.close();
+  if (keep) addImported(name, data);
+  else addImported(name, resetProgress(data), 'toast.importedFresh');
+});
 
 // A plan that exercises every feature: all relationship types, sub-goals, three levels of
 // sub-activities, dependency chains, and every status (not started, in progress, late, waiting, done).
@@ -2841,7 +2960,7 @@ settings.addEventListener('change', e => {
   const key = e.target.dataset.setting;
   if (key) SETTINGS[key].set(e.target.checked);
 });
-$('#exportBtn').addEventListener('click', exportJson);
+$('#exportBtn').addEventListener('click', openExport);
 $('#importInput').addEventListener('change', e => {
   if (e.target.files[0]) { importJson(e.target.files[0]); settings.close(); }
   e.target.value = '';
@@ -3255,6 +3374,8 @@ document.addEventListener('scroll', () => closeCtxMenu(), true);
 const PLAN_ICONS = {
   new: '<path d="M12 5v14M5 12h14"/>',
   rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  export: '<path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/>',
+  import: '<path d="M12 3v12M7 10l5 5 5-5M5 14v6h14v-6"/>',
   delete: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
 };
 
@@ -3281,6 +3402,10 @@ document.addEventListener('click', e => {
   } else if (act === 'rename') {
     const name = askPlanName(t('plan.renamePrompt'), plan.name, plan.id);
     if (name) { plan.name = name; save(); renderPlanSwitch(); toast(t('toast.planRenamed')); }
+  } else if (act === 'export') {
+    openExport();
+  } else if (act === 'import') {
+    $('#importInput').click();
   } else if (act === 'delete') {
     openPlanDelete(plan);
   }

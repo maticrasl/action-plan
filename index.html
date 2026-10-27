@@ -137,6 +137,50 @@
     </form>
   </dialog>
 
+  <dialog id="planExport" class="modal plan-share" aria-labelledby="planExportTitle">
+    <form method="dialog" novalidate>
+      <header class="modal-head">
+        <h2 id="planExportTitle" data-i18n="export.title">Export plan</h2>
+        <button type="button" class="icon-btn" data-plan-export-close data-i18n-aria="btn.close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="modal-body">
+        <p class="export-plan" id="planExportName"></p>
+        <fieldset class="export-kinds">
+          <legend class="sr-only" data-i18n="export.kind">What to export</legend>
+          <label class="export-kind"><input type="radio" name="exportKind" value="full" checked>
+            <span><strong data-i18n="export.full">Full copy</strong><span class="hint" data-i18n="export.fullHint">Everything, including your progress. Use it as a backup.</span></span></label>
+          <label class="export-kind"><input type="radio" name="exportKind" value="template">
+            <span><strong data-i18n="export.template">Template</strong><span class="hint" data-i18n="export.templateHint">Goals, activities and links without progress, with dates moved to start this week. Use it to share the plan.</span></span></label>
+        </fieldset>
+      </div>
+      <footer class="modal-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-plan-export-close data-i18n="btn.cancel">Cancel</button>
+        <button type="button" class="btn" id="exportShareBtn" data-i18n="export.share" hidden>Share</button>
+        <button type="button" class="btn primary" id="exportDownloadBtn" data-i18n="export.download">Download</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="planImport" class="modal plan-share" aria-labelledby="planImportTitle">
+    <form method="dialog" novalidate>
+      <header class="modal-head">
+        <h2 id="planImportTitle" data-i18n="import.title">Keep the progress?</h2>
+        <button type="button" class="icon-btn" data-plan-import-close data-i18n-aria="btn.close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="modal-body" id="planImportBody"></div>
+      <footer class="modal-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="importFreshBtn" data-i18n="import.fresh">Start fresh</button>
+        <button type="button" class="btn primary" id="importKeepBtn" data-i18n="import.keep">Keep progress</button>
+      </footer>
+    </form>
+  </dialog>
+
   <dialog id="settings" class="modal settings" aria-labelledby="settingsTitle">
     <header class="modal-head">
       <h2 id="settingsTitle" data-i18n="settings.title">Settings</h2>
@@ -169,8 +213,8 @@
         <h3 data-i18n="settings.data">Data</h3>
         <p class="hint" data-i18n="settings.dataHint">Your plans are stored only in this browser. Export a plan to back it up; importing a file always adds it as a new plan.</p>
         <div class="set-actions">
-          <button type="button" class="btn small" id="exportBtn" data-i18n="btn.export">Export JSON</button>
-          <label class="btn small"><span data-i18n="btn.import">Import JSON</span><input type="file" id="importInput" accept="application/json" hidden></label>
+          <button type="button" class="btn small" id="exportBtn" data-i18n="btn.export">Export plan</button>
+          <label class="btn small"><span data-i18n="btn.import">Import plan</span><input type="file" id="importInput" accept=".json,application/json" hidden></label>
           <button type="button" class="btn small" id="sampleBtn" data-i18n="btn.sample">Load sample plan</button>
         </div>
       </section>
