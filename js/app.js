@@ -304,7 +304,43 @@ function canRelate(from, to, type) {
   if (db.relations.some(r => r.from === from && r.to === to && r.type === type)) return t('err.relExists');
   if (Object.values(PARENT_REL).includes(type) && relsFrom(from, type).length) return t('err.oneParent');
   if (ACYCLIC.has(type) && reaches(to, from, type)) return t('err.cycle');
+  if ((type === 'depends' || type === PARENT_REL[a.kind]) && PARENT_REL[a.kind]) {
+    if (dependsInLine(from, to, type, a.kind)) return t('err.lineDep');
+    if (wouldSelfBlock(from, to, type, a.kind)) return t('err.selfBlock');
+  }
   return null;
+}
+
+// True if the link would leave an item depending on its own parent or sub-item, in either direction:
+// directly for a new dependency, or through the new parent line for a new sub-activity or sub-goal.
+function dependsInLine(from, to, type, kind) {
+  const parentRel = PARENT_REL[kind];
+  if (type === 'depends') return [...ancestors(from, parentRel), ...descendants(from, parentRel)].includes(to);
+  const below = new Set([from, ...descendants(from, parentRel)]), above = new Set([to, ...ancestors(to, parentRel)]);
+  return db.relations.some(r => r.type === 'depends'
+    && ((below.has(r.from) && above.has(r.to)) || (above.has(r.from) && below.has(r.to))));
+}
+
+// Items `id` waits for: its own prerequisites plus those of every parent above it (see blockers).
+const effectiveDeps = (id, kind) => [id, ...ancestors(id, PARENT_REL[kind])].flatMap(x => relsFrom(x, 'depends')).map(r => r.to);
+
+// True if adding the link would make an item wait for itself, e.g. a parent depending on its
+// own sub-activity: the sub-activity inherits that prerequisite, so both stay blocked for good.
+function wouldSelfBlock(from, to, type, kind) {
+  const rel = { id: '', from, to, type };
+  db.relations.push(rel);
+  try {
+    const waitsForSelf = id => {
+      const seen = new Set(), queue = effectiveDeps(id, kind);
+      while (queue.length) {
+        const x = queue.shift();
+        if (x === id) return true;
+        if (!seen.has(x)) { seen.add(x); queue.push(...effectiveDeps(x, kind)); }
+      }
+      return false;
+    };
+    return [from, ...descendants(from, PARENT_REL[kind])].some(waitsForSelf);
+  } finally { db.relations.splice(db.relations.indexOf(rel), 1); }
 }
 
 function addRelation(from, to, type) {

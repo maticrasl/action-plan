@@ -604,9 +604,9 @@ window.moreTests = async ({ step, assert }) => {
     assert(canRelate(a3.id, a1.id, 'depends') === t('err.cycle'), 'long depends cycle');
     assert(canRelate(a1.id, a2.id, 'depends') === t('err.relExists'), 'duplicate');
     assert(canRelate(g1.id, a1.id, 'depends') === t('err.relTo', { rel: relLabel('depends'), kind: kindList(['goal']) }), 'depends must stay within a kind');
-    rel(a2, a1, 'subactivity');
-    assert(canRelate(a2.id, a3.id, 'subactivity') === t('err.oneParent'), 'one parent');
-    assert(canRelate(a1.id, a2.id, 'subactivity') === t('err.cycle'), 'parent cycle');
+    rel(a1, a3, 'subactivity');
+    assert(canRelate(a1.id, a2.id, 'subactivity') === t('err.oneParent'), 'one parent');
+    assert(canRelate(a3.id, a1.id, 'subactivity') === t('err.cycle'), 'parent cycle');
     rel(g2, g1, 'subgoal'); rel(g3, g2, 'subgoal');
     assert(canRelate(g1.id, g3.id, 'subgoal') === t('err.cycle'), 'subgoal cycle');
     eq(ancestors(g3.id, 'subgoal'), [g2.id, g1.id], 'ancestors');
@@ -617,6 +617,37 @@ window.moreTests = async ({ step, assert }) => {
     // A cycle through other types is fine: depends a3 → a1 is blocked, but related is not acyclic.
     assert(canRelate(a3.id, a1.id, 'related') === null, 'related may loop');
     return `${db.relations.length} relations, all rule errors as expected`;
+  });
+
+  await step('relation rules: no dependency up or down a parent line, and no item waits for itself', () => {
+    fresh('SelfBlock');
+    const [p, c, gc, x, y] = [mk('activity'), mk('activity'), mk('activity'), mk('activity'), mk('activity')];
+    rel(c, p, 'subactivity'); rel(gc, c, 'subactivity');
+    const sb = t('err.selfBlock'), line = t('err.lineDep');
+    assert(canRelate(p.id, c.id, 'depends') === line, 'parent on its sub-activity');
+    assert(canRelate(p.id, gc.id, 'depends') === line, 'grandparent on a grandchild');
+    assert(canRelate(c.id, p.id, 'depends') === line, 'sub-activity on its parent');
+    assert(canRelate(gc.id, p.id, 'depends') === line, 'grandchild on a grandparent');
+    const sib = mk('activity'); rel(sib, p, 'subactivity');
+    assert(canRelate(c.id, sib.id, 'depends') === null && canRelate(gc.id, sib.id, 'depends') === null, 'siblings and cousins may wait for each other');
+    assert(canRelate(c.id, x.id, 'depends') === null, 'ordinary waits stay allowed');
+    // Joining a line where a dependency already links the two ends, either way round.
+    const [u, v, w] = [mk('activity'), mk('activity'), mk('activity')];
+    rel(w, v, 'subactivity'); rel(w, u, 'depends');
+    assert(canRelate(v.id, u.id, 'subactivity') === line, 'new parent line over an existing child → ancestor wait');
+    const z = mk('activity'); rel(v, z, 'depends');
+    assert(canRelate(z.id, w.id, 'subactivity') === line, 'new parent line under an existing ancestor → child wait');
+    assert(!possibleTypes(p.id, c.id).includes('depends') && !possibleTypes(c.id, p.id).includes('depends'), 'not offered as a choice');
+    // Through a chain: p waits for x, x waits for gc → gc inherits p's wait and waits for itself.
+    rel(x, gc, 'depends');
+    assert(canRelate(p.id, x.id, 'depends') === sb, 'indirect self-wait');
+    // Making x a sub-activity of y, which waits (via q) for x, would have x wait for itself.
+    const q = mk('activity'); rel(y, q, 'depends'); rel(q, x, 'depends');
+    assert(canRelate(x.id, y.id, 'subactivity') === sb, 'sub-activity of an item that waits for it');
+    const g1 = mk('goal'), g2 = mk('goal');
+    rel(g2, g1, 'subgoal');
+    assert(canRelate(g1.id, g2.id, 'depends') === line && canRelate(g2.id, g1.id, 'depends') === line, 'goals follow the same rule');
+    return `${db.relations.length} relations, all refused as expected`;
   });
 
   await step('blockers, inherited waits and item states', () => {
