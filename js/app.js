@@ -213,6 +213,8 @@ function fmtDate(date) {
   if (!date) return '';
   return new Date(date + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
+// "3 Mar 2026 – 9 Apr 2026", or the one date there is.
+const fmtSpan = (s, e) => (s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e));
 // A yyyy-mm-dd date in the app's language, read as a calendar day (no time zone shift).
 const fmtDay = (iso, opts) => new Date(iso + 'T00:00Z').toLocaleDateString(locale(), { ...opts, timeZone: 'UTC' });
 function fmtNum(n) {
@@ -304,7 +306,8 @@ function canRelate(from, to, type) {
   if (db.relations.some(r => r.from === from && r.to === to && r.type === type)) return t('err.relExists');
   if (Object.values(PARENT_REL).includes(type) && relsFrom(from, type).length) return t('err.oneParent');
   if (ACYCLIC.has(type) && reaches(to, from, type)) return t('err.cycle');
-  if ((type === 'depends' || type === PARENT_REL[a.kind]) && PARENT_REL[a.kind]) {
+  const parentRel = PARENT_REL[a.kind];
+  if (parentRel && (type === 'depends' || type === parentRel)) {
     if (dependsInLine(from, to, type, a.kind)) return t('err.lineDep');
     if (wouldSelfBlock(from, to, type, a.kind)) return t('err.selfBlock');
   }
@@ -763,15 +766,16 @@ function routineWeeks(a) {
   const last = mondayOf(end), first = mondayOf(routineStart(a));
   return { first: first < last ? first : last, last, end };
 }
-function shownWeek(a) {
-  const { first, last } = routineWeeks(a), w = ui.rtWeek[a.id] || last;
-  return w < first ? first : w > last ? last : w;
+// The week the strip shows (`w`, or else this one), kept within those weeks.
+function shownWeek(a, w = ui.rtWeek[a.id]) {
+  const { first, last } = routineWeeks(a);
+  if (!w || w > last) return last;
+  return w < first ? first : w;
 }
 function shiftRoutineWeek(id, dir) {
   const a = db.activities.find(x => x.id === id);
   if (!a) return;
-  const { first, last } = routineWeeks(a), w = addDays(shownWeek(a), dir * 7);
-  ui.rtWeek[id] = w < first ? first : w > last ? last : w;
+  ui.rtWeek[id] = shownWeek(a, addDays(shownWeek(a), dir * 7));
   render();
   // Keep focus on the arrow, or on the other one once this one has reached the end.
   const btn = d => $(`[data-rt-week="${id}"][data-dir="${d}"]`);
@@ -783,7 +787,7 @@ function shiftRoutineWeek(id, dir) {
 function routineWeek(a, from = shownWeek(a)) {
   const now = today(), { first, last } = routineWeeks(a);
   const fmt = iso => fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const arrow = (dir, off) => `<button type="button" class="icon-btn rt-arrow" data-rt-week="${a.id}" data-dir="${dir}" title="${esc(t(dir < 0 ? 'rt.prevWeek' : 'rt.nextWeek'))}" aria-label="${esc(t(dir < 0 ? 'rt.prevWeek' : 'rt.nextWeek'))}" ${off ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${dir < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg></button>`;
+  const arrow = (dir, off, tip = esc(t(dir < 0 ? 'rt.prevWeek' : 'rt.nextWeek'))) => `<button type="button" class="icon-btn rt-arrow" data-rt-week="${a.id}" data-dir="${dir}" title="${tip}" aria-label="${tip}" ${off ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${dir < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg></button>`;
   const strip = daysBetween(from, addDays(from, 6)).map(d => {
     const on = checkedOn(a, d), off = d > now || !runsOn(a, d);
     const cls = ['rt-day', !isFlexible(a) && isDueDay(a, d) ? 'due' : '', on ? 'on' : '', d === now ? 'today' : ''].filter(Boolean).join(' ');
@@ -1493,7 +1497,7 @@ function mapSelection(id) {
 }
 
 // The ▸/▾ button that folds a goal (or the 'rest' group) in the timeline.
-const foldBtn = (key, name, folded) => `<button type="button" class="tl-fold" data-tl-fold="${key}" aria-expanded="${!folded}" aria-label="${esc(t(folded ? 'tl.expand' : 'tl.collapse', { name }))}" title="${esc(t(folded ? 'tl.expand' : 'tl.collapse', { name }))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${folded ? 'M9 6l6 6-6 6' : 'M6 9l6 6 6-6'}"/></svg></button>`;
+const foldBtn = (key, name, folded, tip = esc(t(folded ? 'tl.expand' : 'tl.collapse', { name }))) => `<button type="button" class="tl-fold" data-tl-fold="${key}" aria-expanded="${!folded}" aria-label="${tip}" title="${tip}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${folded ? 'M9 6l6 6-6 6' : 'M6 9l6 6 6-6'}"/></svg></button>`;
 
 function toggleTlFold(key) {
   const set = tlCollapsed();
@@ -1568,10 +1572,10 @@ function timelineRows(scope, collapsed = new Set()) {
   const startKey = x => x.startDate || x.dueDate || x.deadline || '9999';
   const byStart = (a, b) => startKey(a).localeCompare(startKey(b));
   const kids = a => relsTo(a.id, 'subactivity').map(r => db.activities.find(x => x.id === r.from)).filter(Boolean).sort(byStart);
-  // Prerequisites with no goal of their own hang under the activity that waits for them (their whole tree, from its top).
+  // An activity's prerequisites that serve no shown goal, each as its whole tree (from its top).
   const goals = db.goals.filter(g => visible('goal', g));
   const owned = new Set(goals.flatMap(g => goalActivities(g).map(a => a.id)));
-  const prereqs = a => [...new Set(relsFrom(a.id, 'depends').map(r => [...ancestors(r.to, 'subactivity')].pop() || r.to))]
+  const prereqs = a => [...new Set(relsFrom(a.id, 'depends').map(r => ancestors(r.to, 'subactivity').pop() || r.to))]
     .filter(id => !owned.has(id)).map(id => db.activities.find(x => x.id === id)).filter(Boolean).sort(byStart);
   // `rel` is how a row hangs off the row at index `parent` (drawn as a connector in that relation's colour).
   // A hidden activity passes its own place in the tree on to its children; `hidden` walks without adding rows.
@@ -1582,8 +1586,9 @@ function timelineRows(scope, collapsed = new Set()) {
     if (goal) under.set(a.id, [...(under.get(a.id) || []), goal]);
     const show = !hidden && visible('activity', a) && !(ui.hideDone && a.status === 'done');
     const here = show ? rows.push({ kind: 'activity', item: a, depth, rel, parent, goal }) - 1 : parent;
-    kids(a).forEach(c => (show ? addActivity(c, depth + 1, 'subactivity', here, goal, hidden, seen) : addActivity(c, depth, rel, parent, goal, hidden, seen)));
-    if (goal) prereqs(a).forEach(p => (show ? addActivity(p, depth + 1, 'depends', here, goal, hidden, seen) : addActivity(p, depth, rel, parent, goal, hidden, seen)));
+    const nest = (c, childRel) => (show ? addActivity(c, depth + 1, childRel, here, goal, hidden, seen) : addActivity(c, depth, rel, parent, goal, hidden, seen));
+    kids(a).forEach(c => nest(c, 'subactivity'));
+    if (goal) prereqs(a).forEach(p => nest(p, 'depends'));
   };
   const addGoal = (g, depth, rel, parent, hidden) => {
     if (placedGoals.has(g.id)) return;
@@ -1665,7 +1670,7 @@ function renderTimeline() {
     const { item, kind, depth } = r;
     const st = kind === 'goal' ? goalState(item) : activityState(item);
     const s = item.startDate, e = endOf(kind, item);
-    const dateText = s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e) || t('tl.noDates');
+    const dateText = fmtSpan(s, e) || t('tl.noDates');
     let bar = `<span class="tl-nodates">${t('tl.noDates')}</span>`;
     if (s || e) {
       const a = dayNum(s || e), b = dayNum(e || s);
@@ -1690,7 +1695,7 @@ function renderTimeline() {
     }
     const dim = (sel || relSel) && !near.has(item.id) ? 'dim' : '';
     const also = r.also ? t('tl.alsoUnder', { goals: r.also.join(', ') }) : '';
-    const fold = kind === 'goal' ? (r.fold ? foldBtn(item.id, item.title, r.collapsed) : '') : '';
+    const fold = r.fold ? foldBtn(item.id, item.title, r.collapsed) : '';
     return `<div class="tl-row ${kind} ${dim}${item.id === sel ? ' selected' : ''}" data-tl-node="${item.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc([item.title, dateText, also].filter(Boolean).join(', '))}">
       <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow${REL_TYPES[r.rel].dash ? ' dash' : ''}" style="--rel:${REL_TYPES[r.rel].color};--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}${fold}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-head-line"><span class="tl-title">${esc(item.title)}</span>${also ? `<span class="tl-also" title="${esc(also)}" aria-hidden="true">↻</span>` : ''}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
       <div class="tl-track">${bar}</div>
@@ -3293,8 +3298,13 @@ function openCtxMenu(id, x, y) {
   ctxMenu.dataset.id = id;
   ctxMenu.dataset.rel = '';
   ctxMenu.setAttribute('aria-label', t('ctx.label', { name: ent.item.title }));
-  ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag ${ent.kind}">${t('kind.' + ent.kind)}</span><strong title="${esc(ent.item.title)}">${esc(ent.item.title)}</strong></div>` +
-    ctxOptions(ent.kind, ent.item).map(o => o === '-' ? '<hr>' :
+  showCtxMenu(ent.kind, t('kind.' + ent.kind), ent.item.title, ctxOptions(ent.kind, ent.item), x, y);
+}
+
+// Fills the menu – a heading with a tag and a name, then its options – and shows it at x, y, kept on screen.
+function showCtxMenu(tagClass, tag, title, options, x, y) {
+  ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag ${tagClass}">${tag}</span><strong title="${esc(title)}">${esc(title)}</strong></div>` +
+    options.map(o => o === '-' ? '<hr>' :
       `<button type="button" tabindex="-1" data-ctx="${o.act}" class="${o.danger ? 'danger' : ''}" role="${o.checked === undefined ? 'menuitem' : 'menuitemradio'}"${o.checked === undefined ? '' : ` aria-checked="${o.checked}"`}>${esc(o.label)}</button>`).join('');
   ctxMenu.hidden = false;
   const { width, height } = ctxMenu.getBoundingClientRect();
@@ -3321,16 +3331,14 @@ function openRelMenu(relId, x, y) {
   ctxMenu.dataset.id = '';
   ctxMenu.dataset.rel = relId;
   ctxMenu.setAttribute('aria-label', t('map.relLabel', { rel: relText(r) }));
-  const item = (act, label, danger) => `<button type="button" tabindex="-1" data-ctx="${act}" class="${danger ? 'danger' : ''}" role="menuitem">${esc(label)}</button>`;
-  ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag">${t('kind.relation')}</span><strong title="${esc(relText(r))}">${esc(relText(r))}</strong></div>` +
-    item('rel-edit', t('btn.edit')) + item('rel-remove', t('btn.remove'), true) + item('rel-deselect', t('btn.deselect'));
-  ctxMenu.hidden = false;
   ctxOpenedAt = performance.now();
-  const { width, height } = ctxMenu.getBoundingClientRect();
-  ctxMenu.style.left = `${Math.max(8, Math.min(x, innerWidth - width - 8))}px`;
-  ctxMenu.style.top = `${Math.max(8, Math.min(y, innerHeight - height - 8))}px`;
-  ctxMenu.querySelector('button').focus();
+  showCtxMenu('', t('kind.relation'), relText(r), [
+    { act: 'rel-edit', label: t('btn.edit') }, { act: 'rel-remove', label: t('btn.remove'), danger: true }, { act: 'rel-deselect', label: t('btn.deselect') },
+  ], x, y);
 }
+
+// The menu of a relationship line, or else of an item.
+const openMenuAt = (line, node, x, y) => (line ? openRelMenu(line.dataset.relEdit, x, y) : openCtxMenu(nodeId(node), x, y));
 
 function runRelAction(act, relId) {
   closeCtxMenu();
@@ -3377,8 +3385,7 @@ viewEl.addEventListener('contextmenu', e => {
   const node = e.target.closest(NODE_SEL), line = e.target.closest('[data-rel-edit]');
   if (!node && !line) return;
   e.preventDefault();
-  if (line) openRelMenu(line.dataset.relEdit, e.clientX, e.clientY);
-  else openCtxMenu(nodeId(node), e.clientX, e.clientY);
+  openMenuAt(line, node, e.clientX, e.clientY);
 });
 
 // Long-press for touch screens (iOS Safari never fires contextmenu).
@@ -3387,11 +3394,7 @@ viewEl.addEventListener('pointerdown', e => {
   const node = e.target.closest(NODE_SEL), line = e.target.closest('[data-rel-edit]');
   if ((!node && !line) || e.pointerType === 'mouse' || e.target.closest('[data-tl-drag]')) return;
   const p = { x: e.clientX, y: e.clientY, fired: false };
-  p.timer = setTimeout(() => {
-    p.fired = true;
-    if (line) openRelMenu(line.dataset.relEdit, p.x, p.y + 12);
-    else openCtxMenu(nodeId(node), p.x, p.y + 12);
-  }, LONG_PRESS_MS);
+  p.timer = setTimeout(() => { p.fired = true; openMenuAt(line, node, p.x, p.y + 12); }, LONG_PRESS_MS);
   press = p;
 });
 viewEl.addEventListener('pointermove', e => {
@@ -3647,7 +3650,7 @@ function previewTlDrag(d) {
     if (dot) dot.style.left = `${left + px / 2}px`;
     if (label) label.style.left = `${bar ? left + width + 8 : left + px / 2 + 14}px`;
     row.querySelectorAll('[data-tl-edge]').forEach(g => { g.style.cssText = tlGrip(g.dataset.tlEdge, left, width); });
-    row.querySelector('.tl-dates').textContent = s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e);
+    row.querySelector('.tl-dates').textContent = fmtSpan(s, e);
   });
   showTlDragTip(d, s, e);
 }
@@ -3665,8 +3668,7 @@ function showTlDragTip(d, s, e) {
     document.body.append(tip);
   }
   const endKey = d.kind === 'goal' ? 'f.deadline' : 'f.dueDate';
-  tip.textContent = d.edge ? `${t(d.edge === 'start' ? 'f.startDate' : endKey)}: ${fmtDate(d.edge === 'start' ? s : e)}`
-    : s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e);
+  tip.textContent = d.edge ? `${t(d.edge === 'start' ? 'f.startDate' : endKey)}: ${fmtDate(d.edge === 'start' ? s : e)}` : fmtSpan(s, e);
   const r = mark.getBoundingClientRect(), w = tip.offsetWidth;
   const x = d.edge === 'start' ? r.left : d.edge === 'end' ? r.right : r.left + r.width / 2;
   const top = Math.min(r.top, d.touch ? d.cy - 40 : r.top) - 8;
@@ -3697,7 +3699,7 @@ function endTlDrag(keep) {
   if (d.e0 || fixedEnd(ent.item)) ent.item[ent.kind === 'goal' ? 'deadline' : 'dueDate'] = e;
   save();
   render();
-  toast(t('tl.datesMoved', { name: ent.item.title, dates: s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e) }));
+  toast(t('tl.datesMoved', { name: ent.item.title, dates: fmtSpan(s, e) }));
 }
 
 // Once a long-press has picked the bar up, moving the finger drags it instead of scrolling.
@@ -3782,20 +3784,20 @@ viewEl.addEventListener('gesturestart', e => {
 });
 
 viewEl.addEventListener('keydown', e => {
-  const line = e.target.closest?.('[data-rel-edit]');
-  if (line && (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10'))) {
+  const line = e.target.closest?.('[data-rel-edit]'), menuKey = e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10');
+  if (line && menuKey) {
     e.preventDefault();
     const box = line.getBoundingClientRect();
     return openRelMenu(line.dataset.relEdit, box.left + box.width / 2, box.top + box.height / 2);
   }
   if (line && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
-    return openForm('relation', e.target.closest('[data-rel-edit]').dataset.relEdit);
+    return openForm('relation', line.dataset.relEdit);
   }
   const node = e.target.closest?.(NODE_SEL);
   // A fold button inside a timeline row handles its own keys.
   if (!node || e.target.closest('[data-tl-fold]')) return;
-  if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+  if (menuKey) {
     e.preventDefault();
     const r = node.getBoundingClientRect();
     openCtxMenu(nodeId(node), r.left + 16, r.bottom + 4);
@@ -3881,30 +3883,38 @@ function planHealth(data) {
   try {
     const now = today();
     let health = 'ok';
-    const due = (date, open) => {
-      if (!open || !date || date > now) return;
-      if (date < now) health = 'late';
-      else if (health === 'ok') health = 'today';
-    };
+    const flag = level => { if (level === 'late' || health === 'ok') health = level; };
+    const due = (date, open) => { if (open && date && date <= now) flag(date < now ? 'late' : 'today'); };
     db.goals.forEach(g => due(g.deadline, g.status === 'active' || !g.status));
     db.activities.forEach(a => {
       if (!isRoutine(a)) return due(a.dueDate, a.status !== 'done');
       if (!runsOn(a, now)) return;
-      if (routineState(a) === 'late') health = 'late';
+      if (routineState(a) === 'late') flag('late');
       // Due today: a set day not ticked yet, or a flexible routine that needs every day left, today included.
       const p = periodProgress(a, now);
       const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
       const dueToday = !checkedOn(a, now) && !p.met && (isFlexible(a) ? p.target - p.done >= left : isDueDay(a, now));
-      if (dueToday && health === 'ok') health = 'today';
+      if (dueToday) flag('today');
     });
     return health;
   } finally { db = keep; }
 }
 const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
 
+// Other plans change only through sync or the plan menu: their health is kept until the stored
+// copy or the day changes, so a render reads them from storage without parsing them again.
+const storedHealth = new Map(); // plan id → { key, health }
+function storedPlanHealth(id) {
+  let raw = null;
+  try { raw = localStorage.getItem(planKey(id)); } catch (e) { /* ignore */ }
+  const key = `${today()}|${raw}`;
+  if (storedHealth.get(id)?.key !== key) storedHealth.set(id, { key, health: planHealth(readPlan(id)) });
+  return storedHealth.get(id).health;
+}
+
 // The plan menus show each plan's badge before its name (unless switched off in Settings).
 function updatePlanBadges() {
-  const health = ui.planBadges ? Object.fromEntries(plans.list.map(p => [p.id, planHealth(p.id === plans.current ? db : readPlan(p.id))])) : {};
+  const health = ui.planBadges ? Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? planHealth(db) : storedPlanHealth(p.id)])) : {};
   document.querySelectorAll('[data-plan-select] option').forEach(o => {
     const plan = plans.list.find(p => p.id === o.value), h = health[o.value];
     if (!plan) return;
