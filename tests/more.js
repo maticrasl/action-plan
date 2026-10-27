@@ -2393,8 +2393,16 @@ window.moreTests = async ({ step, assert }) => {
     $('.map-rel-selection [data-rel-open]').click();
     assert(modal.open && formCtx.id === r.id, 'Edit opens it');
     modal.close();
+    eq($('.map-rel-selection [data-map-clear]').textContent, 'Deselect', 'the button says Deselect');
     $('.map-rel-selection [data-map-clear]').click();
-    eq(ui.mapRel, null, 'Clear clears it');
+    eq(ui.mapRel, null, 'Deselect deselects it');
+    ui.mapSelected = a.id; render();
+    eq($('[data-map-clear]').textContent, 'Deselect', 'an item’s row says Deselect too');
+    changeLanguage('sl');
+    eq($('[data-map-clear]').textContent, 'Prekliči izbiro', 'in Slovenian');
+    changeLanguage('en');
+    $('[data-map-clear]').click();
+    eq(ui.mapSelected, null, 'and deselects the item');
     clickEl(edge(r.id));
     press('Escape', document.body);
     eq(ui.mapRel, null, 'Escape clears it');

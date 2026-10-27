@@ -1448,7 +1448,7 @@ function mapSelection(id) {
     <span class="tag ${kind}">${t('kind.' + kind)}</span>
     <span class="grow"><strong>${esc(item.title)}</strong></span>
     <button class="btn small" data-open="${id}">${t('btn.edit')}</button>
-    <button class="btn small ghost" data-map-clear>${t('btn.clear')}</button>
+    <button class="btn small ghost" data-map-clear>${t('btn.deselect')}</button>
   </div>`;
 }
 
@@ -1461,7 +1461,7 @@ function mapRelSelection(r) {
     <span class="grow"><strong>${esc(relText(r))}</strong></span>
     <button class="btn small" data-rel-open="${r.id}">${t('btn.edit')}</button>
     <button class="btn small danger" data-rel-remove="${r.id}">${t('btn.remove')}</button>
-    <button class="btn small ghost" data-map-clear>${t('btn.clear')}</button>
+    <button class="btn small ghost" data-map-clear>${t('btn.deselect')}</button>
   </div>`;
 }
 
