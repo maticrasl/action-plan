@@ -1593,4 +1593,222 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('en');
     return text.replace(/\s+/g, ' ').trim().slice(0, 120);
   });
+  /* ---------- Merging one plan into another ---------- */
+
+  const mrg = $('#planMerge');
+  const titles = data => SYNC_COLLS.filter(c => c !== 'relations').flatMap(c => data[c].map(x => `${c}:${x.title}`)).sort();
+  const allIds = data => SYNC_COLLS.flatMap(c => data[c].map(x => x.id));
+  // A target plan with items of its own, a relation and progress.
+  const targetPlan = () => {
+    const g = { id: uid(), title: 'Save money', status: 'active', unit: '€', baseline: '0', target: '500', current: '100', category: 'Finance', updatedAt: '2026-02-02T00:00:00.000Z' };
+    const a = { id: uid(), title: 'Budget', status: 'done', updatedAt: '2026-02-02T00:00:00.000Z' };
+    return { name: 'Money', data: { goals: [g], states: [], activities: [a], relations: [{ id: uid(), from: a.id, to: g.id, type: 'contributes', updatedAt: '2026-02-02T00:00:00.000Z' }] } };
+  };
+  const cleanup = (...names) => plans.list.filter(p => names.includes(p.name)).map(p => p.id).forEach(deletePlan);
+  const sum = (a, b) => Object.fromEntries(Object.keys(a).map(k => [k, a[k] + b[k]]));
+
+  await step('merge: everything moves over and the target keeps its own', () => {
+    const T = addPlan(targetPlan()), tBefore = clone(db);
+    const S = addPlan(progressPlan()), sBefore = clone(db);
+    const started = new Date().toISOString();
+    mergePlanInto(S.id, T.id);
+    assert(plans.current === T.id, 'the target plan is open afterwards');
+    eq(titles(db), [...titles(tBefore), ...titles(sBefore)].sort(), 'all items of both plans');
+    eq(db.relations.length, 2, 'relations of both plans');
+    tBefore.goals.concat(tBefore.activities, tBefore.relations).forEach(x =>
+      eq(SYNC_COLLS.flatMap(c => db[c]).find(y => y.id === x.id), x, 'target item untouched'));
+    eq(progressCounts(db), sum(progressCounts(tBefore), progressCounts(sBefore)), 'progress of both kept');
+    const run = db.activities.find(a => a.title === 'Run');
+    eq([run.checkins, run.repeat], [sBefore.activities[3].checkins, sBefore.activities[3].repeat], 'check-ins and recurrence kept');
+    eq(db.states.find(s => s.title === 'Longest run').history, sBefore.states[0].history, 'measurement history kept');
+    eq(db.goals.find(g => g.title === 'Run 10 km').category, 'Health', 'category kept');
+    eq(allIds(sBefore).every(id => allIds(db).includes(id)), true, 'ids without a clash kept');
+    const moved = SYNC_COLLS.flatMap(c => db[c]).filter(x => allIds(sBefore).includes(x.id));
+    assert(moved.length === 10 && moved.every(x => x.updatedAt >= started), 'moved items stamped, so sync carries them');
+    eq(readPlan(T.id), JSON.parse(JSON.stringify(db)), 'target saved');
+    eq(readPlan(S.id), sBefore, 'source left as it was');
+    assert(plans.list.some(p => p.id === S.id), 'source kept');
+    assert(repairRelations(clone(db)).length === db.relations.length, 'every relation still valid');
+    const n = db.goals.length;
+    cleanup(T.name, S.name);
+    return `${n} goals`;
+  });
+
+  await step('merge: clashing ids get new ones and their links follow', () => {
+    const src = progressPlan();
+    const T = addPlan(src), S = addPlan(src); // two plans from the same file share ids
+    // The target once deleted an item whose id the source still uses: it must not come back as that id.
+    const T0 = readPlan(T.id);
+    const ghost = uid();
+    T0.deleted[ghost] = '2026-03-03T00:00:00.000Z';
+    localStorage.setItem(planKey(T.id), JSON.stringify(T0));
+    db.states.push({ id: ghost, title: 'Ghost', history: [] });
+    // A relation pointing at nothing is left behind.
+    db.relations.push({ id: uid(), from: db.activities[0].id, to: 'missing', type: 'contributes' });
+    save();
+    const sBefore = clone(db), tIds = new Set(allIds(T0));
+    mergePlanInto(S.id, T.id);
+    const ids = allIds(db);
+    eq(new Set(ids).size, ids.length, 'all ids unique');
+    eq(db.goals.length, 6, 'both copies of every goal');
+    eq(db.relations.length, 2, 'the copied relation added, the dangling one dropped');
+    const copy = db.relations.find(r => !tIds.has(r.id));
+    assert(copy, 'copied relation has a new id');
+    const from = db.activities.find(a => a.id === copy.from), to = db.goals.find(g => g.id === copy.to);
+    eq([from?.title, to?.title, copy.type], ['Training plan', 'Run 10 km', 'contributes'], 'copied relation connects the same items');
+    assert(!tIds.has(copy.from) && !tIds.has(copy.to), '…the copies, not the target’s own');
+    const g2 = db.states.find(s => s.title === 'Ghost');
+    assert(g2 && g2.id !== ghost, 'an id the target deleted is replaced');
+    assert(db.deleted[ghost], 'the target’s deletion record stays');
+    assert(repairRelations(clone(db)).length === db.relations.length, 'relations valid');
+    eq(readPlan(S.id), sBefore, 'source untouched');
+    cleanup(T.name, S.name);
+    return `${ids.length} ids`;
+  });
+
+  await step('merge: the open plan can be the source, the target or another plan', () => {
+    for (const open of ['source', 'target', 'other']) {
+      const O = addPlan({ name: 'Other', data: emptyDb() });
+      const T = addPlan(targetPlan()), tBefore = clone(db);
+      const S = addPlan(progressPlan()), sBefore = clone(db);
+      openPlan({ source: S, target: T, other: O }[open].id);
+      mergePlanInto(S.id, T.id);
+      assert(plans.current === T.id, `${open}: target open`);
+      eq(titles(readPlan(T.id)), [...titles(tBefore), ...titles(sBefore)].sort(), `${open}: merged`);
+      eq(readPlan(S.id), sBefore, `${open}: source untouched`);
+      eq(readPlan(O.id).goals.length, 0, `${open}: the other plan untouched`);
+      cleanup('Other', T.name, S.name);
+    }
+    return 'source, target, other';
+  });
+
+  await step('merge: deleting the source afterwards', () => {
+    const T = addPlan(targetPlan());
+    const S = addPlan(progressPlan()), sBefore = clone(db);
+    const n0 = plans.list.length;
+    mergePlanInto(S.id, T.id, true);
+    assert(plans.current === T.id && plans.list.length === n0 - 1, 'source gone, target open');
+    assert(!plans.list.some(p => p.id === S.id) && localStorage.getItem(planKey(S.id)) === null, 'source removed from storage');
+    assert(plans.deleted?.[S.id], 'deletion recorded for sync');
+    assert(titles(sBefore).every(x => titles(db).includes(x)), 'its contents live on in the target');
+    eq(JSON.parse(localStorage.getItem(PLANS_KEY)).list.map(p => p.id).includes(S.id), false, 'plan list saved');
+    // An empty source merges nothing and can still be deleted.
+    const E = addPlan({ name: 'Empty', data: emptyDb() });
+    const before = clone(readPlan(T.id));
+    mergePlanInto(E.id, T.id, true);
+    eq(titles(db), titles(before), 'empty source adds nothing');
+    assert(!plans.list.some(p => p.id === E.id), 'empty source deleted');
+    cleanup(T.name);
+    return 'ok';
+  });
+
+  await step('merge dialog: pick a target, optionally delete, cancel changes nothing', () => {
+    const T = addPlan(targetPlan()), U = addPlan({ name: 'Unrelated', data: emptyDb() });
+    const S = addPlan(progressPlan()), sBefore = clone(db);
+    const btn = () => $('[data-plan="merge"]');
+    assert(btn() && !btn().disabled && btn().title === t('plan.merge'), 'merge beside the plan actions');
+
+    // With a single plan there is nothing to merge into.
+    const saved = plans.list;
+    plans.list = [currentPlan()];
+    renderPlanSwitch();
+    assert(btn().disabled && btn().title === t('plan.mergeOnly'), 'disabled with one plan, says why');
+    plans.list = saved;
+    renderPlanSwitch();
+
+    btn().click();
+    assert(mrg.open, 'dialog opens');
+    assert(mrg.textContent.includes(S.name), 'names the source');
+    const sel = $('#mergeTarget');
+    eq([...sel.options].map(o => o.value).includes(S.id), false, 'the source is not offered');
+    eq([...sel.options].length, plans.list.length - 1, 'every other plan offered');
+    for (const s of [tp('planDel.goals', 3), tp('planDel.states', 2), tp('planDel.measurements', 2), tp('planDel.activities', 4), tp('planDel.relations', 1)])
+      assert(mrg.textContent.includes(s), `lists “${s}”`);
+    assert(!$('#mergeRemove').checked, 'keeps the source by default');
+
+    // Cancel, the close button and Escape change nothing.
+    const snapshot = () => JSON.stringify([plans.list.map(p => p.id), plans.current, readPlan(T.id), readPlan(S.id)]);
+    const was = snapshot();
+    mrg.querySelector('.modal-foot [data-plan-merge-close]').click();
+    assert(!mrg.open && snapshot() === was, 'Cancel changes nothing');
+    btn().click();
+    mrg.querySelector('.modal-head [data-plan-merge-close]').click();
+    assert(!mrg.open && snapshot() === was, 'the close button changes nothing');
+    btn().click();
+    mrg.close();
+    $('#mergeBtn').click();
+    assert(snapshot() === was, 'a stale Merge click after closing changes nothing');
+
+    btn().click();
+    $('#mergeTarget').value = T.id;
+    $('#mergeTarget').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#mergeBtn').click();
+    assert(!mrg.open && plans.current === T.id, 'merged and switched to the target');
+    assert(titles(sBefore).every(x => titles(db).includes(x)), 'contents moved');
+    eq(readPlan(U.id).goals.length, 0, 'the plan not chosen is untouched');
+    eq($('#toast').textContent, t('toast.merged', { from: S.name, to: T.name }), 'toast');
+    assert(plans.list.some(p => p.id === S.id), 'source kept');
+
+    openPlan(S.id);
+    btn().click();
+    $('#mergeTarget').value = U.id;
+    $('#mergeRemove').click();
+    $('#mergeBtn').click();
+    assert(plans.current === U.id && !plans.list.some(p => p.id === S.id), 'merged into the chosen plan and deleted the source');
+    eq($('#toast').textContent, t('toast.mergedDeleted', { from: S.name, to: U.name }), 'toast says it was deleted');
+    btn().click();
+    assert(!$('#mergeRemove').checked, 'delete is off again next time');
+    mrg.close();
+    cleanup(T.name, 'Unrelated');
+    return 'ok';
+  });
+
+  await step('delete dialog: merge into another plan instead', () => {
+    const T = addPlan(targetPlan());
+    const S = addPlan(progressPlan()), sBefore = clone(db);
+    $('[data-plan="delete"]').click();
+    const instead = () => $('[data-plan-merge-instead]');
+    assert(instead() && instead().textContent === t('planDel.merge'), 'offered in the delete dialog');
+    instead().click();
+    assert(!planDel.open && mrg.open, 'switches to the merge dialog');
+    assert($('#mergeRemove').checked, 'with delete afterwards ticked');
+    $('#mergeTarget').value = T.id;
+    $('#mergeBtn').click();
+    assert(plans.current === T.id && !plans.list.some(p => p.id === S.id), 'merged and deleted without typing the name');
+    assert(titles(sBefore).every(x => titles(db).includes(x)), 'nothing lost');
+
+    // Not offered for an empty plan, nor when there is no other plan.
+    addPlan({ name: 'Empty', data: emptyDb() });
+    $('[data-plan="delete"]').click();
+    assert(!instead(), 'not offered for an empty plan');
+    planDel.close();
+    const saved = plans.list;
+    openPlan(T.id);
+    plans.list = [currentPlan()];
+    $('[data-plan="delete"]').click();
+    assert(!instead(), 'not offered when there is no other plan');
+    planDel.close();
+    plans.list = saved;
+    renderPlanSwitch();
+    cleanup('Empty', T.name);
+    return 'ok';
+  });
+
+  await step('merging plans in Slovenian', () => {
+    changeLanguage('sl');
+    const T = addPlan(targetPlan());
+    const S = addPlan(progressPlan());
+    assert($('[data-plan="merge"]').title === I18N.sl.strings['plan.merge'], 'button title');
+    $('[data-plan="merge"]').click();
+    assert(mrg.querySelector('h2').textContent === I18N.sl.strings['merge.title'], 'dialog title');
+    assert(mrg.textContent.includes(tp('planDel.goals', 3)), 'contents in Slovenian');
+    const text = mrg.textContent.replace(/\s+/g, ' ').trim();
+    $('#mergeTarget').value = T.id;
+    $('#mergeBtn').click();
+    eq($('#toast').textContent, t('toast.merged', { from: S.name, to: T.name }), 'toast in Slovenian');
+    assert(t('toast.merged', { from: 'a', to: 'b' }) !== fill(I18N.en.strings['toast.merged'], { from: 'a', to: 'b' }), 'translated');
+    cleanup(T.name, S.name);
+    changeLanguage('en');
+    return text.slice(0, 120);
+  });
 };

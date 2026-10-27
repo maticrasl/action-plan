@@ -137,6 +137,23 @@
     </form>
   </dialog>
 
+  <dialog id="planMerge" class="modal plan-share" aria-labelledby="planMergeTitle">
+    <form method="dialog" novalidate>
+      <header class="modal-head">
+        <h2 id="planMergeTitle" data-i18n="merge.title">Merge plan</h2>
+        <button type="button" class="icon-btn" data-plan-merge-close data-i18n-aria="btn.close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="modal-body" id="planMergeBody"></div>
+      <footer class="modal-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-plan-merge-close data-i18n="btn.cancel">Cancel</button>
+        <button type="button" class="btn primary" id="mergeBtn" data-i18n="merge.confirm">Merge</button>
+      </footer>
+    </form>
+  </dialog>
+
   <dialog id="planExport" class="modal plan-share" aria-labelledby="planExportTitle">
     <form method="dialog" novalidate>
       <header class="modal-head">

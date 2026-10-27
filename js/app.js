@@ -153,6 +153,34 @@ function deletePlan(id) {
   openPlan(plans.list[0].id);
 }
 
+// Moves everything in one plan into another and opens that one. Items keep their ids unless the
+// target already has (or once deleted) that id; then they get new ones and their relations follow.
+// The moved items are saved as changes, so sync carries them; `remove` deletes the source afterwards.
+function mergePlanInto(fromId, toId, remove = false) {
+  if (fromId === toId) return;
+  const source = fromId === plans.current ? JSON.parse(JSON.stringify(db)) : readPlan(fromId);
+  if (plans.current !== toId) openPlan(toId);
+  const taken = new Set([...SYNC_COLLS.flatMap(c => db[c].map(x => x.id)), ...Object.keys(db.deleted || {})]);
+  const ids = new Map();
+  const place = x => {
+    const id = taken.has(x.id) ? uid() : x.id;
+    taken.add(id);
+    ids.set(x.id, id);
+    delete x.updatedAt;
+    return Object.assign(x, { id });
+  };
+  SYNC_COLLS.filter(c => c !== 'relations').forEach(c => db[c].push(...source[c].map(place)));
+  db.relations.push(...source.relations.filter(r => ids.has(r.from) && ids.has(r.to))
+    .map(r => place({ ...r, from: ids.get(r.from), to: ids.get(r.to) })));
+  if (remove) {
+    try { localStorage.removeItem(planKey(fromId)); } catch (e) { /* ignore */ }
+    plans.list = plans.list.filter(p => p.id !== fromId);
+  }
+  save();
+  renderPlanSwitch();
+  render();
+}
+
 function normalize(data) {
   const d = emptyDb();
   for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k];
@@ -3374,6 +3402,7 @@ document.addEventListener('scroll', () => closeCtxMenu(), true);
 const PLAN_ICONS = {
   new: '<path d="M12 5v14M5 12h14"/>',
   rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  merge: '<path d="M6 3v4a6 6 0 0 0 12 0V3M12 13v8M8 17l4 4 4-4"/>',
   export: '<path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/>',
   import: '<path d="M12 3v12M7 10l5 5 5-5M5 14v6h14v-6"/>',
   delete: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
@@ -3381,8 +3410,11 @@ const PLAN_ICONS = {
 
 function renderPlanSwitch() {
   const options = plans.list.map(p => `<option value="${p.id}" ${p.id === plans.current ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+  // Merging needs a second plan to merge into.
+  const off = act => act === 'merge' && plans.list.length < 2;
+  const label = act => esc(t(off(act) ? 'plan.mergeOnly' : 'plan.' + act));
   const actions = Object.entries(PLAN_ICONS).map(([act, path]) =>
-    `<button type="button" class="icon-btn" data-plan="${act}" title="${esc(t('plan.' + act))}" aria-label="${esc(t('plan.' + act))}"><svg viewBox="0 0 24 24" aria-hidden="true">${path}</svg></button>`).join('');
+    `<button type="button" class="icon-btn" data-plan="${act}" title="${label(act)}" aria-label="${label(act)}" ${off(act) ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${path}</svg></button>`).join('');
   document.querySelectorAll('.plan-switch').forEach(box => {
     box.innerHTML = `<label class="plan-label">${t('plan.label')}<select data-plan-select>${options}</select></label><div class="plan-actions">${actions}</div>`;
   });
@@ -3402,6 +3434,8 @@ document.addEventListener('click', e => {
   } else if (act === 'rename') {
     const name = askPlanName(t('plan.renamePrompt'), plan.name, plan.id);
     if (name) { plan.name = name; save(); renderPlanSwitch(); toast(t('toast.planRenamed')); }
+  } else if (act === 'merge') {
+    openMerge(plan);
   } else if (act === 'export') {
     openExport();
   } else if (act === 'import') {
@@ -3411,6 +3445,14 @@ document.addEventListener('click', e => {
   }
 });
 
+// What a plan holds, as list items for the delete and merge dialogs ('' when it is empty).
+function planContents(data) {
+  const count = (key, n) => (n ? `<li>${esc(tp(key, n))}</li>` : '');
+  const measured = data.states.reduce((sum, s) => sum + (s.history || []).length, 0);
+  return count('planDel.goals', data.goals.length) + count('planDel.states', data.states.length) + count('planDel.measurements', measured)
+    + count('planDel.activities', data.activities.length) + count('planDel.relations', data.relations.length);
+}
+
 /* ---------- Deleting a plan: spells out what is lost and asks for the plan's name ---------- */
 
 const planDel = $('#planDelete');
@@ -3418,10 +3460,7 @@ const planDel = $('#planDelete');
 function openPlanDelete(plan) {
   closeCtxMenu();
   planDel.dataset.id = plan.id;
-  const count = (key, n) => (n ? `<li>${esc(tp(key, n))}</li>` : '');
-  const measured = db.states.reduce((sum, s) => sum + (s.history || []).length, 0);
-  const contents = count('planDel.goals', db.goals.length) + count('planDel.states', db.states.length) + count('planDel.measurements', measured)
-    + count('planDel.activities', db.activities.length) + count('planDel.relations', db.relations.length);
+  const contents = planContents(db);
   const last = plans.list.length === 1;
   $('#planDeleteBody').innerHTML = `
     <div class="del-warn" role="alert">
@@ -3433,7 +3472,10 @@ function openPlanDelete(plan) {
       <li>${t(syncConnected() ? 'planDel.synced' : 'planDel.local')}</li>
       <li>${t(last ? 'planDel.last' : 'planDel.others')}</li>
     </ul>
-    <button type="button" class="btn small del-backup" data-plan-backup>${t('planDel.backup')}</button>
+    <div class="del-actions">
+      <button type="button" class="btn small" data-plan-backup>${t('planDel.backup')}</button>
+      ${contents && !last ? `<button type="button" class="btn small" data-plan-merge-instead>${t('planDel.merge')}</button>` : ''}
+    </div>
     <div class="field">
       <label for="planDeleteName">${t('planDel.type', { name: `<span class="del-name">${esc(plan.name)}</span>` })}</label>
       <input type="text" id="planDeleteName" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="planDeleteHint">
@@ -3449,6 +3491,10 @@ planDel.addEventListener('input', () => ($('#planDeleteBtn').disabled = !planDel
 planDel.addEventListener('click', e => {
   if (e.target === planDel || e.target.closest('[data-plan-delete-close]')) planDel.close();
   if (e.target.closest('[data-plan-backup]')) exportJson();
+  if (e.target.closest('[data-plan-merge-instead]')) {
+    planDel.close();
+    openMerge(currentPlan(), true);
+  }
 });
 $('#planDeleteForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -3456,6 +3502,39 @@ $('#planDeleteForm').addEventListener('submit', e => {
   planDel.close();
   deletePlan(planDel.dataset.id);
   toast(t('toast.planDeleted'));
+});
+
+/* ---------- Merging a plan into another (also offered instead of deleting it) ---------- */
+
+const planMerge = $('#planMerge');
+
+function openMerge(plan, remove = false) {
+  closeCtxMenu();
+  const others = plans.list.filter(p => p.id !== plan.id);
+  if (!others.length) return;
+  planMerge.dataset.id = plan.id;
+  const contents = planContents(plan.id === plans.current ? db : readPlan(plan.id));
+  const name = `<strong>${esc(plan.name)}</strong>`;
+  $('#planMergeBody').innerHTML = `
+    <div class="field">
+      <label for="mergeTarget">${t('merge.lead', { name })}</label>
+      <select id="mergeTarget">${others.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+    </div>
+    ${contents ? `<div><p>${t('merge.contents')}</p><ul class="import-progress">${contents}</ul></div>` : `<p>${t('planDel.empty')}</p>`}
+    <p class="hint">${t('merge.hint')}</p>
+    <label class="merge-remove"><input type="checkbox" id="mergeRemove" ${remove ? 'checked' : ''}> <span>${t('merge.remove', { name })}</span></label>`;
+  planMerge.showModal();
+  $('#mergeTarget').focus();
+}
+planMerge.addEventListener('click', e => {
+  if (e.target === planMerge || e.target.closest('[data-plan-merge-close]')) return planMerge.close();
+  if (!e.target.closest('#mergeBtn') || !planMerge.open) return;
+  const from = plans.list.find(p => p.id === planMerge.dataset.id), to = plans.list.find(p => p.id === $('#mergeTarget').value);
+  const remove = $('#mergeRemove').checked;
+  planMerge.close();
+  if (!from || !to) return;
+  mergePlanInto(from.id, to.id, remove);
+  toast(t(remove ? 'toast.mergedDeleted' : 'toast.merged', { from: from.name, to: to.name }));
 });
 
 /* ---------- Language & theme (in Settings) ---------- */
