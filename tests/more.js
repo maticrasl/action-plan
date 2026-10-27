@@ -2275,4 +2275,56 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('en');
     return out.join(' | ');
   });
+  /* ---------- The sample plan's dates are calculated when it is loaded, and then left alone ---------- */
+
+  await step('sample plan: dates are calculated on the day it is loaded and never move after', () => {
+    const RealDate = Date;
+    // Pretends today is `days` from now while `run` runs.
+    const on = (days, run) => {
+      const shift = days * 86400000;
+      window.Date = class extends RealDate {
+        constructor(...a) { super(...(a.length ? a : [RealDate.now() + shift])); }
+        static now() { return RealDate.now() + shift; }
+      };
+      try { return run(); } finally { window.Date = RealDate; }
+    };
+    const offsets = data => [...data.goals, ...data.activities].flatMap(x => ['startDate', 'deadline', 'dueDate'].map(k => x[k]))
+      .concat(data.states.flatMap(s => [s.date, ...(s.history || []).map(h => h.date)]))
+      .map(d => (d ? dayNum(d) - dayNum(today()) : null));
+    const results = [];
+    let first = null;
+    for (const days of [0, 37, 400, -200]) {
+      on(days, () => {
+        const now = today();
+        loadSample();
+        const id = plans.current, data = clone(db);
+        const offs = offsets(data);
+        // The same plan, the same distances from whichever day it was loaded on.
+        if (!first) first = offs;
+        else eq(offs, first, `loaded ${days} days from now: same distances from that day`);
+        // Routine check-ins follow weekdays, so which days they fall on depends on the day it is loaded:
+        // all in the five weeks before it, and a fixed-day routine only on its own days.
+        const ticks = data.activities.flatMap(a => Object.keys(a.checkins || {}));
+        assert(ticks.length > 10 && ticks.every(d => d < now && d >= addDays(now, -35)), `${days}: check-ins in the weeks before the day it was loaded`);
+        data.activities.filter(a => a.repeat?.days).forEach(a =>
+          assert(Object.keys(a.checkins).every(d => a.repeat.days.includes(weekday(d))), `${days}: ${a.title} ticked on its own days`));
+        // Late, waiting and done items are as the sample means them on that day.
+        assert(data.activities.some(a => a.status !== 'done' && a.dueDate && a.dueDate < now), `${days}: something is late`);
+        assert(data.goals.some(g => g.deadline > now), `${days}: goals still ahead`);
+        results.push(`${days}: ${now}`);
+        deletePlan(id);
+      });
+    }
+    // Once loaded, a sample plan is an ordinary plan: opening it later moves nothing.
+    loadSample();
+    const id = plans.current, before = clone(db);
+    on(30, () => {
+      openPlan(plans.list.find(p => p.id !== id).id);
+      openPlan(id);
+      eq(JSON.stringify({ goals: db.goals, states: db.states, activities: db.activities }),
+        JSON.stringify({ goals: before.goals, states: before.states, activities: before.activities }), 'a month later its dates are where they were');
+    });
+    deletePlan(id);
+    return results.join(' | ');
+  });
 };
