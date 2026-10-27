@@ -3389,16 +3389,27 @@ $('#themeSeg').addEventListener('click', e => {
 
 /* ---------- Install as an app ----------
    Browsers that can install it (Chrome, Edge, Samsung Internet) offer it through `beforeinstallprompt`;
-   on iPhone and iPad it is Safari's Share → Add to Home Screen. */
+   on iPhone and iPad it is Safari's Share → Add to Home Screen; Firefox on Android adds it from its
+   menu, and Firefox on a computer cannot install it at all. */
 
 let installPrompt = null;
 const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isFirefox = () => /Firefox\//.test(navigator.userAgent);
+const isAndroid = () => /Android/.test(navigator.userAgent);
+
+// Without an install prompt, the browser's own way to install it, if there is a hint for it.
+function installHintKey() {
+  if (installPrompt) return 'install.hint';
+  if (isIos()) return 'install.iosHint';
+  if (isFirefox()) return isAndroid() ? 'install.firefoxAndroidHint' : 'install.firefoxHint';
+  return '';
+}
 
 function renderInstall() {
-  const ios = !installPrompt && isIos();
-  $('#installSection').hidden = isInstalled() || !(installPrompt || ios);
-  $('#installHint').textContent = t(ios ? 'install.iosHint' : 'install.hint');
+  const hint = installHintKey();
+  $('#installSection').hidden = isInstalled() || !hint;
+  $('#installHint').textContent = hint ? t(hint) : '';
   $('#installBtn').hidden = !installPrompt;
 }
 

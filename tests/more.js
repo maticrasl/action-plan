@@ -835,6 +835,23 @@ window.moreTests = async ({ step, assert }) => {
     return `history=${m.history.length} value=${m.value}`;
   });
 
+  await step('install: hidden without a way to install, hint for Firefox', () => {
+    const shown = el => getComputedStyle(el).display !== 'none';
+    renderInstall();
+    assert(!shown($('#installSection')) && !shown($('#installBtn')), 'Chrome without a prompt shows nothing');
+    const ua = Object.getOwnPropertyDescriptor(Navigator.prototype, 'userAgent');
+    try {
+      Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0', configurable: true });
+      renderInstall();
+      assert(shown($('#installSection')) && !shown($('#installBtn')) && $('#installHint').textContent === t('install.firefoxHint'), 'Firefox: a hint, no button');
+    } finally {
+      delete navigator.userAgent;
+      if (navigator.userAgent !== ua.get.call(navigator)) throw new Error('user agent not restored');
+      renderInstall();
+    }
+    return $('#installHint').textContent || 'hidden';
+  });
+
   await step('sync file: parsing and starter plans', () => {
     const codes = ['nope', JSON.stringify({ format: 'other', plans: { list: [] } }), JSON.stringify({ format: SYNC_FORMAT, plans: {} })].map(s => {
       try { parseStore(s); return 'parsed'; } catch (e) { return e instanceof SyncError ? e.code : 'other:' + e; }

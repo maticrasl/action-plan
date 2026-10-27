@@ -6,6 +6,9 @@
    and the "running late" signal.
    ========================================================= */
 
+/* `hidden` always hides, even on elements whose class sets a display. */
+[hidden] { display: none !important; }
+
 :root {
   --bg: #F3F5F4;
   --surface: #FFFFFF;
