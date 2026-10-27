@@ -3244,7 +3244,7 @@ function openCtxMenu(id, x, y) {
   ctxMenu.dataset.id = id;
   ctxMenu.dataset.rel = '';
   ctxMenu.setAttribute('aria-label', t('ctx.label', { name: ent.item.title }));
-  ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag ${ent.kind}">${t('kind.' + ent.kind)}</span><strong>${esc(ent.item.title)}</strong></div>` +
+  ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag ${ent.kind}">${t('kind.' + ent.kind)}</span><strong title="${esc(ent.item.title)}">${esc(ent.item.title)}</strong></div>` +
     ctxOptions(ent.kind, ent.item).map(o => o === '-' ? '<hr>' :
       `<button type="button" tabindex="-1" data-ctx="${o.act}" class="${o.danger ? 'danger' : ''}" role="${o.checked === undefined ? 'menuitem' : 'menuitemradio'}"${o.checked === undefined ? '' : ` aria-checked="${o.checked}"`}>${esc(o.label)}</button>`).join('');
   ctxMenu.hidden = false;
@@ -3273,7 +3273,7 @@ function openRelMenu(relId, x, y) {
   ctxMenu.dataset.rel = relId;
   ctxMenu.setAttribute('aria-label', t('map.relLabel', { rel: relText(r) }));
   const item = (act, label, danger) => `<button type="button" tabindex="-1" data-ctx="${act}" class="${danger ? 'danger' : ''}" role="menuitem">${esc(label)}</button>`;
-  ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag">${t('kind.relation')}</span><strong>${esc(relText(r))}</strong></div>` +
+  ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag">${t('kind.relation')}</span><strong title="${esc(relText(r))}">${esc(relText(r))}</strong></div>` +
     item('rel-edit', t('btn.edit')) + item('rel-remove', t('btn.remove'), true) + item('rel-deselect', t('btn.deselect'));
   ctxMenu.hidden = false;
   ctxOpenedAt = performance.now();
@@ -3600,6 +3600,29 @@ function previewTlDrag(d) {
     row.querySelectorAll('[data-tl-edge]').forEach(g => { g.style.cssText = tlGrip(g.dataset.tlEdge, left, width); });
     row.querySelector('.tl-dates').textContent = s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e);
   });
+  showTlDragTip(d, s, e);
+}
+
+// A label above the dragged bar with the date (or dates) it would get, over the end that moves.
+// On touch screens it stays clear of the finger.
+function showTlDragTip(d, s, e) {
+  const mark = $(`[data-tl-node="${d.id}"] :is(.tl-bar, .tl-milestone)`);
+  if (!mark) return;
+  let tip = $('.tl-drag-tip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.className = 'tl-drag-tip';
+    tip.setAttribute('role', 'status');
+    document.body.append(tip);
+  }
+  const endKey = d.kind === 'goal' ? 'f.deadline' : 'f.dueDate';
+  tip.textContent = d.edge ? `${t(d.edge === 'start' ? 'f.startDate' : endKey)}: ${fmtDate(d.edge === 'start' ? s : e)}`
+    : s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e);
+  const r = mark.getBoundingClientRect(), w = tip.offsetWidth;
+  const x = d.edge === 'start' ? r.left : d.edge === 'end' ? r.right : r.left + r.width / 2;
+  const top = Math.min(r.top, d.touch ? d.cy - 40 : r.top) - 8;
+  tip.style.left = `${clamp(x - w / 2, 8, innerWidth - w - 8)}px`;
+  tip.style.top = `${Math.max(8, top)}px`;
 }
 
 function startTlDrag(d) {
@@ -3616,6 +3639,7 @@ function endTlDrag(keep) {
   tlDrag = null;
   tlDragClick = d.moved || d.armed;
   $('.tl-scroll')?.classList.remove('tl-dragging', 'tl-resizing', 'tl-moving');
+  $('.tl-drag-tip')?.remove();
   d.target?.removeEventListener('touchmove', tlDragTouchMove);
   const ent = findEntity(d.id);
   if (!keep || !d.days || !ent) return d.moved && render();
@@ -3656,12 +3680,14 @@ document.addEventListener('pointermove', e => {
   const d = tlDrag;
   if (!d || e.pointerId !== d.pointerId) return;
   const dx = e.clientX - d.x;
+  d.cy = e.clientY;
   if (!d.moved) {
     const far = Math.hypot(dx, e.clientY - d.y);
     // A finger that moves before the long-press is up scrolls the timeline as usual.
     if (d.touch && !d.armed) return far > 10 && endTlDrag(false);
     if (far < 4) return;
     startTlDrag(d);
+    if (!d.days) previewTlDrag(d);
   }
   const days = clamp(Math.round(dx / ui.tlPx), d.lo, d.hi);
   if (days === d.days) return;

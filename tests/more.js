@@ -2972,6 +2972,7 @@ window.moreTests = async ({ step, assert }) => {
     const dep = $('.tl-deps [data-rel-edit]');
     await longPress(dep);
     assert(!ctxMenu.hidden && items().length === 3, 'timeline arrow: menu');
+    eq(ctxMenu.querySelector('.ctx-head strong').title, relText(db.relations.find(x => x.type === 'depends')), 'a line menu heading shows the whole text on hover');
     tapMenu('rel-remove');
     assert(!db.relations.some(x => x.type === 'depends'), 'timeline arrow removed');
     deletePlan(plans.current);
@@ -3033,6 +3034,9 @@ window.moreTests = async ({ step, assert }) => {
     eq(parseFloat(row(a.id).querySelector('.tl-bar').style.left), left0 + 3 * px, 'the bar follows at once');
     eq(row(a.id).querySelector('.tl-dates').textContent, `${fmtDate(addDays(now, 3))} – ${fmtDate(addDays(now, 8))}`, 'its dates follow at once');
     eq(a.startDate, now, 'not saved until let go');
+    eq($('.tl-drag-tip')?.textContent, `${fmtDate(addDays(now, 3))} – ${fmtDate(addDays(now, 8))}`, 'a label above shows the new dates');
+    const tipR = $('.tl-drag-tip').getBoundingClientRect(), barR = row(a.id).querySelector('.tl-bar').getBoundingClientRect();
+    assert(tipR.bottom <= barR.top && tipR.width > 0, 'the label sits above the bar');
     mouse('pointerup', document, 400 + 3 * px + 3);
     click(row(a.id));
     eq([a.startDate, a.dueDate], [addDays(now, 3), addDays(now, 8)], 'moved by three days');
@@ -3040,7 +3044,16 @@ window.moreTests = async ({ step, assert }) => {
     assert(JSON.parse(localStorage.getItem(planKey(plans.current))).activities.find(x => x.id === a.id).startDate === addDays(now, 3), 'saved');
     assert(row(a.id).querySelector('.tl-bar.tl-drag'), 'redrawn and still draggable');
 
-    // A grip changes one end only, and never past the other end.
+    assert(!$('.tl-drag-tip'), 'the label goes when the bar is let go');
+    // A grip changes one end only, and never past the other end; the label names that date.
+    mouse('pointerdown', row(a.id).querySelector('[data-tl-edge="end"]'), 400);
+    mouse('pointermove', document, 400 + 6);
+    eq($('.tl-drag-tip')?.textContent, `${t('f.dueDate')}: ${fmtDate(addDays(now, 8))}`, 'the label shows from the start of the drag');
+    mouse('pointermove', document, 400 + 2 * px);
+    eq($('.tl-drag-tip').textContent, `${t('f.dueDate')}: ${fmtDate(addDays(now, 10))}`, 'end grip: the label names the due date');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    mouse('pointerup', document, 400 + 2 * px);
+    assert(!$('.tl-drag-tip') && a.dueDate === addDays(now, 8), 'Esc removes the label and keeps the date');
     drag(row(a.id).querySelector('[data-tl-edge="end"]'), 4);
     eq([a.startDate, a.dueDate], [addDays(now, 3), addDays(now, 12)], 'end grip: due date only');
     drag(row(a.id).querySelector('[data-tl-edge="start"]'), -2);
@@ -3051,6 +3064,11 @@ window.moreTests = async ({ step, assert }) => {
     sel(g.id);
     drag(row(g.id).querySelector('[data-tl-edge="start"]'), 60);
     eq([g.startDate, g.deadline], [addDays(now, 19), addDays(now, 20)], 'a goal keeps its start before the deadline');
+    mouse('pointerdown', row(g.id).querySelector('[data-tl-edge="end"]'), 400);
+    mouse('pointermove', document, 400 + px);
+    eq($('.tl-drag-tip').textContent, `${t('f.deadline')}: ${fmtDate(addDays(now, 21))}`, 'the end of a goal is its deadline');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    mouse('pointerup', document, 400 + px);
 
     // Esc puts it back.
     sel(a.id);
@@ -3123,6 +3141,7 @@ window.moreTests = async ({ step, assert }) => {
     await wait(LONG_PRESS_MS + 80);
     touch('pointerup', document, 400);
     assert(!ctxMenu.hidden && ctxMenu.dataset.id === a.id, 'a long-press without moving opens the menu');
+    eq(ctxMenu.querySelector('.ctx-head strong').title, a.title, 'the menu heading shows the whole title on hover');
     closeCtxMenu();
     eq(a.startDate, addDays(start, -2), 'and changes nothing');
     deletePlan(plans.current);

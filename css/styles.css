@@ -577,11 +577,19 @@ textarea { resize: vertical; min-height: 68px; }
 /* The selected bar can be dragged to new dates; its grips change one end only. */
 .tl-drag { cursor: grab; box-shadow: 0 0 0 3px color-mix(in srgb, var(--goal) 35%, transparent); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .tl-grip { position: absolute; top: 4px; height: 32px; z-index: 2; cursor: ew-resize; -webkit-touch-callout: none; }
+/* Red [ ] brackets round the selected bar mark the ends that can be dragged. */
 .tl-grip::after {
-  content: ''; position: absolute; top: 9px; height: 14px; width: 4px; border-radius: 2px; background: var(--goal);
+  content: ''; position: absolute; top: 0; height: 32px; width: 8px; box-sizing: border-box;
+  border: 3px solid var(--bad); pointer-events: none;
 }
-.tl-grip[data-tl-edge="start"]::after { left: 10px; }
-.tl-grip[data-tl-edge="end"]::after { right: 10px; }
+.tl-grip[data-tl-edge="start"]::after { left: 7px; border-right: 0; border-radius: 3px 0 0 3px; }
+.tl-grip[data-tl-edge="end"]::after { right: 7px; border-left: 0; border-radius: 0 3px 3px 0; }
+.tl-grip:hover::after, .tl-resizing .tl-grip::after { border-width: 4px; }
+.tl-drag-tip {
+  position: fixed; z-index: 55; transform: translateY(-100%); pointer-events: none; white-space: nowrap;
+  background: var(--ink); color: var(--bg); padding: 5px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  box-shadow: 0 4px 12px rgb(0 0 0 / .2);
+}
 .tl-moving, .tl-moving * { cursor: grabbing; }
 .tl-resizing, .tl-resizing * { cursor: ew-resize; }
 .tl-dragging .tl-drag { box-shadow: 0 0 0 3px color-mix(in srgb, var(--goal) 60%, transparent), 0 4px 12px rgb(0 0 0 / .18); }
