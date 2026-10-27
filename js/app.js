@@ -40,6 +40,7 @@ let db = emptyDb();
 const ui = {
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
   mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, search: '', mapSelected: null, help: false,
+  rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
 };
 
 // Small per-device preferences (view, hidden relation types, hide-done, theme).
@@ -114,7 +115,7 @@ function openPlan(id) {
   plans.current = id;
   db = readPlan(id);
   takeSnapshot(db);
-  Object.assign(ui, { category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', mapSelected: null, search: '', mapRefocus: true });
+  Object.assign(ui, { category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', mapSelected: null, search: '', mapRefocus: true, rtWeek: {} });
   save();
   renderPlanSwitch();
   render();
@@ -700,23 +701,60 @@ function toggleCheckin(id, iso) {
   a.checkins = { ...a.checkins, [iso]: checkedOn(a, iso) ? 0 : 1 };
   save();
   render();
-  if (!wasMet && periodProgress(a, iso).met) toast(t({ month: 'rt.metMonth', year: 'rt.metYear' }[periodUnit(a)] || 'rt.metWeek'));
+  // Only the period running now is "this week done"; filling in an earlier one says nothing.
+  const current = periodOf(a, today()).from === periodOf(a, iso).from;
+  if (current && !wasMet && periodProgress(a, iso).met) toast(t({ month: 'rt.metMonth', year: 'rt.metYear' }[periodUnit(a)] || 'rt.metWeek'));
   $(`[data-checkin="${id}"][data-date="${iso}"]`)?.focus();
 }
 
-// This week, Monday to Sunday: tap a past day or today to tick or untick it.
-function routineWeek(a) {
-  const now = today(), from = addDays(now, -weekday(now));
-  const fmt = iso => fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long' });
-  return `<div class="rt-week" role="group" aria-label="${esc(t('rt.weekLabel'))}">${daysBetween(from, addDays(from, 6)).map(d => {
+const mondayOf = iso => addDays(iso, -weekday(iso));
+// "13–19 Oct" in the app's language.
+const fmtRange = (from, to) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', timeZone: 'UTC' })
+  .formatRange(new Date(from + 'T00:00Z'), new Date(to + 'T00:00Z'));
+
+// The weeks a routine's strip can show: from the week it started in to the week of its end date or
+// today, whichever comes first (a routine that has not started stays on this week).
+function routineWeeks(a) {
+  const now = today(), end = a.dueDate && a.dueDate < now ? a.dueDate : now;
+  const last = mondayOf(end), first = mondayOf(routineStart(a));
+  return { first: first < last ? first : last, last, end };
+}
+function shownWeek(a) {
+  const { first, last } = routineWeeks(a), w = ui.rtWeek[a.id] || last;
+  return w < first ? first : w > last ? last : w;
+}
+function shiftRoutineWeek(id, dir) {
+  const a = db.activities.find(x => x.id === id);
+  if (!a) return;
+  const { first, last } = routineWeeks(a), w = addDays(shownWeek(a), dir * 7);
+  ui.rtWeek[id] = w < first ? first : w > last ? last : w;
+  render();
+  // Keep focus on the arrow, or on the other one once this one has reached the end.
+  const btn = d => $(`[data-rt-week="${id}"][data-dir="${d}"]`);
+  (btn(dir)?.disabled ? btn(-dir) : btn(dir))?.focus();
+}
+
+// A week, Monday to Sunday, between arrows to earlier and later weeks: tap a day the routine runs
+// on, up to today, to tick or untick it. Every day names its date on hover.
+function routineWeek(a, from = shownWeek(a)) {
+  const now = today(), { first, last } = routineWeeks(a);
+  const fmt = iso => fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const arrow = (dir, off) => `<button type="button" class="icon-btn rt-arrow" data-rt-week="${a.id}" data-dir="${dir}" title="${esc(t(dir < 0 ? 'rt.prevWeek' : 'rt.nextWeek'))}" aria-label="${esc(t(dir < 0 ? 'rt.prevWeek' : 'rt.nextWeek'))}" ${off ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${dir < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg></button>`;
+  const strip = daysBetween(from, addDays(from, 6)).map(d => {
     const on = checkedOn(a, d), off = d > now || !runsOn(a, d);
     const cls = ['rt-day', !isFlexible(a) && isDueDay(a, d) ? 'due' : '', on ? 'on' : '', d === now ? 'today' : ''].filter(Boolean).join(' ');
-    return `<button type="button" class="${cls}" data-checkin="${a.id}" data-date="${d}" aria-pressed="${on}" ${off ? 'disabled' : ''} aria-label="${esc(t(on ? 'rt.dayOn' : 'rt.dayOff', { date: fmt(d) }))}"><span aria-hidden="true">${esc(weekdayName(weekday(d), 'narrow'))}</span></button>`;
-  }).join('')}</div>`;
+    const label = esc(t(on ? 'rt.dayOn' : 'rt.dayOff', { date: fmt(d) }));
+    return `<button type="button" class="${cls}" data-checkin="${a.id}" data-date="${d}" aria-pressed="${on}" ${off ? 'aria-disabled="true"' : ''} title="${label}" aria-label="${label}"><span aria-hidden="true">${esc(weekdayName(weekday(d), 'narrow'))}</span></button>`;
+  }).join('');
+  return `<div class="rt-nav">${arrow(-1, from <= first)}<div class="rt-week" role="group" aria-label="${esc(from === mondayOf(now) ? t('rt.weekLabel') : fmtRange(from, addDays(from, 6)))}">${strip}</div>${arrow(1, from >= last)}</div>`;
 }
 
 function routineCard(a) {
-  const p = periodProgress(a), streak = routineStreak(a), st = activityState(a);
+  // The bar follows the week on the strip: this period as usual, or an earlier one with its dates.
+  const week = shownWeek(a), { end } = routineWeeks(a), lastDay = addDays(week, 6) < end ? addDays(week, 6) : end;
+  const p = periodProgress(a, lastDay), streak = routineStreak(a), st = activityState(a);
+  const earlier = periodOf(a, lastDay).from !== periodOf(a, today()).from;
+  const label = earlier ? t(p.target ? 'rt.past' : 'rt.pastNone', { range: fmtRange(p.from, p.to), done: p.done, target: p.target }) : periodText(a, p);
   const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
   const blocked = blockers(a), now = today();
   const when = a.dueDate && a.dueDate < now ? `<span class="tag">${t('rt.ended')}</span>`
@@ -724,8 +762,8 @@ function routineCard(a) {
   return `<article class="card activity routine st-${st}" data-open="${a.id}">
     <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched">${esc(scheduleText(a))}</span></div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
-    ${progressBar(p.target ? clamp(p.done / p.target * 100, 0, 100) : 0, esc(periodText(a, p)))}
-    ${routineWeek(a)}
+    ${progressBar(p.target ? clamp(p.done / p.target * 100, 0, 100) : 0, `<span class="rt-progress">${esc(label)}</span>`)}
+    ${routineWeek(a, week)}
     <div class="meta">
       ${streak.n ? `<span class="tag ok">${esc(streakText(streak))}</span>` : ''}
       ${when}
@@ -2396,7 +2434,7 @@ $('#addBtn').addEventListener('click', () => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-rt-week],[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -2415,6 +2453,7 @@ viewEl.addEventListener('click', e => {
     // Keep the page where it is; the button moves to the end of the list.
     return $('[data-next-more]')?.focus({ preventScroll: true });
   }
+  if (el.dataset.rtWeek) return el.disabled || shiftRoutineWeek(el.dataset.rtWeek, Number(el.dataset.dir));
   if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date);
   if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);

@@ -391,6 +391,11 @@ textarea { resize: vertical; min-height: 68px; }
 .card.routine.st-late { border-left-color: var(--bad); }
 .card.routine.st-blocked { border-left-color: var(--ink-3); }
 .rt-sched { flex: none; }
+.rt-nav { display: flex; align-items: center; gap: 2px; }
+.rt-nav .rt-week { flex: 1; min-width: 0; }
+.rt-arrow { width: 28px; height: 34px; flex: none; border-radius: var(--r-sm); }
+.rt-arrow svg { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; width: 18px; height: 18px; }
+.rt-arrow:disabled { opacity: .3; cursor: default; background: transparent; }
 .rt-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .rt-day {
   height: 34px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--surface);
@@ -399,8 +404,8 @@ textarea { resize: vertical; min-height: 68px; }
 .rt-day.due { border-color: var(--goal); color: var(--ink); }
 .rt-day.today { box-shadow: inset 0 -3px 0 var(--goal); }
 .rt-day.on { background: var(--ok); border-color: var(--ok); color: var(--surface); }
-.rt-day:hover:not(:disabled) { border-color: var(--ink-2); }
-.rt-day:disabled { opacity: .35; cursor: default; }
+.rt-day:hover:not([aria-disabled="true"]) { border-color: var(--ink-2); }
+.rt-day[aria-disabled="true"] { opacity: .35; cursor: default; }
 .routine-row .meta { font-size: 12.5px; margin-left: 6px; }
 .repeat-box { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; border: 1px dashed var(--line-strong); border-radius: var(--r-md); }
 .day-toggles { display: flex; flex-wrap: wrap; gap: 6px; }

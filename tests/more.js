@@ -393,7 +393,7 @@ window.moreTests = async ({ step, assert }) => {
     const day = d => $(`.card.routine[data-open="${run.id}"] [data-checkin][data-date="${d}"]`);
     assert(day(now) && !day(now).disabled, 'today can be ticked');
     const future = addDays(now, 1);
-    if (weekday(now) < 6) assert(day(future).disabled, 'future days cannot');
+    if (weekday(now) < 6) assert(day(future).getAttribute('aria-disabled') === 'true', 'future days cannot');
     day(now).click();
     assert(checkedOn(run, now) && day(now).getAttribute('aria-pressed') === 'true' && !modal.open, 'ticked without opening the form');
     day(now).click();
@@ -1810,5 +1810,171 @@ window.moreTests = async ({ step, assert }) => {
     cleanup(T.name, S.name);
     changeLanguage('en');
     return text.slice(0, 120);
+  });
+  /* ---------- Routine week strip: dates on hover, arrows to earlier weeks ---------- */
+
+  const mondayAt = iso => addDays(iso, -weekday(iso));
+  const longDate = iso => fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const rcard = r => $(`.card.routine[data-open="${r.id}"]`);
+  const days = r => [...rcard(r).querySelectorAll('[data-checkin]')];
+  const arrow = (r, dir) => rcard(r).querySelector(`[data-rt-week][data-dir="${dir}"]`);
+  const shownDays = r => days(r).map(b => b.dataset.date);
+
+  await step('routine week strip: every day shows its date on hover; days that cannot be ticked say so too', () => {
+    fresh('Week strip');
+    const now = today(), mon = mondayAt(now);
+    const r = mk('activity', { title: 'Run', repeat: { every: 1, unit: 'week', times: 3 }, startDate: addDays(mon, -17) });
+    setView('activities');
+    eq(shownDays(r), daysBetween(mon, addDays(mon, 6)), 'this week shown at first');
+    days(r).forEach(b => {
+      const d = b.dataset.date;
+      eq(b.title, t(checkedOn(r, d) ? 'rt.dayOn' : 'rt.dayOff', { date: longDate(d) }), `title of ${d}`);
+      assert(b.title.includes(d.slice(0, 4)), 'with the year');
+      assert(!b.disabled, 'not disabled, so the tooltip shows');
+      eq(b.getAttribute('aria-disabled'), d > now ? 'true' : null, `${d} can${d > now ? 'not' : ''} be ticked`);
+    });
+    const future = days(r).find(b => b.dataset.date > now);
+    if (future) {
+      future.click();
+      assert(!checkedOn(r, future.dataset.date) && !modal.open, 'clicking a future day does nothing');
+    }
+    days(r).find(b => b.dataset.date === now).click();
+    const todayBtn = days(r).find(b => b.dataset.date === now);
+    eq(todayBtn.title, t('rt.dayOn', { date: longDate(now) }), 'ticked day says done');
+    assert(document.activeElement === todayBtn, 'focus stays on the day');
+    return todayBtn.title;
+  });
+
+  await step('routine week strip: arrows browse back to the start week and forward to this week', () => {
+    const now = today(), mon = mondayAt(now);
+    const r = db.activities.find(a => a.title === 'Run');
+    const first = addDays(mon, -21);
+    const other = mk('activity', { title: 'Stretch', repeat: { every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] }, startDate: addDays(mon, -60) });
+    render();
+    assert(arrow(r, -1) && arrow(r, 1), 'arrows on both sides of the days');
+    const strip = rcard(r).querySelector('.rt-week');
+    assert(arrow(r, -1).nextElementSibling === strip && strip.nextElementSibling === arrow(r, 1), 'left arrow, days, right arrow');
+    assert(!arrow(r, -1).disabled && arrow(r, 1).disabled, 'can go back, not forward past this week');
+    eq([arrow(r, -1).title, arrow(r, 1).title], [t('rt.prevWeek'), t('rt.nextWeek')], 'arrow titles');
+    eq(arrow(r, -1).getAttribute('aria-label'), t('rt.prevWeek'), 'arrow label');
+    arrow(r, -1).click();
+    eq(shownDays(r)[0], addDays(mon, -7), 'one week back');
+    assert(document.activeElement === arrow(r, -1), 'focus stays on the arrow');
+    eq(shownDays(other)[0], mon, 'other routines stay on this week');
+    arrow(r, -1).click(); arrow(r, -1).click();
+    eq(shownDays(r)[0], first, 'back to the week the routine started in');
+    assert(arrow(r, -1).disabled && !arrow(r, 1).disabled, 'no further back');
+    assert(document.activeElement === arrow(r, 1), 'focus moves to the arrow that still works');
+    arrow(r, -1).click();
+    shiftRoutineWeek(r.id, -1);
+    eq(shownDays(r)[0], first, 'cannot go before the start, even directly');
+    days(r).forEach(b => eq(b.getAttribute('aria-disabled'), b.dataset.date < r.startDate ? 'true' : null, `${b.dataset.date} before the start`));
+    const before = days(r).find(b => b.dataset.date < r.startDate);
+    before.click();
+    assert(!checkedOn(r, before.dataset.date), 'a day before the start cannot be ticked');
+    for (let i = 0; i < 5; i++) shiftRoutineWeek(r.id, 1);
+    eq(shownDays(r)[0], mon, 'cannot go past this week');
+    assert(arrow(r, 1).disabled, 'forward arrow off on this week');
+    return `${first} … ${mon}`;
+  });
+
+  await step('routine week strip: ticking an earlier week saves it, stays there and shows that week', () => {
+    const now = today(), mon = mondayAt(now);
+    const r = db.activities.find(a => a.title === 'Run');
+    const w2 = addDays(mon, -14), w1 = addDays(mon, -7);
+    shiftRoutineWeek(r.id, -2);
+    eq(shownDays(r)[0], w2, 'two weeks back');
+    const label = () => rcard(r).querySelector('.rt-progress')?.textContent;
+    const range = fmtRange(w2, addDays(w2, 6));
+    assert(range.includes(String(Number(w2.slice(8)))) && range.includes(String(Number(addDays(w2, 6).slice(8)))), `range ${range} names both ends`);
+    eq(label(), t('rt.past', { range, done: 0, target: 3 }), 'the bar shows that week');
+    $('#toast').textContent = '';
+    [0, 2, 4].forEach(i => days(r).find(b => b.dataset.date === addDays(w2, i)).click());
+    assert([0, 2, 4].every(i => r.checkins[addDays(w2, i)] === 1), 'ticked');
+    eq(readPlan(plans.current).activities.find(a => a.id === r.id).checkins, r.checkins, 'saved');
+    eq(shownDays(r)[0], w2, 'still on that week');
+    assert(document.activeElement?.dataset.date === addDays(w2, 4), 'focus on the last ticked day');
+    eq(label(), t('rt.past', { range, done: 3, target: 3 }), 'that week met');
+    assert($('#toast').textContent !== t('rt.metWeek'), 'no “this week done” for an earlier week');
+    arrow(r, 1).click();
+    [1, 3, 5].forEach(i => days(r).find(b => b.dataset.date === addDays(w1, i)).click());
+    assert(rcard(r).textContent.includes(tp('rt.streak.week', 2)), 'streak counts the filled-in weeks');
+    arrow(r, 1).click();
+    eq(label(), periodText(r), 'this week shows as before');
+    return label();
+  });
+
+  await step('routine week strip: an ended routine opens on its last week; a future one cannot move', () => {
+    const now = today(), mon = mondayAt(now);
+    const ended = mk('activity', { title: 'Old', repeat: { every: 1, unit: 'week', days: [0, 2, 4] }, startDate: addDays(mon, -35), dueDate: addDays(mon, -10) });
+    const later = mk('activity', { title: 'Later', repeat: { every: 1, unit: 'week', days: [1] }, startDate: addDays(mon, 14) });
+    render();
+    const last = mondayAt(ended.dueDate);
+    eq(shownDays(ended)[0], last, 'ended routine shows the week it ended in');
+    assert(arrow(ended, 1).disabled && !arrow(ended, -1).disabled, 'only back');
+    days(ended).forEach(b => eq(b.getAttribute('aria-disabled'), b.dataset.date > ended.dueDate ? 'true' : null, `${b.dataset.date} after the end`));
+    const after = days(ended).find(b => b.dataset.date > ended.dueDate);
+    after.click();
+    assert(!checkedOn(ended, after.dataset.date), 'a day after the end cannot be ticked');
+    for (let i = 0; i < 10; i++) shiftRoutineWeek(ended.id, -1);
+    eq(shownDays(ended)[0], addDays(mon, -35), 'back to its start week');
+    eq(shownDays(later)[0], mon, 'a routine that has not started shows this week');
+    assert(arrow(later, -1).disabled && arrow(later, 1).disabled, 'both arrows off');
+    assert(days(later).every(b => b.getAttribute('aria-disabled') === 'true'), 'no day can be ticked');
+    assert(rcard(later).textContent.includes(t('rt.starts', { date: fmtDate(later.startDate) })), 'says when it starts');
+    // A routine whose end date is in the future still stops at this week.
+    const open = mk('activity', { title: 'Open', repeat: { every: 1, unit: 'week', times: 1 }, startDate: addDays(mon, -7), dueDate: addDays(mon, 60) });
+    render();
+    assert(arrow(open, 1).disabled && shownDays(open)[0] === mon, 'stops at this week, not the end date');
+    return `${ended.startDate}–${ended.dueDate}`;
+  });
+
+  await step('routine week strip: every-2-weeks and monthly routines show their own period', () => {
+    const now = today(), mon = mondayAt(now);
+    const two = mk('activity', { title: 'Fortnight', repeat: { every: 2, unit: 'week', times: 2 }, startDate: addDays(mon, -28) });
+    const month = mk('activity', { title: 'Monthly', repeat: { every: 1, unit: 'month', on: 'day' }, startDate: addDays(mon, -70) });
+    render();
+    const label = r => rcard(r).querySelector('.rt-progress')?.textContent;
+    shiftRoutineWeek(two.id, -1);
+    const p2 = periodProgress(two, addDays(mon, -1));
+    eq(label(two), t(p2.target ? 'rt.past' : 'rt.pastNone', { range: fmtRange(p2.from, p2.to), done: p2.done, target: p2.target }), 'fortnight label');
+    eq(dayNum(p2.to) - dayNum(p2.from), 13, 'its period is two weeks');
+    for (let i = 0; i < 6; i++) shiftRoutineWeek(month.id, -1);
+    const shown = shownDays(month)[0];
+    const pm = periodProgress(month, addDays(shown, 6));
+    eq(label(month), t(pm.target ? 'rt.past' : 'rt.pastNone', { range: fmtRange(pm.from, pm.to), done: pm.done, target: pm.target }), 'month label');
+    eq([pm.from.slice(8), Number(pm.to.slice(8)) >= 28], ['01', true], 'its period is the calendar month');
+    return `${label(two)} | ${label(month)}`;
+  });
+
+  await step('routine week strip: weeks reset when switching plans; overview unchanged; Slovenian', () => {
+    const now = today(), mon = mondayAt(now);
+    const r = db.activities.find(a => a.title === 'Run');
+    const here = plans.current;
+    shiftRoutineWeek(r.id, -2);
+    eq(shownDays(r)[0], addDays(mon, -14), 'moved back');
+    const other = addPlan({ name: 'Elsewhere', data: emptyDb() });
+    openPlan(here);
+    setView('activities');
+    eq(shownDays(r)[0], mon, 'back on this week after switching plans');
+
+    setView('dashboard');
+    const row = $(`.routine-row[data-open="${r.id}"]`);
+    assert(row && !row.querySelector('[data-rt-week]'), 'overview rows have no arrows');
+    assert(row.querySelector('[data-checkin]').dataset.date === now, 'overview still ticks today');
+
+    changeLanguage('sl');
+    setView('activities');
+    eq([arrow(r, -1).title, arrow(r, 1).title], [I18N.sl.strings['rt.prevWeek'], I18N.sl.strings['rt.nextWeek']], 'arrows in Slovenian');
+    const d = days(r)[0].dataset.date;
+    eq(days(r)[0].title, fill(I18N.sl.strings[checkedOn(r, d) ? 'rt.dayOn' : 'rt.dayOff'], { date: longDate(d) }), 'day title in Slovenian');
+    assert(/[a-zčšž]/.test(longDate(d)) && longDate(d) !== new Date(d + 'T00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }), 'Slovenian date');
+    shiftRoutineWeek(r.id, -1);
+    assert(rcard(r).querySelector('.rt-progress').textContent.includes('/'), 'earlier week label in Slovenian');
+    const sl = days(r)[0].title;
+    changeLanguage('en');
+    deletePlan(other.id);
+    deletePlan(here);
+    return sl;
   });
 };
