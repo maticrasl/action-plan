@@ -1674,13 +1674,9 @@ function renderTimeline() {
       const tip = `${item.title}: ${dateText} (${t('nodeState.' + st)})`;
       // The selected item's bar can be dragged to new dates (see "Moving dates in the timeline").
       const drag = item.id === sel ? ` tl-drag" data-tl-drag="${item.id}` : '';
-      // Arrows go to an activity's first row when it is listed under several goals.
-      const first = !geo[item.id];
-      if (first) geo[item.id] = { y: i * ROW + ROW / 2, start: left, end: s && e ? left + width : left + px / 2 };
-      if ((!s || !e) && first) {
-        geo[item.id].start = left + px / 2 - 7;
-        geo[item.id].end = left + px / 2 + 7;
-      }
+      // Every row of an item, so an activity listed under several goals gets its arrows on each copy.
+      const spot = s && e ? { start: left, end: left + width } : { start: left + px / 2 - 7, end: left + px / 2 + 7 };
+      (geo[item.id] ||= []).push({ ...spot, y: i * ROW + ROW / 2, goal: r.goal });
       if (!s || !e) {
         const cx = left + px / 2;
         bar = `${lateHtml}<i class="tl-milestone ${kind} st-${st}${drag}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
@@ -1700,9 +1696,15 @@ function renderTimeline() {
     </div>`;
   }).join('');
 
+  // Copies of the two ends that an arrow joins: each copy of either end gets one, to the other
+  // end's copy under the same goal, or else to its nearest copy.
+  const copyPairs = (froms, tos) => {
+    const match = (c, list) => list.find(o => o.goal === c.goal) || list.reduce((a, b) => (Math.abs(b.y - c.y) < Math.abs(a.y - c.y) ? b : a));
+    const pairs = [...froms.map(d => [match(d, tos), d]), ...tos.map(p => [p, match(p, froms)])];
+    return pairs.filter(([p, d], i) => pairs.findIndex(([q, e]) => q === p && e === d) === i);
+  };
   // Finish-to-start arrows: from the end of a prerequisite to the start of what depends on it.
-  const deps = !ui.tlDeps ? '' : db.relations.filter(r => r.type === 'depends' && geo[r.from] && geo[r.to]).map(r => {
-    const p = geo[r.to], d = geo[r.from];
+  const deps = !ui.tlDeps ? '' : db.relations.filter(r => r.type === 'depends' && geo[r.from] && geo[r.to]).flatMap(r => copyPairs(geo[r.from], geo[r.to]).map(([p, d]) => {
     const x1 = p.end, y1 = p.y, x2 = d.start, y2 = d.y;
     const path = x2 - 12 >= x1 + 6
       ? `M${x1},${y1} H${x2 - 12} V${y2} H${x2}`
@@ -1711,7 +1713,7 @@ function renderTimeline() {
     // A wide invisible twin makes the thin arrow easy to hit.
     return `<g class="tl-dep-g${dim}${r.id === relSel?.id ? ' sel' : ''}" data-rel-edit="${r.id}" tabindex="0" role="button" aria-pressed="${r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: relText(r) }))}">
       <path class="tl-dep" d="${path}" marker-end="url(#tl-arrow)"></path><path class="tl-dep-hit" d="${path}"></path><title>${esc(relText(r))}</title></g>`;
-  }).join('');
+  })).join('');
 
   const zoom = Object.entries(TL.ZOOM).map(([z, p]) => `<button class="chip ${Math.abs(px - p) < 0.01 ? 'active' : ''}" data-tl-zoom="${z}">${t('tl.zoom.' + z)}</button>`).join('');
   return `

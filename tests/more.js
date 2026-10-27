@@ -2803,6 +2803,14 @@ window.moreTests = async ({ step, assert }) => {
     eq(row('PP', g1).parent, rows.indexOf(row('P', g1)), 'PP hangs off P');
     eq([row('Part', g1).rel, row('Part', g1).parent], ['subactivity', rows.indexOf(row('Top', g1))], 'the tree keeps its shape');
     eq(row('P', g1).also, ['G2'], 'listed under both goals, marked as such');
+    // Each copy gets its own arrows, paired with the copy under the same goal (arrows need dates).
+    [a, b, p, pp].forEach((x, k) => Object.assign(x, { startDate: d(k), dueDate: d(k + 2) }));
+    ui.tlDeps = true; render(); setView('timeline');
+    const yOf = (title, goal) => rows.indexOf(row(title, goal)) * TL.ROW + TL.ROW / 2;
+    const arrows = [...document.querySelectorAll(`.tl-deps [data-rel-edit]`)].map(g => [g.dataset.relEdit, ...g.querySelector('.tl-dep').getAttribute('d').match(/^M[\d.-]+,([\d.-]+).*?([\d.-]+)\s+H[\d.-]+$/).slice(1).map(Number)]);
+    const has = (from, to, goal) => arrows.some(([, y1, y2]) => y1 === yOf(to, goal) && y2 === yOf(from, goal));
+    assert(['G1', 'G2'].every((n, k) => { const g = [g1, g2][k]; return has(n === 'G1' ? 'A' : 'B', 'P', g) && has('P', 'PP', g); }), 'P and PP joined under each goal');
+    ui.tlDeps = false;
     render(); setView('timeline');
     assert($(`[data-tl-node="${p.id}"] .tl-elbow.dash`), 'drawn with a dashed dependency line');
     assert([...document.querySelectorAll('.tl-legend span')].some(x => x.textContent === relLabel('depends')), 'the legend names it');
@@ -2824,11 +2832,12 @@ window.moreTests = async ({ step, assert }) => {
     clickEl($$(`[data-tl-node="${a.id}"]`)[1]);
     assert([...document.querySelectorAll(`[data-tl-node="${a.id}"]`)].every(r => r.classList.contains('selected')), 'all copies selected');
     ui.mapSelected = null; render();
-    // The dependency arrow goes to the first copy.
+    // The dependency arrow is drawn for every copy: from each copy of A to the one row of C.
     const rowsNow = [...document.querySelectorAll('.tl-body .tl-row')];
-    const firstA = rowsNow.findIndex(r => r.dataset.tlNode === a.id);
-    const arrow = $(`.tl-deps [data-rel-edit] .tl-dep`).getAttribute('d');
-    eq(Number(arrow.match(/^M[\d.-]+,([\d.-]+)/)[1]), firstA * TL.ROW + TL.ROW / 2, 'arrow starts at the first copy');
+    const rowY = id => rowsNow.map((r, i) => r.dataset.tlNode === id ? i * TL.ROW + TL.ROW / 2 : null).filter(y => y !== null);
+    const ends = [...document.querySelectorAll('.tl-deps [data-rel-edit] .tl-dep')].map(p => p.getAttribute('d')).map(d => [Number(d.match(/^M[\d.-]+,([\d.-]+)/)[1]), Number(d.match(/([\d.-]+)\s+H[\d.-]+$/)[1])]);
+    eq(ends.map(e => e[0]).sort((x, y) => x - y), rowY(a.id), 'an arrow starts at each copy of A');
+    assert(ends.every(e => e[1] === rowY(c.id)[0]), 'all end at C');
     // Editing a copy edits the one activity.
     openForm('activity', a.id); $('#f-title').value = 'A renamed'; submitForm();
     eq([...document.querySelectorAll(`[data-tl-node="${a.id}"] .tl-title`)].map(x => x.textContent), ['A renamed', 'A renamed'], 'both copies follow');
@@ -2896,11 +2905,11 @@ window.moreTests = async ({ step, assert }) => {
     assert(document.activeElement === fold(g2.id), 'focus stays on the button after folding');
     eq(fold(g2.id).getAttribute('aria-expanded'), 'false', 'folded with the button');
     fold(g2.id).click();
-    // Arrows to hidden rows are not drawn; the arrow to A's first copy stays while G2 is folded.
+    // Arrows to hidden rows are not drawn: with G2 folded, C is hidden, so neither copy of A has one.
     fold(g2.id).click();
     eq(document.querySelectorAll('.tl-deps [data-rel-edit]').length, 0, 'C hidden: its arrow is not drawn');
     fold(g2.id).click();
-    eq(document.querySelectorAll('.tl-deps [data-rel-edit]').length, 1, 'shown again');
+    eq(document.querySelectorAll('.tl-deps [data-rel-edit]').length, 2, 'shown again, once per copy of A');
     deletePlan(plans.current);
     return 'ok';
   });
