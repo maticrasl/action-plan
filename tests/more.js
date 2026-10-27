@@ -734,6 +734,11 @@ window.moreTests = async ({ step, assert }) => {
     eq(m.history.map(h => `${h.date.slice(-2)}=${h.value}`), ['01=1', '02=2', '03=30'], 'history');
     assert(m.value === '30' && m.date === '2099-01-03', 'value follows the latest measurement');
     eq(mergeState(y, x), m, 'mergeState is symmetric');
+    const deletedDay = { ...y, updatedAt: '2099-03-01', history: [{ date: '2099-01-03', value: '30' }], dropped: { '2099-01-02': 1 } };
+    const md = mergeState(x, deletedDay);
+    eq(md.history.map(h => h.date.slice(-2)), ['01', '03'], 'a deleted measurement stays deleted');
+    eq(md.dropped, { '2099-01-02': 1 }, 'deletion remembered');
+    eq(mergeState({ ...x, updatedAt: '2099-04-01', history: [...x.history, { date: '2099-01-02', value: '9' }] }, deletedDay).dropped, undefined, 're-recorded later wins');
 
     const plan = (goals, deleted = {}) => ({ ...emptyDb(), goals, deleted });
     const z = at => ({ id: 'z', title: 'Z', updatedAt: at });

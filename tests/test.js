@@ -90,6 +90,34 @@
     return `history=${s.history.length}`;
   });
 
+  await step('state form: new measurement, same date replaces, table and delete', () => {
+    const s = db.states.find(x => x.title === 'Pages read');
+    openForm('state', s.id);
+    assert($('#f-value').value === '' && parseDateInput($('#f-date').value) === today(), 'value empty, dated today');
+    assert(modal.querySelector('[data-field="value"] .hint').textContent.includes('4'), 'hint names the latest value');
+    submitForm(); // empty value keeps the measurements
+    assert(s.history.length === 2 && s.value === '4' && s.date === '2099-01-02', 'empty value keeps the latest');
+    openForm('state', s.id);
+    $('#f-value').value = '2';
+    submitForm(); // today: before 2099, so the value stays the latest
+    openForm('state', s.id);
+    $('#f-value').value = '5';
+    $('#f-date').value = '2099-01-02';
+    submitForm();
+    // 3.25 was recorded today when the state was made, so both new values replaced one.
+    assert(s.history.map(h => h.value).join() === '2,5' && s.value === '5', 'same date replaced: ' + JSON.stringify(s.history));
+    setView('graphs');
+    const dates = [...$(`[data-gr="${s.id}"] .gr-table tbody`).rows].map(r => r.cells[0].textContent);
+    assert(dates.join() === [fmtDate('2099-01-02'), fmtDate(today())].join(), 'newest first: ' + dates);
+    $(`[data-gr="${s.id}"] [data-del-measure][data-date="2099-01-02"]`).click();
+    assert(!s.history.some(h => h.date === '2099-01-02') && s.dropped['2099-01-02'], 'measurement deleted and remembered');
+    assert(s.date === today() && s.value === s.history[s.history.length - 1].value, 'value follows the latest left');
+    assert($(`[data-gr="${s.id}"] .gr-table`).open, 'table stays open');
+    recordMeasurement(s, '2099-01-02', '6');
+    assert(!s.dropped && s.value === '6', 're-recording a deleted date clears it');
+    return `history=${s.history.length}`;
+  });
+
   await step('activity form + parent + validation', () => {
     openForm('activity');
     $('#f-title').value = 'Child act';

@@ -1476,6 +1476,39 @@ function stateSeries(s) {
     .sort((a, b) => a.day - b.day);
 }
 
+// One measurement per date: a new value for a date replaces the old one. The state's value is its latest measurement.
+function recordMeasurement(s, date, value) {
+  s.history = (s.history || []).filter(h => h.date !== date).concat({ date, value }).sort((a, b) => a.date.localeCompare(b.date));
+  if (s.dropped) { delete s.dropped[date]; if (!Object.keys(s.dropped).length) delete s.dropped; }
+  followLatest(s);
+}
+
+// A deleted date is remembered, so syncing with an older copy does not bring the measurement back.
+function deleteMeasurement(s, date) {
+  s.history = (s.history || []).filter(h => h.date !== date);
+  s.dropped = { ...s.dropped, [date]: 1 };
+  followLatest(s);
+}
+
+function followLatest(s) {
+  const last = s.history.reduce((a, h) => (!a || h.date > a.date ? h : a), null);
+  Object.assign(s, last ? { value: last.value, date: last.date } : { value: '' });
+}
+
+function removeMeasurement(id, iso) {
+  const s = db.states.find(x => x.id === id);
+  const h = s?.history?.find(x => x.date === iso);
+  if (!h || !confirm(t('confirm.deleteMeasurement', { value: withUnit(fmtNum(h.value), s.unit || ''), date: fmtDate(iso) }))) return;
+  deleteMeasurement(s, iso);
+  save();
+  render();
+  toast(t('toast.measurementDeleted'));
+  // Keep the table open where it was.
+  const card = $(`[data-gr="${id}"]`);
+  if (card) { card.querySelector('.gr-table').open = true; card.querySelector('.gr-table summary').focus(); }
+  else $(`[data-open="${id}"]`)?.focus();
+}
+
 // Change from the first to the latest measurement; `good` is null when no goal says which way is better.
 function stateChange(s, points, targets) {
   if (points.length < 2) return null;
@@ -1578,7 +1611,11 @@ function graphCard(s, width) {
       <span><i class="key key-target"></i>${esc(targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title }))}</span>
     </div>` : '';
 
-  const rowsHtml = points.map(p => `<tr><td>${fmtDate(p.date)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td>${p === points[0] ? '—' : esc(withUnit(signed(p.value - points[0].value), unit))}</td></tr>`).join('');
+  // Newest first, each with a button to delete it.
+  const rowsHtml = points.slice().reverse().map(p => {
+    const del = t('gr.delete', { date: fmtDate(p.date) });
+    return `<tr><td>${fmtDate(p.date)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td>${p === points[0] ? '—' : esc(withUnit(signed(p.value - points[0].value), unit))}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
+  }).join('');
 
   return `<article class="card gr-card" data-gr="${s.id}">
     <div class="card-head"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
@@ -1593,7 +1630,7 @@ function graphCard(s, width) {
       <div class="gr-tip" hidden></div>
     </div>
     <details class="gr-table"><summary>${t('gr.table')}</summary>
-      <table><thead><tr><th>${t('gr.col.date')}</th><th>${t('gr.col.value')}</th><th>${t('gr.col.change')}</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+      <table><thead><tr><th>${t('gr.col.date')}</th><th>${t('gr.col.value')}</th><th>${t('gr.col.change')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </details>
   </article>`;
 }
@@ -1830,14 +1867,16 @@ function goalForm(g) {
 
 function stateForm(s) {
   const linked = s.id ? relsFrom(s.id, 'measures').map(r => r.to) : [];
-  const history = (s.history || []).slice().reverse();
+  const history = (s.history || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  // The value field records a new measurement, so it starts empty and dated today.
+  const latest = isNum(s.value) ? t('f.valueHint', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtDate(s.date) || '—' }) : '';
   return `
     ${field('title', t('f.title'), text('title', s.title, t('f.statePh')))}
     ${field('description', t('f.stateDesc'), area('description', s.description, t('f.stateDescPh')))}
     <div class="row3">
-      ${field('value', t('f.value'), num('value', s.value ?? '', t('f.optional')))}
+      ${field('value', t('f.value'), num('value', '', t('f.optional')), latest)}
       ${field('unit', t('f.unit'), text('unit', s.unit, t('f.unitPh')))}
-      ${field('date', t('f.asOf'), date('date', s.date || today()))}
+      ${field('date', t('f.asOf'), date('date', today()))}
     </div>
     ${checklist('goals', t('f.describesGoals'), 'goal', db.goals, linked, t('f.describesHint'))}
     ${history.length > 1 ? `<div class="field"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtDate(h.date)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}`;
@@ -2023,15 +2062,12 @@ function submitForm() {
   }
 
   if (kind === 'state') {
-    const s = Object.assign(existing || { id: uid(), history: [] }, {
-      title: v.title.trim(), description: v.description.trim(), value: v.value, unit: v.unit.trim(), date: v.date || today(),
+    const s = Object.assign(existing || { id: uid(), history: [], value: '' }, {
+      title: v.title.trim(), description: v.description.trim(), unit: v.unit.trim(),
     });
     s.history ||= [];
-    const last = s.history[s.history.length - 1];
-    if (isNum(s.value) && (!last || last.value !== s.value || last.date !== s.date)) {
-      if (last && last.date === s.date) last.value = s.value;
-      else s.history.push({ date: s.date, value: s.value });
-    }
+    // An empty value keeps the latest measurement; a value for a date that has one replaces it.
+    if (isNum(v.value)) recordMeasurement(s, v.date || today(), v.value);
     if (!existing) db.states.push(s);
     setLinks(s.id, 'measures', arr('goals'));
     return finish(t(existing ? 'toast.stateUpdated' : 'toast.stateAdded'));
@@ -2155,7 +2191,7 @@ $('#addBtn').addEventListener('click', () => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-checkin],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -2175,6 +2211,7 @@ viewEl.addEventListener('click', e => {
     return $('[data-next-more]')?.focus({ preventScroll: true });
   }
   if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date);
+  if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
   if (el.dataset.open) { const ent = findEntity(el.dataset.open); return ent && openForm(ent.kind, ent.item.id); }
   if (el.dataset.new) return el.dataset.new === 'relation' ? $('#addBtn').click() : openForm(el.dataset.new);

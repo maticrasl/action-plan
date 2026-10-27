@@ -89,13 +89,18 @@ function mergeDeleted(a, b) {
 }
 
 // Current states: measurements from both versions are kept (one per date, the newer version's
-// value wins on a clash), and the state's value follows its latest measurement.
+// value wins on a clash, so deleting a measurement carries over too), and the state's value
+// follows its latest measurement.
 function mergeState(x, y) {
   const newer = newerOf(x, y), older = newer === x ? y : x;
   const byDate = new Map((older.history || []).map(h => [h.date, h]));
+  Object.keys(newer.dropped || {}).forEach(d => byDate.delete(d));
   (newer.history || []).forEach(h => byDate.set(h.date, h));
   const history = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
   const merged = { ...newer, history };
+  const dropped = Object.keys({ ...older.dropped, ...newer.dropped }).filter(d => !byDate.has(d));
+  if (dropped.length) merged.dropped = Object.fromEntries(dropped.map(d => [d, 1]));
+  else delete merged.dropped;
   const last = history[history.length - 1];
   if (last && (!merged.date || last.date >= merged.date)) Object.assign(merged, { value: last.value, date: last.date });
   return merged;

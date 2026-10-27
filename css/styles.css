@@ -789,6 +789,8 @@ textarea { resize: vertical; min-height: 68px; }
 .gr-table table { width: 100%; max-width: 480px; margin-top: 8px; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .gr-table th, .gr-table td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); }
 .gr-table th { color: var(--ink-3); font-weight: 600; }
+.gr-table td.gr-del { width: 1%; padding-right: 0; text-align: right; }
+.gr-table td.gr-del .btn { padding: 2px 8px; }
 .gr-without { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
 /* ---------- Collapsible sidebar (desktop only): icons stay, labels and the plan switcher go ---------- */
