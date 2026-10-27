@@ -357,16 +357,18 @@ window.moreTests = async ({ step, assert }) => {
     change('#f-repeat', 'month');
     change('#f-repeat', 'custom');
     assert($('#f-unit').value === 'month' && $('#f-on').value === 'times' && shown('#repTimes') && !shown('#repDays'), 'custom starts from times per month');
-    eq([...$('#f-on').options].map(o => o.value), ['day', 'weekday', 'last', 'times'], 'month options');
+    eq([...$('#f-on').options].map(o => o.value), ['day', 'lastDay', 'nth', 'times'], 'month options');
     $('#f-every').value = '2';
     $('#f-every').dispatchEvent(new Event('input', { bubbles: true }));
     assert($('#f-unit [value="month"]').textContent === tp('f.unit.month', 2), 'unit follows the interval');
-    change('#f-on', 'last');
+    change('#f-on', 'nth');
+    eq([$('#f-nth').value, $('#f-weekday').value], ['4', '2'], 'defaults to the start: the fourth Wednesday');
+    change('#f-nth', '-1');
     modal.querySelector('[name="ends"][value="after"]').checked = true;
     $('#f-count').value = '3';
     submitForm();
     const check = db.activities.find(a => a.title === 'Check-up');
-    assert(JSON.stringify(check.repeat) === '{"every":2,"unit":"month","on":"last","count":3}', 'custom month saved: ' + JSON.stringify(check.repeat));
+    assert(JSON.stringify(check.repeat) === '{"every":2,"unit":"month","on":"nth","nth":-1,"weekday":2,"count":3}', 'custom month saved: ' + JSON.stringify(check.repeat));
     assert(check.dueDate === '2099-05-27', 'ends on the third occurrence: ' + check.dueDate);
     eq(daysBetween('2099-01-01', '2099-12-31').filter(d => runsOn(check, d) && isDueDay(check, d)), ['2099-01-28', '2099-03-25', '2099-05-27'], 'last Wednesday every 2 months');
     assert(scheduleText(check) === 'every 2 months on the last Wednesday', scheduleText(check));
@@ -480,7 +482,7 @@ window.moreTests = async ({ step, assert }) => {
     ].map(scheduleText), ['every day', 'every 3 days', 'every Wed', 'every 2 weeks on Mon, Fri', 'every month on day 7', 'every month on the first Wednesday', '3× every 2 weeks', 'once a month']);
     changeLanguage('sl');
     eq([at({ every: 2, unit: 'week', days: [0] }), at({ every: 1, unit: 'month', on: 'weekday' }), at({ every: 5, unit: 'year' })].map(scheduleText),
-      ['vsaka 2 tedna: pon.', 'vsak mesec: 1. sreda v mesecu', 'vsakih 5 let: 7. januar'].map(x => x), 'Slovenian summaries');
+      ['vsaka 2 tedna: pon.', 'vsak mesec: prva sreda v mesecu', 'vsakih 5 let: 7. januar'].map(x => x), 'Slovenian summaries');
     changeLanguage('en');
     // Every 3 days; every 2 weeks (Mon, Fri); flexible every 2 weeks; a yearly one.
     const due = a => daysBetween('2099-01-07', '2099-01-31').filter(d => isDueDay(a, d)).map(d => d.slice(8));
@@ -1976,5 +1978,256 @@ window.moreTests = async ({ step, assert }) => {
     deletePlan(other.id);
     deletePlan(here);
     return sl;
+  });
+  /* ---------- Monthly routines: a chosen day, the last day, or the n-th weekday ---------- */
+
+  const dueIn = (repeat, from, to, startDate = from) => daysBetween(from, to).filter(d => isDueDay({ repeat, startDate }, d));
+  const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+  const lastOfMonth = iso => isoOf(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0);
+
+  await step('monthly routines: a day of the month, clamped to shorter months', () => {
+    eq(dueIn({ every: 1, unit: 'month', on: 'day', day: 15 }, '2027-01-01', '2027-12-31').map(d => d.slice(5)),
+      ['01-15', '02-15', '03-15', '04-15', '05-15', '06-15', '07-15', '08-15', '09-15', '10-15', '11-15', '12-15'], 'the 15th');
+    eq(dueIn({ every: 1, unit: 'month', on: 'day', day: 31 }, '2027-01-01', '2027-12-31').map(d => d.slice(5)),
+      ['01-31', '02-28', '03-31', '04-30', '05-31', '06-30', '07-31', '08-31', '09-30', '10-31', '11-30', '12-31'], 'day 31 falls on the last day of shorter months');
+    eq(dueIn({ every: 1, unit: 'month', on: 'day', day: 30 }, '2028-02-01', '2028-03-31').map(d => d.slice(5)), ['02-29', '03-30'], 'leap February');
+    eq(dueIn({ every: 1, unit: 'month', on: 'day', day: 29 }, '2027-02-01', '2027-03-31').map(d => d.slice(5)), ['02-28', '03-29'], 'non-leap February');
+    eq(dueIn({ every: 3, unit: 'month', on: 'day', day: 10 }, '2027-01-20', '2027-12-31').map(d => d.slice(5)), ['04-10', '07-10', '10-10'], 'every 3 months, counted from the start month');
+    // Stored without a day (older routines): the start's day of the month.
+    eq(dueIn({ every: 1, unit: 'month', on: 'day' }, '2027-01-12', '2027-03-31').map(d => d.slice(5)), ['01-12', '02-12', '03-12'], 'no day: the start’s');
+    eq(dueIn({ every: 1, unit: 'month' }, '2027-01-12', '2027-02-28').map(d => d.slice(5)), ['01-12', '02-12'], 'no on at all: the start’s day');
+    return 'ok';
+  });
+
+  await step('monthly routines: the last day of the month', () => {
+    const got = dueIn({ every: 1, unit: 'month', on: 'lastDay' }, '2027-01-01', '2028-12-31');
+    eq(got.length, 24, 'one a month');
+    assert(got.every(d => d === lastOfMonth(d)), 'always the last day');
+    assert(got.includes('2027-02-28') && got.includes('2028-02-29') && got.includes('2027-04-30'), 'short and leap months');
+    eq(dueIn({ every: 2, unit: 'month', on: 'lastDay' }, '2027-01-15', '2027-07-31').map(d => d.slice(5)), ['01-31', '03-31', '05-31', '07-31'], 'every 2 months');
+    return got.slice(0, 3).join(', ');
+  });
+
+  await step('monthly routines: the n-th or last weekday, for every weekday', () => {
+    const from = '2027-01-01', to = '2027-12-31';
+    for (let wd = 0; wd < 7; wd++) {
+      const all = daysBetween(from, to).filter(d => weekday(d) === wd);
+      const byMonth = Object.values(Object.groupBy ? Object.groupBy(all, d => d.slice(0, 7)) : all.reduce((m, d) => ((m[d.slice(0, 7)] ||= []).push(d), m), {}));
+      for (const nth of [1, 2, 3, 4]) eq(dueIn({ every: 1, unit: 'month', on: 'nth', nth, weekday: wd }, from, to), byMonth.map(m => m[nth - 1]), `${nth}. ${weekdayName(wd)}`);
+      eq(dueIn({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: wd }, from, to), byMonth.map(m => m[m.length - 1]), `last ${weekdayName(wd)}`);
+    }
+    // The second Friday every month, and a fifth one only in months that have five.
+    eq(dueIn({ every: 1, unit: 'month', on: 'nth', nth: 2, weekday: 4 }, '2027-01-01', '2027-04-30'), ['2027-01-08', '2027-02-12', '2027-03-12', '2027-04-09'], 'second Friday');
+    eq(dueIn({ every: 1, unit: 'month', on: 'nth', nth: 5, weekday: 4 }, '2027-01-01', '2027-06-30'), ['2027-01-29', '2027-04-30'], 'fifth Friday only when there is one');
+    eq(dueIn({ every: 2, unit: 'month', on: 'nth', nth: 1, weekday: 0 }, '2027-01-01', '2027-06-30'), ['2027-01-04', '2027-03-01', '2027-05-03'], 'first Monday every 2 months');
+    return 'all weekdays';
+  });
+
+  await step('monthly routines: older weekday routines keep their days', () => {
+    // 'weekday' and 'last' were worked out from the start date; they now read as the same n-th weekday.
+    for (const start of ['2027-01-28', '2027-03-15', '2027-05-31', '2027-07-01', '2027-09-29']) {
+      const nth = Math.ceil(monthDay(start) / 7), wd = weekday(start);
+      eq(dueIn({ every: 1, unit: 'month', on: 'weekday' }, start, '2028-06-30'), dueIn({ every: 1, unit: 'month', on: 'nth', nth, weekday: wd }, start, '2028-06-30'), `${start} weekday`);
+      if (lastInMonth(start)) eq(dueIn({ every: 1, unit: 'month', on: 'last' }, start, '2028-06-30'), dueIn({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: wd }, start, '2028-06-30'), `${start} last`);
+      eq(sched({ repeat: { every: 1, unit: 'month', on: 'weekday' }, startDate: start }), { every: 1, unit: 'month', on: 'nth', nth, weekday: wd }, `${start} read as n-th`);
+    }
+    const old = { repeat: { every: 1, unit: 'month', on: 'last' }, startDate: '2027-01-27' };
+    eq(dueIn(old.repeat, '2027-01-01', '2027-04-30', old.startDate), ['2027-01-27', '2027-02-24', '2027-03-31', '2027-04-28'], 'last Wednesday as before');
+    eq(scheduleText(old), 'every month on the last Wednesday', 'same summary');
+    assert(JSON.stringify(old.repeat) === '{"every":1,"unit":"month","on":"last"}', 'reading does not rewrite what is stored');
+    return 'ok';
+  });
+
+  await step('monthly routines: summaries in English and Slovenian', () => {
+    const at = repeat => ({ repeat, startDate: '2027-01-07' });
+    eq([
+      at({ every: 1, unit: 'month', on: 'day', day: 15 }), at({ every: 1, unit: 'month', on: 'lastDay' }), at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
+      at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 1 }), at({ every: 3, unit: 'month', on: 'day', day: 31 }),
+    ].map(scheduleText), ['every month on day 15', 'every month on the last day', 'every 2 months on the second Friday', 'every month on the last Tuesday', 'every 3 months on day 31']);
+    changeLanguage('sl');
+    eq([
+      at({ every: 1, unit: 'month', on: 'day', day: 15 }), at({ every: 1, unit: 'month', on: 'lastDay' }), at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
+      at({ every: 1, unit: 'month', on: 'nth', nth: 2, weekday: 2 }), at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 5 }), at({ every: 1, unit: 'month', on: 'nth', nth: 3, weekday: 6 }),
+      at({ every: 1, unit: 'month', on: 'nth', nth: 1, weekday: 0 }),
+    ].map(scheduleText), ['vsak mesec: 15. dan', 'vsak mesec: zadnji dan v mesecu', 'vsaka 2 meseca: drugi petek v mesecu', 'vsak mesec: druga sreda v mesecu',
+      'vsak mesec: zadnja sobota v mesecu', 'vsak mesec: tretja nedelja v mesecu', 'vsak mesec: prvi ponedeljek v mesecu'], 'Slovenian, with feminine ordinals');
+    changeLanguage('en');
+    return 'ok';
+  });
+
+  await step('monthly routines: the form shows the right fields and saves each option', () => {
+    fresh('Monthly');
+    const shown = sel => !$(sel).closest('[hidden]');
+    const start = d => { $('#f-startDate').value = dateInput(d); $('#f-startDate').dispatchEvent(new Event('input', { bubbles: true })); $('#f-startDate').dispatchEvent(new Event('change', { bubbles: true })); };
+    const make = (title, setup) => {
+      openForm('activity');
+      $('#f-title').value = title;
+      start('2027-03-10'); // the second Wednesday of March 2027
+      change('#f-repeat', 'custom');
+      change('#f-unit', 'month');
+      setup();
+      submitForm();
+      return db.activities.find(a => a.title === title);
+    };
+    let checks = {};
+    const a1 = make('Rent', () => {
+      change('#f-on', 'day');
+      checks.day = [shown('#repMonthDay'), shown('#repNth'), shown('#repTimes'), shown('#repDays'), $('#f-monthDay').value];
+      $('#f-monthDay').value = '31';
+    });
+    eq(checks.day, [true, false, false, false, '10'], 'day field only, the start’s day by default');
+    eq(a1.repeat, { every: 1, unit: 'month', on: 'day', day: 31 }, 'day saved');
+    const a2 = make('Bills', () => {
+      change('#f-on', 'lastDay');
+      checks.last = [shown('#repMonthDay'), shown('#repNth'), shown('#repTimes')];
+    });
+    eq(checks.last, [false, false, false], 'no extra fields for the last day');
+    eq(a2.repeat, { every: 1, unit: 'month', on: 'lastDay' }, 'last day saved');
+    const a3 = make('Club', () => {
+      change('#f-on', 'nth');
+      checks.nth = [shown('#repMonthDay'), shown('#repNth'), $('#f-nth').value, $('#f-weekday').value, [...$('#f-nth').options].map(o => o.value)];
+      change('#f-nth', '2');
+      change('#f-weekday', '4');
+    });
+    eq(checks.nth, [false, true, '2', '2', ['1', '2', '3', '4', '-1']], 'n-th fields, the start’s weekday by default');
+    eq(a3.repeat, { every: 1, unit: 'month', on: 'nth', nth: 2, weekday: 4 }, 'second Friday saved');
+    eq(scheduleText(a3), 'every month on the second Friday', 'summary');
+
+    // Wrong days are refused.
+    for (const bad of ['0', '32', '1.5', 'x', '']) {
+      openForm('activity', a1.id);
+      $('#f-monthDay').value = bad;
+      submitForm();
+      const err = modal.querySelector('[data-field="monthDay"] .err').textContent;
+      assert(modal.open && err === t(bad === 'x' ? 'err.number' : 'err.times', { max: 31 }), `day “${bad}” refused: ${err}`);
+      modal.close();
+    }
+    eq(a1.repeat.day, 31, 'unchanged after refusals');
+
+    // Reopening shows what was saved.
+    openForm('activity', a3.id);
+    eq([$('#f-repeat').value, $('#f-unit').value, $('#f-on').value, $('#f-nth').value, $('#f-weekday').value], ['custom', 'month', 'nth', '2', '4'], 'n-th reopened');
+    modal.close();
+    openForm('activity', a1.id);
+    eq([$('#f-on').value, $('#f-monthDay').value], ['day', '31'], 'day reopened');
+    modal.close();
+    openForm('activity', a2.id);
+    eq($('#f-on').value, 'lastDay', 'last day reopened');
+    modal.close();
+
+    // An older routine opens with its days chosen, and saves in the new form.
+    const old = mk('activity', { title: 'Old monthly', status: 'todo', startDate: '2027-01-27', repeat: { every: 1, unit: 'month', on: 'last' } });
+    openForm('activity', old.id);
+    eq([$('#f-on').value, $('#f-nth').value, $('#f-weekday').value], ['nth', '-1', '2'], 'old “last Wednesday” shown as such');
+    submitForm();
+    eq(old.repeat, { every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 2 }, 'saved the new way, same days');
+    const oldDay = mk('activity', { title: 'Old day', status: 'todo', startDate: '2027-01-12', repeat: { every: 1, unit: 'month', on: 'day' } });
+    openForm('activity', oldDay.id);
+    eq($('#f-monthDay').value, '12', 'old day routine shows its start’s day');
+    modal.close();
+
+    // A fifth weekday from an old routine stays selectable.
+    const fifth = mk('activity', { title: 'Fifth', status: 'todo', startDate: '2027-01-29', repeat: { every: 1, unit: 'month', on: 'weekday' } });
+    openForm('activity', fifth.id);
+    eq([$('#f-nth').value, [...$('#f-nth').options].map(o => o.value).includes('5')], ['5', true], 'a fifth Friday kept');
+    modal.close();
+
+    // Changing the start date moves the defaults until they are chosen by hand.
+    openForm('activity');
+    $('#f-title').value = 'Moves';
+    change('#f-repeat', 'custom');
+    change('#f-unit', 'month');
+    change('#f-on', 'nth');
+    start('2027-06-25'); // the fourth Friday
+    eq([$('#f-nth').value, $('#f-weekday').value, $('#f-monthDay').value], ['4', '4', '25'], 'defaults follow the start date');
+    change('#f-nth', '1');
+    start('2027-06-02');
+    eq($('#f-nth').value, '1', 'a choice made by hand stays');
+    modal.close();
+    return `${a1.repeat.day} | ${a2.repeat.on} | ${scheduleText(a3)}`;
+  });
+
+  await step('monthly routines: check-ins, streaks and the week strip', () => {
+    const now = today(), lastDay = lastOfMonth(now);
+    const r = mk('activity', { title: 'Month end', status: 'todo', startDate: addDays(now, -120), repeat: { every: 1, unit: 'month', on: 'lastDay' } });
+    const done = daysBetween(r.startDate, addDays(now, -1)).filter(d => isDueDay(r, d));
+    assert(done.length >= 3 && done.every(d => d === lastOfMonth(d)), 'past due days are month ends');
+    done.forEach(d => (r.checkins = { ...r.checkins, [d]: 1 }));
+    save();
+    eq(routineStreak(r).n, done.length, 'streak counts every month end');
+    eq(periodProgress(r, now).target, 1, 'one due this month');
+    eq(nextDueDay(r), lastDay, 'next due is this month’s last day');
+    setView('activities');
+    const card = $(`.card.routine[data-open="${r.id}"]`);
+    assert(card.textContent.includes('every month on the last day'), 'card summary');
+    const strip = [...card.querySelectorAll('[data-checkin]')].map(b => b.dataset.date);
+    if (strip.includes(lastDay)) assert(card.querySelector(`[data-date="${lastDay}"]`).classList.contains('due'), 'the last day is outlined');
+    // Browse back to a past month end and see it ticked.
+    shiftRoutineWeek(r.id, -Math.ceil((dayNum(now) - dayNum(done[done.length - 1])) / 7));
+    const b = $(`.card.routine[data-open="${r.id}"] [data-date="${done[done.length - 1]}"]`);
+    assert(b && b.classList.contains('due') && b.getAttribute('aria-pressed') === 'true', 'past month end shown ticked');
+    deletePlan(plans.current);
+    return `${done.length} months`;
+  });
+  /* ---------- A routine's start date is always visible in the form ---------- */
+
+  await step('routine start date: filled in visibly, never silently today', () => {
+    fresh('Start dates');
+    const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    const now = today();
+    // Choosing how it repeats fills an empty start date with today, where it can be seen and changed.
+    for (const preset of ['week', 'month', 'days', 'custom']) {
+      openForm('activity');
+      eq($('#f-startDate').value, '', `${preset}: a new activity starts empty`);
+      change('#f-repeat', preset);
+      eq($('#f-startDate').value, dateInput(now), `${preset}: today filled in`);
+      modal.close();
+    }
+    // A date already there is kept, also when switching between kinds.
+    openForm('activity');
+    $('#f-startDate').value = dateInput('2026-09-01');
+    change('#f-repeat', 'week');
+    change('#f-repeat', 'custom');
+    eq($('#f-startDate').value, dateInput('2026-09-01'), 'a typed date is kept');
+    // Back to a one-off: the date stays, it is the user's to clear.
+    change('#f-repeat', 'none');
+    eq($('#f-startDate').value, dateInput('2026-09-01'), 'kept for a one-off too');
+    modal.close();
+    // A one-off without dates stays without dates.
+    openForm('activity');
+    $('#f-title').value = 'Plain';
+    submitForm();
+    eq(db.activities.find(a => a.title === 'Plain').startDate, '', 'one-off saved without a start');
+    // Filled in and changed before saving: the change is what is saved.
+    openForm('activity');
+    $('#f-title').value = 'Earlier';
+    change('#f-repeat', 'days');
+    $('#f-startDate').value = dateInput(addDays(now, -20));
+    submitForm();
+    eq(db.activities.find(a => a.title === 'Earlier').startDate, addDays(now, -20), 'the changed date is saved');
+    return dateInput(now);
+  });
+
+  await step('routine start date: an older routine without one keeps the day it was created', () => {
+    const now = today(), created = addDays(today(), -40);
+    const old = mk('activity', { title: 'Legacy', status: 'todo', createdAt: created, repeat: { every: 1, unit: 'week', times: 2 }, checkins: { [addDays(now, -30)]: 1 } });
+    delete old.startDate;
+    save();
+    eq(routineStart(old), created, 'runs from the day it was created');
+    openForm('activity', old.id);
+    eq($('#f-startDate').value, dateInput(created), 'the form shows that day');
+    submitForm();
+    eq(old.startDate, created, 'saving keeps it, not today');
+    // Even if the field is cleared, an existing routine keeps where it started.
+    openForm('activity', old.id);
+    $('#f-startDate').value = '';
+    submitForm();
+    eq(old.startDate, created, 'a cleared field keeps the old start');
+    assert(checkedOn(old, addDays(now, -30)), 'its old check-ins still count');
+    setView('activities');
+    shiftRoutineWeek(old.id, -10);
+    eq($(`.card.routine[data-open="${old.id}"] [data-checkin]`).dataset.date, addDays(created, -weekday(created)), 'the strip still reaches back to the start');
+    deletePlan(plans.current);
+    return created;
   });
 };

@@ -494,8 +494,10 @@ function goalScope(goalId) {
    `repeat` is { every, unit: 'day' | 'week' | 'month' | 'year', ... }, like a calendar's custom
    recurrence: every `every` days, weeks, months or years, counted from the start date.
    - week: `days` (Monday = 0) it falls on, or `times`: any that many days per period;
-   - month: `on` 'day' (the start's day of the month), 'weekday' (e.g. its fourth Wednesday),
-     'last' (e.g. its last Wednesday), or `times`: any that many days per period;
+   - month: `on` 'day' (`day` of the month, or the start's; 29–31 fall on the last day of shorter
+     months), 'lastDay', 'nth' (the `nth` – 1 to 5, or -1 for the last – `weekday` of the month),
+     or `times`: any that many days per period. Older routines store 'weekday' or 'last', which
+     meant the start's n-th or last weekday; `sched` reads them as 'nth';
    - year: on the start's day and month;
    - `count`: it ends after that many occurrences (the due date is set to the last one).
    Older plans store { times, per: 'week' | 'month' } or { days }; `sched` reads both.
@@ -517,9 +519,17 @@ const lastInMonth = iso => monthDay(iso) + 7 > monthLength(iso);
 
 function sched(a) {
   const r = a.repeat;
-  if (r.unit) return { every: 1, ...r };
+  if (r.unit) return r.unit === 'month' && !r.times ? monthRule({ every: 1, ...r }, routineStart(a)) : { every: 1, ...r };
   return r.days ? { every: 1, unit: 'week', days: r.days } : { every: 1, unit: r.per === 'month' ? 'month' : 'week', times: r.times };
 }
+// A monthly rule with everything it falls on spelled out (older ones took it from the start date).
+function monthRule(s, start) {
+  if (s.on === 'lastDay') return s;
+  if (s.on === 'weekday' || s.on === 'last') return { ...s, on: 'nth', nth: s.on === 'last' ? -1 : nthInMonth(start), weekday: weekday(start) };
+  if (s.on === 'nth') return { ...s, nth: s.nth ?? nthInMonth(start), weekday: s.weekday ?? weekday(start) };
+  return { ...s, on: 'day', day: s.day || monthDay(start) };
+}
+
 // Flexible routines ask for a number of days per period; fixed ones fall on set days.
 const isFlexible = a => !!sched(a).times;
 
@@ -540,9 +550,9 @@ function isDueDay(a, iso) {
   if ((unitIndex(iso, s.unit) - unitIndex(start, s.unit)) % s.every) return false;
   if (s.unit === 'week') return (s.days || [weekday(start)]).includes(weekday(iso));
   if (s.unit === 'month') {
-    if (s.on === 'weekday') return weekday(iso) === weekday(start) && nthInMonth(iso) === nthInMonth(start);
-    if (s.on === 'last') return weekday(iso) === weekday(start) && lastInMonth(iso);
-    return monthDay(iso) === monthDay(start);
+    if (s.on === 'lastDay') return monthDay(iso) === monthLength(iso);
+    if (s.on === 'nth') return weekday(iso) === s.weekday && (s.nth < 0 ? lastInMonth(iso) : nthInMonth(iso) === s.nth);
+    return monthDay(iso) === Math.min(s.day, monthLength(iso));
   }
   if (s.unit === 'year') return iso.slice(5) === start.slice(5);
   return true;
@@ -656,13 +666,11 @@ function consistency(a, from = '') {
 
 // 1 January 2024 was a Monday.
 const weekdayName = (i, style = 'short') => fmtDay(isoOf(2024, 0, 1 + i), { weekday: style });
-// "the fourth Wednesday" or "the last Wednesday" of the month a date is in.
-function nthWeekdayText(iso, last) {
-  const day = weekday(iso);
-  // The Slovenian "last" follows the weekday's gender (sreda, sobota and nedelja are feminine).
-  const nth = last ? t([2, 5, 6].includes(day) ? 'rt.nth.lastF' : 'rt.nth.last') : t('rt.nth.' + nthInMonth(iso));
-  return t('rt.monthNth', { nth, day: weekdayName(day, 'long') });
-}
+// "first" … "fifth" or "last" (-1); in Slovenian it follows the weekday's gender (sreda, sobota and
+// nedelja are feminine).
+const nthWord = (nth, day) => t(`rt.nth.${nth < 0 ? 'last' : nth}${[2, 5, 6].includes(day) ? 'F' : ''}`);
+// "the second Friday" or "the last Wednesday" of a month.
+const nthWeekdayText = (nth, day) => t('rt.monthNth', { nth: nthWord(nth, day), day: weekdayName(day, 'long') });
 
 // A short summary, like a calendar's: every day, every Mon, Thu, every 2 weeks on Mon, 3× a week.
 function scheduleText(a) {
@@ -674,7 +682,7 @@ function scheduleText(a) {
     if (s.every === 1) return days.length === 7 ? t('rt.daily') : t('rt.onDays', { days: days.map(i => weekdayName(i)).join(', ') });
     return t('rt.on', { every, what: days.map(i => weekdayName(i)).join(', ') });
   }
-  if (s.unit === 'month') return t('rt.on', { every, what: s.on === 'weekday' || s.on === 'last' ? nthWeekdayText(start, s.on === 'last') : t('rt.monthDay', { d: monthDay(start) }) });
+  if (s.unit === 'month') return t('rt.on', { every, what: s.on === 'lastDay' ? t('rt.monthLast') : s.on === 'nth' ? nthWeekdayText(s.nth, s.weekday) : t('rt.monthDay', { d: s.day }) });
   if (s.unit === 'year') return t('rt.on', { every, what: fmtDay(start, { day: 'numeric', month: 'long' }) });
   return every;
 }
@@ -2050,7 +2058,7 @@ function activityForm(a) {
     ${field('description', t('f.details'), area('description', a.description, t('f.detailsPh')))}
     <div class="row3">
       ${field('status', t('f.status'), select('status', statusLabels(ACTIVITY_STATUS, 'activity.'), a.status || 'todo'))}
-      ${field('startDate', t('f.startDate'), date('startDate', a.startDate))}
+      ${field('startDate', t('f.startDate'), date('startDate', isRoutine(a) ? routineStart(a) : a.startDate))}
       ${field('dueDate', t('f.dueDate'), date('dueDate', a.dueDate))}
     </div>
     ${repeatFields(a)}
@@ -2073,18 +2081,14 @@ function repeatPreset(r) {
   return r.unit === 'week' && r.days ? 'days' : 'custom';
 }
 
-// What a custom recurrence falls on, for its unit: weekdays or a day of the month, or any days a number of times.
-function repeatOnOptions(unit, start) {
+// What a custom recurrence falls on, for its unit: weekdays, a day or weekday of the month, or any days a number of times.
+function repeatOnOptions(unit) {
   if (unit === 'week') return { days: t('f.onDays'), times: t('f.onTimes') };
   if (unit !== 'month') return {};
-  const nth = last => { const s = t('f.onNth', { what: nthWeekdayText(start, last) }); return s[0].toUpperCase() + s.slice(1); };
-  return {
-    day: t('f.onMonthDay', { d: monthDay(start) }),
-    weekday: nth(false),
-    ...(lastInMonth(start) ? { last: nth(true) } : {}),
-    times: t('f.onTimes'),
-  };
+  return { day: t('f.onMonthDay'), lastDay: t('f.onLastDay'), nth: t('f.onNth'), times: t('f.onTimes') };
 }
+// The n-th choices for a monthly weekday; a fifth only for older routines that use one.
+const nthOptions = nth => Object.fromEntries([1, 2, 3, 4, ...(nth === 5 ? [5] : []), -1].map(n => [n, nthWord(n, 0)]));
 
 const formStart = () => parseDateInput($('#f-startDate')?.value || '') || today();
 
@@ -2094,6 +2098,11 @@ function repeatFields(a) {
   const mode = repeatPreset(r);
   const unit = r?.unit || 'week';
   const on = r?.times ? 'times' : unit === 'week' ? 'days' : r?.on || 'day';
+  // A monthly day or n-th weekday, the start's until chosen (updateRepeatFields follows the start date).
+  const month = r?.unit === 'month' && !r.times ? r : monthRule({ on: 'day' }, start);
+  const nthPick = { ...month, ...monthRule({ on: 'nth' }, start), ...(month.on === 'nth' ? month : {}) };
+  const weekdays = Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(i => [i, weekdayName(i, 'long')]));
+  const picked = r?.unit === 'month' && !r.times ? 'data-picked' : '';
   const days = r?.days || [weekday(start)];
   const ends = r?.count ? 'after' : a.dueDate ? 'on' : 'never';
   const toggles = [0, 1, 2, 3, 4, 5, 6].map(i =>
@@ -2116,7 +2125,10 @@ function repeatFields(a) {
     <div id="repeatCustom" class="rep-custom">
       <div class="field" data-field="every"><label for="f-every">${t('f.every')}</label>
         <div class="rep-every">${num('every', r?.every ?? 1)}${select('unit', units, unit).replace('<select', `<select aria-label="${esc(t('f.unit'))}"`)}</div><div class="err"></div></div>
-      ${field('on', t('f.on'), select('on', repeatOnOptions(unit, start), on))}
+      ${field('on', t('f.on'), select('on', repeatOnOptions(unit), on))}
+      <div id="repMonthDay">${field('monthDay', t('f.monthDay'), num('monthDay', month.on === 'day' ? month.day : monthDay(start)).replace('<input', `<input ${picked}`), t('f.monthDayHint'))}</div>
+      <div id="repNth" class="field" data-field="nth"><label for="f-nth">${t('f.nthLabel')}</label>
+        <div class="rep-nth">${select('nth', nthOptions(nthPick.nth), String(nthPick.nth)).replace('<select', `<select ${picked}`)}${select('weekday', weekdays, String(nthPick.weekday)).replace('<select', `<select aria-label="${esc(t('f.weekday'))}" ${picked}`)}</div><div class="err"></div></div>
     </div>
     <div id="repDays">${field('days', t('f.days'), `<div class="day-toggles" role="group" aria-label="${esc(t('f.days'))}">${toggles}</div><input type="hidden" name="days" value="${days.join(',')}">`)}</div>
     <div id="repTimes">${field('times', t('f.times'), num('times', r?.times ?? 3), '<span id="timesHint"></span>')}</div>
@@ -2147,15 +2159,25 @@ function updateRepeatFields(e) {
   const was = REPEAT_PRESETS[sel.dataset.prev];
   if (e?.target === sel && sel.value === 'custom' && was) { unitSel.value = was.unit; onSel.dataset.want = was.on; }
   sel.dataset.prev = sel.value;
+  // A routine runs from its start date: choosing one fills an empty start with today, in plain sight.
+  if (e?.target === sel && sel.value !== 'none' && !$('#f-startDate').value.trim()) $('#f-startDate').value = dateInput(today());
   const mode = sel.value, preset = REPEAT_PRESETS[mode], start = formStart();
   const every = preset ? 1 : Math.max(1, parseInt($('#f-every').value, 10) || 1);
   [...unitSel.options].forEach(o => (o.textContent = tp('f.unit.' + o.value, every)));
-  const opts = repeatOnOptions(unitSel.value, start), want = onSel.dataset.want || onSel.value;
+  const opts = repeatOnOptions(unitSel.value), want = onSel.dataset.want || onSel.value;
   delete onSel.dataset.want;
   onSel.innerHTML = Object.entries(opts).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('');
   onSel.value = want in opts ? want : Object.keys(opts)[0] || '';
   const { unit, on } = preset || (mode === 'custom' ? { unit: unitSel.value, on: onSel.value } : {});
+  // Until chosen by hand, the monthly day and weekday follow the start date.
+  if (e?.target?.id === 'f-startDate') {
+    const d = $('#f-monthDay'), n = $('#f-nth'), w = $('#f-weekday');
+    if (!d.hasAttribute('data-picked')) d.value = monthDay(start);
+    if (!n.hasAttribute('data-picked') && !w.hasAttribute('data-picked')) { n.value = nthInMonth(start) > 4 ? -1 : nthInMonth(start); w.value = weekday(start); }
+  }
   $('#repeatCustom').hidden = mode !== 'custom';
+  $('#repMonthDay').hidden = !(unit === 'month' && on === 'day');
+  $('#repNth').hidden = !(unit === 'month' && on === 'nth');
   modal.querySelector('[data-field="on"]').hidden = !onSel.options.length;
   $('#repDays').hidden = !(unit === 'week' && on === 'days');
   $('#repTimes').hidden = on !== 'times';
@@ -2182,7 +2204,15 @@ function readRepeat(v, start) {
     const days = String(v.days || '').split(',').filter(Boolean).map(Number).sort();
     if (!days.length) return { errors: { days: t('err.days') } };
     repeat.days = days;
-  } else if (unit === 'month') repeat.on = on;
+  } else if (unit === 'month') {
+    repeat.on = on;
+    if (on === 'day') {
+      const day = int(v.monthDay, 31);
+      if (!day) return { errors: { monthDay: t('err.times', { max: 31 }) } };
+      repeat.day = day;
+    }
+    if (on === 'nth') Object.assign(repeat, { nth: Number(v.nth), weekday: Number(v.weekday) });
+  }
   let dueDate = '';
   if (v.ends === 'on') {
     if (!v.endDate) return { errors: { endDate: t('err.endDate') } };
@@ -2324,7 +2354,7 @@ function submitForm() {
   }
 
   if (kind === 'activity') {
-    const startDate = v.startDate || (v.repeat === 'none' ? '' : existing?.startDate || today());
+    const startDate = v.startDate || (v.repeat === 'none' ? '' : existing && isRoutine(existing) ? routineStart(existing) : today());
     const { repeat, dueDate = v.dueDate, errors } = readRepeat(v, startDate);
     if (errors) return showErrors(errors);
     if (!repeat && v.startDate && v.dueDate && v.startDate > v.dueDate) return showErrors({ dueDate: t('err.startAfterDue') });
@@ -2524,7 +2554,7 @@ function bindDragDrop() {
 $('#modalForm').addEventListener('submit', e => { e.preventDefault(); submitForm(); });
 $('#modalForm').addEventListener('input', updateSmartLive);
 $('#modalForm').addEventListener('input', e => {
-  if (['f-every', 'f-count', 'f-startDate'].includes(e.target.id)) updateRepeatFields();
+  if (['f-every', 'f-count', 'f-startDate'].includes(e.target.id)) updateRepeatFields(e);
 });
 // Typing or picking when a routine ends chooses that option.
 $('#modalForm').addEventListener('focusin', e => {
@@ -2533,6 +2563,7 @@ $('#modalForm').addEventListener('focusin', e => {
 });
 $('#modalForm').addEventListener('change', e => {
   if (e.target.id === 'f-from' || e.target.id === 'f-to') return fillRelTypes();
+  if (['f-monthDay', 'f-nth', 'f-weekday'].includes(e.target.id)) e.target.setAttribute('data-picked', '');
   if (['f-repeat', 'f-unit', 'f-on', 'f-startDate'].includes(e.target.id)) return updateRepeatFields(e);
   if (e.target.id !== 'f-progress') return;
   updateProgressFields();
