@@ -312,24 +312,32 @@ window.moreTests = async ({ step, assert }) => {
     const now = today();
     const g = mk('goal', { title: 'Move more', progress: 'routines', startDate: addDays(now, -14), deadline: addDays(now, 90), category: 'Health' });
     const oneOff = mk('activity', { title: 'Buy shoes', status: 'todo' });
-    // Create a routine in the form: specific days.
+    const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    const shown = sel => !modal.querySelector(sel).closest('[hidden]');
+    // Create a routine in the form: custom, specific days.
     openForm('activity');
     $('#f-title').value = 'Strength';
-    const repeat = $('#f-repeat');
-    assert(!modal.querySelector('[data-field="status"]').hidden && $('#repeatDays').hidden, 'one-off by default');
-    repeat.value = 'days'; repeat.dispatchEvent(new Event('change', { bubbles: true }));
-    assert(modal.querySelector('[data-field="status"]').hidden && !$('#repeatDays').hidden && $('#repeatTimes').hidden, 'days shown, status hidden');
+    assert(shown('[data-field="status"]') && !shown('#repeatCustom') && !shown('#repeatEnds'), 'one-off by default');
+    eq([...$('#f-repeat').options].map(o => o.value), ['none', 'day', 'week', 'month', 'year', 'flex', 'custom'], 'presets like a calendar');
+    assert($('#f-repeat [value="week"]').textContent === t('f.repeatWeekly', { day: weekdayName(weekday(now), 'long') }), 'weekly preset names the start weekday');
+    change('#f-repeat', 'custom');
+    assert(!shown('[data-field="status"]') && !shown('[data-field="dueDate"]') && shown('#repDays') && !shown('#repTimes') && shown('#repeatEnds'), 'days shown, status and due date hidden');
+    modal.querySelector('.day-toggle[aria-pressed="true"]').click(); // the start's weekday is chosen by default
     submitForm();
     assert(modal.open && modal.querySelector('[data-field="days"] .err').textContent === t('err.days'), 'needs a day');
     modal.querySelectorAll('.day-toggle')[0].click(); modal.querySelectorAll('.day-toggle')[3].click();
     [...modal.querySelectorAll('[data-name="goals"] .pick-opt')].find(o => o.textContent === 'Move more').click();
     submitForm();
     const st = db.activities.find(a => a.title === 'Strength');
-    assert(!modal.open && st && JSON.stringify(st.repeat) === '{"days":[0,3]}' && st.startDate === now, 'saved as a routine from today');
-    // A number of times per week, with validation.
+    assert(!modal.open && st && JSON.stringify(st.repeat) === '{"every":1,"unit":"week","days":[0,3]}' && st.startDate === now && !st.dueDate, 'saved as a routine from today');
+    openForm('activity', st.id);
+    assert($('#f-repeat').value === 'custom' && $('#f-unit').value === 'week' && $('#f-on').value === 'days' && modal.querySelector('[name="ends"]:checked').value === 'never', 'form shows the saved recurrence');
+    modal.close();
+    // A number of times per week (the flexible preset), with validation.
     openForm('activity');
     $('#f-title').value = 'Run';
-    $('#f-repeat').value = 'week'; $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
+    change('#f-repeat', 'flex');
+    assert($('#f-repeat').value === 'custom' && $('#f-on').value === 'times' && shown('#repTimes') && !shown('#repDays'), 'flexible preset fills the custom fields');
     $('#f-times').value = '9';
     submitForm();
     assert(modal.querySelector('[data-field="times"] .err').textContent === t('err.times', { max: 7 }), 'at most 7 a week');
@@ -338,7 +346,44 @@ window.moreTests = async ({ step, assert }) => {
     [...modal.querySelectorAll('[data-name="goals"] .pick-opt')].find(o => o.textContent === 'Move more').click();
     submitForm();
     const run = db.activities.find(a => a.title === 'Run');
-    assert(JSON.stringify(run.repeat) === '{"times":3,"per":"week"}', 'count routine saved');
+    assert(JSON.stringify(run.repeat) === '{"every":1,"unit":"week","times":3}', 'count routine saved');
+
+    // Presets, custom months and when it ends.
+    openForm('activity');
+    $('#f-title').value = 'Check-up';
+    $('#f-startDate').value = dateInput('2099-01-28'); // the fourth and last Wednesday of January 2099
+    $('#f-startDate').dispatchEvent(new Event('input', { bubbles: true }));
+    assert($('#f-repeat [value="month"]').textContent === t('f.repeatMonthly', { d: 28 }), 'monthly preset follows the start date');
+    change('#f-repeat', 'month');
+    change('#f-repeat', 'custom');
+    assert($('#f-unit').value === 'month' && shown('[data-field="on"]') && !shown('#repDays'), 'custom starts from the preset');
+    eq([...$('#f-on').options].map(o => o.value), ['day', 'weekday', 'last', 'times'], 'month options');
+    $('#f-every').value = '2';
+    $('#f-every').dispatchEvent(new Event('input', { bubbles: true }));
+    assert($('#f-unit [value="month"]').textContent === tp('f.unit.month', 2), 'unit follows the interval');
+    change('#f-on', 'last');
+    modal.querySelector('[name="ends"][value="after"]').checked = true;
+    $('#f-count').value = '3';
+    submitForm();
+    const check = db.activities.find(a => a.title === 'Check-up');
+    assert(JSON.stringify(check.repeat) === '{"every":2,"unit":"month","on":"last","count":3}', 'custom month saved: ' + JSON.stringify(check.repeat));
+    assert(check.dueDate === '2099-05-27', 'ends on the third occurrence: ' + check.dueDate);
+    eq(daysBetween('2099-01-01', '2099-12-31').filter(d => runsOn(check, d) && isDueDay(check, d)), ['2099-01-28', '2099-03-25', '2099-05-27'], 'last Wednesday every 2 months');
+    assert(scheduleText(check) === 'every 2 months on the last Wednesday', scheduleText(check));
+    openForm('activity', check.id);
+    assert(modal.querySelector('[name="ends"]:checked').value === 'after' && $('#f-count').value === '3', 'ends after shown');
+    modal.querySelector('[name="ends"][value="on"]').checked = true;
+    $('#f-endDate').value = dateInput('2098-01-01');
+    submitForm();
+    assert(modal.querySelector('[data-field="endDate"] .err').textContent === t('err.startAfterDue'), 'cannot end before it starts');
+    $('#f-endDate').value = dateInput('2099-12-31');
+    submitForm();
+    assert(check.dueDate === '2099-12-31' && !check.repeat.count, 'ends on a date');
+    openForm('activity', check.id);
+    change('#f-repeat', 'year');
+    submitForm();
+    assert(JSON.stringify(check.repeat) === '{"every":1,"unit":"year"}' && scheduleText(check) === 'every year on 28 January', scheduleText(check));
+    removeEntity('activity', check.id);
 
     // Board: routines above the columns, ticking days on the week strip.
     setView('activities');
@@ -427,6 +472,22 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('en');
     eq([1, 3].map(n => tp('rt.perWeek', n)), ['once a week', '3× a week']);
     assert(scheduleText({ repeat: { days: [0, 3] } }) === 'every Mon, Thu' && scheduleText({ repeat: { days: [0, 1, 2, 3, 4, 5, 6] } }) === 'every day', 'day schedules');
+    const at = (repeat, startDate = '2099-01-07') => ({ repeat, startDate }); // a Wednesday
+    eq([
+      at({ every: 1, unit: 'day' }), at({ every: 3, unit: 'day' }), at({ every: 1, unit: 'week' }), at({ every: 2, unit: 'week', days: [0, 4] }),
+      at({ every: 1, unit: 'month' }), at({ every: 1, unit: 'month', on: 'weekday' }), at({ every: 2, unit: 'week', times: 3 }), at({ every: 1, unit: 'month', times: 1 }),
+    ].map(scheduleText), ['every day', 'every 3 days', 'every Wed', 'every 2 weeks on Mon, Fri', 'every month on day 7', 'every month on the first Wednesday', '3× every 2 weeks', 'once a month']);
+    changeLanguage('sl');
+    eq([at({ every: 2, unit: 'week', days: [0] }), at({ every: 1, unit: 'month', on: 'weekday' }), at({ every: 5, unit: 'year' })].map(scheduleText),
+      ['vsaka 2 tedna: pon.', 'vsak mesec: 1. sreda v mesecu', 'vsakih 5 let: 7. januar'].map(x => x), 'Slovenian summaries');
+    changeLanguage('en');
+    // Every 3 days; every 2 weeks (Mon, Fri); flexible every 2 weeks; a yearly one.
+    const due = a => daysBetween('2099-01-07', '2099-01-31').filter(d => isDueDay(a, d)).map(d => d.slice(8));
+    eq(due(at({ every: 3, unit: 'day' })), ['07', '10', '13', '16', '19', '22', '25', '28', '31'], 'every 3 days');
+    eq(due(at({ every: 2, unit: 'week', days: [0, 4] })), ['09', '19', '23'], 'every 2 weeks on Mon, Fri');
+    eq(periodOf(at({ every: 2, unit: 'week', times: 3 }), '2099-01-14'), { from: '2099-01-05', to: '2099-01-18' }, 'a two-week period');
+    eq(periodOf(at({ every: 1, unit: 'year' }), '2099-06-01'), { from: '2099-01-01', to: '2099-12-31' }, 'a year');
+    eq(lastOccurrence(at({ every: 2, unit: 'week', times: 3 }), 7), '2099-02-15', 'seven times at 3 per two weeks needs three periods');
     const i = TOUR_STEPS.findIndex(x => x.key === 'routines');
     assert(TOUR_STEPS[i - 1].key === 'activities' && TOUR_STEPS[i].target[0] === '.routines', 'tour step after activities');
     assert(t('tour.routines.text').includes('streak') && sl['tour.routines.text'].includes('niz'), 'tour text');
