@@ -39,7 +39,7 @@ const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(pr
 let db = emptyDb();
 const ui = {
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
-  mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, search: '', mapSelected: null, mapRel: null, help: false,
+  mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
   rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
 };
 
@@ -938,6 +938,7 @@ function render() {
     if (prevScroll) wrap.scrollTop = prevScroll.top;
   }
   decorateHelp();
+  updatePlanBadges();
 }
 
 const NEXT_FEW = 3; // next actions shown on the overview until expanded
@@ -3195,10 +3196,11 @@ const SETTINGS = {
   help: { get: () => ui.help, set: v => setHelp(v) },
   hideDone: { get: () => ui.hideDone, set: v => setToggle('hideDone', v) },
   tlDeps: { get: () => ui.tlDeps, set: v => setToggle('tlDeps', v) },
+  planBadges: { get: () => ui.planBadges, set: v => setToggle('planBadges', v) },
   navCollapsed: { get: () => ui.navCollapsed, set: v => setNavCollapsed(v) },
 };
 
-// A remembered on/off display option (hideDone, tlDeps).
+// A remembered on/off display option (hideDone, tlDeps, planBadges).
 function setToggle(key, on) {
   ui[key] = on;
   prefs.set(key, on);
@@ -3871,6 +3873,46 @@ const PLAN_ICONS = {
   delete: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
 };
 
+// How a plan is doing, for the badge in the plan menus: 'late' when something is overdue,
+// 'today' when something still has to be done today, else 'ok'. Paused goals and finished work don't count.
+function planHealth(data) {
+  const keep = db;
+  db = data;
+  try {
+    const now = today();
+    let health = 'ok';
+    const due = (date, open) => {
+      if (!open || !date || date > now) return;
+      if (date < now) health = 'late';
+      else if (health === 'ok') health = 'today';
+    };
+    db.goals.forEach(g => due(g.deadline, g.status === 'active' || !g.status));
+    db.activities.forEach(a => {
+      if (!isRoutine(a)) return due(a.dueDate, a.status !== 'done');
+      if (!runsOn(a, now)) return;
+      if (routineState(a) === 'late') health = 'late';
+      // Due today: a set day not ticked yet, or a flexible routine that needs every day left, today included.
+      const p = periodProgress(a, now);
+      const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
+      const dueToday = !checkedOn(a, now) && !p.met && (isFlexible(a) ? p.target - p.done >= left : isDueDay(a, now));
+      if (dueToday && health === 'ok') health = 'today';
+    });
+    return health;
+  } finally { db = keep; }
+}
+const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
+
+// The plan menus show each plan's badge before its name (unless switched off in Settings).
+function updatePlanBadges() {
+  const health = ui.planBadges ? Object.fromEntries(plans.list.map(p => [p.id, planHealth(p.id === plans.current ? db : readPlan(p.id))])) : {};
+  document.querySelectorAll('[data-plan-select] option').forEach(o => {
+    const plan = plans.list.find(p => p.id === o.value), h = health[o.value];
+    if (!plan) return;
+    o.textContent = h ? `${HEALTH_BADGE[h]} ${plan.name}` : plan.name;
+    o.title = h ? t('plan.health.' + h) : '';
+  });
+}
+
 function renderPlanSwitch() {
   const options = plans.list.map(p => `<option value="${p.id}" ${p.id === plans.current ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
   // Merging needs a second plan to merge into.
@@ -3882,6 +3924,7 @@ function renderPlanSwitch() {
     box.innerHTML = `<label class="plan-label">${t('plan.label')}<select data-plan-select>${options}</select></label><div class="plan-actions">${actions}</div>`;
   });
   $('#planName').innerHTML = options;
+  updatePlanBadges();
 }
 
 document.addEventListener('change', e => {
@@ -4118,6 +4161,7 @@ ui.mapHidden = new Set([].concat(prefs.get('mapHidden', [])).filter(k => REL_TYP
 ui.hideDone = prefs.get('hideDone', false) === true;
 ui.nextAll = prefs.get('nextAll', false) === true;
 ui.tlDeps = prefs.get('tlDeps', true) !== false;
+ui.planBadges = prefs.get('planBadges', true) !== false;
 ui.tlPx = clamp(Number(prefs.get('tlPx', TL.ZOOM[prefs.get('tlZoom')] || TL.ZOOM.month)) || TL.ZOOM.month, TL.MIN, TL.MAX);
 ui.mapScale = clamp(Number(prefs.get('mapScale', 1)) || 1, MAP.MIN_SCALE, MAP.MAX_SCALE);
 ui.category = typeof prefs.get('category') === 'string' ? prefs.get('category') : '';

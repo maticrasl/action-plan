@@ -1157,7 +1157,7 @@ window.moreTests = async ({ step, assert }) => {
     const pick = $('#planName');
     assert(pick.matches('select[data-plan-select]') && pick.closest('label').textContent.includes(t('plan.label')), 'labelled select');
     assert(pick.options.length === plans.list.length && pick.value === plans.current, 'lists every plan, current selected');
-    assert(pick.selectedOptions[0].textContent === 'Second plan', 'shows the current plan name');
+    assert(pick.selectedOptions[0].textContent === `${HEALTH_BADGE.ok} Second plan`, 'shows the current plan name, after its status badge');
     pick.value = first; pick.dispatchEvent(new Event('change', { bubbles: true }));
     assert(plans.current === first && $('#planName').value === first, 'switches the plan');
     assert([...document.querySelectorAll('[data-plan-select]')].every(s => s.value === first), 'all switchers agree');
@@ -2781,6 +2781,45 @@ window.moreTests = async ({ step, assert }) => {
   const shownRows = () => [...document.querySelectorAll('.tl-body .tl-row')].map(r => r.classList.contains('tl-group') ? '[group]' : r.querySelector('.tl-title').textContent).join(' ');
   const fold = id => $(`[data-tl-fold="${id}"]`);
   const $$ = sel => [...document.querySelectorAll(sel)];
+
+  await step('plan menu badges: green, yellow when something is due today, red when overdue; optional', () => {
+    fresh('Badges');
+    const badge = () => { render(); return [...new Set([...document.querySelectorAll(`[data-plan-select] option[value="${plans.current}"]`)].map(o => o.textContent.split(' ')[0]))]; };
+    eq(badge(), ['🟢'], 'an empty plan is fine');
+    const a = mk('activity', { dueDate: d(0) });
+    eq(badge(), ['🟡'], 'activity due today');
+    a.status = 'done'; eq(badge(), ['🟢'], 'done today');
+    a.status = 'todo'; a.dueDate = d(-1); eq(badge(), ['🔴'], 'overdue activity');
+    a.status = 'done';
+    const g = mk('goal', { deadline: d(0) });
+    eq(badge(), ['🟡'], 'goal deadline today');
+    g.deadline = d(-2); eq(badge(), ['🔴'], 'overdue goal');
+    g.status = 'paused'; eq(badge(), ['🟢'], 'paused goals do not count');
+    g.status = 'achieved'; eq(badge(), ['🟢'], 'nor achieved ones');
+    const r = mk('activity', { startDate: d(-3), repeat: { every: 1, unit: 'day' }, checkins: { [d(-3)]: 1, [d(-2)]: 1, [d(-1)]: 1 } });
+    eq(badge(), ['🟡'], 'daily routine not ticked today');
+    r.checkins[d(0)] = 1; eq(badge(), ['🟢'], 'ticked today');
+    delete r.checkins[d(-1)]; eq(badge(), ['🔴'], 'a missed day');
+    r.checkins[d(-1)] = 1;
+    // Another plan's badge comes from its saved data.
+    save(); const busy = plans.current;
+    createPlan('Badges 2');
+    const other = () => $(`#planName option[value="${busy}"]`).textContent;
+    eq(other(), '🟢 Badges', 'other plan, read from storage');
+    assert($(`#planName option[value="${busy}"]`).title === t('plan.health.ok'), 'with a tooltip');
+    // On by default; the setting hides them and is remembered.
+    eq(SETTINGS.planBadges.get(), true, 'on by default');
+    const box = settings.querySelector('[data-setting="planBadges"]');
+    renderSettings(); assert(box.checked, 'switch shows on');
+    box.click();
+    assert(!ui.planBadges && prefs.get('planBadges') === false, 'switched off and remembered');
+    eq(other(), 'Badges', 'plain names without badges');
+    box.click();
+    eq(other(), '🟢 Badges', 'back on');
+    const name = other();
+    deletePlan(plans.current); deletePlan(busy);
+    return name;
+  });
 
   await step('timeline: prerequisites with no goal of their own sit under the activity that waits for them', () => {
     fresh('Prereqs');
