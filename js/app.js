@@ -1508,6 +1508,13 @@ const DAY_MS = 86400000;
 const dayNum = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / DAY_MS; };
 const dayStr = n => new Date(n * DAY_MS).toISOString().slice(0, 10);
 const endOf = (kind, item) => (kind === 'goal' ? item.deadline : item.dueDate);
+// A routine that runs a set number of times ends where its start puts it: only the whole bar moves.
+const fixedEnd = item => isRoutine(item) && !!item.repeat.count;
+// The grips at the ends of the selected bar reach a little past it, so even a thin bar has room to grab.
+const tlGrip = (edge, left, width) => {
+  const inner = Math.min(6, width / 4);
+  return `left:${edge === 'start' ? left - 12 : left + width - inner}px;width:${12 + inner}px`;
+};
 
 // Rows in plan order: each top-level goal, its activity trees, then its sub-goals (recursively).
 // An activity that serves several goals is listed under each of them (its rows carry `also`: the
@@ -1620,6 +1627,8 @@ function renderTimeline() {
       const overdue = st === 'late' && e && dayNum(e) < todayN;
       const lateHtml = overdue ? `<i class="tl-overdue" style="left:${x(dayNum(e) + 1)}px;width:${(todayN - dayNum(e)) * px}px" title="${esc(t('tl.overdue', { date: fmtDate(e) }))}"></i>` : '';
       const tip = `${item.title}: ${dateText} (${t('nodeState.' + st)})`;
+      // The selected item's bar can be dragged to new dates (see "Moving dates in the timeline").
+      const drag = item.id === sel ? ` tl-drag" data-tl-drag="${item.id}` : '';
       // Arrows go to an activity's first row when it is listed under several goals.
       const first = !geo[item.id];
       if (first) geo[item.id] = { y: i * ROW + ROW / 2, start: left, end: s && e ? left + width : left + px / 2 };
@@ -1629,11 +1638,12 @@ function renderTimeline() {
       }
       if (!s || !e) {
         const cx = left + px / 2;
-        bar = `${lateHtml}<i class="tl-milestone ${kind} st-${st}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
+        bar = `${lateHtml}<i class="tl-milestone ${kind} st-${st}${drag}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
       } else {
         const inside = width > item.title.length * 7.2 + 26;
         const pct = kind === 'goal' ? goalProgress(item) : null;
-        bar = `${lateHtml}<div class="tl-bar ${kind} st-${st}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
+        const grips = drag && !fixedEnd(item) ? ['start', 'end'].map(edge => `<i class="tl-grip" data-tl-drag="${item.id}" data-tl-edge="${edge}" style="${tlGrip(edge, left, width)}"></i>`).join('') : '';
+        bar = `${lateHtml}${grips}<div class="tl-bar ${kind} st-${st}${drag}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
       }
     }
     const dim = (sel || relSel) && !near.has(item.id) ? 'dim' : '';
@@ -1672,7 +1682,7 @@ function renderTimeline() {
     <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
     <div class="map-legend tl-legend"><span class="ctl-label">${t('tl.links')}</span>${['contributes', 'subactivity', 'subgoal', ...(ui.tlDeps ? ['depends'] : [])].map(k =>
       `<span><i class="line-key${REL_TYPES[k].dash ? ' dash' : ''}" style="--rel:${REL_TYPES[k].color}"></i>${esc(relLabel(k))}</span>`).join('')}</div>
-    ${rows.length ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + 145)}" data-from="${from}">
+    ${rows.length ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + 145)}" data-from="${from}" data-to="${to}">
       <div class="tl-inner" style="--tl-w:${W}px">
         <div class="tl-head">
           <div class="tl-corner"></div>
@@ -1688,7 +1698,7 @@ function renderTimeline() {
         </div>
       </div>
     </div>` : `<div class="empty">${t('tl.noneShown')}</div>`}
-    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
+    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) + (geo[sel] ? `<p class="meta" style="margin-top:8px">${t(fixedEnd(findEntity(sel).item) ? 'tl.dragHintMove' : 'tl.dragHint')}</p>` : '') : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
 }
 
 /* ---------- Graphs (measurement history of each current state) ----------
@@ -3314,6 +3324,7 @@ function runCtxAction(act, id) {
 }
 
 viewEl.addEventListener('contextmenu', e => {
+  if (tlDrag?.touch) return e.preventDefault();
   const node = e.target.closest(NODE_SEL), line = e.target.closest('[data-rel-edit]');
   if (!node && !line) return;
   e.preventDefault();
@@ -3325,7 +3336,7 @@ viewEl.addEventListener('contextmenu', e => {
 let press = null;
 viewEl.addEventListener('pointerdown', e => {
   const node = e.target.closest(NODE_SEL), line = e.target.closest('[data-rel-edit]');
-  if ((!node && !line) || e.pointerType === 'mouse') return;
+  if ((!node && !line) || e.pointerType === 'mouse' || e.target.closest('[data-tl-drag]')) return;
   const p = { x: e.clientX, y: e.clientY, fired: false };
   p.timer = setTimeout(() => {
     p.fired = true;
@@ -3437,7 +3448,7 @@ viewEl.addEventListener('touchstart', e => {
 // Click and drag with the mouse pans the map and the timeline (touch screens pan natively).
 let pan = null;
 viewEl.addEventListener('pointerdown', e => {
-  const wrap = e.pointerType === 'mouse' && e.button === 0 && !e.target.closest('[data-map-node]') && e.target.closest(ZOOM_SEL);
+  const wrap = e.pointerType === 'mouse' && e.button === 0 && !e.target.closest('[data-map-node],[data-tl-drag]') && e.target.closest(ZOOM_SEL);
   if (!wrap) return;
   const r = wrap.getBoundingClientRect();
   if (e.clientX - r.left - wrap.clientLeft >= wrap.clientWidth || e.clientY - r.top - wrap.clientTop >= wrap.clientHeight) return; // scrollbar
@@ -3547,9 +3558,132 @@ document.addEventListener('pointercancel', e => { if (linkDrag && e.pointerId ==
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || modal.open || !ctxMenu.hidden) return;
   if (linkDrag?.moved && !linkDrag.ended) endLinkDrag();
+  else if (tlDrag) endTlDrag(false);
   else if (ui.mapLinkFrom) { ui.mapLinkFrom = null; render(); }
   else if (selectsInView() && (ui.mapSelected || ui.mapRel) && !document.querySelector('dialog[open]')) { ui.mapSelected = ui.mapRel = null; render(); }
 });
+
+/* ---------- Moving dates in the timeline ----------
+   The selected item's bar can be dragged along the time axis: from its middle it moves both dates,
+   from one of its grips only that date. With a mouse the drag starts once the pointer moves; on touch
+   screens (where dragging scrolls) after a long-press, and a long-press let go without moving still
+   opens the menu. The bar follows whole days as it goes; the dates are saved when it is let go, and
+   Esc puts it back. */
+
+let tlDrag = null; // { id, kind, edge, s0, e0, lo, hi, x, y, pointerId, touch, armed, moved, days, timer }
+let tlDragClick = false; // the click that ends a drag must not toggle the selection
+
+// The dates the drag has reached: each end keeps at least the length the item's form asks for.
+function tlDragDates(d, days = d.days) {
+  const min = d.kind === 'goal' ? 1 : 0;
+  let s = d.s0, e = d.e0;
+  if (d.edge === 'start') s = dayStr(Math.min(dayNum(d.s0) + days, dayNum(d.e0) - min));
+  else if (d.edge === 'end') e = dayStr(Math.max(dayNum(d.e0) + days, dayNum(d.s0) + min));
+  else { s = s && addDays(s, days); e = e && addDays(e, days); }
+  const item = findEntity(d.id)?.item;
+  if (item && fixedEnd(item)) e = lastOccurrence({ ...item, startDate: s }, item.repeat.count) || e;
+  return { s, e };
+}
+
+// Redraws the dragged item's bar (in every row it is listed in) without redrawing the timeline.
+function previewTlDrag(d) {
+  const scroll = $('.tl-scroll');
+  if (!scroll) return;
+  const { s, e } = tlDragDates(d), px = ui.tlPx, from = Number(scroll.dataset.from);
+  const a = dayNum(s || e), b = dayNum(e || s), left = (a - from) * px, width = (b - a + 1) * px;
+  document.querySelectorAll(`[data-tl-node="${d.id}"]`).forEach(row => {
+    row.querySelector('.tl-overdue')?.remove();
+    const bar = row.querySelector('.tl-bar'), dot = row.querySelector('.tl-milestone'), label = row.querySelector('.tl-bar-label');
+    if (bar) Object.assign(bar.style, { left: `${left}px`, width: `${width}px` });
+    if (dot) dot.style.left = `${left + px / 2}px`;
+    if (label) label.style.left = `${bar ? left + width + 8 : left + px / 2 + 14}px`;
+    row.querySelectorAll('[data-tl-edge]').forEach(g => { g.style.cssText = tlGrip(g.dataset.tlEdge, left, width); });
+    row.querySelector('.tl-dates').textContent = s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e);
+  });
+}
+
+function startTlDrag(d) {
+  d.moved = true;
+  $('.tl-scroll')?.classList.add('tl-dragging', d.edge ? 'tl-resizing' : 'tl-moving');
+  getSelection().removeAllRanges();
+}
+
+// Saves the new dates (or, with `keep` false, puts the bar back) and redraws the timeline.
+function endTlDrag(keep) {
+  const d = tlDrag;
+  if (!d) return;
+  clearTimeout(d.timer);
+  tlDrag = null;
+  tlDragClick = d.moved || d.armed;
+  $('.tl-scroll')?.classList.remove('tl-dragging', 'tl-resizing', 'tl-moving');
+  d.target?.removeEventListener('touchmove', tlDragTouchMove);
+  const ent = findEntity(d.id);
+  if (!keep || !d.days || !ent) return d.moved && render();
+  const { s, e } = tlDragDates(d);
+  if (d.s0) ent.item.startDate = s;
+  if (d.e0 || fixedEnd(ent.item)) ent.item[ent.kind === 'goal' ? 'deadline' : 'dueDate'] = e;
+  save();
+  render();
+  toast(t('tl.datesMoved', { name: ent.item.title, dates: s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e) }));
+}
+
+// Once a long-press has picked the bar up, moving the finger drags it instead of scrolling.
+function tlDragTouchMove(e) {
+  if (tlDrag?.armed && e.cancelable) e.preventDefault();
+}
+
+viewEl.addEventListener('pointerdown', e => {
+  const el = e.target.closest('[data-tl-drag]'), ent = el && findEntity(el.dataset.tlDrag);
+  if (!ent || (e.pointerType === 'mouse' && e.button !== 0) || tlDrag) return;
+  const { kind, item } = ent, edge = el.dataset.tlEdge || '';
+  const s0 = item.startDate || '', e0 = endOf(kind, item) || '';
+  // How far the drag may go: to the ends of the timeline as drawn.
+  const scroll = $('.tl-scroll'), from = Number(scroll.dataset.from), to = Number(scroll.dataset.to);
+  const ends = (edge === 'start' ? [s0] : edge === 'end' ? [e0] : [s0, e0]).filter(Boolean).map(dayNum);
+  const d = tlDrag = { id: item.id, kind, edge, s0, e0, lo: from - Math.min(...ends), hi: to - Math.max(...ends),
+    x: e.clientX, y: e.clientY, pointerId: e.pointerId, touch: e.pointerType !== 'mouse', armed: false, moved: false, days: 0 };
+  if (!d.touch) return;
+  // Touch events keep going to the element the finger started on, even after a redraw detaches it.
+  d.target = e.target;
+  d.target.addEventListener('touchmove', tlDragTouchMove, { passive: false });
+  d.timer = setTimeout(() => {
+    d.armed = true;
+    $('.tl-scroll')?.classList.add('tl-dragging');
+    navigator.vibrate?.(15);
+  }, LONG_PRESS_MS);
+});
+document.addEventListener('pointermove', e => {
+  const d = tlDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  const dx = e.clientX - d.x;
+  if (!d.moved) {
+    const far = Math.hypot(dx, e.clientY - d.y);
+    // A finger that moves before the long-press is up scrolls the timeline as usual.
+    if (d.touch && !d.armed) return far > 10 && endTlDrag(false);
+    if (far < 4) return;
+    startTlDrag(d);
+  }
+  const days = clamp(Math.round(dx / ui.tlPx), d.lo, d.hi);
+  if (days === d.days) return;
+  d.days = days;
+  previewTlDrag(d);
+});
+document.addEventListener('pointerup', e => {
+  const d = tlDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  // A long-press let go where it started opens the menu, as it does elsewhere.
+  if (d.armed && !d.moved) {
+    endTlDrag(false);
+    return openCtxMenu(d.id, d.x, d.y + 12);
+  }
+  endTlDrag(true);
+});
+document.addEventListener('pointercancel', e => { if (tlDrag && e.pointerId === tlDrag.pointerId) endTlDrag(false); });
+document.addEventListener('click', e => {
+  if (tlDragClick) { e.stopPropagation(); e.preventDefault(); }
+  tlDragClick = false;
+}, true);
+document.addEventListener('pointerdown', () => { tlDragClick = false; }, true);
 
 // Safari: trackpad pinch on macOS arrives as gesture events; on iOS they duplicate the touches above.
 let gesture = null;

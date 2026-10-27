@@ -574,6 +574,17 @@ textarea { resize: vertical; min-height: 68px; }
   border: 1.5px solid var(--line-strong); background: var(--surface); border-radius: 2px; z-index: 1;
 }
 .tl-milestone.goal { border-color: var(--goal); border-width: 2px; }
+/* The selected bar can be dragged to new dates; its grips change one end only. */
+.tl-drag { cursor: grab; box-shadow: 0 0 0 3px color-mix(in srgb, var(--goal) 35%, transparent); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.tl-grip { position: absolute; top: 4px; height: 32px; z-index: 2; cursor: ew-resize; -webkit-touch-callout: none; }
+.tl-grip::after {
+  content: ''; position: absolute; top: 9px; height: 14px; width: 4px; border-radius: 2px; background: var(--goal);
+}
+.tl-grip[data-tl-edge="start"]::after { left: 10px; }
+.tl-grip[data-tl-edge="end"]::after { right: 10px; }
+.tl-moving, .tl-moving * { cursor: grabbing; }
+.tl-resizing, .tl-resizing * { cursor: ew-resize; }
+.tl-dragging .tl-drag { box-shadow: 0 0 0 3px color-mix(in srgb, var(--goal) 60%, transparent), 0 4px 12px rgb(0 0 0 / .18); }
 .tl-overdue {
   position: absolute; top: 12px; height: 16px; border-radius: 0 4px 4px 0;
   background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--bad) 70%, transparent) 0 2px, transparent 2px 6px);
