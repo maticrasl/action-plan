@@ -2724,4 +2724,136 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('en');
     return t('tl.hint');
   });
+  /* ---------- Timeline: an activity under each of its goals; collapsible goals ---------- */
+
+  const foldFixture = () => {
+    fresh('Fold');
+    const g1 = mk('goal', { title: 'G1', startDate: d(-10), deadline: d(60) });
+    const g1a = mk('goal', { title: 'G1a', startDate: d(-8), deadline: d(40) });
+    const g2 = mk('goal', { title: 'G2', startDate: d(-5), deadline: d(50) });
+    const g3 = mk('goal', { title: 'G3', startDate: d(-1), deadline: d(20) }); // nothing under it
+    const a = mk('activity', { title: 'A', startDate: d(-4), dueDate: d(10) });
+    const a1 = mk('activity', { title: 'A1', startDate: d(-3), dueDate: d(5) });
+    const b = mk('activity', { title: 'B', startDate: d(-2), dueDate: d(12) });
+    const c = mk('activity', { title: 'C', startDate: d(11), dueDate: d(20) });
+    const u = mk('activity', { title: 'U', startDate: d(1), dueDate: d(3) });
+    rel(g1a, g1, 'subgoal');
+    rel(a, g1, 'contributes'); rel(a, g2, 'contributes'); rel(a1, a, 'subactivity');
+    rel(b, g1, 'contributes'); rel(b, g1a, 'contributes');
+    rel(c, g2, 'contributes'); rel(c, a, 'depends');
+    save();
+    ui.tlDeps = true; ui.hideDone = false; ui.timelineGoal = '';
+    setView('timeline');
+    return { g1, g1a, g2, g3, a, a1, b, c, u };
+  };
+  const rowsText = rows => rows.map(r => r.kind === 'group' ? `[${r.label}]` : r.item.title).join(' ');
+  const shownRows = () => [...document.querySelectorAll('.tl-body .tl-row')].map(r => r.classList.contains('tl-group') ? '[group]' : r.querySelector('.tl-title').textContent).join(' ');
+  const fold = id => $(`[data-tl-fold="${id}"]`);
+  const $$ = sel => [...document.querySelectorAll(sel)];
+
+  await step('timeline: an activity that serves several goals is listed under each', () => {
+    const { g1, g2, a, b, c } = foldFixture();
+    eq(rowsText(timelineRows(null)), `G1 A A1 B G1a B G2 A A1 C G3 [${t('tl.unlinked')}] U`, 'under each goal, with its sub-activities');
+    eq(document.querySelectorAll(`[data-tl-node="${a.id}"]`).length, 2, 'two rows for A');
+    const also = id => [...document.querySelectorAll(`[data-tl-node="${id}"] .tl-also`)].map(x => x.title);
+    eq(also(a.id), [t('tl.alsoUnder', { goals: 'G2' }), t('tl.alsoUnder', { goals: 'G1' })], 'each copy names the other goal');
+    eq(also(b.id), [t('tl.alsoUnder', { goals: 'G1a' }), t('tl.alsoUnder', { goals: 'G1' })], 'a goal and its sub-goal');
+    eq(also(c.id), [], 'an activity under one goal has no mark');
+    assert($(`[data-tl-node="${a.id}"]`).getAttribute('aria-label').includes(t('tl.alsoUnder', { goals: 'G2' })), 'screen readers hear it too');
+    // One item: selecting a copy lights every copy.
+    clickEl($$(`[data-tl-node="${a.id}"]`)[1]);
+    assert([...document.querySelectorAll(`[data-tl-node="${a.id}"]`)].every(r => r.classList.contains('selected')), 'all copies selected');
+    ui.mapSelected = null; render();
+    // The dependency arrow goes to the first copy.
+    const rowsNow = [...document.querySelectorAll('.tl-body .tl-row')];
+    const firstA = rowsNow.findIndex(r => r.dataset.tlNode === a.id);
+    const arrow = $(`.tl-deps [data-rel-edit] .tl-dep`).getAttribute('d');
+    eq(Number(arrow.match(/^M[\d.-]+,([\d.-]+)/)[1]), firstA * TL.ROW + TL.ROW / 2, 'arrow starts at the first copy');
+    // Editing a copy edits the one activity.
+    openForm('activity', a.id); $('#f-title').value = 'A renamed'; submitForm();
+    eq([...document.querySelectorAll(`[data-tl-node="${a.id}"] .tl-title`)].map(x => x.textContent), ['A renamed', 'A renamed'], 'both copies follow');
+    eq(db.activities.filter(x => x.title === 'A renamed').length, 1, 'still one activity');
+    // A goal filter shows only the goals in scope, so no mark there.
+    ui.timelineGoal = g2.id; render();
+    eq(document.querySelectorAll(`[data-tl-node="${a.id}"]`).length, 1, 'filtered to G2: one row');
+    eq(also(a.id), [], 'and no mark');
+    ui.timelineGoal = ''; render();
+    // Hide done hides every copy.
+    b.status = 'done'; ui.hideDone = true; render();
+    eq(document.querySelectorAll(`[data-tl-node="${b.id}"]`).length, 0, 'done copies hidden');
+    ui.hideDone = false; b.status = 'todo'; render();
+    return rowsText(timelineRows(null));
+  });
+
+  await step('timeline: goals collapse and expand, remembered per plan', () => {
+    const { g1, g1a, g2, g3, a, b } = foldFixture();
+    assert(fold(g1.id) && fold(g2.id) && fold(g1a.id), 'goals with something under them can fold');
+    assert(!fold(g3.id), 'a goal with nothing under it has no fold button');
+    eq([fold(g1.id).getAttribute('aria-expanded'), fold(g1.id).getAttribute('aria-label')], ['true', t('tl.collapse', { name: 'G1' })], 'expanded at first');
+    fold(g1.id).click();
+    eq(shownRows(), 'G1 G2 A A1 C G3 [group] U', 'G1 folded: its activities and sub-goal hidden');
+    eq([fold(g1.id).getAttribute('aria-expanded'), fold(g1.id).getAttribute('aria-label')], ['false', t('tl.expand', { name: 'G1' })], 'says it is folded');
+    assert($(`[data-tl-node="${g1.id}"] .tl-bar`), 'the goal keeps its bar');
+    eq(ui.mapSelected, null, 'folding does not select the goal');
+    assert(!modal.open, 'nor open it');
+    const folded = timelineRows(null, tlCollapsed());
+    eq(folded.slice(folded.findIndex(r => r.kind === 'group') + 1).map(r => r.item.title), ['U'], 'B is still under a goal, so it does not move to the unlinked group');
+    eq($$(`[data-tl-node="${a.id}"] .tl-also`).map(x => x.title), [t('tl.alsoUnder', { goals: 'G1' })], 'the copy under G2 still names folded G1');
+    // Remembered: on redraw, per plan, and after switching plans.
+    render();
+    eq(fold(g1.id).getAttribute('aria-expanded'), 'false', 'kept on redraw');
+    const here = plans.current;
+    const other = addPlan({ name: 'Other fold', data: clone(db) });
+    setView('timeline');
+    eq(fold(g1.id).getAttribute('aria-expanded'), 'true', 'another plan has its own folds');
+    openPlan(here); setView('timeline');
+    eq(fold(g1.id).getAttribute('aria-expanded'), 'false', 'back in this plan, still folded');
+    deletePlan(other.id); openPlan(here); setView('timeline');
+    fold(g1.id).click();
+    eq(shownRows(), 'G1 A A1 B G1a B G2 A A1 C G3 [group] U', 'expanded again');
+    // A sub-goal folds on its own.
+    fold(g1a.id).click();
+    eq(shownRows(), 'G1 A A1 B G1a G2 A A1 C G3 [group] U', 'sub-goal folded');
+    fold(g1a.id).click();
+    // The unlinked group folds too.
+    const restFold = $('[data-tl-fold="rest"]');
+    assert(restFold, 'the group can fold');
+    restFold.click();
+    eq(shownRows(), 'G1 A A1 B G1a B G2 A A1 C G3 [group]', 'group folded');
+    $('[data-tl-fold="rest"]').click();
+    // Collapse all / Expand all.
+    $('[data-tl-fold-all="collapse"]').click();
+    eq(shownRows(), 'G1 G2 G3 [group]', 'collapse all: one line per goal');
+    $('[data-tl-fold-all="expand"]').click();
+    eq(shownRows(), 'G1 A A1 B G1a B G2 A A1 C G3 [group] U', 'expand all');
+    eq(prefs.get('tlCollapsed.' + plans.current, null), [], 'saved as nothing folded');
+    // The fold button is a real button: Enter on it is left to the button, not taken as selecting the row.
+    fold(g2.id).focus();
+    const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    fold(g2.id).dispatchEvent(ev);
+    assert(!ev.defaultPrevented && !modal.open && ui.mapSelected === null, 'Enter left to the button');
+    fold(g2.id).click();
+    assert(document.activeElement === fold(g2.id), 'focus stays on the button after folding');
+    eq(fold(g2.id).getAttribute('aria-expanded'), 'false', 'folded with the button');
+    fold(g2.id).click();
+    // Arrows to hidden rows are not drawn; the arrow to A's first copy stays while G2 is folded.
+    fold(g2.id).click();
+    eq(document.querySelectorAll('.tl-deps [data-rel-edit]').length, 0, 'C hidden: its arrow is not drawn');
+    fold(g2.id).click();
+    eq(document.querySelectorAll('.tl-deps [data-rel-edit]').length, 1, 'shown again');
+    deletePlan(plans.current);
+    return 'ok';
+  });
+
+  await step('timeline: fold and “also under” wording in both languages', () => {
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code);
+      for (const k of ['tl.collapseAll', 'tl.expandAll']) assert(t(k) && t(k) !== k, `${code} ${k}`);
+      assert(t('tl.collapse', { name: 'X' }).includes('X') && t('tl.expand', { name: 'X' }).includes('X') && t('tl.alsoUnder', { goals: 'X' }).includes('X'), `${code} names`);
+      assert(/↻/.test(t('tl.hint')) || /fold|collapse|strn/i.test(t('tl.hint')), `${code} hint mentions folding`);
+      assert(/collapse|strn/i.test(t('help.view.timeline')), `${code} help mentions folding`);
+    }
+    changeLanguage('en');
+    return t('tl.alsoUnder', { goals: 'G1, G2' });
+  });
 };

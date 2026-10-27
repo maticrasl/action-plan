@@ -1452,6 +1452,23 @@ function mapSelection(id) {
   </div>`;
 }
 
+// The ▸/▾ button that folds a goal (or the 'rest' group) in the timeline.
+const foldBtn = (key, name, folded) => `<button type="button" class="tl-fold" data-tl-fold="${key}" aria-expanded="${!folded}" aria-label="${esc(t(folded ? 'tl.expand' : 'tl.collapse', { name }))}" title="${esc(t(folded ? 'tl.expand' : 'tl.collapse', { name }))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${folded ? 'M9 6l6 6-6 6' : 'M6 9l6 6 6-6'}"/></svg></button>`;
+
+function toggleTlFold(key) {
+  const set = tlCollapsed();
+  set.has(key) ? set.delete(key) : set.add(key);
+  setTlCollapsed(set);
+  render();
+  $(`[data-tl-fold="${key}"]`)?.focus();
+}
+// Collapse all folds every goal with something under it, and the 'rest' group.
+function foldAllTl(collapse) {
+  const keys = collapse ? timelineRows(scopeFor(ui.timelineGoal)).filter(r => r.fold || r.kind === 'group').map(r => r.kind === 'group' ? 'rest' : r.item.id) : [];
+  setTlCollapsed(new Set(keys));
+  render();
+}
+
 const relText = r => `${findEntity(r.from).item.title} ${relLabel(r.type)} ${findEntity(r.to).item.title}`;
 
 // The selected line, with buttons for touch screens (no Delete key there).
@@ -1493,31 +1510,37 @@ const dayStr = n => new Date(n * DAY_MS).toISOString().slice(0, 10);
 const endOf = (kind, item) => (kind === 'goal' ? item.deadline : item.dueDate);
 
 // Rows in plan order: each top-level goal, its activity trees, then its sub-goals (recursively).
-// Activities that are not under any shown goal come last in their own group.
-function timelineRows(scope) {
-  const rows = [], placed = new Set();
+// An activity that serves several goals is listed under each of them (its rows carry `also`: the
+// other goals it is under). A goal in `collapsed` keeps its own row but hides what is under it;
+// what it hides still counts as placed. Activities under no shown goal come last in their own
+// group ('rest', which can be collapsed too).
+function timelineRows(scope, collapsed = new Set()) {
+  const rows = [], placedGoals = new Set(), placed = new Set(), under = new Map(); // activity → goals it is listed under
   const visible = (kind, x) => !scope || scope[kind].has(x.id);
   const startKey = x => x.startDate || x.dueDate || x.deadline || '9999';
   const byStart = (a, b) => startKey(a).localeCompare(startKey(b));
+  const kids = a => relsTo(a.id, 'subactivity').map(r => db.activities.find(x => x.id === r.from)).filter(Boolean).sort(byStart);
   // `rel` is how a row hangs off the row at index `parent` (drawn as a connector in that relation's colour).
-  // A hidden activity passes its own place in the tree on to its children.
-  const addActivity = (a, depth, rel, parent) => {
-    if (placed.has(a.id)) return;
+  // A hidden activity passes its own place in the tree on to its children; `hidden` walks without adding rows.
+  const addActivity = (a, depth, rel, parent, goal, hidden, seen = new Set()) => {
+    if (seen.has(a.id)) return;
+    seen.add(a.id);
     placed.add(a.id);
-    const show = visible('activity', a) && !(ui.hideDone && a.status === 'done');
-    const here = show ? rows.push({ kind: 'activity', item: a, depth, rel, parent }) - 1 : parent;
-    relsTo(a.id, 'subactivity').map(r => db.activities.find(x => x.id === r.from)).filter(Boolean).sort(byStart)
-      .forEach(c => (show ? addActivity(c, depth + 1, 'subactivity', here) : addActivity(c, depth, rel, parent)));
+    if (goal) under.set(a.id, [...(under.get(a.id) || []), goal]);
+    const show = !hidden && visible('activity', a) && !(ui.hideDone && a.status === 'done');
+    const here = show ? rows.push({ kind: 'activity', item: a, depth, rel, parent, goal }) - 1 : parent;
+    kids(a).forEach(c => (show ? addActivity(c, depth + 1, 'subactivity', here, goal, hidden, seen) : addActivity(c, depth, rel, parent, goal, hidden, seen)));
   };
-  const addGoal = (g, depth, rel, parent) => {
-    if (placed.has(g.id)) return;
-    placed.add(g.id);
-    const here = rows.push({ kind: 'goal', item: g, depth, rel, parent }) - 1;
+  const addGoal = (g, depth, rel, parent, hidden) => {
+    if (placedGoals.has(g.id)) return;
+    placedGoals.add(g.id);
     const contributors = new Set(relsTo(g.id, 'contributes').map(r => r.from));
-    db.activities.filter(a => contributors.has(a.id) && !ancestors(a.id, 'subactivity').some(p => contributors.has(p)))
-      .sort(byStart).forEach(a => addActivity(a, depth + 1, 'contributes', here));
-    relsTo(g.id, 'subgoal').map(r => db.goals.find(x => x.id === r.from)).filter(x => x && visible('goal', x)).sort(byStart)
-      .forEach(sg => addGoal(sg, depth + 1, 'subgoal', here));
+    const acts = db.activities.filter(a => contributors.has(a.id) && !ancestors(a.id, 'subactivity').some(p => contributors.has(p))).sort(byStart);
+    const subs = relsTo(g.id, 'subgoal').map(r => db.goals.find(x => x.id === r.from)).filter(x => x && visible('goal', x)).sort(byStart);
+    const folded = collapsed.has(g.id);
+    const here = hidden ? parent : rows.push({ kind: 'goal', item: g, depth, rel, parent, fold: acts.length + subs.length > 0, collapsed: folded }) - 1;
+    acts.forEach(a => addActivity(a, depth + 1, 'contributes', here, g.id, hidden || folded));
+    subs.forEach(sg => addGoal(sg, depth + 1, 'subgoal', here, hidden || folded));
   };
   const goals = db.goals.filter(g => visible('goal', g));
   const goalIds = new Set(goals.map(g => g.id));
@@ -1525,16 +1548,26 @@ function timelineRows(scope) {
 
   const rest = db.activities.filter(a => !placed.has(a.id) && visible('activity', a));
   const restIds = new Set(rest.map(a => a.id));
-  const group = { kind: 'group', label: t(scope ? 'tl.related' : 'tl.unlinked'), depth: 0 };
+  const group = { kind: 'group', key: 'rest', label: t(scope ? 'tl.related' : 'tl.unlinked'), depth: 0, collapsed: collapsed.has('rest') };
   const before = rows.push(group);
-  rest.filter(a => !ancestors(a.id, 'subactivity').some(p => restIds.has(p))).sort(byStart).forEach(a => addActivity(a, 1));
-  if (rows.length === before) rows.pop();
+  rest.filter(a => !ancestors(a.id, 'subactivity').some(p => restIds.has(p))).sort(byStart).forEach(a => addActivity(a, 1, undefined, undefined, '', group.collapsed));
+  if (rows.length === before && !group.collapsed) rows.pop();
+  if (group.collapsed && !rest.length) rows.pop();
+  // Each copy of an activity names the other goals it is listed under.
+  rows.forEach(r => {
+    const goalsOf = r.kind === 'activity' && [...new Set(under.get(r.item.id) || [])];
+    if (goalsOf && goalsOf.length > 1) r.also = goalsOf.filter(id => id !== r.goal).map(id => findEntity(id).item.title);
+  });
   return rows;
 }
 
+// Goals (and the 'rest' group) folded in the timeline: per plan, on this device.
+const tlCollapsed = () => new Set(prefs.get('tlCollapsed.' + plans.current, []));
+const setTlCollapsed = set => prefs.set('tlCollapsed.' + plans.current, [...set]);
+
 function renderTimeline() {
   if (!db.goals.length && !db.activities.length) return emptyState(t('tl.emptyTitle'), t('tl.emptyText'), 'goal');
-  const rows = timelineRows(scopeFor(ui.timelineGoal));
+  const rows = timelineRows(scopeFor(ui.timelineGoal), tlCollapsed());
   const { ROW } = TL;
   const px = ui.tlPx;
   const todayN = dayNum(today());
@@ -1575,7 +1608,7 @@ function renderTimeline() {
 
   const geo = {};
   const body = rows.map((r, i) => {
-    if (r.kind === 'group') return `<div class="tl-row tl-group"><div class="tl-label">${esc(r.label)}</div><div class="tl-track"></div></div>`;
+    if (r.kind === 'group') return `<div class="tl-row tl-group"><div class="tl-label">${foldBtn('rest', r.label, r.collapsed)}${esc(r.label)}</div><div class="tl-track"></div></div>`;
     const { item, kind, depth } = r;
     const st = kind === 'goal' ? goalState(item) : activityState(item);
     const s = item.startDate, e = endOf(kind, item);
@@ -1587,11 +1620,15 @@ function renderTimeline() {
       const overdue = st === 'late' && e && dayNum(e) < todayN;
       const lateHtml = overdue ? `<i class="tl-overdue" style="left:${x(dayNum(e) + 1)}px;width:${(todayN - dayNum(e)) * px}px" title="${esc(t('tl.overdue', { date: fmtDate(e) }))}"></i>` : '';
       const tip = `${item.title}: ${dateText} (${t('nodeState.' + st)})`;
-      geo[item.id] = { y: i * ROW + ROW / 2, start: left, end: s && e ? left + width : left + px / 2 };
+      // Arrows go to an activity's first row when it is listed under several goals.
+      const first = !geo[item.id];
+      if (first) geo[item.id] = { y: i * ROW + ROW / 2, start: left, end: s && e ? left + width : left + px / 2 };
+      if ((!s || !e) && first) {
+        geo[item.id].start = left + px / 2 - 7;
+        geo[item.id].end = left + px / 2 + 7;
+      }
       if (!s || !e) {
         const cx = left + px / 2;
-        geo[item.id].start = cx - 7;
-        geo[item.id].end = cx + 7;
         bar = `${lateHtml}<i class="tl-milestone ${kind} st-${st}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
       } else {
         const inside = width > item.title.length * 7.2 + 26;
@@ -1600,8 +1637,10 @@ function renderTimeline() {
       }
     }
     const dim = (sel || relSel) && !near.has(item.id) ? 'dim' : '';
-    return `<div class="tl-row ${kind} ${dim}${item.id === sel ? ' selected' : ''}" data-tl-node="${item.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(`${item.title}, ${dateText}`)}">
-      <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow" style="--rel:${REL_TYPES[r.rel].color};--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-title">${esc(item.title)}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
+    const also = r.also ? t('tl.alsoUnder', { goals: r.also.join(', ') }) : '';
+    const fold = kind === 'goal' ? (r.fold ? foldBtn(item.id, item.title, r.collapsed) : '<span class="tl-fold-gap"></span>') : '';
+    return `<div class="tl-row ${kind} ${dim}${item.id === sel ? ' selected' : ''}" data-tl-node="${item.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc([item.title, dateText, also].filter(Boolean).join(', '))}">
+      <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow" style="--rel:${REL_TYPES[r.rel].color};--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}${fold}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-head-line"><span class="tl-title">${esc(item.title)}</span>${also ? `<span class="tl-also" title="${esc(also)}" aria-hidden="true">↻</span>` : ''}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
       <div class="tl-track">${bar}</div>
     </div>`;
   }).join('');
@@ -1626,6 +1665,8 @@ function renderTimeline() {
       ${goalSelect('timeline', ui.timelineGoal)}
       ${hideDoneToggle()}
       <button class="chip" data-tl-deps aria-pressed="${ui.tlDeps}">${t('tl.deps')}</button>
+      <button class="chip" data-tl-fold-all="collapse">${t('tl.collapseAll')}</button>
+      <button class="chip" data-tl-fold-all="expand">${t('tl.expandAll')}</button>
       <div class="chips" role="group" aria-label="${esc(t('tl.zoom'))}">${zoom}</div>
     </div>
     <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
@@ -2504,7 +2545,7 @@ $('#addBtn').addEventListener('click', () => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -2520,6 +2561,8 @@ viewEl.addEventListener('click', e => {
     return;
   }
   e.stopPropagation();
+  if (el.dataset.tlFold) return toggleTlFold(el.dataset.tlFold);
+  if (el.dataset.tlFoldAll) return foldAllTl(el.dataset.tlFoldAll === 'collapse');
   if (el.dataset.relOpen) return openForm('relation', el.dataset.relOpen);
   if (el.dataset.relRemove) return removeRelation(el.dataset.relRemove);
   if (el.hasAttribute('data-next-more')) {
@@ -3495,7 +3538,8 @@ viewEl.addEventListener('keydown', e => {
     return openForm('relation', e.target.closest('[data-rel-edit]').dataset.relEdit);
   }
   const node = e.target.closest?.(NODE_SEL);
-  if (!node) return;
+  // A fold button inside a timeline row handles its own keys.
+  if (!node || e.target.closest('[data-tl-fold]')) return;
   if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
     e.preventDefault();
     const r = node.getBoundingClientRect();
