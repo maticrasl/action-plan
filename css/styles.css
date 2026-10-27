@@ -481,6 +481,7 @@ textarea { resize: vertical; min-height: 68px; }
 /* Lines are clickable through a wide invisible twin; hover or focus thickens the visible line. */
 .edge-g { cursor: pointer; outline: none; }
 .edge-g.dim { opacity: .15; }
+.edge-g.sel .edge { stroke-width: 4.5 !important; }
 .edge-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
 .edge-g:hover .edge, .edge-g:focus-visible .edge { stroke-width: 3.5 !important; }
 /* Long-press must not select text or open the iOS callout. */
@@ -525,7 +526,10 @@ textarea { resize: vertical; min-height: 68px; }
 .tl-today { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--blaze); z-index: 2; }
 .tl-deps { position: absolute; top: 0; left: var(--label-w); pointer-events: none; z-index: 2; overflow: visible; }
 .tl-dep { fill: none; stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 4 3; }
-.tl-dep.dim { opacity: .15; }
+.tl-dep-g { cursor: pointer; outline: none; }
+.tl-dep-g.dim { opacity: .15; }
+.tl-dep-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; }
+.tl-dep-g:hover .tl-dep, .tl-dep-g:focus-visible .tl-dep, .tl-dep-g.sel .tl-dep { stroke-width: 3; }
 #tl-arrow path { fill: var(--bad); }
 
 .tl-row { display: flex; height: var(--row); position: relative; cursor: pointer; }

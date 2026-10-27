@@ -939,8 +939,11 @@ window.moreTests = async ({ step, assert }) => {
     const node = () => $(`[data-map-node="${g1.id}"]`);
     node().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     assert(ui.mapSelected === g1.id, 'Enter selects');
+    assert(!modal.open, 'Enter on an unselected item only selects it');
     node().dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-    assert(ui.mapSelected === null, 'Space toggles off');
+    assert(modal.open && formCtx.kind === 'goal' && formCtx.id === g1.id && ui.mapSelected === g1.id, 'Space on the selected item opens it');
+    modal.close();
+    ui.mapSelected = null; render();
     node().dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
     assert(!ctxMenu.hidden && ctxMenu.dataset.id === g1.id, 'menu key opens the context menu');
     const btns = [...ctxMenu.querySelectorAll('button')];
@@ -2326,5 +2329,391 @@ window.moreTests = async ({ step, assert }) => {
     });
     deletePlan(id);
     return results.join(' | ');
+  });
+  /* ---------- Map: select a line, Delete removes it; Delete on an item asks; double-click edits ---------- */
+
+  const mapFixture = () => {
+    fresh('Map keys');
+    const g = mk('goal', { title: 'Run a marathon' });
+    const a = mk('activity', { title: 'Train' });
+    const b = mk('activity', { title: 'Buy shoes' });
+    const s = mk('state', { title: 'Distance' });
+    rel(a, g, 'contributes'); rel(b, g, 'contributes'); rel(s, g, 'measures');
+    save();
+    setView('map');
+    return { g, a, b, s };
+  };
+  const clickEl = (el, detail = 1) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail }));
+  const edge = id => $(`[data-rel-edit="${id}"]`);
+  const nodeEl = id => $(`[data-map-node="${id}"]`);
+  const press = (key, target = document.activeElement || document.body) => {
+    const ev = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    target.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  };
+  const relOf = (from, to) => db.relations.find(r => r.from === from.id && r.to === to.id);
+
+  await step('map: clicking a line selects it; clicking it again or double-clicking opens it', () => {
+    const { g, a, b, s } = mapFixture();
+    const r = relOf(a, g);
+    clickEl(edge(r.id));
+    assert(!modal.open, 'a click does not open the form');
+    eq([ui.mapRel, ui.mapSelected], [r.id, null], 'the line is selected');
+    assert(edge(r.id).classList.contains('sel'), 'drawn as selected');
+    assert([...document.querySelectorAll('[data-rel-edit]')].filter(e => e.dataset.relEdit !== r.id).every(e => e.classList.contains('dim')), 'other lines dimmed');
+    assert(!nodeEl(a.id).classList.contains('dim') && !nodeEl(g.id).classList.contains('dim'), 'its two items stay lit');
+    assert(nodeEl(b.id).classList.contains('dim') && nodeEl(s.id).classList.contains('dim'), 'the rest dims');
+    const row = $('.map-rel-selection');
+    assert(row && row.textContent.includes('Train') && row.textContent.includes('Run a marathon'), 'a row names the relationship');
+    assert(row.querySelector('[data-rel-open]') && row.querySelector('[data-rel-remove]') && row.querySelector('[data-map-clear]'), 'with Edit, Remove and Clear (for touch screens)');
+    // Selecting an item clears the line, and the other way round.
+    clickEl(nodeEl(s.id));
+    eq([ui.mapRel, ui.mapSelected], [null, s.id], 'an item click selects the item instead');
+    clickEl(edge(r.id));
+    eq([ui.mapRel, ui.mapSelected], [r.id, null], 'a line click selects the line instead');
+    // A second click on the selected line opens it, so a double-click does too.
+    clickEl(edge(r.id), 2);
+    assert(modal.open && formCtx.kind === 'relation' && formCtx.id === r.id, 'second click opens the relationship');
+    modal.close();
+    clickEl(edge(relOf(b, g).id));
+    clickEl(edge(relOf(b, g).id));
+    assert(modal.open && formCtx.id === relOf(b, g).id, 'clicking a selected line opens it');
+    modal.close();
+    // Enter or Space on a focused line opens it as before.
+    edge(r.id).focus();
+    press('Enter', edge(r.id));
+    assert(modal.open && formCtx.id === r.id, 'Enter opens');
+    modal.close();
+    edge(r.id).focus();
+    press(' ', edge(r.id));
+    assert(modal.open && formCtx.id === r.id, 'Space opens');
+    modal.close();
+    // The row's buttons.
+    clickEl(edge(r.id));
+    $('.map-rel-selection [data-rel-open]').click();
+    assert(modal.open && formCtx.id === r.id, 'Edit opens it');
+    modal.close();
+    $('.map-rel-selection [data-map-clear]').click();
+    eq(ui.mapRel, null, 'Clear clears it');
+    clickEl(edge(r.id));
+    press('Escape', document.body);
+    eq(ui.mapRel, null, 'Escape clears it');
+    clickEl(nodeEl(a.id));
+    eq(ui.mapSelected, a.id, 'item selected');
+    press('Escape', nodeEl(a.id));
+    eq(ui.mapSelected, null, 'Escape deselects an item too');
+    assert(!nodeEl(g.id).classList.contains('dim') && !nodeEl(s.id).classList.contains('dim'), 'nothing dimmed after Escape');
+    clickEl(nodeEl(a.id));
+    openForm('goal', g.id);
+    press('Escape', document.body);
+    eq(ui.mapSelected, a.id, 'Escape in an open form leaves the map selection alone');
+    modal.close();
+    press('Escape', document.body);
+    clickEl(edge(r.id));
+    clickEl($('.map-wrap svg') || $('.map-wrap'));
+    eq(ui.mapRel, null, 'clicking empty space clears it');
+    return 'ok';
+  });
+
+  await step('map: Delete or Backspace removes the selected line at once', () => {
+    const { g, a, b, s } = mapFixture();
+    const n0 = db.relations.length, r = relOf(a, g), keep = clone(db.relations.filter(x => x.id !== r.id));
+    clickEl(edge(r.id));
+    let asked = 0;
+    const realConfirm = window.confirm;
+    window.confirm = () => { asked++; return true; };
+    try {
+      assert(press('Delete', document.body), 'Delete is handled');
+      eq(asked, 0, 'no question for a line');
+      eq(db.relations.length, n0 - 1, 'one relationship fewer');
+      assert(!relOf(a, g), 'the selected one is gone');
+      eq(db.relations, keep, 'the others untouched');
+      assert(findEntity(a.id) && findEntity(g.id), 'its items stay');
+      eq(readPlan(plans.current).relations.length, n0 - 1, 'saved');
+      eq($('#toast').textContent, t('toast.relRemoved'), 'says so');
+      eq(ui.mapRel, null, 'selection cleared');
+      assert(!edge(r.id), 'no longer drawn');
+      // Backspace (the delete key on a Mac) works the same; so does a focused, unselected line.
+      clickEl(edge(relOf(b, g).id));
+      press('Backspace', document.body);
+      assert(!relOf(b, g), 'Backspace removes it');
+      const last = relOf(s, g);
+      edge(last.id).focus();
+      press('Delete', edge(last.id));
+      assert(!relOf(s, g), 'Delete on a focused line removes it');
+      eq(db.relations.length, 0, 'all gone');
+    } finally { window.confirm = realConfirm; }
+    return `${n0} → 0`;
+  });
+
+  await step('map: Delete on a selected item asks first, then deletes it with its links', () => {
+    const { g, a, b, s } = mapFixture();
+    const realConfirm = window.confirm;
+    let question = '';
+    try {
+      clickEl(nodeEl(a.id));
+      eq(ui.mapSelected, a.id, 'item selected');
+      window.confirm = q => { question = q; return false; };
+      assert(press('Delete', document.body), 'Delete is handled');
+      eq(question, t('confirm.delete', { name: 'Train' }), 'the delete question names it');
+      assert(findEntity(a.id) && relOf(a, g), 'cancel keeps it and its links');
+      eq(ui.mapSelected, a.id, 'still selected after cancel');
+      window.confirm = q => { question = q; return true; };
+      press('Backspace', document.body);
+      assert(!findEntity(a.id) && !relOf(a, g), 'confirm deletes it and its links');
+      assert(findEntity(g.id) && relOf(b, g), 'everything else stays');
+      eq(readPlan(plans.current).activities.map(x => x.id), [b.id], 'saved');
+      eq($('#toast').textContent, t('toast.deleted.activity'), 'says so');
+      eq(ui.mapSelected, null, 'selection cleared');
+      // A focused item works without clicking it first; each kind gets its own message.
+      question = '';
+      nodeEl(s.id).focus();
+      press('Delete', nodeEl(s.id));
+      assert(question.includes('Distance') && !findEntity(s.id), 'focused state deleted');
+      eq($('#toast').textContent, t('toast.deleted.state'), 'state message');
+      clickEl(nodeEl(g.id));
+      press('Delete', document.body);
+      assert(!findEntity(g.id), 'goal deleted');
+      eq($('#toast').textContent, t('toast.deleted.goal'), 'goal message');
+    } finally { window.confirm = realConfirm; }
+    return question;
+  });
+
+  await step('map: Delete does nothing without a selection, while typing, with a dialog open or elsewhere', () => {
+    const { g, a } = mapFixture();
+    const realConfirm = window.confirm;
+    let asked = 0;
+    window.confirm = () => { asked++; return true; };
+    const count = () => db.goals.length + db.activities.length + db.states.length + db.relations.length;
+    const n0 = count();
+    try {
+      press('Delete', document.body);
+      eq([count(), asked], [n0, 0], 'nothing selected: nothing happens');
+      // Typing in a field: the key edits the text.
+      clickEl(nodeEl(a.id));
+      const search = document.createElement('input');
+      search.type = 'search';
+      viewEl.append(search);
+      {
+        search.focus();
+        assert(!press('Delete', search) && !press('Backspace', search), 'keys left to the field');
+        eq([count(), asked], [n0, 0], 'nothing deleted while typing');
+        search.remove();
+      }
+      // A dialog or menu open.
+      openForm('goal', g.id);
+      press('Delete', modal);
+      eq([count(), asked, modal.open], [n0, 0, true], 'nothing deleted with the form open');
+      modal.close();
+      clickEl(nodeEl(a.id));
+      settings.showModal();
+      press('Delete', document.body);
+      eq([count(), asked], [n0, 0], 'nothing deleted with settings open');
+      settings.close();
+      openCtxMenu(a.id, 10, 10);
+      press('Delete', document.body);
+      eq([count(), asked], [n0, 0], 'nothing deleted with the menu open');
+      closeCtxMenu();
+      // Other views ignore it, even with a map selection kept.
+      ui.mapSelected = a.id;
+      setView('activities');
+      press('Delete', document.body);
+      eq([count(), asked], [n0, 0], 'other views ignore it');
+      setView('map');
+    } finally { window.confirm = realConfirm; }
+    return 'ok';
+  });
+
+  await step('map: double-clicking an item opens its edit form; keyboard presses never count as a double-click', () => {
+    const { g, a, s } = mapFixture();
+    clickEl(nodeEl(a.id), 1);
+    clickEl(nodeEl(a.id), 2);
+    assert(modal.open && formCtx.kind === 'activity' && formCtx.id === a.id, 'double-click opens the activity');
+    eq(ui.mapSelected, a.id, 'and leaves it selected');
+    modal.close();
+    for (const [x, kind] of [[g, 'goal'], [s, 'state']]) {
+      clickEl(nodeEl(x.id), 1); clickEl(nodeEl(x.id), 2);
+      assert(modal.open && formCtx.kind === kind && formCtx.id === x.id, `double-click opens the ${kind}`);
+      modal.close();
+    }
+    // Two clicks on different items, or slow clicks, just select.
+    ui.mapSelected = null; render();
+    clickEl(nodeEl(a.id)); clickEl(nodeEl(g.id));
+    assert(!modal.open && ui.mapSelected === g.id, 'two items: just selects the second');
+    ui.mapSelected = null; render();
+    const realNow = performance.now.bind(performance);
+    let shift = 0;
+    performance.now = () => realNow() + shift;
+    try {
+      clickEl(nodeEl(a.id));
+      shift = 2000;
+      clickEl(nodeEl(a.id));
+      assert(!modal.open && ui.mapSelected === null, 'a slow second click deselects as before');
+    } finally { performance.now = realNow; }
+    // Enter or Space on an item selects it; on the selected item they open it. Neither counts toward a double-click.
+    for (const [first, second] of [['Enter', 'Enter'], [' ', ' '], ['Enter', ' ']]) {
+      ui.mapSelected = null; render();
+      nodeEl(a.id).focus();
+      press(first, nodeEl(a.id));
+      assert(!modal.open && ui.mapSelected === a.id, `“${first}” selects`);
+      nodeEl(a.id).focus();
+      press(second, nodeEl(a.id));
+      assert(modal.open && formCtx.id === a.id && ui.mapSelected === a.id, `then “${second}” opens it`);
+      modal.close();
+    }
+    // With an item selected by a click and the focus elsewhere in the map, Enter or Space opens it too.
+    for (const key of ['Enter', ' ']) {
+      ui.mapSelected = g.id; ui.mapRel = null; render();
+      document.activeElement?.blur();
+      assert(press(key, document.body), `“${key}” handled`);
+      assert(modal.open && formCtx.kind === 'goal' && formCtx.id === g.id, `“${key}” opens the selected item`);
+      modal.close();
+    }
+    // The same for a selected line.
+    const line = db.relations[0];
+    clickEl(edge(line.id));
+    document.activeElement?.blur();
+    press('Enter', document.body);
+    assert(modal.open && formCtx.kind === 'relation' && formCtx.id === line.id, 'Enter opens the selected line');
+    modal.close();
+    // Nothing selected, typing, or another view: Enter and Space are left alone.
+    ui.mapSelected = null; ui.mapRel = null; render();
+    assert(!press('Enter', document.body) && !modal.open, 'nothing selected: Enter does nothing');
+    ui.mapSelected = a.id; render();
+    const field = document.createElement('input');
+    viewEl.append(field);
+    field.focus();
+    assert(!press(' ', field) && !modal.open, 'Space in a text field types a space');
+    field.remove();
+    setView('activities');
+    assert(!press('Enter', document.body) && !modal.open, 'other views ignore it');
+    setView('map');
+    // While linking by tapping, a double tap does not open anything.
+    ui.mapLinkFrom = a.id; render();
+    clickEl(nodeEl(s.id), 1);
+    assert(!(modal.open && formCtx.kind === 'state'), 'a tap while linking finishes the link instead of opening the item');
+    if (modal.open) modal.close();
+    ui.mapLinkFrom = null; render();
+    deletePlan(plans.current);
+    return 'ok';
+  });
+
+  await step('map: help and labels mention the new keys, in both languages', () => {
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code);
+      const words = { en: [/Delete/, /double-click/i, /Enter/], sl: [/Delete/, /dvojnim klik/i, /Enter/] }[code];
+      for (const key of ['help.view.map', 'tour.map.text']) words.forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
+      assert(t('map.relLabel', { rel: 'x' }).includes('x'), `${code} line label`);
+    }
+    changeLanguage('en');
+    return t('map.relLabel', { rel: 'A contributes to B' });
+  });
+  /* ---------- Timeline: the same selecting, editing and deleting as the map ---------- */
+
+  const tlFixture = () => {
+    fresh('Timeline keys');
+    const now = today();
+    const g = mk('goal', { title: 'Renovate', startDate: addDays(now, -10), deadline: addDays(now, 60) });
+    const a = mk('activity', { title: 'Plan', startDate: addDays(now, -5), dueDate: addDays(now, 5) });
+    const b = mk('activity', { title: 'Build', startDate: addDays(now, 6), dueDate: addDays(now, 30) });
+    const c = mk('activity', { title: 'Paint', startDate: addDays(now, 31), dueDate: addDays(now, 40) });
+    rel(a, g, 'contributes'); rel(b, a, 'depends'); rel(c, b, 'depends');
+    save();
+    ui.tlDeps = true;
+    setView('timeline');
+    return { g, a, b, c };
+  };
+  const bar = id => $(`[data-tl-node="${id}"]`);
+  const dep = id => $(`.tl-deps [data-rel-edit="${id}"]`);
+
+  await step('timeline: double-click or Enter on the selected bar edits it; Esc deselects', () => {
+    const { g, a } = tlFixture();
+    clickEl(bar(a.id), 1); clickEl(bar(a.id), 2);
+    assert(modal.open && formCtx.kind === 'activity' && formCtx.id === a.id, 'double-click opens the activity');
+    eq(ui.mapSelected, a.id, 'left selected');
+    modal.close();
+    clickEl(bar(g.id), 1); clickEl(bar(g.id), 2);
+    assert(modal.open && formCtx.kind === 'goal' && formCtx.id === g.id, 'double-click opens the goal');
+    modal.close();
+    // Enter or Space: the first selects, the next opens.
+    ui.mapSelected = null; render();
+    bar(a.id).focus(); press('Enter', bar(a.id));
+    assert(!modal.open && ui.mapSelected === a.id, 'Enter selects');
+    bar(a.id).focus(); press(' ', bar(a.id));
+    assert(modal.open && formCtx.id === a.id, 'Space on the selected bar opens it');
+    modal.close();
+    document.activeElement?.blur();
+    press('Enter', document.body);
+    assert(modal.open && formCtx.id === a.id, 'Enter with the focus elsewhere opens the selected bar');
+    modal.close();
+    press('Escape', document.body);
+    eq(ui.mapSelected, null, 'Esc deselects');
+    assert(!$('.tl-row.dim'), 'nothing dimmed');
+    return 'ok';
+  });
+
+  await step('timeline: Delete on a bar asks first; dependency arrows select, open and delete like map lines', () => {
+    const { g, a, b, c } = tlFixture();
+    const realConfirm = window.confirm;
+    let question = '';
+    try {
+      // Bars.
+      clickEl(bar(c.id));
+      window.confirm = q => { question = q; return false; };
+      press('Delete', document.body);
+      assert(question === t('confirm.delete', { name: 'Paint' }) && findEntity(c.id), 'asks; cancel keeps it');
+      window.confirm = () => true;
+      press('Backspace', document.body);
+      assert(!findEntity(c.id) && !db.relations.some(r => r.from === c.id || r.to === c.id), 'confirm deletes it and its links');
+      eq($('#toast').textContent, t('toast.deleted.activity'), 'says so');
+      // Dependency arrows: clickable, with a wide hit area, and reachable with Tab.
+      const r = db.relations.find(x => x.type === 'depends' && x.from === b.id);
+      assert(dep(r.id), 'the arrow is a target');
+      eq(getComputedStyle(dep(r.id).querySelector('.tl-dep-hit')).pointerEvents, 'stroke', 'its hit area takes clicks');
+      eq(dep(r.id).getAttribute('tabindex'), '0', 'focusable');
+      clickEl(dep(r.id));
+      eq([ui.mapRel, ui.mapSelected], [r.id, null], 'a click selects it');
+      assert(dep(r.id).classList.contains('sel'), 'drawn as selected');
+      assert(!bar(a.id).classList.contains('dim') && !bar(b.id).classList.contains('dim') && bar(g.id).classList.contains('dim'), 'its two bars lit, the rest dimmed');
+      assert($('.map-rel-selection') && $('.map-rel-selection').textContent.includes('Build'), 'the selection row names it');
+      clickEl(dep(r.id), 2);
+      assert(modal.open && formCtx.kind === 'relation' && formCtx.id === r.id, 'a second click opens it');
+      modal.close();
+      press('Escape', document.body);
+      eq(ui.mapRel, null, 'Esc deselects it');
+      clickEl(dep(r.id));
+      press('Delete', document.body);
+      assert(!db.relations.some(x => x.id === r.id) && findEntity(a.id) && findEntity(b.id), 'Delete removes the dependency, not the bars');
+      eq($('#toast').textContent, t('toast.relRemoved'), 'says so');
+      eq(readPlan(plans.current).relations.some(x => x.id === r.id), false, 'saved');
+      // With dependencies hidden there is nothing to select or delete there.
+      rel(b, a, 'depends'); save();
+      const r2 = db.relations.find(x => x.type === 'depends');
+      ui.mapRel = r2.id; ui.tlDeps = false; render();
+      press('Delete', document.body);
+      assert(db.relations.some(x => x.id === r2.id), 'a hidden arrow is not deleted');
+      ui.tlDeps = true; ui.mapRel = null;
+      // Typing or another view: left alone.
+      clickEl(bar(a.id));
+      const field = document.createElement('input');
+      viewEl.append(field); field.focus();
+      press('Delete', field);
+      assert(findEntity(a.id), 'nothing deleted while typing');
+      field.remove();
+      setView('goals');
+      press('Delete', document.body);
+      assert(findEntity(a.id), 'other views ignore it');
+    } finally { window.confirm = realConfirm; }
+    deletePlan(plans.current);
+    return question;
+  });
+
+  await step('timeline: help mentions the keys, in both languages', () => {
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code);
+      for (const key of ['tl.hint', 'help.view.timeline']) [/Delete/, /Enter/, /Esc/].forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
+    }
+    changeLanguage('en');
+    return t('tl.hint');
   });
 };

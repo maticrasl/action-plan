@@ -39,7 +39,7 @@ const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(pr
 let db = emptyDb();
 const ui = {
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
-  mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, search: '', mapSelected: null, help: false,
+  mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, search: '', mapSelected: null, mapRel: null, help: false,
   rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
 };
 
@@ -115,7 +115,7 @@ function openPlan(id) {
   plans.current = id;
   db = readPlan(id);
   takeSnapshot(db);
-  Object.assign(ui, { category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', mapSelected: null, search: '', mapRefocus: true, rtWeek: {} });
+  Object.assign(ui, { category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', mapSelected: null, mapRel: null, search: '', mapRefocus: true, rtWeek: {} });
   save();
   renderPlanSwitch();
   render();
@@ -1354,15 +1354,18 @@ function renderMap() {
   const { NW, NH, PAD } = MAP;
   const { node, layers, bands, chains, W, H } = layoutMap(items, rels);
 
-  const sel = ui.mapSelected && visible.has(ui.mapSelected) ? ui.mapSelected : null;
-  const near = neighbourhood(sel, rels);
+  // Either an item or a relationship line can be selected.
+  const relSel = rels.find(r => r.id === ui.mapRel) || null;
+  const sel = !relSel && ui.mapSelected && visible.has(ui.mapSelected) ? ui.mapSelected : null;
+  const near = relSel ? new Set([relSel.from, relSel.to]) : neighbourhood(sel, rels);
 
-  // Each line sits in a group with a wide invisible twin, so it is easy to hit; clicking it edits the relationship.
+  // Each line sits in a group with a wide invisible twin, so it is easy to hit; a click selects it,
+  // a second click (or Enter) edits the relationship and Delete removes it.
   const edges = chains.map(c => {
     const def = REL_TYPES[c.r.type];
-    const dim = sel && !(c.r.from === sel || c.r.to === sel) ? 'dim' : '';
-    const label = `${findEntity(c.r.from).item.title} ${relLabel(c.r.type)} ${findEntity(c.r.to).item.title}`;
-    return `<g class="edge-g ${dim}" data-rel-edit="${c.r.id}" tabindex="0" role="button" aria-label="${esc(t('map.editRel', { rel: label }))}">
+    const dim = (sel && !(c.r.from === sel || c.r.to === sel)) || (relSel && c.r.id !== relSel.id) ? 'dim' : '';
+    const label = relText(c.r);
+    return `<g class="edge-g ${dim} ${c.r.id === relSel?.id ? 'sel' : ''}" data-rel-edit="${c.r.id}" tabindex="0" role="button" aria-pressed="${c.r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: label }))}">
       <path class="edge" d="${c.d}" style="stroke:${def.color};stroke-width:${def.width || 1.6}" ${def.dash ? 'stroke-dasharray="5 4"' : ''} marker-end="url(#arrow-${c.r.type})"></path>
       <path class="edge-hit" d="${c.d}"></path><title>${esc(label)}</title></g>`;
   }).join('');
@@ -1386,7 +1389,7 @@ function renderMap() {
       sub = isNum(item.value) ? `${fmtNum(item.value)} ${item.unit || ''}, ${fmtDate(item.date)}` : fmtDate(item.date);
     }
     const title = item.title.length > 22 ? item.title.slice(0, 21) + '…' : item.title;
-    const dim = sel && !near.has(n.id) ? 'dim' : '';
+    const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
     return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
       <rect width="${NW}" height="${NH}" rx="10" style="${n.id === sel ? 'stroke-width:3' : ''}"></rect>
@@ -1428,7 +1431,7 @@ function renderMap() {
       <defs>${markers}</defs>${bandSvg}${edges}${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
-    ${sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
+    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
     ${relNote}
   `;
 }
@@ -1447,6 +1450,37 @@ function mapSelection(id) {
     <button class="btn small" data-open="${id}">${t('btn.edit')}</button>
     <button class="btn small ghost" data-map-clear>${t('btn.clear')}</button>
   </div>`;
+}
+
+const relText = r => `${findEntity(r.from).item.title} ${relLabel(r.type)} ${findEntity(r.to).item.title}`;
+
+// The selected line, with buttons for touch screens (no Delete key there).
+function mapRelSelection(r) {
+  return `<div class="row map-rel-selection" style="margin-top:12px;cursor:default">
+    <span class="tag">${t('kind.relation')}</span>
+    <span class="grow"><strong>${esc(relText(r))}</strong></span>
+    <button class="btn small" data-rel-open="${r.id}">${t('btn.edit')}</button>
+    <button class="btn small danger" data-rel-remove="${r.id}">${t('btn.remove')}</button>
+    <button class="btn small ghost" data-map-clear>${t('btn.clear')}</button>
+  </div>`;
+}
+
+function removeRelation(id) {
+  db.relations = db.relations.filter(r => r.id !== id);
+  if (ui.mapRel === id) ui.mapRel = null;
+  save();
+  render();
+  toast(t('toast.relRemoved'));
+}
+
+// Deleting an item from the map asks first, like the form's Delete button.
+function askDeleteItem(id) {
+  const ent = findEntity(id);
+  if (!ent || !confirm(t('confirm.delete', { name: ent.item.title }))) return;
+  removeEntity(ent.kind, id);
+  save();
+  render();
+  toast(t('toast.deleted.' + ent.kind));
 }
 
 /* ---------- Timeline (Gantt chart of goals and activities) ---------- */
@@ -1534,8 +1568,10 @@ function renderTimeline() {
     }
   }
 
-  const sel = ui.mapSelected && rows.some(r => r.item?.id === ui.mapSelected) ? ui.mapSelected : null;
-  const near = neighbourhood(sel, db.relations);
+  // A bar or (with dependencies shown) a dependency arrow can be selected, as in the map.
+  const relSel = ui.tlDeps && db.relations.find(r => r.id === ui.mapRel && r.type === 'depends' && rows.some(x => x.item?.id === r.from) && rows.some(x => x.item?.id === r.to)) || null;
+  const sel = !relSel && ui.mapSelected && rows.some(r => r.item?.id === ui.mapSelected) ? ui.mapSelected : null;
+  const near = relSel ? new Set([relSel.from, relSel.to]) : neighbourhood(sel, db.relations);
 
   const geo = {};
   const body = rows.map((r, i) => {
@@ -1563,7 +1599,7 @@ function renderTimeline() {
         bar = `${lateHtml}<div class="tl-bar ${kind} st-${st}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
       }
     }
-    const dim = sel && !near.has(item.id) ? 'dim' : '';
+    const dim = (sel || relSel) && !near.has(item.id) ? 'dim' : '';
     return `<div class="tl-row ${kind} ${dim}${item.id === sel ? ' selected' : ''}" data-tl-node="${item.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(`${item.title}, ${dateText}`)}">
       <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow" style="--rel:${REL_TYPES[r.rel].color};--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-title">${esc(item.title)}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
       <div class="tl-track">${bar}</div>
@@ -1577,8 +1613,10 @@ function renderTimeline() {
     const path = x2 - 12 >= x1 + 6
       ? `M${x1},${y1} H${x2 - 12} V${y2} H${x2}`
       : `M${x1},${y1} h8 V${y2 + (y2 > y1 ? -ROW / 2 : ROW / 2)} H${x2 - 12} V${y2} H${x2}`;
-    const dim = sel && !(r.from === sel || r.to === sel) ? ' dim' : '';
-    return `<path class="tl-dep${dim}" d="${path}" marker-end="url(#tl-arrow)"><title>${esc(findEntity(r.from).item.title)} ${esc(relLabel('depends'))} ${esc(findEntity(r.to).item.title)}</title></path>`;
+    const dim = (sel && !(r.from === sel || r.to === sel)) || (relSel && r.id !== relSel.id) ? ' dim' : '';
+    // A wide invisible twin makes the thin arrow easy to hit.
+    return `<g class="tl-dep-g${dim}${r.id === relSel?.id ? ' sel' : ''}" data-rel-edit="${r.id}" tabindex="0" role="button" aria-pressed="${r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: relText(r) }))}">
+      <path class="tl-dep" d="${path}" marker-end="url(#tl-arrow)"></path><path class="tl-dep-hit" d="${path}"></path><title>${esc(relText(r))}</title></g>`;
   }).join('');
 
   const zoom = Object.entries(TL.ZOOM).map(([z, p]) => `<button class="chip ${Math.abs(px - p) < 0.01 ? 'active' : ''}" data-tl-zoom="${z}">${t('tl.zoom.' + z)}</button>`).join('');
@@ -1602,14 +1640,14 @@ function renderTimeline() {
         </div>
         <div class="tl-body">
           <div class="tl-grid">${lines.join('')}<i class="tl-today" style="left:${x(todayN) + px / 2}px"></i></div>
-          <svg class="tl-deps" width="${W}" height="${rows.length * ROW}" aria-hidden="true">
+          <svg class="tl-deps" width="${W}" height="${rows.length * ROW}">
             <defs><marker id="tl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>${deps}
           </svg>
           ${body}
         </div>
       </div>
     </div>` : `<div class="empty">${t('tl.noneShown')}</div>`}
-    ${sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
+    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
 }
 
 /* ---------- Graphs (measurement history of each current state) ----------
@@ -2380,6 +2418,8 @@ function finish(msg) {
   toast(msg);
 }
 
+let lastNodeClick = { id: null, t: 0 };
+
 /* =========================================================
    Events
    ========================================================= */
@@ -2464,7 +2504,7 @@ $('#addBtn').addEventListener('click', () => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-rt-week],[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -2474,8 +2514,14 @@ viewEl.addEventListener('click', e => {
     if (to && to !== from) linkItems(from, to);
     return;
   }
-  if (!el) return;
+  if (!el) {
+    // Clicking empty space in the map clears what is selected there.
+    if (e.target.closest('.map-wrap, .tl-scroll') && (ui.mapSelected || ui.mapRel)) { ui.mapSelected = ui.mapRel = null; render(); }
+    return;
+  }
   e.stopPropagation();
+  if (el.dataset.relOpen) return openForm('relation', el.dataset.relOpen);
+  if (el.dataset.relRemove) return removeRelation(el.dataset.relRemove);
   if (el.hasAttribute('data-next-more')) {
     ui.nextAll = !ui.nextAll;
     prefs.set('nextAll', ui.nextAll);
@@ -2491,7 +2537,11 @@ viewEl.addEventListener('click', e => {
   if (el.dataset.new) return el.dataset.new === 'relation' ? $('#addBtn').click() : openForm(el.dataset.new);
   if (el.hasAttribute('data-sample')) return loadSample();
   if (el.dataset.goalFilter) { ui.goalFilter = el.dataset.goalFilter; return render(); }
-  if (el.dataset.relEdit) return openForm('relation', el.dataset.relEdit);
+  if (el.dataset.relEdit) {
+    if (ui.mapRel === el.dataset.relEdit) return openForm('relation', el.dataset.relEdit);
+    Object.assign(ui, { mapRel: el.dataset.relEdit, mapSelected: null });
+    return render();
+  }
   if (el.dataset.category !== undefined) {
     ui.category = ui.category === el.dataset.category ? '' : el.dataset.category;
     prefs.set('category', ui.category);
@@ -2505,8 +2555,22 @@ viewEl.addEventListener('click', e => {
   }
   if (el.hasAttribute('data-tl-deps')) return setToggle('tlDeps', !ui.tlDeps);
   const node = nodeId(el);
-  if (node) { ui.mapSelected = ui.mapSelected === node ? null : node; return render(); }
-  if (el.hasAttribute('data-map-clear')) { ui.mapSelected = null; return render(); }
+  if (node) {
+    // A second click on the same item soon after opens it. The map is redrawn between the clicks, so the
+    // browser's own dblclick may not arrive; keyboard clicks (detail 0) never count.
+    const now = performance.now(), double = e.detail > 0 && lastNodeClick.id === node && now - lastNodeClick.t < 450;
+    lastNodeClick = e.detail > 0 && !double ? { id: node, t: now } : { id: null, t: 0 };
+    ui.mapRel = null;
+    if (double) {
+      ui.mapSelected = node;
+      render();
+      const ent = findEntity(node);
+      return ent && openForm(ent.kind, node);
+    }
+    ui.mapSelected = ui.mapSelected === node ? null : node;
+    return render();
+  }
+  if (el.hasAttribute('data-map-clear')) { ui.mapSelected = ui.mapRel = null; return render(); }
   if (el.dataset.relToggle) {
     const type = el.dataset.relToggle;
     if (ui.mapHidden.has(type)) ui.mapHidden.delete(type);
@@ -3401,6 +3465,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || modal.open || !ctxMenu.hidden) return;
   if (linkDrag?.moved && !linkDrag.ended) endLinkDrag();
   else if (ui.mapLinkFrom) { ui.mapLinkFrom = null; render(); }
+  else if (selectsInView() && (ui.mapSelected || ui.mapRel) && !document.querySelector('dialog[open]')) { ui.mapSelected = ui.mapRel = null; render(); }
 });
 
 // Safari: trackpad pinch on macOS arrives as gesture events; on iOS they duplicate the touches above.
@@ -3437,6 +3502,8 @@ viewEl.addEventListener('keydown', e => {
     openCtxMenu(nodeId(node), r.left + 16, r.bottom + 4);
   } else if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
+    const id = nodeId(node), ent = findEntity(id);
+    if (ui.mapSelected === id && ent) return openForm(ent.kind, id);
     node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   }
 });
@@ -3444,7 +3511,33 @@ viewEl.addEventListener('keydown', e => {
 viewEl.addEventListener('dblclick', e => {
   const id = nodeId(e.target.closest(NODE_SEL));
   const ent = id && findEntity(id);
-  if (ent) openForm(ent.kind, id);
+  if (ent && !modal.open) openForm(ent.kind, id);
+});
+
+// In the map and the timeline, with nothing being typed and no dialog or menu open: Delete (or
+// Backspace, the Mac's delete key) removes the selected or focused line at once, or asks before
+// deleting the selected or focused item; Enter or Space opens what is selected.
+const selectsInView = () => ui.view === 'map' || ui.view === 'timeline';
+const relShown = id => !!id && !!$(`[data-rel-edit="${id}"]`);
+const itemShown = id => !!id && !!$(`[data-map-node="${id}"],[data-tl-node="${id}"]`);
+document.addEventListener('keydown', e => {
+  if (!selectsInView() || document.querySelector('dialog[open]') || !ctxMenu.hidden) return;
+  if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+  const edgeEl = e.target.closest?.('[data-rel-edit]'), nodeEl = e.target.closest?.(NODE_SEL);
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    const relId = edgeEl?.dataset.relEdit || (!nodeEl && relShown(ui.mapRel) ? ui.mapRel : '');
+    const id = !relId && (nodeId(nodeEl) || (itemShown(ui.mapSelected) ? ui.mapSelected : ''));
+    if (!relId && !id) return;
+    e.preventDefault();
+    return relId ? removeRelation(relId) : askDeleteItem(id);
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && !edgeEl && !nodeEl && !e.target.closest?.('button, a, [tabindex]')) {
+    const ent = itemShown(ui.mapSelected) && findEntity(ui.mapSelected);
+    if (relShown(ui.mapRel)) openForm('relation', ui.mapRel);
+    else if (ent) openForm(ent.kind, ui.mapSelected);
+    else return;
+    e.preventDefault();
+  }
 });
 
 ctxMenu.addEventListener('click', e => {
