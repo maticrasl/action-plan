@@ -3097,6 +3097,11 @@ function sampleData() {
     .filter(n => keep(n, weekday(d(n)))).map(n => [d(n), 1]));
   // Strength training on Mondays and Thursdays, one session missed two weeks ago.
   const missed = Array.from({ length: 7 }, (_, i) => -14 + i).find(n => [0, 3].includes(weekday(d(n))));
+  // A state's measurements from [days from today, value] pairs, oldest first; the last is its value.
+  const readings = list => {
+    const history = list.map(([n, v]) => ({ date: d(n), value: String(v) }));
+    return { value: history.at(-1).value, date: history.at(-1).date, history };
+  };
   // Numbers and dates live here; the wording (and word units) come from the active language (i18n.js → sample).
   const txt = I18N[lang].sample;
   const withText = (list, texts) => list.map((x, i) => ({ ...x, ...texts[i] }));
@@ -3114,13 +3119,15 @@ function sampleData() {
       { id: heating, unit: '€', baseline: '180', current: '', target: '120', startDate: d(-60), deadline: d(180), status: 'active' },
       { id: exercise, progress: 'routines', startDate: d(-35), deadline: d(150), status: 'active' },
     ], txt.goals),
+    // Enough measurements for the graphs to tell a story: each starts before its goal (at the goal's
+    // starting value on the goal's start date) and wobbles on its way, as real readings do.
     states: withText([
-      { id: fitness, value: '8', unit: 'km', date: d(-2), history: [{ date: d(-30), value: '5' }, { date: d(-2), value: '8' }] },
-      { id: savings, value: '1900', unit: '€', date: d(-5), history: [{ date: d(-60), value: '1000' }, { date: d(-5), value: '1900' }] },
-      { id: spending, value: '2000', unit: '€', date: d(-5), history: [{ date: d(-5), value: '2000' }] },
-      { id: bodyWeight, value: '78', unit: 'kg', date: d(-1), history: [{ date: d(-30), value: '81' }, { date: d(-1), value: '78' }] },
-      { id: itemsSold, value: '6', date: d(-4), history: [{ date: d(-20), value: '2' }, { date: d(-4), value: '6' }] },
-      { id: heatingBill, value: '165', unit: '€', date: d(-5), history: [{ date: d(-60), value: '180' }, { date: d(-30), value: '172' }, { date: d(-5), value: '165' }] },
+      { id: fitness, unit: 'km', ...readings([[-58, 4], [-51, 4.5], [-44, 4.5], [-37, 5], [-30, 5], [-23, 6], [-16, 6.5], [-9, 7.5], [-2, 8]]) },
+      { id: savings, unit: '€', ...readings([[-120, 550], [-90, 800], [-75, 760], [-60, 1000], [-45, 1080], [-30, 1450], [-20, 1520], [-5, 1900]]) },
+      { id: spending, unit: '€', ...readings([[-185, 2450], [-155, 2380], [-125, 2520], [-95, 2300], [-65, 2250], [-35, 2100], [-5, 2000]]) },
+      { id: bodyWeight, unit: 'kg', ...readings([[-63, 82.4], [-56, 82.1], [-49, 82.3], [-42, 81.8], [-35, 81.4], [-30, 81], [-23, 80.3], [-16, 79.6], [-9, 78.9], [-1, 78]]) },
+      { id: itemsSold, ...readings([[-38, 0], [-33, 1], [-27, 2], [-20, 2], [-15, 3], [-11, 4], [-7, 5], [-4, 6]]) },
+      { id: heatingBill, unit: '€', ...readings([[-150, 195], [-120, 188], [-90, 184], [-60, 180], [-30, 172], [-5, 165]]) },
     ], txt.states),
     activities: withText([
       { id: a[0], status: 'done', startDate: d(-30), dueDate: d(-20) },   // running shoes
