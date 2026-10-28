@@ -3605,4 +3605,28 @@ window.moreTests = async ({ step, assert }) => {
     deletePlan(plans.current);
     return `map ${px} → ${ui.mapScale}`;
   });
+
+  await step('touch: tapping or long-pressing a line or box shows no tap highlight box', () => {
+    loadSample();
+    const clear = el => getComputedStyle(el).webkitTapHighlightColor;
+    const out = [];
+    for (const v of ['map', 'timeline']) {
+      setView(v);
+      if (v === 'timeline') { ui.tlDeps = true; render(); }
+      const els = [...viewEl.querySelectorAll('[data-rel-edit], [data-map-node], [data-tl-node]')];
+      assert(els.some(el => el.matches('[data-rel-edit]')), `${v}: has lines`);
+      const shown = els.filter(el => clear(el) !== 'rgba(0, 0, 0, 0)');
+      assert(!shown.length, `${v}: ${shown.length} with a highlight, e.g. ${shown[0] && clear(shown[0])}`);
+      const line = viewEl.querySelector('[data-rel-edit]');
+      line.focus();
+      const cs = getComputedStyle(line);
+      assert(document.activeElement === line && cs.outlineStyle === 'none', `${v}: a focused line draws no box (${cs.outlineStyle})`);
+      out.push(`${v}: ${els.length}`);
+    }
+    // Elsewhere the browser's highlight is untouched.
+    setView('dashboard');
+    eq(clear(viewEl.querySelector('.row') || viewEl), clear(document.body), 'other views keep the browser default');
+    deletePlan(plans.current);
+    return out.join(', ');
+  });
 };

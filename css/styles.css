@@ -491,6 +491,9 @@ textarea { resize: vertical; min-height: 68px; }
 .edge-g:hover .edge, .edge-g:focus-visible .edge { stroke-width: 3.5 !important; }
 /* Long-press must not select text or open the iOS callout. */
 .map-wrap svg { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Nor flash the phone's tap highlight: around a line it is a box as big as the line is long and high.
+   Selection is shown by the line or box itself. */
+.map-wrap, .tl-scroll { -webkit-tap-highlight-color: transparent; }
 .node:focus { outline: none; box-shadow: none; }
 .node:focus-visible rect { stroke-width: 3.5; stroke: var(--goal); }
 
