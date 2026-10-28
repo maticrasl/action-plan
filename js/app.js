@@ -3462,8 +3462,11 @@ function openCtxMenu(id, x, y) {
   showCtxMenu(ent.kind, t('kind.' + ent.kind), ent.item.title, ctxOptions(ent.kind, ent.item), x, y);
 }
 
+let ctxOpenedAt = 0;
+
 // Fills the menu – a heading with a tag and a name, then its options – and shows it at x, y, kept on screen.
 function showCtxMenu(tagClass, tag, title, options, x, y) {
+  ctxOpenedAt = performance.now();
   ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag ${tagClass}">${tag}</span><strong title="${esc(title)}">${esc(title)}</strong></div>` +
     options.map(o => o === '-' ? '<hr>' :
       `<button type="button" tabindex="-1" data-ctx="${o.act}" class="${o.danger ? 'danger' : ''}" role="${o.checked === undefined ? 'menuitem' : 'menuitemradio'}"${o.checked === undefined ? '' : ` aria-checked="${o.checked}"`}${o.name ? ` aria-label="${esc(o.name)}" title="${esc(o.name)}"` : ''}>${esc(o.label)}${o.icon ? $(`.nav-item[data-view="${o.icon}"] svg`).outerHTML : ''}</button>`).join('');
@@ -3473,8 +3476,6 @@ function showCtxMenu(tagClass, tag, title, options, x, y) {
   ctxMenu.style.top = `${Math.max(8, Math.min(y, innerHeight - height - 8))}px`;
   ctxMenu.querySelector('button').focus();
 }
-
-let ctxOpenedAt = 0;
 
 function closeCtxMenu(refocus = false) {
   if (ctxMenu.hidden) return;
@@ -3492,7 +3493,6 @@ function openRelMenu(relId, x, y) {
   ctxMenu.dataset.id = '';
   ctxMenu.dataset.rel = relId;
   ctxMenu.setAttribute('aria-label', t('map.relLabel', { rel: relText(r) }));
-  ctxOpenedAt = performance.now();
   showCtxMenu('', t('kind.relation'), relText(r), [
     { act: 'rel-edit', label: t('btn.edit') }, { act: 'rel-remove', label: t('btn.remove'), danger: true }, { act: 'rel-deselect', label: t('btn.deselect') },
   ], x, y);
@@ -4072,8 +4072,9 @@ ctxMenu.addEventListener('keydown', e => {
 });
 document.addEventListener('pointerdown', e => { if (!ctxMenu.contains(e.target)) closeCtxMenu(); });
 addEventListener('resize', () => closeCtxMenu());
-// Scrolling closes the menu, but not the scroll a redraw makes right after it opened (a line's
-// menu selects the line, which redraws the map and puts its scroll position back).
+// Scrolling closes the menu, but not a scroll that arrives right after it opened: browsers deliver
+// scroll events on the next frame, so one from just before (a redraw putting the map's scroll back,
+// as a line's menu does when it selects the line, or the end of a swipe) can land after it.
 document.addEventListener('scroll', () => { if (performance.now() - ctxOpenedAt > 400) closeCtxMenu(); }, true);
 
 /* ---------- Plan switcher (sidebar on desktop, menu on mobile) ---------- */

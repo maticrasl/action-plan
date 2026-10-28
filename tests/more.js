@@ -1746,7 +1746,8 @@ window.moreTests = async ({ step, assert }) => {
     dt.items.add(fileOf({ format: 'actionplan-plan', version: 1, kind: 'template', name: 'Picked', goals: [] }));
     input.files = dt.files;
     input.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 50));
+    // Reading the file takes real time, which the test's virtual clock does not wait for: poll.
+    for (let i = 0; i < 100 && currentPlan().name !== 'Picked'; i++) await new Promise(r => setTimeout(r, 20));
     assert(currentPlan().name === 'Picked' && input.value === '', 'picked file imported, picker reset');
 
     const plansNow = plans.list.filter(p => [src.name, `${src.name} 2`, `${src.name} 3`, 'Picked'].includes(p.name)).map(p => p.id);
@@ -3144,6 +3145,16 @@ window.moreTests = async ({ step, assert }) => {
       assert(modal.open && formCtx.id === g.id, `${withClick ? 'with' : 'without'} a lifting click: one tap on Edit opens it`);
       modal.close();
     }
+    // A scroll that arrives just after the menu opens (one a redraw made before the press, delivered on
+    // the next frame) does not close it; a scroll later does.
+    ui.mapSelected = null; render();
+    await longPress(node(g2.id), false);
+    document.dispatchEvent(new Event('scroll'));
+    $('.map-wrap').dispatchEvent(new Event('scroll'));
+    assert(!ctxMenu.hidden, 'a scroll right after opening leaves the item menu open');
+    await new Promise(r => setTimeout(r, 450));
+    $('.map-wrap').dispatchEvent(new Event('scroll'));
+    assert(ctxMenu.hidden, 'a scroll later closes it');
     // A short tap still selects as before.
     ui.mapSelected = null; render();
     touch('pointerdown', node(g.id)); touch('pointerup', node(g.id));
