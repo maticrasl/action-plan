@@ -3443,4 +3443,41 @@ window.moreTests = async ({ step, assert }) => {
     assert(tpl.activities.every(a => a.status === 'todo' && !('autoStarted' in a)), 'templates forget it');
     deletePlan(plans.current);
   });
+
+  await step('layout: a phone held sideways gets a slim icon rail and a title bar that scrolls away; no tab bar', async () => {
+    // The app's markup and stylesheet in a frame of each size (headless Chrome's window cannot shrink that far).
+    const sizes = { portrait: [390, 844], landscape: [844, 390], 'small landscape': [736, 360], 'large landscape': [932, 430], desktop: [1280, 900], 'desktop collapsed': [1280, 900] };
+    const out = [];
+    for (const [name, [w, h]] of Object.entries(sizes)) {
+      const frame = document.createElement('iframe');
+      Object.assign(frame.style, { width: `${w}px`, height: `${h}px`, position: 'fixed', left: '-9999px', top: '0', border: '0' });
+      const app = $('.app').cloneNode(true);
+      app.classList.toggle('nav-collapsed', name === 'desktop collapsed');
+      frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body>${app.outerHTML}</body>`;
+      await new Promise(res => { frame.onload = res; document.body.append(frame); });
+      const doc = frame.contentDocument, css = sel => frame.contentWindow.getComputedStyle(doc.querySelector(sel));
+      const nav = doc.querySelector('.nav').getBoundingClientRect(), tabs = [...doc.querySelectorAll('.nav-item[data-view]')];
+      const kind = css('.nav').position === 'fixed' ? 'tabs' : nav.width < 80 ? 'rail' : 'sidebar';
+      out.push(`${name}=${kind}`);
+      if (name === 'portrait') { frame.remove(); continue; }
+      if (name.endsWith('landscape')) {
+        eq(kind, 'rail', `${name}: a rail at the side, not a tab bar`);
+        assert(nav.width <= 64 && nav.height >= h - 1, `${name}: slim and full height (${nav.width}×${nav.height})`);
+        eq(css('.nav').overflowY, 'auto', `${name}: the rail scrolls if the icons do not fit`);
+        assert(tabs.every(b => b.getBoundingClientRect().bottom <= h + 1), `${name}: every view's icon is on screen`);
+        assert(tabs.every(b => b.querySelector('span').getBoundingClientRect().width <= 1 && b.title !== undefined), `${name}: icons only`);
+        assert(['.brand span', '.nav .plan-switch', '.nav-footer', '#navMore'].every(sel => css(sel).display === 'none' || doc.querySelector(sel).getBoundingClientRect().width <= 1), `${name}: no name, plan switcher, collapse toggle or More button in the rail`);
+        assert(css('.plan-name').display !== 'none', `${name}: the plan switcher sits above the title`);
+        eq(css('.topbar').position, 'static', `${name}: the title bar scrolls away`);
+        assert(doc.querySelector('.topbar').getBoundingClientRect().height <= 80, `${name}: and is compact`);
+      } else {
+        eq(kind, name === 'desktop' ? 'sidebar' : 'rail', `${name}: unchanged`);
+        eq(css('.topbar').position, 'sticky', `${name}: the title bar stays`);
+        assert(css('.plan-name').display === 'none', `${name}: the plan switcher is in the sidebar`);
+      }
+      frame.remove();
+    }
+    eq(out[0], 'portrait=tabs', 'phones held upright keep the tab bar');
+    return out.join(' ');
+  });
 };

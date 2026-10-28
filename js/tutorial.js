@@ -12,7 +12,7 @@
    Runs on a temporary sample plan so the user's own data is never touched.
    Each step may switch view and spotlights the first visible target;
    steps without a visible target show a centred card. Optional steps are left out when their
-   target is hidden at the start (the sidebar toggle on phones, the sync button when sync is off). */
+   target is hidden at the start (the sidebar toggle on phones, upright or sideways, the sync button when sync is off). */
 
 const TOUR_STEPS = [
   { key: 'about' },

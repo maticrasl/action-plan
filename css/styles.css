@@ -877,6 +877,26 @@ textarea { resize: vertical; min-height: 68px; }
   }
   .nav-collapsed .nav-toggle svg { transform: scaleX(-1); }
 }
+/* A phone held sideways: the screen is short, not narrow. The sidebar becomes a slim rail of icons (it
+   scrolls if they do not fit), the plan name sits above the title as on phones, and the title bar scrolls
+   away with the page, so the view keeps the height. */
+@media (min-width: 721px) and (max-height: 500px) {
+  .app, .app.nav-collapsed { grid-template-columns: calc(56px + env(safe-area-inset-left)) 1fr; }
+  .nav, .nav-collapsed .nav { padding: 10px 6px 10px calc(6px + env(safe-area-inset-left)); overflow-y: auto; }
+  .brand, .nav-collapsed .brand { justify-content: center; padding: 0 0 10px; }
+  .brand span, .nav .plan-switch, .nav-footer { display: none; }
+  .nav-item, .nav-collapsed .nav-item { justify-content: center; padding: 8px 0; }
+  .nav-item span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .title-block { flex: 1; }
+  .plan-name { display: inline-block; }
+  .topbar { position: static; padding: 8px max(16px, env(safe-area-inset-right)) 6px 16px; backdrop-filter: none; }
+  .topbar h1 { font-size: 22px; }
+  .view { padding: 4px max(16px, env(safe-area-inset-right)) 24px 16px; }
+  /* Scrolled into view, the map and the timeline fill the screen. */
+  .map-wrap, .tl-scroll { max-height: calc(100vh - 16px); }
+}
 @media (max-width: 720px) { .desktop-only { display: none !important; } }
 
 /* ---------- Settings ---------- */
