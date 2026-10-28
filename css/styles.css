@@ -371,6 +371,8 @@ textarea { resize: vertical; min-height: 68px; }
 
 .empty { text-align: center; padding: 48px 20px; color: var(--ink-2); border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); }
 .empty h3 { color: var(--ink); margin-bottom: 6px; font-size: 20px; }
+/* Inside a list (no next actions due, the rest behind "Show all"): the list draws the frame. */
+.list > .empty { border: 0; border-radius: 0; padding: 24px 20px; }
 .empty .btn { margin-top: 16px; }
 
 /* ---------- Board ---------- */

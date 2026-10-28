@@ -961,8 +961,6 @@ document.addEventListener('visibilitychange', () => {
   render();
 });
 
-const NEXT_FEW = 3; // next actions shown on the overview until expanded, unless more are due by today
-
 function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
 
@@ -977,11 +975,13 @@ function renderDashboard() {
   const doneActs = oneOff.filter(a => a.status === 'done').length;
   const todo = oneOff.filter(a => a.status !== 'done').sort(byDueDate);
   const overdue = todo.filter(a => a.dueDate && daysUntil(a.dueDate) < 0).length;
-  // Collapsed, the list still shows everything due by today (todo is sorted by due date).
-  const few = Math.max(NEXT_FEW, todo.filter(a => a.dueDate && a.dueDate <= now).length);
-  const next = ui.nextAll ? todo : todo.slice(0, few);
-  const more = todo.length > few ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
-    ui.nextAll ? t('dash.showFewer') : t('dash.showAll', { n: todo.length })}</button>` : '';
+  // Only active activities: collapsed, those due by today (overdue included); expanded, also the
+  // others in progress.
+  const due = todo.filter(a => a.dueDate && a.dueDate <= now);
+  const going = todo.filter(a => due.includes(a) || a.status === 'doing');
+  const next = ui.nextAll ? going : due;
+  const more = going.length > due.length ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
+    ui.nextAll ? t('dash.showFewer') : t('dash.showAll', { n: going.length })}</button>` : '';
 
   const waiting = todo.filter(a => blockers(a).length).length;
   return `
@@ -995,7 +995,9 @@ function renderDashboard() {
     </section>
 
     <h2 class="section-title">${t('dash.next')} <small>${next.length ? t('dash.sorted') : ''}</small></h2>
-    ${next.length ? `<div class="list">${next.map(activityRow).join('')}${more}</div>` : `<div class="empty">${t('dash.allDone')}</div>`}
+    ${next.length ? `<div class="list">${next.map(activityRow).join('')}${more}</div>`
+    : more ? `<div class="list"><div class="empty">${t('dash.noneDue')}</div>${more}</div>`
+    : `<div class="empty">${t(todo.length ? 'dash.noneActive' : 'dash.allDone')}</div>`}
 
     ${routines.length ? `<h2 class="section-title">${t('rt.title')} <small>${t('rt.dashHint')}</small></h2>
     <div class="list routine-list">${routines.map(routineRow).join('')}</div>` : ''}

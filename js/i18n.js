@@ -213,7 +213,7 @@ const I18N = {
 
       'help.off': 'Turn off help',
       'help.tipLabel': 'What is this?',
-      'help.view.dashboard': 'The overview sums up your plan: average progress of active goals, finished, late and waiting activities, and what is due next: at least three activities, and all that are due by today.',
+      'help.view.dashboard': 'The overview sums up your plan: average progress of active goals, finished, late and waiting activities, and what is due next: the activities due by today or overdue (Show all adds the others in progress).',
       'help.view.goals': 'Goals are where you want to get. Make each one SMART and link it to the current state that measures it and the activities that move it forward. A goal can also be measured simply by how many of its activities are done. Long-press or right-click a card to show the goal in the timeline or on the map.',
       'help.view.states': 'Current states are what you measure, such as your longest run or your savings. Describe what the value means and how you measure it, and record a new value whenever it changes to keep a history; Graphs draws it over time. Long-press or right-click a card to show the state in Graphs or on the map.',
       'help.view.graphs': 'Graphs show how each current state has changed: every measurement, the target of the goal it measures, and the change since the first measurement. Record new values on the state to extend the line – one per day, so a new value for a day replaces the old one. The table below each graph lists the measurements, newest first; delete a wrong one there.',
@@ -450,6 +450,8 @@ const I18N = {
       'dash.showAll': 'Show all ({n})',
       'dash.showFewer': 'Show fewer',
       'dash.allDone': 'Nothing left to do. 🎉',
+      'dash.noneDue': 'Nothing is due by today.',
+      'dash.noneActive': 'Nothing is in progress or due by today.',
       'blocked': 'blocked',
       'blocked.title': { one: 'Waiting for {n} other activity', other: 'Waiting for {n} other activities' },
 
@@ -894,7 +896,7 @@ const I18N = {
 
       'help.off': 'Izklopi pomoč',
       'help.tipLabel': 'Kaj je to?',
-      'help.view.dashboard': 'Pregled povzame vaš načrt: povprečni napredek aktivnih ciljev, opravljene, zamujene in čakajoče aktivnosti ter kaj je na vrsti: vsaj tri aktivnosti in vse, ki jim rok poteče do danes.',
+      'help.view.dashboard': 'Pregled povzame vaš načrt: povprečni napredek aktivnih ciljev, opravljene, zamujene in čakajoče aktivnosti ter kaj je na vrsti: aktivnosti z rokom do danes ali zamujene (Prikaži vse doda še ostale v teku).',
       'help.view.goals': 'Cilji so tam, kamor želite priti. Vsak naj bo SMART in povezan s trenutnim stanjem, ki ga meri, in z aktivnostmi, ki ga premikajo naprej. Cilj lahko merite tudi preprosto s tem, koliko njegovih aktivnosti je opravljenih. Pridržite kartico ali jo kliknite z desno tipko, da cilj prikažete na časovnici ali zemljevidu.',
       'help.view.states': 'Trenutna stanja so tisto, kar merite, na primer najdaljši tek ali prihranke. Opišite, kaj vrednost pomeni in kako jo merite, ob vsaki spremembi pa vpišite novo vrednost, da se ohrani zgodovina; Grafi jo prikažejo skozi čas. Pridržite kartico ali jo kliknite z desno tipko, da stanje prikažete v Grafih ali na zemljevidu.',
       'help.view.graphs': 'Grafi kažejo, kako se je spreminjalo posamezno trenutno stanje: vse meritve, ciljno vrednost cilja, ki ga meri, in spremembo od prve meritve. Nove vrednosti vpisujte pri stanju, da se črta podaljša – ena na dan, zato nova vrednost za isti dan nadomesti staro. Tabela pod grafom našteje meritve od najnovejše; napačno meritev izbrišete tam.',
@@ -1131,6 +1133,8 @@ const I18N = {
       'dash.showAll': 'Prikaži vse ({n})',
       'dash.showFewer': 'Prikaži manj',
       'dash.allDone': 'Vse je opravljeno. 🎉',
+      'dash.noneDue': 'Nič nima roka do danes.',
+      'dash.noneActive': 'Nič ni v teku in nič nima roka do danes.',
       'blocked': 'blokirano',
       'blocked.title': {
         one: 'Čaka na {n} drugo aktivnost',
