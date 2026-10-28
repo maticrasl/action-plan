@@ -3508,7 +3508,8 @@ function runCtxAction(act, id) {
 }
 
 viewEl.addEventListener('contextmenu', e => {
-  if (tlDrag?.touch) return e.preventDefault();
+  // Phones may report a still finger of a pinch as a long-press.
+  if (tlDrag?.touch || pinch) return e.preventDefault();
   const node = e.target.closest(MENU_SEL), line = e.target.closest('[data-rel-edit]');
   if (!node && !line) return;
   e.preventDefault();
@@ -3520,6 +3521,8 @@ let press = null;
 viewEl.addEventListener('pointerdown', e => {
   const node = e.target.closest(MENU_SEL), line = e.target.closest('[data-rel-edit]');
   if ((!node && !line) || e.pointerType === 'mouse' || e.target.closest('[data-tl-drag]')) return;
+  // A second finger (a pinch starting) must not leave the first one's wait running.
+  if (press) clearTimeout(press.timer);
   const p = { x: e.clientX, y: e.clientY, fired: false };
   p.timer = setTimeout(() => { p.fired = true; openMenuAt(line, node, p.x, p.y + 12); }, LONG_PRESS_MS);
   press = p;
@@ -3622,6 +3625,8 @@ viewEl.addEventListener('touchstart', e => {
     ['touchend', 'touchcancel'].forEach(type => el.addEventListener(type, pinchEnd));
   });
   if (press) { clearTimeout(press.timer); press = null; }
+  // Nor does a pinch pick up the selected timeline bar.
+  if (tlDrag && !tlDrag.moved) endTlDrag(false);
 }, { passive: true });
 
 // Click and drag with the mouse pans the map and the timeline (touch screens pan natively).

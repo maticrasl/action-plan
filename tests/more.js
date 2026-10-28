@@ -3542,4 +3542,67 @@ window.moreTests = async ({ step, assert }) => {
     closeCtxMenu();
     deletePlan(plans.current);
   });
+
+  await step('pinch: zooming the timeline or the map with two fingers opens no menu', async () => {
+    fresh('Pinch');
+    const g = mk('goal', { title: 'Goal', startDate: d(-5), deadline: d(30) });
+    const a = mk('activity', { title: 'First', startDate: d(-2), dueDate: d(10) }), b = mk('activity', { title: 'Second', startDate: d(1), dueDate: d(20) });
+    rel(a, g, 'contributes'); rel(b, g, 'contributes');
+    save();
+    const wait = ms => new Promise(res => setTimeout(res, ms));
+    const ptr = (type, el, id, x, y) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: id, isPrimary: id === 31, clientX: x, clientY: y }));
+    const tch = (type, el, fingers) => el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true,
+      touches: type === 'touchend' ? [] : fingers.map(([target, x, y], i) => new Touch({ identifier: i, target, clientX: x, clientY: y })) }));
+    // Two fingers down (each on its own item, or the second off any item), held, spread, lifted.
+    const pinchOn = async (el1, el2) => {
+      const r1 = el1.getBoundingClientRect(), r2 = el2.getBoundingClientRect();
+      const f1 = [el1, r1.left + 20, r1.top + 5], f2 = [el2, r2.left + 30, r2.top + 5];
+      ptr('pointerdown', el1, 31, f1[1], f1[2]); tch('touchstart', el1, [f1]);
+      ptr('pointerdown', el2, 32, f2[1], f2[2]); tch('touchstart', el2, [f1, f2]);
+      await wait(LONG_PRESS_MS + 80);
+      // Phones may also report the still finger as a long-press.
+      const cm = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: f1[1], clientY: f1[2] });
+      el1.dispatchEvent(cm);
+      // Checked while the fingers are still: zooming redraws the view, which would close a menu.
+      const menu = !ctxMenu.hidden, prevented = cm.defaultPrevented;
+      tch('touchmove', el1, [f1, [el2, f2[1] + 60, f2[2]]]);
+      await wait(20);
+      ptr('pointerup', el2, 32, f2[1], f2[2]); tch('touchend', el2, []);
+      ptr('pointerup', el1, 31, f1[1], f1[2]); tch('touchend', el1, []);
+      await wait(LONG_PRESS_MS + 80);
+      return { menu: menu || !ctxMenu.hidden, prevented };
+    };
+    setView('timeline');
+    ui.mapSelected = null; render();
+    const row = id => $(`[data-tl-node="${id}"]`);
+    let px = ui.tlPx;
+    let res = await pinchOn(row(a.id), row(b.id));
+    assert(!res.menu, 'two fingers on two rows: no menu');
+    assert(res.prevented, 'the browser menu is held back too');
+    assert(ui.tlPx > px, `and the timeline zoomed (${px} → ${ui.tlPx})`);
+    res = await pinchOn(row(a.id), $('.tl-scroll .tl-scale') || $('.tl-scroll'));
+    assert(!res.menu, 'second finger off any row: no menu');
+    // With a bar selected, a pinch that starts on it does not pick it up.
+    ui.mapSelected = a.id; render();
+    const start = a.startDate;
+    res = await pinchOn(row(a.id).querySelector('.tl-bar'), row(b.id));
+    assert(!res.menu && !tlDrag && !$('.tl-scroll').classList.contains('tl-dragging'), 'selected bar: not picked up, no menu');
+    eq(a.startDate, start, 'its dates stay');
+    // The map, the same.
+    setView('map');
+    ui.mapSelected = null; render();
+    px = ui.mapScale;
+    res = await pinchOn($(`[data-map-node="${a.id}"]`), $(`[data-map-node="${b.id}"]`));
+    assert(!res.menu, 'map: no menu');
+    // One finger held still is still a long-press.
+    const node = $(`[data-map-node="${a.id}"]`);
+    ptr('pointerdown', node, 31, 50, 50);
+    await wait(LONG_PRESS_MS + 80);
+    ptr('pointerup', node, 31, 50, 50);
+    assert(!ctxMenu.hidden && ctxMenu.dataset.id === a.id, 'a one-finger long-press still opens the menu');
+    closeCtxMenu();
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    deletePlan(plans.current);
+    return `map ${px} → ${ui.mapScale}`;
+  });
 };
