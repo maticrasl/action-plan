@@ -3391,4 +3391,21 @@ window.moreTests = async ({ step, assert }) => {
     deletePlan(plans.current);
     return `px=${px}`;
   });
+
+  await step('graphs: a pinch on a chart zooms the page; a sideways swipe still moves the crosshair', () => {
+    loadSample();
+    setView('graphs');
+    const plots = [...viewEl.querySelectorAll('.gr-plot')];
+    assert(plots.length, 'charts drawn');
+    const ta = getComputedStyle(plots[0]).touchAction;
+    assert(ta.includes('pinch-zoom'), `pinch zooms: ${ta}`);
+    assert(ta.includes('pan-y') && !ta.includes('pan-x') && ta !== 'auto', `up and down scrolls, sideways is the app's: ${ta}`);
+    for (const v of ['map', 'timeline']) {
+      setView(v);
+      const own = getComputedStyle($(ZOOM_SEL)).touchAction;
+      assert(!own.includes('pinch-zoom'), `${v} keeps its own pinch: ${own}`);
+    }
+    deletePlan(plans.current);
+    return ta;
+  });
 };

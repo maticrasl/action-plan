@@ -830,7 +830,8 @@ textarea { resize: vertical; min-height: 68px; }
 .gr-legend .key { width: 18px; height: 0; border-top: 2px solid; }
 .gr-legend .key-measure { border-color: var(--rel-state); }
 .gr-legend .key-target { border-color: var(--goal); border-top-style: dashed; }
-.gr-plot { position: relative; touch-action: pan-y; border-radius: var(--r-sm); }
+/* A sideways swipe moves the crosshair; scrolling up and down and pinch-zooming the page still work. */
+.gr-plot { position: relative; touch-action: pan-y pinch-zoom; border-radius: var(--r-sm); }
 .gr-plot:focus-visible { box-shadow: var(--focus); outline: none; }
 .gr-plot svg { display: block; overflow: visible; }
 .gr-grid { stroke: var(--line); stroke-width: 1; }
