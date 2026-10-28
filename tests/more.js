@@ -71,7 +71,7 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('templates: every template becomes a sound plan, in both languages, and every view draws it', () => {
-    const views = ['dashboard', 'goals', 'states', 'graphs', 'activities', 'timeline', 'map'];
+    const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs'];
     const made = [];
     let items = 0;
     for (const code of ['en', 'sl']) {
@@ -1316,11 +1316,11 @@ window.moreTests = async ({ step, assert }) => {
     more.click();
     const items = [...sheet.querySelectorAll('[data-sheet-view]')].map(b => b.dataset.sheetView);
     assert(!sheet.hidden && more.getAttribute('aria-expanded') === 'true', 'opens');
-    assert(items.join() === 'graphs,timeline,map', 'lists the extra views');
+    assert(items.join() === 'map,timeline,graphs', 'lists the extra views');
     assert(sheet.querySelector('[data-sheet-view="timeline"]').textContent.trim() === t('nav.timeline'), 'with labels');
     assert(document.activeElement === sheet.querySelector('button'), 'first item focused');
     sheet.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
-    assert(document.activeElement.dataset.sheetView === 'map', 'arrows wrap');
+    assert(document.activeElement.dataset.sheetView === 'graphs', 'arrows wrap');
     sheet.querySelector('[data-sheet-view="timeline"]').click();
     assert(ui.view === 'timeline' && sheet.hidden && more.classList.contains('active'), 'picks a view, closes, More marked');
     more.click();
@@ -3555,7 +3555,7 @@ window.moreTests = async ({ step, assert }) => {
       await longPress(card(a.id).querySelector('h3'), withClick);
       assert(!ctxMenu.hidden && ctxMenu.dataset.id === a.id, `${withClick ? 'with' : 'without'} a lifting click: menu open`);
       assert(!modal.open, 'the press does not also open the form');
-      eq(acts(), ['edit', 'status:todo', 'status:doing', 'status:done', 'add:activity:subactivity', 'show:timeline', 'show:map', 'link', 'delete'], 'activity options, no highlighting');
+      eq(acts(), ['edit', 'status:todo', 'status:doing', 'status:done', 'add:activity:subactivity', 'show:map', 'show:timeline', 'link', 'delete'], 'activity options, no highlighting');
       tapMenu('status:' + (withClick ? 'todo' : 'doing'));
       assert(ctxMenu.hidden, 'one tap runs the item');
       eq(a.status, withClick ? 'todo' : 'doing', 'status set from the menu');
@@ -3740,14 +3740,14 @@ window.moreTests = async ({ step, assert }) => {
     const pick = view => ctxMenu.querySelector(`[data-ctx="show:${view}"]`).click();
     // Goals view → map: the box is selected and focused, its neighbours stay lit.
     setView('goals');
-    eq(rightClick($(`.card[data-open="${g.id}"]`)), ['timeline', 'map'], 'goal card');
+    eq(rightClick($(`.card[data-open="${g.id}"]`)), ['map', 'timeline'], 'goal card');
     const showMap = ctxMenu.querySelector('[data-ctx="show:map"]');
     assert(showMap.textContent === t('ctx.showIn') && showMap.querySelector('svg').outerHTML === $('.nav-item[data-view="map"] svg').outerHTML, '"Show in" and the map icon');
     assert(showMap.getAttribute('aria-label') === t('ctx.showInView', { view: t('nav.map') }) && showMap.title === 'Show in Map view', 'named in full');
     const box = showMap.querySelector('svg').getBoundingClientRect();
     assert(box.width === 18 && box.height === 18 && getComputedStyle(showMap.querySelector('svg')).fill === 'none', 'icon drawn like in the navigation');
     const all = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
-    eq(all(), ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'show:timeline', 'show:map', 'link', 'delete'], 'goal options: no highlight or focus outside the map and timeline');
+    eq(all(), ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'show:map', 'show:timeline', 'link', 'delete'], 'goal options: no highlight or focus outside the map and timeline');
     pick('map');
     const node = $(`[data-map-node="${g.id}"]`);
     assert(ui.view === 'map' && ui.mapSelected === g.id && ctxMenu.hidden, 'map, goal selected');
@@ -3771,7 +3771,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(!card.classList.contains('flash'), 'and stops');
     // States: graphs only for one with measurements; graphs → states.
     setView('states');
-    eq(rightClick($(`.card[data-open="${s.id}"]`)), ['graphs', 'map'], 'state with data');
+    eq(rightClick($(`.card[data-open="${s.id}"]`)), ['map', 'graphs'], 'state with data');
     closeCtxMenu();
     eq(rightClick($(`.card[data-open="${bare.id}"]`)), ['map'], 'state without data');
     closeCtxMenu();
@@ -3785,7 +3785,7 @@ window.moreTests = async ({ step, assert }) => {
     // Overview rows have the menu too (the activity is in progress, not due yet: listed once expanded).
     ui.nextAll = true;
     setView('dashboard');
-    eq(rightClick($(`.row[data-open="${a.id}"]`)), ['activities', 'timeline', 'map'], 'next action row');
+    eq(rightClick($(`.row[data-open="${a.id}"]`)), ['activities', 'map', 'timeline'], 'next action row');
     pick('map');
     assert(ui.view === 'map' && ui.mapSelected === a.id, 'from the overview to the map');
     ui.nextAll = false;

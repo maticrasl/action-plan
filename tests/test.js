@@ -10,7 +10,7 @@
     catch (e) { log(`FAIL ${name}: ${e && e.stack || e}`); }
   };
   const assert = (c, m) => { if (!c) throw new Error(m || 'assertion failed'); };
-  const views = ['dashboard', 'goals', 'states', 'graphs', 'activities', 'timeline', 'map'];
+  const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs'];
   const tick = () => new Promise(r => setTimeout(r, 0));
 
   await step('boot: one empty starter plan', () => { assert(plans.list.length === 1); assert(itemCountSafe() === 0); return plans.list[0].name; });

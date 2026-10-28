@@ -920,11 +920,11 @@ const matchesSearch = item => !ui.search || (item.title + ' ' + (item.descriptio
 const VIEWS = {
   dashboard: { add: 'goal', render: renderDashboard },
   goals: { add: 'goal', render: renderGoals },
-  states: { add: 'state', render: renderStates },
-  graphs: { add: 'state', render: renderGraphs },
   activities: { add: 'activity', render: renderActivities },
-  timeline: { add: 'activity', render: renderTimeline },
+  states: { add: 'state', render: renderStates },
   map: { add: 'relation', render: renderMap },
+  timeline: { add: 'activity', render: renderTimeline },
+  graphs: { add: 'state', render: renderGraphs },
 };
 
 function render() {
@@ -3435,7 +3435,7 @@ function ctxOptions(kind, item) {
 }
 
 // The views each kind of item appears in (graphs: only states with measurements).
-const SHOW_IN = { goal: ['goals', 'timeline', 'map'], activity: ['activities', 'timeline', 'map'], state: ['states', 'graphs', 'map'] };
+const SHOW_IN = { goal: ['goals', 'map', 'timeline'], activity: ['activities', 'map', 'timeline'], state: ['states', 'map', 'graphs'] };
 
 // Switches to another view with the item selected there (map, timeline) or its card brought into
 // view. Filters stay as they are, so the item may not be shown.
