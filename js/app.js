@@ -3654,6 +3654,51 @@ viewEl.addEventListener('touchstart', e => {
   if (tlDrag && !tlDrag.moved) endTlDrag(false);
 }, { passive: true });
 
+// One-finger zoom on touch screens: tap, then touch again and drag – down zooms in, up zooms out,
+// around the point first tapped. A second tap that doesn't move stays a double-tap (which edits).
+const TAP_ZOOM = { GAP_MS: 300, NEAR: 30, START: 8, RATE: 0.01 };
+let lastTap = null, tapZoom = null;
+function tapZoomMove(e) {
+  if (!tapZoom || e.touches.length !== 1) return;
+  // From the first move on, so the drag never starts scrolling the view instead.
+  if (e.cancelable) e.preventDefault();
+  const y = e.touches[0].clientY;
+  if (!tapZoom.moved) {
+    if (Math.abs(y - tapZoom.y0) < TAP_ZOOM.START) return;
+    tapZoom.moved = true;
+    if (press) { clearTimeout(press.timer); press = null; }
+    if (tlDrag && !tlDrag.moved) endTlDrag(false);
+  }
+  queueZoom(tapZoom.wrap, Math.exp((y - tapZoom.y) * TAP_ZOOM.RATE), tapZoom.x, tapZoom.y0);
+  tapZoom.y = y;
+}
+function tapZoomEnd() {
+  const z = tapZoom;
+  if (!z) return;
+  z.target.removeEventListener('touchmove', tapZoomMove);
+  ['touchend', 'touchcancel'].forEach(type => z.target.removeEventListener(type, tapZoomEnd));
+  // Keep it until the click the lifted finger may produce has been swallowed (see below).
+  setTimeout(() => { if (tapZoom === z) tapZoom = null; });
+}
+let touchDown = null; // where and when the current one-finger touch began
+viewEl.addEventListener('touchstart', e => {
+  const t = e.touches.length === 1 && e.touches[0], prev = lastTap;
+  touchDown = t && { x: t.clientX, y: t.clientY, t: e.timeStamp };
+  lastTap = null;
+  const wrap = t && e.target.closest(ZOOM_SEL);
+  if (!wrap || !prev || e.timeStamp - prev.t > TAP_ZOOM.GAP_MS || Math.hypot(t.clientX - prev.x, t.clientY - prev.y) > TAP_ZOOM.NEAR) return;
+  tapZoom = { wrap, target: e.target, x: prev.x, y0: t.clientY, y: t.clientY, moved: false };
+  e.target.addEventListener('touchmove', tapZoomMove, { passive: false });
+  ['touchend', 'touchcancel'].forEach(type => e.target.addEventListener(type, tapZoomEnd));
+}, { passive: true });
+// A tap: one finger, down and up quickly, without moving. Only a tap can start a tap-and-drag.
+viewEl.addEventListener('touchend', e => {
+  const t = e.changedTouches[0], down = touchDown;
+  touchDown = null;
+  const tap = down && t && !e.touches.length && !tapZoom && e.timeStamp - down.t < TAP_ZOOM.GAP_MS && Math.hypot(t.clientX - down.x, t.clientY - down.y) < TAP_ZOOM.START;
+  lastTap = tap ? { x: t.clientX, y: t.clientY, t: e.timeStamp } : null;
+});
+
 // Click and drag with the mouse pans the map and the timeline (touch screens pan natively).
 let pan = null;
 viewEl.addEventListener('pointerdown', e => {
@@ -3685,7 +3730,7 @@ document.addEventListener('pointermove', e => {
 }));
 // The click that ends a drag (panning, or linking two boxes) must not select a box.
 document.addEventListener('click', e => {
-  if (pan?.moved || linkDrag?.moved) { e.stopPropagation(); e.preventDefault(); }
+  if (pan?.moved || linkDrag?.moved || tapZoom?.moved) { e.stopPropagation(); e.preventDefault(); }
 }, true);
 
 /* ---------- Linking two map boxes ----------
