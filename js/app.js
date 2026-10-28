@@ -960,7 +960,7 @@ document.addEventListener('visibilitychange', () => {
   render();
 });
 
-const NEXT_FEW = 3; // next actions shown on the overview until expanded
+const NEXT_FEW = 3; // next actions shown on the overview until expanded, unless more are due by today
 
 function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
@@ -976,8 +976,10 @@ function renderDashboard() {
   const doneActs = oneOff.filter(a => a.status === 'done').length;
   const todo = oneOff.filter(a => a.status !== 'done').sort(byDueDate);
   const overdue = todo.filter(a => a.dueDate && daysUntil(a.dueDate) < 0).length;
-  const next = ui.nextAll ? todo : todo.slice(0, NEXT_FEW);
-  const more = todo.length > NEXT_FEW ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
+  // Collapsed, the list still shows everything due by today (todo is sorted by due date).
+  const few = Math.max(NEXT_FEW, todo.filter(a => a.dueDate && a.dueDate <= now).length);
+  const next = ui.nextAll ? todo : todo.slice(0, few);
+  const more = todo.length > few ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
     ui.nextAll ? t('dash.showFewer') : t('dash.showAll', { n: todo.length })}</button>` : '';
 
   const waiting = todo.filter(a => blockers(a).length).length;

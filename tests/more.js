@@ -1368,7 +1368,8 @@ window.moreTests = async ({ step, assert }) => {
     const todo = db.activities.filter(a => a.status !== 'done' && !isRoutine(a)).sort(byDueDate);
     const shown = () => [...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].map(r => r.dataset.open);
     const more = () => $('[data-next-more]');
-    assert(shown().join() === todo.slice(0, NEXT_FEW).map(a => a.id).join(), 'the first few by due date');
+    const few = Math.max(NEXT_FEW, todo.filter(a => a.dueDate && a.dueDate <= today()).length);
+    assert(shown().join() === todo.slice(0, few).map(a => a.id).join(), 'the first few by due date');
     assert(more().textContent === t('dash.showAll', { n: todo.length }) && more().getAttribute('aria-expanded') === 'false', 'show all with the count');
     window.scrollTo(0, 0);
     more().click();
@@ -1377,7 +1378,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(more().textContent === t('dash.showFewer') && more().getAttribute('aria-expanded') === 'true' && document.activeElement === more(), 'show fewer, focus kept');
     assert(prefs.get('nextAll') === true, 'remembered');
     more().click();
-    assert(shown().length === NEXT_FEW && prefs.get('nextAll') === false, 'collapsed again');
+    assert(shown().length === few && prefs.get('nextAll') === false, 'collapsed again');
     // No button when everything fits.
     todo.slice(NEXT_FEW - 1).forEach(a => (a.status = 'done')); render();
     assert(shown().length === NEXT_FEW - 1 && !more(), 'no button for a short list');
@@ -3628,5 +3629,39 @@ window.moreTests = async ({ step, assert }) => {
     eq(clear(viewEl.querySelector('.row') || viewEl), clear(document.body), 'other views keep the browser default');
     deletePlan(plans.current);
     return out.join(', ');
+  });
+
+  await step('overview: next actions show everything due by today', () => {
+    fresh('Due today'); changeLanguage('en'); setView('dashboard');
+    ui.nextAll = false;
+    const shown = () => [...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].map(r => r.dataset.open);
+    const more = () => $('[data-next-more]');
+    const ids = xs => xs.map(a => a.id).join();
+    // Five due by today (overdue, today, one in progress), then two later and one without a date.
+    const due = [d(-9), d(-4), d(-1), d(0), d(0)].map((dueDate, i) => mk('activity', { dueDate, status: i === 2 ? 'doing' : 'todo' }));
+    const later = [d(1), d(5)].map(dueDate => mk('activity', { dueDate }));
+    const undated = mk('activity');
+    // Neither finished activities nor routines count.
+    mk('activity', { dueDate: d(-2), status: 'done' });
+    mk('activity', { dueDate: d(-3), repeat: { times: 1, per: 'week' }, checkins: {} });
+    render();
+    assert(shown().join() === ids(due), `all five due by today, got ${shown().length}`);
+    assert(more()?.textContent === t('dash.showAll', { n: 8 }), 'show all for the later ones');
+    more().click();
+    assert(shown().join() === ids([...due, ...later, undated]), 'expanded to all');
+    more().click();
+    assert(shown().join() === ids(due), 'collapsed back to those due');
+    // Only one left due by today: still at least three.
+    due.slice(1).forEach(a => (a.status = 'done')); render();
+    assert(shown().join() === ids([due[0], ...later]), 'topped up to three');
+    assert(more()?.textContent === t('dash.showAll', { n: 4 }), 'button for the undated one');
+    // Due ones only, more than three: no button.
+    [...later, undated].forEach(a => (a.status = 'done')); due.forEach(a => (a.status = 'todo')); render();
+    assert(shown().join() === ids(due) && !more(), 'no button when all are shown');
+    // Tomorrow is not due today.
+    due.slice(3).forEach(a => (a.dueDate = d(1))); later[0].status = 'todo'; render();
+    assert(shown().join() === ids(due.slice(0, 3)) && more(), 'only three when the rest are due tomorrow');
+    deletePlan(plans.current);
+    return 'ok';
   });
 };
