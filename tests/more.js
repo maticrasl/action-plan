@@ -2438,7 +2438,7 @@ window.moreTests = async ({ step, assert }) => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
       loadSample();
-      eq(db.states.length, 6, `${code}: six states`);
+      eq(db.states.length, 7, `${code}: seven states`);
       for (const s of db.states) {
         assert(s.description && s.description.length > 20, `${code} ${s.title}: has a description`);
         // A lasting description does not repeat a reading: no measured value or change appears in it.
@@ -2466,7 +2466,8 @@ window.moreTests = async ({ step, assert }) => {
       try { return run(); } finally { window.Date = RealDate; }
     };
     const offsets = data => [...data.goals, ...data.activities].flatMap(x => ['startDate', 'deadline', 'dueDate'].map(k => x[k]))
-      .concat(data.states.flatMap(s => [s.date, ...(s.history || []).map(h => h.date)]))
+      // A total's date is its last run's, which follows the weekdays like the check-ins below.
+      .concat(data.states.filter(s => !s.cumulative).flatMap(s => [s.date, ...(s.history || []).map(h => h.date)]))
       .map(d => (d ? dayNum(d) - dayNum(today()) : null));
     const results = [];
     let first = null;
@@ -3953,5 +3954,359 @@ window.moreTests = async ({ step, assert }) => {
     modal.close();
     deletePlan(plans.current);
     return out.join(', ');
+  });
+  /* ---------- States that add up (cumulative states) ---------- */
+
+  const entry = (date, amount, routine) => ({ id: uid(), date, amount: String(amount), ...(routine && { routine }) });
+
+  await step('cumulative: calendar periods, totals at their edges, several entries a day', () => {
+    eq(calPeriod('week', '2026-10-28'), { from: '2026-10-26', to: '2026-11-01' }, 'Monday to Sunday');
+    eq(calPeriod('week', '2026-11-01'), { from: '2026-10-26', to: '2026-11-01' }, 'Sunday ends the week');
+    eq(calPeriod('month', '2028-02-10'), { from: '2028-02-01', to: '2028-02-29' }, 'a leap February');
+    eq(calPeriod('year', '2026-12-31'), { from: '2026-01-01', to: '2026-12-31' }, 'year');
+    eq(calPeriod('day', '2026-03-29'), { from: '2026-03-29', to: '2026-03-29' }, 'day');
+    const wk = { cumulative: 'week', entries: [entry('2026-10-25', 5), entry('2026-10-26', 3), entry('2026-10-26', 2.5), entry('2026-11-01', 1)] };
+    assert(stateTotal(wk, '2026-10-25') === 5, 'Sunday belongs to the week before');
+    assert(stateTotal(wk, '2026-10-28') === 6.5, `Monday starts a new week; two entries on one day add up: ${stateTotal(wk, '2026-10-28')}`);
+    assert(lastPeriodTotal(wk, '2026-10-28') === 5, 'the week before');
+    const mo = { cumulative: 'month', entries: [entry('2026-01-31', 1), entry('2026-02-01', 2), entry('2026-12-31', 4), entry('2027-01-01', 8)] };
+    assert(stateTotal(mo, '2026-01-15') === 1 && stateTotal(mo, '2026-02-28') === 2 && stateTotal(mo, '2026-12-01') === 4 && stateTotal(mo, '2027-01-31') === 8, 'month ends');
+    const yr = { cumulative: 'year', entries: mo.entries };
+    assert(stateTotal(yr, '2026-06-01') === 7 && stateTotal(yr, '2027-06-01') === 8, 'year ends');
+    const day = { cumulative: 'day', entries: [entry('2026-05-05', 0.1), entry('2026-05-05', 0.2), entry('2026-05-06', 1)] };
+    assert(stateTotal(day, '2026-05-05') === 0.3, `per day, and 0.1 + 0.2 is 0.3: ${stateTotal(day, '2026-05-05')}`);
+    const all = { cumulative: 'none', entries: [entry('2026-01-01', 100), entry('2026-06-01', 50.5), entry('2099-01-01', 7)] };
+    assert(stateTotal(all, '2026-12-31') === 150.5, 'in total: everything up to the day');
+    // Entries without a date or a number are left out.
+    assert(stateTotal({ cumulative: 'none', entries: [entry('', 5), { id: 'x', date: '2026-01-01', amount: 'abc' }] }) === 0, 'bad entries ignored');
+    return 'week, month, year, day, total';
+  });
+
+  await step('cumulative: the value is the running total, fresh when a period ends without an edit', () => {
+    const now = today(), y = addDays(now, -1);
+    const s = { cumulative: 'day', entries: [entry(y, 4)] };
+    assert(stateValue(s) === 0 && lastPeriodTotal(s) === 4, 'yesterday’s amount is no longer today’s total');
+    s.entries.push(entry(now, 2.5));
+    assert(stateValue(s) === 2.5 && stateDate(s) === now, 'today');
+    assert(stateValue({ cumulative: 'week', entries: [] }) === '' && stateDate({ cumulative: 'week' }) === '', 'no entries: no value yet');
+    s.cumulative = 'none';
+    assert(stateValue(s) === 6.5, 'in total');
+    refreshTotal(s);
+    assert(s.value === '6.5' && s.date === now, 'stored copy');
+    // Plain states are unchanged: one value per date, a new one replaces it.
+    const p = { history: [] };
+    recordMeasurement(p, now, '5'); recordMeasurement(p, now, '7');
+    assert(p.history.length === 1 && stateValue(p) === '7', 'plain: same date replaces');
+    const periods = periodTotals({ cumulative: 'week', entries: [entry(addDays(now, -15), 1), entry(now, 2)] });
+    assert(periods.length >= 3 && periods.some(p => p.total === 0) && periods.at(-1).total === 2, `empty weeks included: ${periods.map(p => p.total)}`);
+    return `${periods.length} weeks`;
+  });
+
+  await step('cumulative: goals use the higher of this and the last period; reached only by a complete one', () => {
+    fresh('Cumulative goals');
+    const now = today(), lastWeek = addDays(now, -7);
+    const s = mk('state', { cumulative: 'week', entries: [entry(lastWeek, 20)] });
+    const g = mk('goal', { title: 'Run 30 km a week', unit: 'km', baseline: '10', target: '30', metric: 'Weekly km' });
+    rel(s, g, 'measures');
+    refreshTotal(s);
+    assert(goalCurrent(g) === 20 && Math.round(goalProgress(g)) === 50, `last week counts while this week is behind: ${goalCurrent(g)}`);
+    s.entries.push(entry(now, 25));
+    assert(goalCurrent(g) === 25, 'this week counts once it is ahead');
+    assert(!goalReached(g), 'not reached');
+    s.entries.push(entry(now, 10));
+    assert(goalProgress(g) === 100 && !goalReached(g), 'a strong week under way is 100 % but not reached yet');
+    s.entries.push(entry(lastWeek, 11));
+    assert(goalReached(g), 'a complete week at the target is');
+    // A goal that goes down: a month under way only counts once it is worse than the last full one.
+    const sp = mk('state', { cumulative: 'month', entries: [entry(addDays(calPeriod('month', now).from, -1), 350), entry(now, 50)] });
+    const h = mk('goal', { title: 'Spend less', unit: '€', baseline: '400', target: '300', metric: 'Spending' });
+    rel(sp, h, 'measures');
+    assert(goalCurrent(h) === 350 && Math.round(goalProgress(h)) === 50, `last month: ${goalCurrent(h)}`);
+    sp.entries.push(entry(now, 330));
+    assert(goalCurrent(h) === 380, 'this month once it is worse');
+    // Goal card: the two periods side by side.
+    setView('goals');
+    ui.goalFilter = 'all'; render();
+    const line = $(`.card.goal[data-open="${g.id}"] .cu-periods`).textContent;
+    assert(line === 'This week: 35 km · last week: 31 km', line);
+    // An in-total state suggests its total as the starting value.
+    const tot = mk('state', { cumulative: 'none', unit: '€', entries: [entry(now, 2450)] });
+    const f = mk('goal', { title: 'Save 6000 more', unit: '€', baseline: '', target: '6000', metric: 'Saved' });
+    rel(tot, f, 'measures');
+    openForm('goal', f.id);
+    assert($('[data-field="baseline"] .hint').textContent.includes('2,450 €'), 'baseline hint');
+    modal.close();
+    deletePlan(plans.current);
+    return line;
+  });
+
+  await step('cumulative: a tick asks how much; untick, delete and an amount on the state keep both in step', async () => {
+    fresh('Cumulative routines');
+    const now = today(), y = addDays(now, -1);
+    const run = mk('activity', { title: 'Run', startDate: addDays(now, -30), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
+    const km = mk('state', { title: 'Km', unit: 'km', cumulative: 'week', entries: [] });
+    const longest = mk('state', { title: 'Longest', history: [] });
+    rel(run, km, 'improves'); rel(run, longest, 'improves');
+    save();
+    setView('activities');
+    const day = iso => $(`.card.routine[data-open="${run.id}"] [data-checkin][data-date="${iso}"]`);
+    day(now).click();
+    const pop = $('.amount-pop');
+    assert(pop && pop.querySelectorAll('[data-amount]').length === 1 && document.activeElement === pop.querySelector('[data-amount]'), 'one field (plain states are not asked), focused');
+    assert(!checkedOn(run, now), 'nothing ticked yet');
+    pop.querySelector('[data-amount]').value = 'abc';
+    pop.requestSubmit();
+    assert($('.amount-pop .amount-err').textContent === t('err.number') && !km.entries.length, 'a wrong number is refused');
+    $('.amount-pop [data-amount]').value = '7,5';
+    $('.amount-pop').requestSubmit();
+    assert(!$('.amount-pop') && checkedOn(run, now), 'ticked');
+    eq(km.entries.map(e => [e.date, e.amount, e.routine]), [[now, '7.5', run.id]], 'entry tagged with the routine');
+    assert(!longest.history.length, 'plain state untouched');
+    // Escape (or "Just tick") only ticks.
+    if (runsOn(run, y)) {
+      ui.rtWeek[run.id] = mondayOf(y); render();
+      day(y).click();
+      $('.amount-pop [data-amount]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      assert(checkedOn(run, y) && km.entries.length === 1, 'Escape ticks only');
+      day(y).click();
+      assert(!checkedOn(run, y) && !$('.amount-pop'), 'unticking asks nothing');
+    }
+    // A click elsewhere leaves it unticked.
+    ui.rtWeek = {}; render();
+    // Unticking removes the routine's amounts that day.
+    day(now).click();
+    assert(!checkedOn(run, now) && !km.entries.length && Object.keys(km.droppedEntries).length === 1, 'untick drops the entry, remembered for sync');
+    assert(km.value === '' , 'total follows');
+    // An amount added on the state ticks the routine, tagged.
+    const e1 = addEntry(km, y, 5);
+    assert(checkedOn(run, y) && e1.routine === run.id, 'entry on the state ticks the routine');
+    const e2 = addEntry(km, y, 3);
+    deleteEntry(km, e1.id);
+    assert(checkedOn(run, y), 'another entry that day keeps the tick');
+    deleteEntry(km, e2.id);
+    assert(!checkedOn(run, y), 'deleting the last one unticks');
+    // Not before the routine starts, and not in the future.
+    const early = addEntry(km, addDays(now, -60), 4), later = addEntry(km, addDays(now, 3), 4);
+    assert(!checkedOn(run, addDays(now, -60)) && !early.routine && !later.routine, 'outside the routine’s days: no tick, no tag');
+    // With two routines feeding it, an entry ticks both, tagged with neither.
+    const bike = mk('activity', { title: 'Bike', startDate: addDays(now, -30), repeat: { every: 1, unit: 'week', times: 2 }, checkins: {} });
+    rel(bike, km, 'improves');
+    const both = addEntry(km, now, 10);
+    assert(checkedOn(run, now) && checkedOn(bike, now) && !both.routine, 'two routines: both ticked, untagged');
+    // Overview rows ask the same.
+    setView('dashboard');
+    $(`.routine-row[data-open="${bike.id}"] [data-checkin]`).click();
+    assert(!checkedOn(bike, now) && !$('.amount-pop'), 'unticking from the overview');
+    $(`.routine-row[data-open="${bike.id}"] [data-checkin]`).click();
+    assert($('.amount-pop'), 'ticking from the overview asks');
+    $('.amount-pop [data-amount-skip]').click();
+    assert(checkedOn(bike, now) && !$('.amount-pop'), '"Just tick"');
+    deletePlan(plans.current);
+    return `${km.entries.length} entries left`;
+  });
+
+  await step('cumulative: + on the state card adds an amount with its date', () => {
+    fresh('Cumulative card');
+    const s = mk('state', { title: 'Saved', unit: '€', cumulative: 'none', entries: [] });
+    save();
+    setView('states');
+    assert($(`.card.state[data-open="${s.id}"]`).textContent.includes(t('cu.noEntries')), 'nothing added yet');
+    $(`[data-add-amount="${s.id}"]`).click();
+    assert(!modal.open && $('.amount-pop [data-amount-date]').value === dateInput(today()), 'opens by the button, not the form; today');
+    $('.amount-pop [data-amount]').value = '120';
+    $('.amount-pop [data-amount-date]').value = '31/02/2026';
+    $('.amount-pop').requestSubmit();
+    assert($('.amount-pop .amount-err').textContent === t('err.date'), 'a wrong date is refused');
+    $('.amount-pop [data-amount-date]').value = '01/02/2026';
+    $('.amount-pop').requestSubmit();
+    eq(s.entries.map(e => [e.date, e.amount]), [['2026-02-01', '120']], 'added');
+    assert($('#toast').textContent === t('cu.added', { value: '120 €', name: 'Saved' }), $('#toast').textContent);
+    const card = $(`.card.state[data-open="${s.id}"]`);
+    assert(card.querySelector('.cu-total').textContent === '120 € in total' && document.activeElement === $(`[data-add-amount="${s.id}"]`), 'total on the card, focus back on +');
+    // Empty adds nothing; a click elsewhere closes.
+    $(`[data-add-amount="${s.id}"]`).click();
+    $('.amount-pop').requestSubmit();
+    assert(!$('.amount-pop') && s.entries.length === 1, 'empty: nothing');
+    $(`[data-add-amount="${s.id}"]`).click();
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    assert(!$('.amount-pop'), 'click elsewhere closes');
+    deletePlan(plans.current);
+    return card.querySelector('.cu-total').textContent;
+  });
+
+  await step('cumulative: the form switches between adding up and single values, both ways', () => {
+    fresh('Cumulative form');
+    const now = today();
+    const s = mk('state', { title: 'Pages', history: [] });
+    recordMeasurement(s, addDays(now, -2), '10'); recordMeasurement(s, now, '20');
+    save();
+    openForm('state', s.id);
+    const change = (sel, v) => { $(sel).value = v; $(sel).dispatchEvent(new Event('change', { bubbles: true })); };
+    assert($('[data-field="value"] label').textContent === t('f.value') && !$('#addsUpHint').textContent, 'plain form');
+    change('#f-addsUp', 'week');
+    assert($('[data-field="value"] label').textContent === t('cu.addAmount') && $('#addsUpHint').textContent === t('cu.toCumulative'), 'labels follow');
+    let asked = '';
+    window.confirm = m => { asked = m; return false; };
+    submitForm();
+    assert(asked === t('cu.confirmToCumulative', { name: 'Pages' }) && !s.cumulative && modal.open, 'asks first; cancelling keeps it');
+    window.confirm = () => true;
+    $('#f-value').value = '5';
+    submitForm();
+    assert(s.cumulative === 'week' && s.entries.length === 3, `measurements became entries, plus the new amount: ${s.entries.length}`);
+    eq(entriesOf(s).filter(e => e.date === now).map(e => e.amount).sort(), ['20', '5'], 'today: two entries');
+    // Changing the period only changes the totals.
+    openForm('state', s.id);
+    assert($('#entryList') && !$('#entryList').hidden, 'entry list');
+    change('#f-addsUp', 'month');
+    submitForm();
+    assert(s.cumulative === 'month' && s.entries.length === 3, 'period change keeps the entries');
+    // Marking an entry deletes it on saving, not on cancelling.
+    openForm('state', s.id);
+    const first = $('[data-drop-entry]');
+    first.click();
+    assert(first.getAttribute('aria-pressed') === 'true' && first.closest('.entry').classList.contains('dropped'), 'marked');
+    modal.close();
+    assert(s.entries.length === 3, 'cancel keeps it');
+    openForm('state', s.id);
+    $(`[data-drop-entry="${first.dataset.dropEntry}"]`).click();
+    submitForm();
+    assert(s.entries.length === 2 && s.droppedEntries[first.dataset.dropEntry], 'save deletes it');
+    // Back to single values: each day's amounts add up.
+    s.entries.push(entry(now, 1.5));
+    openForm('state', s.id);
+    change('#f-addsUp', '');
+    assert($('#addsUpHint').textContent === t('cu.toPlain'), 'hint');
+    submitForm();
+    assert(!s.cumulative, 'plain again');
+    const todayValue = s.history.find(h => h.date === now).value;
+    assert(stateValue(s) === s.value && s.date === stateDate(s), 'value follows its history');
+    deletePlan(plans.current);
+    return `today ${todayValue}`;
+  });
+
+  await step('cumulative: sync merges entries by id, keeps deletions, recomputes the total', () => {
+    const now = today();
+    const e = (id, amount, date = now) => ({ id, date, amount: String(amount) });
+    const x = { id: 's', cumulative: 'week', updatedAt: '2099-01-01', entries: [e('a', 1), e('b', 2)], value: '3', date: now };
+    const y = { id: 's', cumulative: 'week', updatedAt: '2099-02-01', entries: [e('a', 10), e('c', 4)], droppedEntries: { b: 1 }, value: '14', date: now };
+    const m = mergeState(x, y);
+    eq(m.entries.map(x => `${x.id}=${x.amount}`), ['a=10', 'c=4'], 'b deleted, a from the newer copy, c added');
+    eq(m.droppedEntries, { b: 1 }, 'deletion remembered');
+    assert(m.value === '14', `total recomputed: ${m.value}`);
+    eq(mergeState(y, x), m, 'symmetric');
+    const old = { ...x, updatedAt: '2099-03-01', entries: [e('a', 1), e('b', 2), e('d', 8)] };
+    eq(mergeState(old, y).entries.map(x => x.id), ['a', 'b', 'c', 'd'].filter(id => id !== 'b'), 'a deletion on one side wins over the other side keeping it');
+    // Through whole plans.
+    const p = { ...emptyDb(), states: [x] }, q = { ...emptyDb(), states: [y] };
+    assert(mergePlans(p, q).states[0].entries.length === 2, 'mergePlans');
+    return m.entries.length + ' entries';
+  });
+
+  await step('target reached: a toast offers to mark the goal achieved, once, not for an existing plan', async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    // An existing plan with a goal already at its target: no toast on opening it.
+    const done = { ...emptyDb(), goals: [{ id: 'g0', title: 'Already there', status: 'active', baseline: '0', target: '5', current: '5', metric: 'm' }] };
+    createPlan('Reached already', done);
+    await wait(10);
+    assert(!$('#toast').classList.contains('has-action') && db.goals[0].offeredAt, 'quietly noted');
+    deletePlan(plans.current);
+    await wait(300);
+    fresh('Reached');
+    const s = mk('state', { title: 'Items', history: [] });
+    const g = mk('goal', { title: 'Sell 3', baseline: '0', target: '3', metric: 'Sold' });
+    rel(s, g, 'measures');
+    recordMeasurement(s, today(), '2');
+    save();
+    await wait(10);
+    assert(!$('#toast').classList.contains('has-action'), 'below the target: nothing');
+    recordMeasurement(s, today(), '3');
+    save();
+    await wait(10);
+    const box = $('#toast');
+    assert(box.classList.contains('has-action') && box.textContent.startsWith(t('reached.text', { name: 'Sell 3' })), box.textContent);
+    // It stays longer than a plain toast.
+    await wait(2500);
+    assert(box.classList.contains('show'), 'still there after 2.5 s');
+    save();
+    await wait(10);
+    assert(box.textContent.startsWith(t('reached.text', { name: 'Sell 3' })) && reachedQueue.length === 0, 'offered once');
+    box.querySelector('.toast-action').click();
+    assert(g.status === 'achieved' && box.textContent === t('ctx.statusSet', { s: t('goal.achieved') }), 'marked achieved');
+    // Reactivated and dropped below, then reached again: offered again.
+    g.status = 'active';
+    recordMeasurement(s, today(), '1');
+    save();
+    assert(!g.offeredAt, 'below again: re-armed');
+    recordMeasurement(s, today(), '4');
+    save();
+    await wait(10);
+    assert($('#toast').classList.contains('has-action'), 'offered again');
+    hideToast();
+    // Two goals at once: one toast at a time.
+    const g2 = mk('goal', { title: 'Sell 2', baseline: '0', target: '2', metric: 'Sold' }), g3 = mk('goal', { title: 'Sell 1', baseline: '0', target: '1', metric: 'Sold' });
+    rel(s, g2, 'measures'); rel(s, g3, 'measures');
+    save();
+    await wait(10);
+    const firstText = $('#toast').textContent;
+    hideToast();
+    await wait(300);
+    assert($('#toast').textContent !== firstText && $('#toast').classList.contains('has-action'), 'the next one follows');
+    hideToast();
+    // A goal measured by routines has no target to reach.
+    assert(!goalReached({ status: 'active', progress: 'routines' }), 'routines: never');
+    deletePlan(plans.current);
+    await wait(300);
+    return firstText;
+  });
+
+  await step('cumulative graphs: bars per period, running total, a graph per routine, Show in', () => {
+    loadSample();
+    setView('graphs');
+    const km = db.states.find(s => s.cumulative === 'week'), run = db.activities.find(a => relsFrom(a.id, 'improves').some(r => r.to === km.id) && isRoutine(a));
+    const card = $(`[data-gr="${km.id}"]`);
+    assert(card.querySelectorAll('.gr-bar').length === periodTotals(km).length && card.querySelectorAll('.gr-bar.now').length === 1, 'a bar per week, this one lighter');
+    assert(card.querySelector('.gr-value').textContent === totalText(km), 'total');
+    const plot = card.querySelector('.gr-plot');
+    plot.focus();
+    assert(plot.querySelector('.gr-tip-date').textContent.startsWith('Week of') && plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(stateTotal(km)), 'km'), plot.querySelector('.gr-tip').textContent);
+    plot.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    assert(plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(periodTotals(km)[0].total), 'km'), 'Home: the first week');
+    plot.blur();
+    // Every routine with check-ins has a graph; its bars show check-ins against the period's target.
+    const rc = $(`[data-gr="${run.id}"]`);
+    assert(rc && rc.querySelectorAll('.gr-bar').length >= 5 && rc.querySelectorAll('.gr-bar.met').length >= 1 && rc.querySelectorAll('.gr-goal').length >= 5, 'routine graph');
+    db.activities.filter(isRoutine).forEach(a => assert($(`[data-gr="${a.id}"]`), `${a.title} has a graph`));
+    // Delete an entry from the table.
+    const n = km.entries.length, del = card.querySelector('[data-del-entry]');
+    del.click();
+    assert(km.entries.length === n - 1 && $(`[data-gr="${km.id}"] .gr-table`).open, 'deleted from the table, which stays open');
+    // A running total: a step line.
+    km.cumulative = 'none'; render();
+    assert($(`[data-gr="${km.id}"] .gr-line`).getAttribute('d').includes('H') && $(`[data-gr="${km.id}"] .gr-value`).textContent.endsWith('in total'), 'step line of the total');
+    km.cumulative = 'week'; render();
+    // Show in Graphs, for a routine too.
+    setView('activities');
+    const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 });
+    $(`.card.routine[data-open="${run.id}"]`).dispatchEvent(e);
+    $('#ctxMenu [data-ctx="show:graphs"]').click();
+    assert(ui.view === 'graphs' && $(`[data-gr="${run.id}"]`), 'shown in Graphs');
+    // Long daily histories scroll, starting at the latest days.
+    km.cumulative = 'day'; km.entries.push(entry(addDays(today(), -200), 3)); render();
+    const daily = $(`[data-gr="${km.id}"] .gr-plot`);
+    assert(daily.classList.contains('scroll') && daily.scrollLeft > 0, `daily bars scroll: ${daily.scrollLeft}`);
+    deletePlan(plans.current);
+    return `${periodTotals(km).length} days`;
+  });
+
+  await step('cumulative: wording in both languages', () => {
+    const keys = Object.keys(I18N.en.strings).filter(k => k.startsWith('cu.') || k.startsWith('reached.') || k === 'help.tip.addAmount');
+    const missing = keys.filter(k => !(k in I18N.sl.strings));
+    assert(keys.length > 50 && !missing.length, `missing in Slovenian: ${missing}`);
+    changeLanguage('sl');
+    const s = { cumulative: 'week', unit: 'km', entries: [entry(today(), 3)] };
+    const text = totalText(s);
+    changeLanguage('en');
+    assert(text === '3 km ta teden', text);
+    return text;
   });
 };

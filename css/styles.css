@@ -705,6 +705,8 @@ textarea { resize: vertical; min-height: 68px; }
   font-size: 14.5px; font-weight: 600; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.has-action { pointer-events: auto; display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px); border-radius: 18px; padding: 8px 8px 8px 18px; }
+.toast-action { border: 0; border-radius: 999px; background: var(--bg); color: var(--ink); font: inherit; font-weight: 700; padding: 6px 14px; cursor: pointer; white-space: nowrap; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 960px) {
@@ -872,6 +874,42 @@ textarea { resize: vertical; min-height: 68px; }
 .gr-table td.gr-del { width: 1%; padding-right: 0; text-align: right; }
 .gr-table td.gr-del .btn { padding: 2px 8px; }
 .gr-without { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.gr-plot.scroll { overflow-x: auto; overflow-y: hidden; touch-action: auto; }
+.gr-bar { fill: color-mix(in srgb, var(--rel-state) 75%, transparent); }
+.gr-bar.met { fill: var(--ok); }
+.gr-bar.now { fill: color-mix(in srgb, var(--rel-state) 35%, transparent); }
+.gr-bar.met.now { fill: color-mix(in srgb, var(--ok) 55%, transparent); }
+.gr-goal { stroke: var(--goal); stroke-width: 2; stroke-dasharray: 4 3; }
+.gr-legend .key-bar { height: 10px; border: 0; border-radius: 2px; background: color-mix(in srgb, var(--rel-state) 75%, transparent); }
+.gr-legend .key-goal { border-color: var(--goal); border-top-style: dashed; }
+.gr-table tr.gr-period td { padding-top: 9px; }
+.gr-table tr.gr-entry td:first-child { padding-left: 14px; color: var(--ink-2); }
+
+/* States that add up: the total and a + on the card, a quick amount by the button or tick */
+.cu-head { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.cu-add { width: 30px; height: 30px; border: 1px solid var(--line-strong); }
+.cu-add svg { width: 16px; height: 16px; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+.cu-periods { font-size: 13px; }
+.amount-pop {
+  position: fixed; z-index: 60; width: min(300px, calc(100vw - 16px)); display: flex; flex-direction: column; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-pop);
+  padding: 12px 14px; animation: rise .12s ease-out;
+}
+.amount-title { font-size: 14.5px; }
+.amount-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; }
+.amount-input { display: flex; align-items: center; gap: 8px; }
+.amount-input input { flex: 1; min-width: 0; }
+.amount-unit { color: var(--ink-2); font-weight: 600; }
+.amount-err { font-size: 12.5px; color: var(--bad); font-weight: 600; }
+.amount-err:empty { display: none; }
+.amount-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.entries .entry-day { align-items: center; gap: 12px; }
+.entry-amounts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 10px; }
+.entry { display: inline-flex; align-items: center; gap: 2px; }
+.entry.dropped strong { text-decoration: line-through; opacity: .5; }
+.entry-del { border: 0; background: none; color: var(--ink-3); width: 24px; height: 24px; border-radius: 999px; cursor: pointer; font-size: 15px; line-height: 1; }
+.entry-del:hover, .entry-del:focus-visible { color: var(--bad); background: var(--surface-2); }
+.entry-del[aria-pressed="true"] { color: var(--bad); }
 
 /* ---------- Collapsible sidebar (desktop only): icons stay, labels and the plan switcher go ---------- */
 .nav-toggle { opacity: .55; font-size: 13.5px; }

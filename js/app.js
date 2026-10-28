@@ -101,6 +101,7 @@ function load() {
 }
 
 function save() {
+  offerReached();
   stampChanges(db);
   stampPlanChanges(plans);
   try {
@@ -414,14 +415,18 @@ function smartCheck(g) {
 function measuringState(g) {
   return relsTo(g.id, 'measures')
     .map(r => db.states.find(s => s.id === r.from))
-    .filter(s => s && isNum(s.value))
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || null;
+    .filter(s => s && isNum(stateValue(s)))
+    .sort((a, b) => (stateDate(b) || '').localeCompare(stateDate(a) || ''))[0] || null;
 }
+// What a state says about a goal: its value, or for a state that adds up per period the higher of
+// this period's total and the last complete one's – so progress does not drop when a period starts,
+// and a period still under way counts once it is past the last one (for better or worse).
+const goalMeasure = s => (byPeriod(s) ? Math.max(stateTotal(s), lastPeriodTotal(s)) : Number(stateValue(s)));
 function goalCurrent(g) {
   if (byRoutines(g)) return Math.round(goalProgress(g));
   if (byActivities(g)) return countedActivities(g).filter(a => a.status === 'done').length;
   const st = measuringState(g);
-  if (st) return Number(st.value);
+  if (st) return goalMeasure(st);
   if (isNum(g.current)) return Number(g.current);
   return isNum(g.baseline) ? Number(g.baseline) : 0;
 }
@@ -435,10 +440,23 @@ function goalProgress(g) {
     const total = countedActivities(g).length;
     return total ? (goalCurrent(g) / total) * 100 : 0;
   }
+  return metricProgress(g, goalCurrent(g));
+}
+function metricProgress(g, current) {
   const b = isNum(g.baseline) ? Number(g.baseline) : 0;
   const target = Number(g.target);
   if (!isNum(g.target) || target === b) return 0;
-  return clamp(((goalCurrent(g) - b) / (target - b)) * 100, 0, 100);
+  return clamp(((current - b) / (target - b)) * 100, 0, 100);
+}
+
+// Whether a goal has reached its target. For a goal measured by a state that adds up per period,
+// only a complete period counts: one strong Wednesday does not reach "30 km a week". Consistency
+// has no target to reach (it is 100 % after the first tick).
+function goalReached(g) {
+  if (g.status !== 'active' || byRoutines(g)) return false;
+  const st = ownMetric(g) ? measuringState(g) : null;
+  if (st && byPeriod(st)) return metricProgress(g, lastPeriodTotal(st)) >= 100;
+  return goalProgress(g) >= 100;
 }
 
 // Activities working toward a goal: direct contributors plus all their sub-activities.
@@ -750,11 +768,22 @@ function periodText(a, p = periodProgress(a)) {
 }
 const streakText = ({ n, unit }) => tp('rt.streak.' + unit, n);
 
-function toggleCheckin(id, iso) {
+// Ticking a day of a routine that improves states that add up first asks how much (from `anchor`,
+// the button that was clicked); unticking also removes the amounts its tick added that day.
+function toggleCheckin(id, iso, anchor = null) {
   const a = db.activities.find(x => x.id === id);
-  if (!a || !isRoutine(a) || !runsOn(a, iso) || iso > today()) return;
+  if (!a || !isRoutine(a) || !tickable(a, iso)) return;
+  if (anchor && !checkedOn(a, iso) && improvedStates(a).length) return openTickAmount(a, iso, anchor);
+  setRoutineDay(a, iso, !checkedOn(a, iso));
+}
+
+// `amounts`: [state, amount] pairs to add to the states, tagged with the routine.
+function setRoutineDay(a, iso, on, amounts = []) {
+  const id = a.id;
   const wasMet = periodProgress(a, iso).met;
-  a.checkins = { ...a.checkins, [iso]: checkedOn(a, iso) ? 0 : 1 };
+  setCheckin(a, iso, on);
+  if (!on) dropRoutineEntries(a, iso);
+  amounts.forEach(([s, n]) => addEntry(s, iso, n, a));
   save();
   render();
   // Only the period running now is "this week done"; filling in an earlier one says nothing.
@@ -843,6 +872,136 @@ function routineRow(a) {
 
 const activeRoutine = a => isRoutine(a) && runsOn(a, today());
 
+/* ---------- Cumulative states: amounts that add up ----------
+   A state with `cumulative` keeps `entries` ({ id, date, amount, routine? }) that add up, several a
+   day if need be, instead of one value per date: per calendar 'day', 'week' (Monday to Sunday),
+   'month' or 'year', or in total ('none'). `routine` is the routine whose tick the entry belongs to.
+   Deleted entry ids stay in `droppedEntries`, so syncing with an older copy does not bring them
+   back. `value` and `date` keep a copy of the total for older readers; stateValue() reads it fresh,
+   as a period's total changes when the period ends.
+   A routine that improves a cumulative state and the state keep in step: ticking a day can add
+   an amount, an amount added on the state ticks the routine, unticking removes the routine's
+   amounts that day, and deleting its last amount that day unticks it. */
+
+const ADDS_UP = ['day', 'week', 'month', 'year', 'none'];
+const isCumulative = s => !!s?.cumulative;
+const byPeriod = s => isCumulative(s) && s.cumulative !== 'none';
+
+// The calendar day, week, month or year around a date.
+function calPeriod(unit, iso) {
+  const i = unitIndex(iso, unit);
+  return { from: unitFrom(i, unit), to: addDays(unitFrom(i + 1, unit), -1) };
+}
+
+const entriesOf = s => (s.entries || []).filter(e => e.date && isNum(e.amount));
+// Rounded, so 0.1 + 0.2 adds up to 0.3.
+const sumOf = list => Number(list.reduce((n, e) => n + Number(e.amount), 0).toFixed(9));
+
+// The total of the period around `iso`, or of everything up to it.
+function stateTotal(s, iso = today()) {
+  if (!byPeriod(s)) return sumOf(entriesOf(s).filter(e => e.date <= iso));
+  const { from, to } = calPeriod(s.cumulative, iso);
+  return sumOf(entriesOf(s).filter(e => e.date >= from && e.date <= to));
+}
+// The previous period's total (period states only).
+const lastPeriodTotal = (s, iso = today()) => stateTotal(s, addDays(calPeriod(s.cumulative, iso).from, -1));
+
+// A state's value and date: the latest measurement, or a cumulative state's total ('' with no entries yet).
+function stateValue(s) {
+  if (!isCumulative(s)) return s.value;
+  return entriesOf(s).length ? stateTotal(s) : '';
+}
+function stateDate(s) {
+  if (!isCumulative(s)) return s.date;
+  return entriesOf(s).reduce((d, e) => (e.date > d ? e.date : d), '');
+}
+function refreshTotal(s) {
+  const v = stateValue(s);
+  Object.assign(s, { value: v === '' ? '' : String(v), date: stateDate(s) });
+}
+
+// Each period from the first entry's to today's (or the latest entry's), empty ones included.
+function periodTotals(s) {
+  const list = entriesOf(s);
+  if (!list.length || !byPeriod(s)) return [];
+  const dates = list.map(e => e.date).sort();
+  const end = dates.at(-1) > today() ? dates.at(-1) : today();
+  const out = [];
+  for (let p = calPeriod(s.cumulative, dates[0]); p.from <= end && out.length < 5000; p = calPeriod(s.cumulative, addDays(p.to, 1))) {
+    const entries = list.filter(e => e.date >= p.from && e.date <= p.to);
+    out.push({ ...p, total: sumOf(entries), entries });
+  }
+  return out;
+}
+
+const improvedStates = a => relsFrom(a.id, 'improves').map(r => db.states.find(s => s.id === r.to)).filter(isCumulative);
+const feedingRoutines = s => relsTo(s.id, 'improves').map(r => db.activities.find(a => a.id === r.from)).filter(isRoutine);
+const tickable = (a, iso) => runsOn(a, iso) && iso <= today();
+const setCheckin = (a, iso, on) => { a.checkins = { ...a.checkins, [iso]: on ? 1 : 0 }; };
+
+// Adds an amount. From a routine's tick it is tagged with the routine; added on the state, it ticks
+// the routines that feed the state that day, tagged when there is just one.
+function addEntry(s, date, amount, routine = null) {
+  const e = { id: uid(), date, amount: String(amount) };
+  if (routine) e.routine = routine.id;
+  else {
+    const feeds = feedingRoutines(s);
+    feeds.filter(a => tickable(a, date)).forEach(a => setCheckin(a, date, true));
+    if (feeds.length === 1 && tickable(feeds[0], date)) e.routine = feeds[0].id;
+  }
+  (s.entries ||= []).push(e);
+  refreshTotal(s);
+  return e;
+}
+
+function dropEntry(s, id) {
+  s.entries = (s.entries || []).filter(e => e.id !== id);
+  s.droppedEntries = { ...s.droppedEntries, [id]: 1 };
+  refreshTotal(s);
+}
+
+// Deleting a routine's last amount on a day unticks the routine that day.
+function deleteEntry(s, id) {
+  const e = (s.entries || []).find(x => x.id === id);
+  if (!e) return;
+  dropEntry(s, id);
+  const a = e.routine && db.activities.find(x => x.id === e.routine);
+  if (a && isRoutine(a) && !db.states.some(st => (st.entries || []).some(x => x.routine === a.id && x.date === e.date))) setCheckin(a, e.date, false);
+}
+
+// Unticking a routine's day removes the amounts its tick added that day.
+function dropRoutineEntries(a, iso) {
+  db.states.forEach(s => (s.entries || []).filter(e => e.routine === a.id && e.date === iso).forEach(e => dropEntry(s, e.id)));
+}
+
+// Plain → cumulative: each measurement becomes an entry. Cumulative → plain: each day's entries add
+// up to that day's measurement. Changing the period only changes how the entries are added up.
+function convertState(s, addsUp) {
+  if (!addsUp) {
+    if (!isCumulative(s)) return;
+    const days = {};
+    entriesOf(s).forEach(e => (days[e.date] = (days[e.date] || 0) + Number(e.amount)));
+    s.history = Object.entries(days).sort().map(([date, v]) => ({ date, value: String(Number(v.toFixed(9))) }));
+    s.history.forEach(h => delete s.dropped?.[h.date]);
+    if (s.dropped && !Object.keys(s.dropped).length) delete s.dropped;
+    delete s.cumulative;
+    followLatest(s);
+    return;
+  }
+  if (!isCumulative(s)) {
+    (s.entries || []).forEach(e => (s.droppedEntries = { ...s.droppedEntries, [e.id]: 1 }));
+    s.entries = (s.history || []).filter(h => h.date && isNum(h.value)).map(h => ({ id: uid(), date: h.date, amount: String(h.value) }));
+  }
+  s.cumulative = addsUp;
+  refreshTotal(s);
+}
+
+// "18 km this week", "€2,450 in total".
+function totalText(s, iso = today()) {
+  const v = withUnit(fmtNum(stateTotal(s, iso)), s.unit || '');
+  return t('cu.total.' + s.cumulative, { value: v });
+}
+
 /* ---------- Small render helpers ---------- */
 
 function smartBadge(g) {
@@ -928,7 +1087,8 @@ const VIEWS = {
 };
 
 function render() {
-  if (startDueActivities()) save();
+  // A period ending can reach a goal without any edit.
+  if (startDueActivities() + offerReached()) save();
   const v = VIEWS[ui.view];
   if (ui.category && !categories().includes(ui.category)) ui.category = '';
   const title = t('view.' + ui.view);
@@ -939,12 +1099,15 @@ function render() {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === ui.view));
   $('#navMore').classList.toggle('active', !!$(`.nav-extra[data-view="${ui.view}"]`));
   closeCtxMenu();
+  closeAmountPop();
   const old = ui.mapRefocus ? null : $('.map-wrap, .tl-scroll');
   const prevScroll = old && { left: old.scrollLeft, top: old.scrollTop };
   ui.mapRefocus = false;
   viewEl.dataset.view = ui.view;
   viewEl.innerHTML = v.render();
   if (ui.view === 'activities') bindDragDrop();
+  // Long charts start at their latest bars.
+  viewEl.querySelectorAll('.gr-plot.scroll').forEach(p => (p.scrollLeft = p.scrollWidth));
   // Keep the map / timeline where the user left it; on first show, centre on the goals / today.
   const wrap = $('.map-wrap, .tl-scroll');
   if (wrap) {
@@ -954,9 +1117,10 @@ function render() {
   decorateHelp();
   updatePlanBadges();
 }
-// Coming back to the app on a later day starts the activities due by then.
+// Coming back to the app on a later day starts the activities due by then, and may find goals
+// that a period's end has brought to their target.
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden || !startDueActivities()) return;
+  if (document.hidden || !(startDueActivities() + offerReached())) return;
   save();
   render();
 });
@@ -1041,7 +1205,8 @@ function goalCard(g) {
     ? `${trail(pct, '0', esc(tp('goals.actsTotal', counted)))}
     <div class="meta"><span>${t('f.progressActs')}: <strong>${goalCurrent(g)} / ${counted}</strong></span></div>`
     : `${trail(pct, `${fmtNum(isNum(g.baseline) ? g.baseline : 0)}${unit}`, `${fmtNum(g.target)}${unit}`)}
-    <div class="meta"><span>${esc(g.metric)}: <strong>${fmtNum(goalCurrent(g))}${unit}</strong></span></div>`}
+    <div class="meta"><span>${esc(g.metric)}: <strong>${fmtNum(goalCurrent(g))}${unit}</strong></span></div>
+    ${st && byPeriod(st) ? `<div class="meta cu-periods">${esc(t('cu.goalLine.' + st.cumulative, { now: withUnit(fmtNum(stateTotal(st)), st.unit || g.unit || ''), last: withUnit(fmtNum(lastPeriodTotal(st)), st.unit || g.unit || '') }))}</div>` : ''}`}
     <div class="meta">
       ${g.status !== 'active' ? `<span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${t('goal.' + g.status)}</span>` : ''}
       ${waits.length ? waitsForTag(waits) : ''}
@@ -1077,15 +1242,22 @@ function searchBox() {
 
 function renderStates() {
   if (!db.states.length) return emptyState(t('states.emptyTitle'), t('states.emptyText'), 'state');
-  const list = db.states.filter(matchesSearch).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const list = db.states.filter(matchesSearch).sort((a, b) => (stateDate(b) || '').localeCompare(stateDate(a) || ''));
   return `<div class="toolbar">${searchBox()}</div>
     <div class="grid">${list.map(s => {
       const goals = relsFrom(s.id, 'measures').map(r => linkTag(r.to)).join('');
       const improvers = relsTo(s.id, 'improves').length;
+      const add = esc(t('cu.addTo', { name: s.title }));
+      // A state that adds up shows its total and takes a new amount right here.
+      const head = isCumulative(s)
+        ? `<span class="cu-head"><span class="tag state cu-total">${esc(totalText(s))}</span><button type="button" class="icon-btn cu-add" data-add-amount="${s.id}" title="${add}" aria-label="${add}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></span>`
+        : isNum(s.value) ? `<span class="tag state">${fmtNum(s.value)}${s.unit ? ' ' + esc(s.unit) : ''}</span>` : '';
+      const count = isCumulative(s) ? (entriesOf(s).length ? tp('cu.entries', entriesOf(s).length) : '') : (s.history?.length || 0) > 1 ? tp('states.measurements', s.history.length) : '';
+      const when = isCumulative(s) ? (stateDate(s) ? t('cu.lastEntry', { date: fmtDate(stateDate(s)) }) : t('cu.noEntries')) : t('states.asOf', { date: fmtDate(s.date) || '—' });
       return `<article class="card state" data-open="${s.id}" data-ctx-item="${s.id}">
-        <div class="card-head"><h3>${esc(s.title)}</h3>${isNum(s.value) ? `<span class="tag state">${fmtNum(s.value)}${s.unit ? ' ' + esc(s.unit) : ''}</span>` : ''}</div>
+        <div class="card-head"><h3>${esc(s.title)}</h3>${head}</div>
         ${s.description ? `<p class="desc">${esc(s.description)}</p>` : ''}
-        <div class="meta"><span>${t('states.asOf', { date: fmtDate(s.date) || '—' })}</span>${improvers ? `<span>${tp('states.improvers', improvers)}</span>` : ''}${(s.history?.length || 0) > 1 ? `<span>${tp('states.measurements', s.history.length)}</span>` : ''}</div>
+        <div class="meta"><span>${when}</span>${improvers ? `<span>${tp('states.improvers', improvers)}</span>` : ''}${count ? `<span>${count}</span>` : ''}</div>
         ${goals ? `<div class="links">${goals}</div>` : ''}
       </article>`;
     }).join('')}</div>`;
@@ -1962,20 +2134,208 @@ function graphCard(s, width) {
   </article>`;
 }
 
+// States with measurements or amounts, and routines with check-ins, have a graph.
+const hasGraph = item => (isRoutine(item) ? Object.values(item.checkins || {}).includes(1)
+  : isCumulative(item) ? entriesOf(item).length > 0 : stateSeries(item).length > 0);
+
 function renderGraphs() {
-  if (!db.states.length) return emptyState(t('states.emptyTitle'), t('states.emptyText'), 'state');
+  const routines = db.activities.filter(hasGraph);
+  if (!db.states.length && !routines.length) return emptyState(t('states.emptyTitle'), t('states.emptyText'), 'state');
   const scope = scopeFor(ui.graphGoal);
   const list = db.states.filter(s => !scope || scope.state.has(s.id)).filter(matchesSearch);
-  const withData = list.filter(s => stateSeries(s).length);
-  const without = list.filter(s => !stateSeries(s).length);
+  const withData = list.filter(hasGraph);
+  const without = list.filter(s => !hasGraph(s));
+  const kept = routines.filter(a => !scope || scope.activity.has(a.id)).filter(matchesSearch);
   // Cards take the full width of the view; charts are drawn at that pixel width so text stays crisp.
   const viewStyle = getComputedStyle(viewEl);
   const width = clamp(viewEl.clientWidth - parseFloat(viewStyle.paddingLeft) - parseFloat(viewStyle.paddingRight) - 38, GR.MIN_W, GR.MAX_W);
   Object.keys(grCharts).forEach(k => delete grCharts[k]);
+  const card = s => (byPeriod(s) ? periodGraphCard(s, width) : isCumulative(s) ? totalGraphCard(s, width) : graphCard(s, width));
+  const cards = [...withData.map(card), ...kept.map(a => routineGraphCard(a, width))];
   return `${categoryChips()}
     <div class="toolbar">${goalSelect('graphs', ui.graphGoal)}${searchBox()}</div>
-    ${withData.length ? `<div class="gr-list">${withData.map(s => graphCard(s, width)).join('')}</div>` : `<div class="empty">${t('gr.none')}</div>`}
+    ${cards.length ? `<div class="gr-list">${cards.join('')}</div>` : `<div class="empty">${t('gr.none')}</div>`}
     ${without.length ? `<p class="meta gr-without">${t('gr.without')} ${without.map(s => linkTag(s.id)).join(' ')}</p>` : ''}`;
+}
+
+/* ---------- Graphs of amounts that add up, and of routines ----------
+   A state that adds up per period gets a bar for each period (the one under way lighter), one that
+   adds up in total a step line of its running total; a routine gets a bar of check-ins for each of
+   its periods, against what the period asks for. They share the line graph's hover layer: each
+   point has its `day` (where the crosshair snaps) and its own tooltip rows (`tip`). */
+
+const GR_SLOT = 12; // the narrowest a period's bar gets; longer histories scroll sideways
+const GR_BAR = 44; // the widest
+// A bar's left edge and width in a period running from day `a` to day `b`, centred when capped.
+function barBox(px, a, b) {
+  const slot = px(b) - px(a), w = clamp(slot - 2, 2, GR_BAR);
+  return { x: px(a) + (slot - w) / 2, w };
+}
+
+// "Week of 20 Oct", "October 2026", "2026", "20 Oct 2026", or a range for longer periods.
+function periodLabel(unit, from, to) {
+  if (calPeriod(unit, from).to !== to) return fmtRange(from, to);
+  if (unit === 'week') return t('cu.weekOf', { date: fmtDay(from, { day: 'numeric', month: 'short' }) });
+  if (unit === 'month') return fmtDay(from, { month: 'long', year: 'numeric' });
+  if (unit === 'year') return from.slice(0, 4);
+  return fmtDate(from);
+}
+
+// Goals a state measures with a target, for target lines.
+const stateTargets = s => relsFrom(s.id, 'measures').map(r => db.goals.find(g => g.id === r.to))
+  .filter(g => g && ownMetric(g) && isNum(g.target))
+  .map(g => ({ goal: g, value: Number(g.target), end: g.deadline ? dayNum(g.deadline) : null }));
+
+// The plot shared by bar and step graphs: grid, date axis, today, target lines and labels, and the
+// hover layer. `marks` draws the data with the scales; `bars` widens a long history so it scrolls.
+function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, tip, aria, ys = [] }, width) {
+  const todayN = dayNum(today());
+  // Bars end with the period under way: weeks to a far deadline would only squeeze them.
+  let x0 = from, x1 = bars ? to : Math.max(to, ...targets.map(tg => tg.end || 0));
+  if (x1 - x0 < 14) x1 = x0 + 14;
+  const W = bars ? Math.max(width, GR.L + GR.R + Math.ceil((x1 - x0) / ((to - from) / bars) * GR_SLOT)) : width;
+  const values = [0, ...points.map(p => p.value), ...targets.map(tg => tg.value), ...ys];
+  const ticks = niceTicks(Math.min(...values), Math.max(...values));
+  const y0 = ticks[0], y1 = ticks[ticks.length - 1];
+  const px = d => GR.L + (d - x0) / (x1 - x0) * (W - GR.L - GR.R);
+  const py = v => GR.T + (1 - (v - y0) / (y1 - y0)) * (GR.H - GR.T - GR.B);
+  grCharts[id] = { points, targets, px, py, unit, tip };
+  const grid = ticks.map(v => `<line class="gr-grid" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>
+    <text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`).join('');
+  const dateTicks = [x0, x1];
+  if (!bars && todayN > x0 && todayN < x1 && px(todayN) - px(x0) > 80 && px(x1) - px(todayN) > 80) dateTicks.push(todayN);
+  const xAxis = dateTicks.map((d, i) => `<text class="gr-axis" x="${px(d)}" y="${GR.H - 6}" text-anchor="${['start', 'end', 'middle'][i]}">${esc(fmtDate(dayStr(d)))}</text>`).join('');
+  const todayLine = todayN > x0 && todayN <= x1 ? `<line class="gr-today" x1="${px(todayN)}" x2="${px(todayN)}" y1="${GR.T}" y2="${GR.H - GR.B}"/>` : '';
+  const targetLines = targets.map(tg => {
+    const xe = px(tg.end && tg.end > x0 && tg.end < x1 ? tg.end : x1);
+    const ty = py(tg.value) + (py(tg.value) - GR.T < 16 ? 14 : -6);
+    const text = t('gr.targetLabel', { value: withUnit(fmtNum(tg.value), unit) }) + (targets.length > 1 ? ` (${tg.goal.title})` : '');
+    return `<line class="gr-target" x1="${GR.L}" x2="${xe}" y1="${py(tg.value)}" y2="${py(tg.value)}"/>
+      ${tg.end && tg.end > x0 && tg.end <= x1 ? `<circle class="gr-target-end" cx="${xe}" cy="${py(tg.value)}" r="4"/>` : ''}
+      <text class="gr-label muted" x="${GR.L + 6}" y="${ty}">${esc(text)}</text>`;
+  }).join('');
+  return `<div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(aria)}">
+      <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
+        ${grid}${todayLine}${marks(px, py)}${targetLines}${xAxis}
+        <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
+        <circle class="gr-focus" r="6" hidden/>
+      </svg>
+      <div class="gr-tip" hidden></div>
+    </div>`;
+}
+
+const grLegend = items => `<div class="gr-legend">${items.map(([cls, text]) => `<span><i class="key ${cls}"></i>${esc(text)}</span>`).join('')}</div>`;
+const targetKey = targets => ['key-target', targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title })];
+
+function grCardHtml(item, stats, legend, plot, table) {
+  return `<article class="card gr-card" data-gr="${item.id}">
+    <div class="card-head" data-ctx-item="${item.id}"><h3>${esc(item.title)}</h3><button class="btn small ghost" data-open="${item.id}">${t('btn.edit')}</button></div>
+    <div class="gr-stats">${stats}</div>
+    ${legend}
+    ${plot}
+    <details class="gr-table"><summary>${t('gr.table')}</summary>${table}</details>
+  </article>`;
+}
+
+const entryDel = (s, e) => {
+  const del = t('cu.deleteEntry', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(e.date) });
+  return `<td class="gr-del"><button type="button" class="btn small ghost" data-del-entry="${s.id}" data-entry="${e.id}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td>`;
+};
+
+// A bar for each period; the change tag compares the last complete period with the one before.
+function periodGraphCard(s, width) {
+  const unit = s.unit || '', now = today(), periods = periodTotals(s), targets = stateTargets(s);
+  const points = periods.map(p => {
+    const a = dayNum(p.from), b = dayNum(p.to) + 1;
+    return { ...p, value: p.total, day: (a + b) / 2, a, b, now: p.from <= now && p.to >= now };
+  });
+  const tip = p => [['gr-tip-value', withUnit(fmtNum(p.value), unit)], ['gr-tip-date', periodLabel(s.cumulative, p.from, p.to)],
+    ['gr-tip-row', tp('cu.entries', p.entries.length)],
+    ...targets.map(tg => ['gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), unit) })])];
+  const plot = plotSvg(s.id, {
+    points, targets, unit, tip, from: points[0].a, to: points.at(-1).b, bars: points.length,
+    aria: t('cu.aria', { name: s.title }),
+    marks: (px, py) => points.map(p => {
+      const { x, w } = barBox(px, p.a, p.b), y = py(Math.max(0, p.value)), h = Math.abs(py(p.value) - py(0));
+      return `<rect class="gr-bar${p.now ? ' now' : ''}" x="${x}" y="${p.value < 0 ? py(0) : y}" width="${w}" height="${h}" rx="2"/>`;
+    }).join(''),
+  }, width);
+  // The last complete period against the one before it.
+  const done = points.filter(p => p.to < now);
+  const last = done.at(-1), prev = done.at(-2);
+  let change = '';
+  if (last && prev) {
+    const delta = Number((last.value - prev.value).toFixed(9));
+    const aim = targets.length ? Math.sign(targets[0].value - prev.value) : 0;
+    const cls = !aim || !delta ? '' : Math.sign(delta) === aim ? 'ok' : 'bad';
+    change = `<span class="tag gr-delta ${cls}"><span aria-hidden="true">${delta > 0 ? '▲' : delta < 0 ? '▼' : '→'}</span> ${esc(withUnit(signed(delta), unit))}</span>
+      <span class="meta">${esc(t('cu.vsPrev.' + s.cumulative, { period: periodLabel(s.cumulative, last.from, last.to) }))}</span>`;
+  }
+  const legend = grLegend([['key-bar', t('cu.legend.' + s.cumulative)], ...(targets.length ? [targetKey(targets)] : [])]);
+  const rows = points.slice().reverse().map(p => `<tr class="gr-period"><td>${esc(periodLabel(s.cumulative, p.from, p.to))}</td><td><strong>${esc(withUnit(fmtNum(p.value), unit))}</strong></td><td></td></tr>
+    ${p.entries.slice().reverse().map(e => `<tr class="gr-entry"><td>${fmtDate(e.date)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td>${entryDel(s, e)}</tr>`).join('')}`).join('');
+  const table = `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.amount')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
+  return grCardHtml(s, `<strong class="gr-value">${esc(totalText(s))}</strong>${change}`, legend, plot, table);
+}
+
+// A step line of the running total; the tag shows what was added in the last 30 days.
+function totalGraphCard(s, width) {
+  const unit = s.unit || '', targets = stateTargets(s), entries = entriesOf(s).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const byDay = {};
+  entries.forEach(e => (byDay[e.date] = (byDay[e.date] || 0) + Number(e.amount)));
+  let sum = 0;
+  const points = Object.keys(byDay).sort().map(date => ({ date, day: dayNum(date), added: Number(byDay[date].toFixed(9)), value: (sum = Number((sum + byDay[date]).toFixed(9))) }));
+  const todayN = dayNum(today()), end = Math.max(points.at(-1).day, todayN);
+  const tip = p => [['gr-tip-value', withUnit(fmtNum(p.value), unit)], ['gr-tip-date', fmtDate(p.date)],
+    ['gr-tip-row', t('cu.tipAdded', { value: withUnit(signed(p.added), unit) })],
+    ...targets.map(tg => ['gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), unit) })])];
+  const plot = plotSvg(s.id, {
+    points, targets, unit, tip, from: points[0].day, to: end, aria: t('cu.aria', { name: s.title }),
+    marks: (px, py) => {
+      const path = points.map((p, i) => (i ? `H${px(p.day).toFixed(1)}V${py(p.value).toFixed(1)}` : `M${px(p.day).toFixed(1)},${py(p.value).toFixed(1)}`)).join('') + `H${px(end).toFixed(1)}`;
+      return `<path class="gr-line" d="${path}"/>${points.map(p => `<circle class="gr-dot" cx="${px(p.day)}" cy="${py(p.value)}" r="3.5"/>`).join('')}`;
+    },
+  }, width);
+  const recent = sumOf(entries.filter(e => e.date > dayStr(todayN - 30) && e.date <= today()));
+  const stats = `<strong class="gr-value">${esc(totalText(s))}</strong><span class="tag gr-delta ${recent > 0 ? 'ok' : ''}">${esc(withUnit(signed(recent), unit))}</span><span class="meta">${t('cu.last30')}</span>`;
+  const legend = grLegend([['key-measure', t('cu.legend.none')], ...(targets.length ? [targetKey(targets)] : [])]);
+  let running = sumOf(entries);
+  const rows = entries.slice().reverse().map(e => {
+    const row = `<tr><td>${fmtDate(e.date)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
+    running = Number((running - Number(e.amount)).toFixed(9));
+    return row;
+  }).join('');
+  const table = `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.amount')}</th><th>${t('cu.col.total')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
+  return grCardHtml(s, stats, legend, plot, table);
+}
+
+// Check-ins in each of a routine's periods, against what the period asks for (met: filled in).
+function routineGraphCard(a, width) {
+  const now = today(), end = a.dueDate && a.dueDate < now ? a.dueDate : now;
+  const ticked = Object.keys(a.checkins || {}).filter(d => a.checkins[d] === 1).sort();
+  const first = ticked[0] < routineStart(a) ? ticked[0] : routineStart(a);
+  const points = [];
+  for (let p = periodOf(a, first); p.from <= end && points.length < 2000; p = periodOf(a, addDays(p.to, 1))) {
+    const pr = periodProgress(a, p.from), x0 = dayNum(p.from), x1 = dayNum(p.to) + 1;
+    points.push({ ...p, value: pr.done, target: pr.target, met: pr.met, day: (x0 + x1) / 2, a: x0, b: x1, now: p.from <= now && p.to >= now });
+  }
+  const unit = periodUnit(a);
+  const tip = p => [['gr-tip-value', t('cu.ofTarget', { done: p.value, target: p.target })], ['gr-tip-date', periodLabel(unit, p.from, p.to)]];
+  const plot = plotSvg(a.id, {
+    points, unit: '', tip, ys: points.map(p => p.target),
+    from: points[0].a, to: points.at(-1).b, bars: points.length, aria: t('cu.routineAria', { name: a.title }),
+    marks: (px, py) => points.map(p => {
+      const { x, w } = barBox(px, p.a, p.b);
+      return `<rect class="gr-bar${p.met ? ' met' : ''}${p.now ? ' now' : ''}" x="${x}" y="${py(p.value)}" width="${w}" height="${py(0) - py(p.value)}" rx="2"/>
+        ${p.target ? `<line class="gr-goal" x1="${x - 4}" x2="${x + w + 4}" y1="${py(p.target)}" y2="${py(p.target)}"/>` : ''}`;
+    }).join(''),
+  }, width);
+  const streak = routineStreak(a);
+  const stats = `<strong class="gr-value">${esc(periodText(a))}</strong>${streak.n ? `<span class="tag ok">${esc(streakText(streak))}</span>` : ''}`;
+  const legend = grLegend([['key-bar', t('cu.legendRoutine')], ['key-goal', t('cu.legendAsks')]]);
+  const rows = points.slice().reverse().map(p => `<tr><td>${esc(periodLabel(unit, p.from, p.to))}</td><td>${esc(t('cu.ofTarget', { done: p.value, target: p.target }))}</td><td>${p.met ? '✓' : ''}</td></tr>`).join('');
+  const table = `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.checkins')}</th><th>${t('cu.col.met')}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return grCardHtml(a, stats, legend, plot, table);
 }
 
 // Hover / touch / keyboard: a crosshair snaps to the nearest measurement and a tooltip lists its values.
@@ -1990,15 +2350,21 @@ function showGraphPoint(plot, i) {
   // Built with textContent: titles and units are user text.
   tip.replaceChildren();
   const row = (cls, text) => { const el = document.createElement('div'); el.className = cls; el.textContent = text; tip.append(el); };
-  row('gr-tip-value', withUnit(fmtNum(p.value), c.unit));
-  row('gr-tip-date', fmtDate(p.date));
-  if (p !== c.points[0]) row('gr-tip-row', t('gr.tipChange', { value: withUnit(signed(p.value - c.points[0].value), c.unit) }));
-  c.targets.forEach(tg => row('gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), c.unit) })));
+  if (c.tip) c.tip(p).forEach(([cls, text]) => row(cls, text));
+  else {
+    row('gr-tip-value', withUnit(fmtNum(p.value), c.unit));
+    row('gr-tip-date', fmtDate(p.date));
+    if (p !== c.points[0]) row('gr-tip-row', t('gr.tipChange', { value: withUnit(signed(p.value - c.points[0].value), c.unit) }));
+    c.targets.forEach(tg => row('gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), c.unit) })));
+  }
   tip.hidden = false;
-  const box = plot.getBoundingClientRect();
-  tip.style.left = `${clamp(cx + 12, 0, box.width - tip.offsetWidth)}px`;
+  // The chart's own width: a long one scrolls inside the plot.
+  const w = Number(plot.querySelector('svg').getAttribute('width'));
+  tip.style.left = `${clamp(cx + 12, 0, w - tip.offsetWidth)}px`;
   tip.style.top = `${clamp(cy - tip.offsetHeight - 10, 0, GR.H - tip.offsetHeight)}px`;
-  if (cx + 12 + tip.offsetWidth > box.width) tip.style.left = `${Math.max(0, cx - 12 - tip.offsetWidth)}px`;
+  if (cx + 12 + tip.offsetWidth > w) tip.style.left = `${Math.max(0, cx - 12 - tip.offsetWidth)}px`;
+  // Keys can move to a bar scrolled out of sight.
+  if (cx < plot.scrollLeft + GR.L || cx > plot.scrollLeft + plot.clientWidth - GR.R) plot.scrollLeft = cx - plot.clientWidth / 2;
 }
 
 function hideGraphPoint(plot) {
@@ -2142,6 +2508,7 @@ function openForm(kind, id = null, links = {}) {
   }
   if (kind === 'goal') { updateProgressFields(); updateSmartLive(); }
   if (kind === 'activity') updateRepeatFields();
+  if (kind === 'state') updateStateFields();
   modal.showModal();
   if (!item) setTimeout(() => modal.querySelector('input, select, textarea')?.focus(), 30);
 }
@@ -2171,7 +2538,9 @@ function goalForm(g) {
         ${field('unit', t('f.unit'), text('unit', g.unit, t('f.unitPh')))}
       </div>
       <div class="row3">
-        ${field('baseline', t('f.baseline'), num('baseline', g.baseline ?? '', '0'))}
+        ${field('baseline', t('f.baseline'), num('baseline', g.baseline ?? '', '0'),
+          // A running total counts everything before the goal too; starting from it counts only what comes next.
+          st && isCumulative(st) && !byPeriod(st) ? esc(t('cu.baselineHint', { total: withUnit(fmtNum(stateTotal(st)), st.unit || '') })) : '')}
         ${field('current', t('f.current'), num('current', g.current ?? '', ''), st ? esc(t('f.currentFrom', { name: st.title })) : t('f.currentHint'))}
         ${field('target', t('f.target'), num('target', g.target ?? ''))}
       </div>
@@ -2196,17 +2565,51 @@ function stateForm(s) {
   const linked = s.id ? relsFrom(s.id, 'measures').map(r => r.to) : [];
   const history = (s.history || []).slice().sort((a, b) => b.date.localeCompare(a.date));
   // The value field records a new measurement, so it starts empty and dated today.
-  const latest = isNum(s.value) ? t('f.valueHint', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtDate(s.date) || '—' }) : '';
+  const latest = isNum(s.value) && !isCumulative(s) ? t('f.valueHint', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtDate(s.date) || '—' }) : '';
+  const addsUp = { '': t('cu.opt.no'), ...Object.fromEntries(ADDS_UP.map(k => [k, t('cu.opt.' + k)])) };
   return `
     ${field('title', t('f.title'), text('title', s.title, t('f.statePh')))}
     ${field('description', t('f.stateDesc'), area('description', s.description, t('f.stateDescPh')))}
-    <div class="row3">
-      ${field('value', t('f.value'), num('value', '', t('f.optional')), latest)}
+    <div class="row2">
+      ${field('addsUp', t('cu.addsUp'), select('addsUp', addsUp, s.cumulative || ''), `<span id="addsUpHint"></span>`)}
       ${field('unit', t('f.unit'), text('unit', s.unit, t('f.unitPh')))}
+    </div>
+    <div class="row2">
+      ${field('value', t('f.value'), num('value', '', t('f.optional')), `<span id="valueHint" data-plain="${esc(latest)}"></span>`)}
       ${field('date', t('f.asOf'), date('date', today()))}
     </div>
     ${checklist('goals', t('f.describesGoals'), 'goal', db.goals, linked, t('f.describesHint'))}
-    ${history.length > 1 ? `<div class="field"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtDate(h.date)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}`;
+    ${history.length > 1 ? `<div class="field" id="historyList"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtDate(h.date)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}
+    ${isCumulative(s) && entriesOf(s).length ? entryList(s) : ''}`;
+}
+
+// A cumulative state's entries, newest day first; × marks one to delete when the form is saved.
+function entryList(s) {
+  const days = {};
+  entriesOf(s).forEach(e => (days[e.date] ||= []).push(e));
+  const rows = Object.keys(days).sort().reverse().map(d => `<div class="entry-day"><span>${fmtDate(d)}</span><span class="entry-amounts">${days[d].map(e => {
+    const del = esc(t('cu.deleteEntry', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(d) }));
+    return `<span class="entry" data-entry="${e.id}"><strong>${esc(withUnit(fmtNum(e.amount), s.unit || ''))}</strong><button type="button" class="entry-del" data-drop-entry="${e.id}" aria-pressed="false" title="${del}" aria-label="${del}">×</button></span>`;
+  }).join('')}</span></div>`).join('');
+  return `<div class="field" id="entryList"><span class="label">${t('cu.entryList')}</span><div class="history entries">${rows}</div><div class="hint">${t('cu.entryListHint')}</div></div>`;
+}
+
+// The labels and hints that follow "Adds up": a new amount or a new measurement, and what switching
+// between the two does to what is there.
+function updateStateFields() {
+  const sel = $('#f-addsUp');
+  if (!sel || formCtx?.kind !== 'state') return;
+  const s = formCtx.id ? db.states.find(x => x.id === formCtx.id) : null;
+  const addsUp = sel.value, was = s?.cumulative || '';
+  const unit = $('#f-unit').value.trim();
+  $('[data-field="value"] label').textContent = t(addsUp ? 'cu.addAmount' : 'f.value');
+  const hint = $('#valueHint');
+  hint.textContent = !addsUp ? hint.dataset.plain
+    : s && isCumulative(s) && entriesOf(s).length ? t('cu.valueHint', { total: totalText({ ...s, cumulative: addsUp, unit }) }) : t('cu.valueHintNew');
+  const has = s && (isCumulative(s) ? entriesOf(s).length : (s.history || []).length);
+  $('#addsUpHint').textContent = !has || !addsUp === !was ? '' : t(addsUp ? 'cu.toCumulative' : 'cu.toPlain');
+  $('#historyList')?.toggleAttribute('hidden', !!addsUp);
+  $('#entryList')?.toggleAttribute('hidden', !addsUp);
 }
 
 function activityForm(a) {
@@ -2506,14 +2909,23 @@ function submitForm() {
   }
 
   if (kind === 'state') {
+    // Switching between adding up and single measurements turns what is there into the other kind.
+    const had = existing && (isCumulative(existing) ? entriesOf(existing).length : (existing.history || []).length);
+    if (had && !v.addsUp !== !existing.cumulative && !confirm(t(v.addsUp ? 'cu.confirmToCumulative' : 'cu.confirmToPlain', { name: existing.title }))) return;
     const s = Object.assign(existing || { id: uid(), history: [], value: '' }, {
       title: v.title.trim(), description: v.description.trim(), unit: v.unit.trim(),
     });
     s.history ||= [];
-    // An empty value keeps the latest measurement; a value for a date that has one replaces it.
-    if (isNum(v.value)) recordMeasurement(s, v.date || today(), v.value);
     if (!existing) db.states.push(s);
     setLinks(s.id, 'measures', arr('goals'));
+    modal.querySelectorAll('[data-drop-entry][aria-pressed="true"]').forEach(b => deleteEntry(s, b.dataset.dropEntry));
+    convertState(s, v.addsUp);
+    // An empty value keeps the latest measurement; a value for a date that has one replaces it.
+    // A state that adds up takes it as one more amount.
+    if (isNum(v.value)) {
+      if (isCumulative(s)) addEntry(s, v.date || today(), v.value);
+      else recordMeasurement(s, v.date || today(), v.value);
+    }
     return finish(t(existing ? 'toast.stateUpdated' : 'toast.stateAdded'));
   }
 
@@ -2550,12 +2962,70 @@ let lastNodeClick = { id: null, t: 0 };
    Events
    ========================================================= */
 
-function toast(msg) {
+// `action` ({ label, run }) adds a button, and the toast stays longer so there is time to use it.
+function toast(msg, action = null) {
   const box = $('#toast');
   box.textContent = msg;
+  box.classList.toggle('has-action', !!action);
+  if (action) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = action.label;
+    btn.addEventListener('click', () => { hideToast(); action.run(); });
+    box.append(' ', btn);
+  }
   box.classList.add('show');
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => box.classList.remove('show'), 2200);
+  toast.timer = setTimeout(hideToast, action ? 8000 : 2200);
+}
+function hideToast() {
+  clearTimeout(toast.timer);
+  $('#toast').classList.remove('show', 'has-action');
+  $('#toast').replaceChildren();
+  // Goals waiting to be offered come next.
+  if (reachedQueue.length) setTimeout(showReached, 250);
+}
+
+/* ---------- "Target reached": offer to mark a goal achieved ----------
+   After a change, each active goal that has reached its target since it was last offered gets a
+   toast with a button to mark it achieved, one goal at a time; `offeredAt` remembers the offer
+   until the goal drops below its target again. The first check of a plan on a device only notes
+   which goals are there already, so an existing plan does not greet you with a row of toasts. */
+
+const reachedQueue = [];
+
+function offerReached() {
+  const key = 'reachedChecked.' + plans.current, quiet = !prefs.get(key, false);
+  let changed = false;
+  db.goals.forEach(g => {
+    const reached = goalReached(g);
+    if (reached && !g.offeredAt) {
+      g.offeredAt = today();
+      changed = true;
+      if (!quiet && !reachedQueue.includes(g.id)) reachedQueue.push(g.id);
+    } else if (!reached && g.offeredAt) {
+      delete g.offeredAt;
+      changed = true;
+    }
+  });
+  if (quiet) prefs.set(key, true);
+  if (reachedQueue.length && !$('#toast').classList.contains('has-action')) setTimeout(showReached, 0);
+  return changed;
+}
+
+function showReached() {
+  if ($('#toast').classList.contains('has-action')) return;
+  let g;
+  while (reachedQueue.length && !(g = db.goals.find(x => x.id === reachedQueue[0] && goalReached(x)))) reachedQueue.shift();
+  if (!g) return;
+  reachedQueue.shift();
+  toast(t('reached.text', { name: g.title }), { label: t('reached.mark'), run: () => {
+    g.status = 'achieved';
+    save();
+    render();
+    toast(t('ctx.statusSet', { s: t('goal.achieved') }));
+  } });
 }
 
 function cycleStatus(id) {
@@ -2567,6 +3037,99 @@ function cycleStatus(id) {
   a.status = next;
   save();
   render();
+}
+
+/* ---------- Amount popover: a quick amount for states that add up ----------
+   A state card's + asks for an amount and its date; ticking a routine that improves such states
+   asks for an amount for each (empty adds nothing). Enter adds. Escape or "Tick only" still ticks
+   the day; a click elsewhere leaves everything as it was. */
+
+let amountPop = null; // { el, anchor, skip }
+
+function openAmountPop(anchor, { title, fields, withDate, okLabel, skipLabel }, submit, skip = null) {
+  closeAmountPop();
+  const el = document.createElement('form');
+  el.className = 'amount-pop';
+  el.noValidate = true;
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', title);
+  el.innerHTML = `<strong class="amount-title">${esc(title)}</strong>
+    ${fields.map((f, i) => `<label class="amount-field"><span>${esc(f.label)}</span><span class="amount-input">
+      <input type="text" data-amount="${i}" inputmode="decimal" autocomplete="off" placeholder="0">${f.unit ? `<span class="amount-unit">${esc(f.unit)}</span>` : ''}</span></label>`).join('')}
+    ${withDate ? `<label class="amount-field"><span>${t('f.asOf')}</span><input type="text" data-amount-date value="${esc(dateInput(today()))}" placeholder="${esc(t('f.datePh'))}" inputmode="numeric" autocomplete="off" maxlength="10"></label>` : ''}
+    <div class="amount-err" role="alert"></div>
+    <div class="amount-actions">${skipLabel ? `<button type="button" class="btn small ghost" data-amount-skip>${esc(skipLabel)}</button>` : ''}<button type="submit" class="btn small primary">${esc(okLabel)}</button></div>`;
+  document.body.append(el);
+  amountPop = { el, anchor, skip };
+  const r = anchor.getBoundingClientRect(), vw = document.documentElement.clientWidth;
+  const below = r.bottom + 8 + el.offsetHeight <= innerHeight - 8;
+  el.style.left = `${clamp(r.left + r.width / 2 - el.offsetWidth / 2, 8, vw - el.offsetWidth - 8)}px`;
+  el.style.top = `${Math.max(8, below ? r.bottom + 8 : r.top - 8 - el.offsetHeight)}px`;
+  el.querySelector('input').focus();
+  el.addEventListener('submit', e => {
+    e.preventDefault();
+    const amounts = [...el.querySelectorAll('[data-amount]')].map(i => (i.value.trim() ? parseNum(i.value) : null));
+    const dateBox = el.querySelector('[data-amount-date]');
+    const date = dateBox ? parseDateInput(dateBox.value) : today();
+    const err = amounts.some(n => Number.isNaN(n)) ? t('err.number') : !date ? t('err.date') : '';
+    if (err) { el.querySelector('.amount-err').textContent = err; return; }
+    closeAmountPop();
+    submit(amounts, date);
+  });
+  el.addEventListener('click', e => { if (e.target.closest('[data-amount-skip]')) skipAmount(); });
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopPropagation();
+    skipAmount();
+  });
+}
+
+function skipAmount() {
+  const { skip, anchor } = amountPop;
+  closeAmountPop();
+  if (skip) skip();
+  else anchor.focus();
+}
+
+function closeAmountPop() {
+  amountPop?.el.remove();
+  amountPop = null;
+}
+document.addEventListener('pointerdown', e => { if (amountPop && !amountPop.el.contains(e.target) && e.target !== amountPop.anchor) closeAmountPop(); });
+
+function openStateAmount(id, anchor) {
+  const s = db.states.find(x => x.id === id);
+  if (!s) return;
+  openAmountPop(anchor, { title: t('cu.addTo', { name: s.title }), fields: [{ label: t('cu.amount'), unit: s.unit }], withDate: true, okLabel: t('cu.add') }, ([n], date) => {
+    if (n === null) return anchor.focus();
+    addEntry(s, date, n);
+    save();
+    render();
+    toast(t('cu.added', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));
+    $(`[data-add-amount="${id}"]`)?.focus();
+  });
+}
+
+function openTickAmount(a, iso, anchor) {
+  const states = improvedStates(a);
+  const title = iso === today() ? t('cu.howMuch', { name: a.title }) : t('cu.howMuchOn', { name: a.title, date: fmtDay(iso, { weekday: 'short', day: 'numeric', month: 'short' }) });
+  openAmountPop(anchor, { title, fields: states.map(s => ({ label: s.title, unit: s.unit })), okLabel: t('cu.add'), skipLabel: t('cu.tickOnly') },
+    amounts => setRoutineDay(a, iso, true, states.map((s, i) => [s, amounts[i]]).filter(([, n]) => n !== null)),
+    () => setRoutineDay(a, iso, true));
+}
+
+function removeEntry(id, entryId) {
+  const s = db.states.find(x => x.id === id);
+  const e = s?.entries?.find(x => x.id === entryId);
+  if (!e || !confirm(t('confirm.deleteMeasurement', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(e.date) }))) return;
+  deleteEntry(s, entryId);
+  save();
+  render();
+  toast(t('toast.measurementDeleted'));
+  // Keep the table (or the form's list) open where it was.
+  const card = $(`[data-gr="${id}"]`);
+  if (card) { card.querySelector('.gr-table').open = true; card.querySelector('.gr-table summary').focus(); }
 }
 
 function setView(view) {
@@ -2630,7 +3193,7 @@ $('#addBtn').addEventListener('click', () => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-del-measure],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-add-amount],[data-del-measure],[data-del-entry],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -2658,8 +3221,10 @@ viewEl.addEventListener('click', e => {
     return $('[data-next-more]')?.focus({ preventScroll: true });
   }
   if (el.dataset.rtWeek) return el.disabled || shiftRoutineWeek(el.dataset.rtWeek, Number(el.dataset.dir));
-  if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date);
+  if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date, el);
+  if (el.dataset.addAmount) return openStateAmount(el.dataset.addAmount, el);
   if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
+  if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry);
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
   if (el.dataset.open) { const ent = findEntity(el.dataset.open); return ent && openForm(ent.kind, ent.item.id); }
   if (el.dataset.new) return el.dataset.new === 'relation' ? $('#addBtn').click() : openForm(el.dataset.new);
@@ -2764,6 +3329,7 @@ $('#modalForm').addEventListener('focusin', e => {
 $('#modalForm').addEventListener('change', e => {
   if (e.target.id === 'f-from' || e.target.id === 'f-to') return fillRelTypes();
   if (['f-monthDay', 'f-nth', 'f-weekday'].includes(e.target.id)) e.target.setAttribute('data-picked', '');
+  if (['f-addsUp', 'f-unit'].includes(e.target.id) && formCtx?.kind === 'state') return updateStateFields();
   if (['f-repeat', 'f-unit', 'f-on', 'f-startDate'].includes(e.target.id)) return updateRepeatFields(e);
   if (e.target.id !== 'f-progress') return;
   updateProgressFields();
@@ -2909,6 +3475,14 @@ function pickDate(iso) {
 }
 
 $('#modalForm').addEventListener('click', e => {
+  // An entry marked for deletion is deleted on saving (and kept on cancelling).
+  const drop = e.target.closest('[data-drop-entry]');
+  if (drop) {
+    const on = drop.getAttribute('aria-pressed') !== 'true';
+    drop.setAttribute('aria-pressed', on);
+    drop.closest('.entry').classList.toggle('dropped', on);
+    return;
+  }
   const open = e.target.closest('[data-cal-open]');
   if (open) return cal?.field === open.closest('.date-field') ? closeCalendar() : openCalendar(open.closest('.date-field'));
   if (!cal) return;
@@ -2986,8 +3560,8 @@ function resetProgress(data, { shift = false } = {}) {
   const by = shift && first ? Math.ceil((dayNum(today()) - dayNum(first)) / 7) * 7 : 0;
   for (const x of [...dated, ...d.states, ...d.relations]) delete x.updatedAt;
   for (const x of dated) for (const k of [...PLAN_DATES, 'createdAt']) if (by && x[k]) x[k] = addDays(x[k], by);
-  d.goals.forEach(g => { g.current = ''; if (g.status === 'achieved') g.status = 'active'; });
-  d.states.forEach(s => Object.assign(s, { value: '', date: '', history: [] }));
+  d.goals.forEach(g => { g.current = ''; if (g.status === 'achieved') g.status = 'active'; delete g.offeredAt; });
+  d.states.forEach(s => { Object.assign(s, { value: '', date: '', history: [] }); delete s.dropped; if (s.entries) s.entries = []; delete s.droppedEntries; });
   d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; });
   return d;
 }
@@ -2997,7 +3571,7 @@ function progressCounts(data) {
   const ticks = a => Object.values(a.checkins || {}).filter(v => v === 1).length;
   return {
     checkins: data.activities.reduce((n, a) => n + ticks(a), 0),
-    measurements: data.states.reduce((n, s) => n + ((s.history || []).length || (isNum(s.value) ? 1 : 0)), 0)
+    measurements: data.states.reduce((n, s) => n + (s.cumulative ? (s.entries || []).length : (s.history || []).length || (isNum(s.value) ? 1 : 0)), 0)
       + data.goals.filter(g => isNum(g.current)).length,
     done: data.activities.filter(a => a.status === 'done').length + data.goals.filter(g => g.status === 'achieved').length,
     // Those started by their start date alone (see startDueActivities) are not progress.
@@ -3119,8 +3693,8 @@ planImp.addEventListener('click', e => {
 // The sample plan's data (also used by the guided tour in tutorial.js).
 function sampleData() {
   const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
-  const [halfMarathon, fund, tenK, weight, course, spanish, sell, trip, bathroom, heating, exercise] = Array.from({ length: 11 }, uid);
-  const [fitness, savings, spending, bodyWeight, itemsSold, heatingBill] = Array.from({ length: 6 }, uid);
+  const [halfMarathon, fund, tenK, weight, course, spanish, sell, trip, bathroom, heating, exercise, weeklyKm] = Array.from({ length: 12 }, uid);
+  const [fitness, savings, spending, bodyWeight, itemsSold, heatingBill, distance] = Array.from({ length: 7 }, uid);
   const a = Array.from({ length: 25 }, uid);
   // Routine check-ins on the past days `from`..yesterday that `keep(daysAgo, weekday)` picks.
   const ticks = (from, keep) => Object.fromEntries(Array.from({ length: -from }, (_, i) => from + i)
@@ -3148,6 +3722,7 @@ function sampleData() {
       { id: bathroom, progress: 'activities', startDate: d(-25), deadline: d(45), status: 'active' },
       { id: heating, unit: '€', baseline: '180', current: '', target: '120', startDate: d(-60), deadline: d(180), status: 'active' },
       { id: exercise, progress: 'routines', startDate: d(-35), deadline: d(150), status: 'active' },
+      { id: weeklyKm, unit: 'km', baseline: '12', current: '', target: '30', startDate: d(-35), deadline: d(150), status: 'active' },
     ], txt.goals),
     // Enough measurements for the graphs to tell a story: each starts before its goal (at the goal's
     // starting value on the goal's start date) and wobbles on its way, as real readings do.
@@ -3158,6 +3733,7 @@ function sampleData() {
       { id: bodyWeight, unit: 'kg', ...readings([[-63, 82.4], [-56, 82.1], [-49, 82.3], [-42, 81.8], [-35, 81.4], [-30, 81], [-23, 80.3], [-16, 79.6], [-9, 78.9], [-1, 78]]) },
       { id: itemsSold, ...readings([[-38, 0], [-33, 1], [-27, 2], [-20, 2], [-15, 3], [-11, 4], [-7, 5], [-4, 6]]) },
       { id: heatingBill, unit: '€', ...readings([[-150, 195], [-120, 188], [-90, 184], [-60, 180], [-30, 172], [-5, 165]]) },
+      { id: distance, unit: 'km', cumulative: 'week', entries: [], value: '', date: '', history: [] },
     ], txt.states),
     activities: withText([
       { id: a[0], status: 'done', startDate: d(-30), dueDate: d(-20) },   // running shoes
@@ -3191,6 +3767,10 @@ function sampleData() {
     ], txt.activities),
     relations: [],
   };
+  // Each run adds its kilometres to the weekly distance, a little longer as the weeks go by.
+  const runs = data.activities.find(x => x.id === a[23]), km = data.states.find(x => x.id === distance);
+  km.entries = Object.keys(runs.checkins).sort().map((date, i) => ({ id: uid(), date, amount: String(Math.round((4.5 + (dayNum(date) - dayNum(d(-35))) * 0.08 + (i % 3 === 2 ? 2 : 0)) * 2) / 2), routine: a[23] }));
+  refreshTotal(km);
   const rel = (from, type, to) => data.relations.push({ id: uid(), from, to, type });
   // Goals: two sub-goals under the half marathon, a late sub-goal under the fund,
   // and a trip that waits for two other goals.
@@ -3202,6 +3782,7 @@ function sampleData() {
   rel(bodyWeight, 'measures', weight); rel(itemsSold, 'measures', sell);
   rel(spending, 'related', savings);
   rel(heatingBill, 'measures', heating);
+  rel(distance, 'measures', weeklyKm); rel(weeklyKm, 'subgoal', halfMarathon); rel(a[23], 'improves', distance);
   // Activities → goals
   rel(a[0], 'contributes', halfMarathon); rel(a[1], 'contributes', halfMarathon); rel(a[1], 'contributes', tenK);
   rel(a[2], 'contributes', halfMarathon); rel(a[3], 'contributes', tenK); rel(a[4], 'contributes', fund);
@@ -3252,7 +3833,7 @@ function templateData(tpl) {
     (g.deps || []).forEach(x => rel(g.k, 'depends', x));
   }
   for (const s of tpl.states) {
-    data.states.push({ id: id(s.k), ...texts(s, ['title', 'description', 'unit']), value: '', date: '', history: [] });
+    data.states.push({ id: id(s.k), ...texts(s, ['title', 'description', 'unit']), value: '', date: '', history: [], ...(s.cumulative && { cumulative: s.cumulative, entries: [] }) });
     (s.measures || []).forEach(x => rel(s.k, 'measures', x));
   }
   for (const a of tpl.activities) {
@@ -3428,14 +4009,15 @@ function ctxOptions(kind, item) {
     options.push('-', opt('add:activity:improves', t('ctx.addActivityState')));
   }
   // "Show in" and the view's icon from the navigation; the full name is the accessible name and tooltip.
-  const views = SHOW_IN[kind].filter(v => v !== ui.view && (v !== 'graphs' || stateSeries(item).length));
+  const views = SHOW_IN[kind].filter(v => v !== ui.view && (v !== 'graphs' || hasGraph(item)));
   if (views.length) options.push('-', ...views.map(v => opt('show:' + v, t('ctx.showIn'), { icon: v, name: t('ctx.showInView', { view: t('nav.' + v) }) })));
   options.push(opt('link', t('ctx.link')), '-', opt('delete', t('btn.delete'), { danger: true }));
   return options;
 }
 
-// The views each kind of item appears in (graphs: only states with measurements).
-const SHOW_IN = { goal: ['goals', 'map', 'timeline'], activity: ['activities', 'map', 'timeline'], state: ['states', 'map', 'graphs'] };
+// The views each kind of item appears in (graphs: only states with measurements or amounts, and
+// routines with check-ins).
+const SHOW_IN = { goal: ['goals', 'map', 'timeline'], activity: ['activities', 'map', 'timeline', 'graphs'], state: ['states', 'map', 'graphs'] };
 
 // Switches to another view with the item selected there (map, timeline) or its card brought into
 // view. Filters stay as they are, so the item may not be shown.
@@ -4177,7 +4759,7 @@ document.addEventListener('click', e => {
 // What a plan holds, as list items for the delete and merge dialogs ('' when it is empty).
 function planContents(data) {
   const count = (key, n) => (n ? `<li>${esc(tp(key, n))}</li>` : '');
-  const measured = data.states.reduce((sum, s) => sum + (s.history || []).length, 0);
+  const measured = data.states.reduce((sum, s) => sum + (s.cumulative ? s.entries || [] : s.history || []).length, 0);
   return count('planDel.goals', data.goals.length) + count('planDel.states', data.states.length) + count('planDel.measurements', measured)
     + count('planDel.activities', data.activities.length) + count('planDel.relations', data.relations.length);
 }

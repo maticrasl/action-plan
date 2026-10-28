@@ -7,8 +7,8 @@
    - save() stamps `updatedAt` on every goal, state, activity and relationship that
      changed since the last save, and records deleted ids in `db.deleted` (tombstones);
    - mergePlans(a, b) keeps the newer version of each item, drops items deleted after
-     their last edit, merges measurement histories by date, and repairs relationships
-     the merge would break.
+     their last edit, merges measurement histories by date (and amounts that add up by
+     entry), and repairs relationships the merge would break.
    Loaded before app.js; uses its helpers (emptyDb, PARENT_REL, ACYCLIC) only when called.
    ========================================================= */
 
@@ -90,7 +90,7 @@ function mergeDeleted(a, b) {
 
 // Current states: measurements from both versions are kept (one per date, the newer version's
 // value wins on a clash, so deleting a measurement carries over too), and the state's value
-// follows its latest measurement.
+// follows its latest measurement – or, for a state that adds up, its merged entries' total.
 function mergeState(x, y) {
   const newer = newerOf(x, y), older = newer === x ? y : x;
   const byDate = new Map((older.history || []).map(h => [h.date, h]));
@@ -101,9 +101,25 @@ function mergeState(x, y) {
   const dropped = Object.keys({ ...older.dropped, ...newer.dropped }).filter(d => !byDate.has(d));
   if (dropped.length) merged.dropped = Object.fromEntries(dropped.map(d => [d, 1]));
   else delete merged.dropped;
-  const last = history[history.length - 1];
-  if (last && (!merged.date || last.date >= merged.date)) Object.assign(merged, { value: last.value, date: last.date });
+  if (newer.entries || older.entries) mergeEntries(merged, newer, older);
+  if (isCumulative(merged)) refreshTotal(merged);
+  else {
+    const last = history[history.length - 1];
+    if (last && (!merged.date || last.date >= merged.date)) Object.assign(merged, { value: last.value, date: last.date });
+  }
   return merged;
+}
+
+// Amounts that add up: entries from both versions are kept by id (the newer version's copy wins on
+// a clash), except those deleted on either side.
+function mergeEntries(merged, newer, older) {
+  const dropped = { ...older.droppedEntries, ...newer.droppedEntries };
+  const byId = new Map((older.entries || []).map(e => [e.id, e]));
+  (newer.entries || []).forEach(e => byId.set(e.id, e));
+  merged.entries = [...byId.values()].filter(e => !dropped[e.id])
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  if (Object.keys(dropped).length) merged.droppedEntries = dropped;
+  else delete merged.droppedEntries;
 }
 
 // Routines: check-ins from both versions are kept per date (the newer version wins on a clash,
