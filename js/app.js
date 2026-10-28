@@ -2886,12 +2886,12 @@ function closeCalendar(refocus = false) {
   if (refocus) field.querySelector('[data-cal-open]')?.focus();
 }
 
+// Focus goes back to the calendar button, not the text box: on a phone that would bring up the keyboard.
 function pickDate(iso) {
   const { box } = cal;
   box.value = dateInput(iso);
-  closeCalendar();
+  closeCalendar(true);
   box.dispatchEvent(new Event('input', { bubbles: true }));
-  box.focus();
 }
 
 $('#modalForm').addEventListener('click', e => {

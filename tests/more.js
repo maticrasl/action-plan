@@ -680,7 +680,10 @@ window.moreTests = async ({ step, assert }) => {
     assert(document.activeElement.dataset.calMove === "1" && /feb/i.test(back), "month buttons: " + back);
     const moved = $('[data-field="startDate"] .cal-head strong').textContent;
     $('[data-field="startDate"] [data-cal-day="2026-03-01"]').click();
-    assert($('#f-startDate').value === '01/03/2026' && !$('.cal') && document.activeElement === $('#f-startDate'), 'picked day fills the field and closes');
+    assert($('#f-startDate').value === '01/03/2026' && !$('.cal'), 'picked day fills the field and closes');
+    // Focus goes to the calendar button: in the text box a phone would bring up its keyboard.
+    assert(document.activeElement === calBtn('startDate') && calBtn('startDate').getAttribute('aria-expanded') === 'false', 'focus back on the calendar button, not the text box');
+    assert(!String(getSelection()) && $('#f-startDate').selectionStart === $('#f-startDate').selectionEnd, 'no text selected');
     // An empty end date opens on the start date's month (also after the start was set by the calendar).
     due.value = '';
     calBtn('dueDate').click();
@@ -697,10 +700,10 @@ window.moreTests = async ({ step, assert }) => {
     assert(!$('.cal'), 'click outside closes');
     calBtn('dueDate').click();
     $('[data-field="dueDate"] [data-cal-pick=""]').click();
-    assert(due.value === '' && !$('.cal'), 'clear empties the field');
+    assert(due.value === '' && !$('.cal') && document.activeElement === calBtn('dueDate'), 'clear empties the field');
     calBtn('dueDate').click();
     $('[data-field="dueDate"] .cal-foot [data-cal-pick]').click();
-    assert(due.value === dateInput(today()), 'today button');
+    assert(due.value === dateInput(today()) && document.activeElement === calBtn('dueDate'), 'today button');
     $('#f-title').value = 'Dated activity';
     due.value = '31/02/2026';
     submitForm();
