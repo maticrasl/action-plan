@@ -489,6 +489,14 @@ function activityState(a) {
   if (a.dueDate && daysUntil(a.dueDate) < 0) return 'late';
   return a.status === 'doing' ? 'doing' : 'todo';
 }
+// When its start date comes, an activity still to do is in progress. This happens once per start date
+// (`autoStarted` remembers which), so setting it back to "To do" sticks until the start date changes.
+function startDueActivities() {
+  const now = today();
+  const due = db.activities.filter(a => !isRoutine(a) && a.status === 'todo' && a.startDate && a.startDate <= now && a.autoStarted !== a.startDate);
+  due.forEach(a => Object.assign(a, { status: 'doing', autoStarted: a.startDate }));
+  return due.length;
+}
 function goalState(g) {
   if (g.status === 'achieved') return 'done';
   if (blockers(g, 'goal').length) return 'blocked';
@@ -919,6 +927,7 @@ const VIEWS = {
 };
 
 function render() {
+  if (startDueActivities()) save();
   const v = VIEWS[ui.view];
   if (ui.category && !categories().includes(ui.category)) ui.category = '';
   const title = t('view.' + ui.view);
@@ -944,6 +953,12 @@ function render() {
   decorateHelp();
   updatePlanBadges();
 }
+// Coming back to the app on a later day starts the activities due by then.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !startDueActivities()) return;
+  save();
+  render();
+});
 
 const NEXT_FEW = 3; // next actions shown on the overview until expanded
 
@@ -2959,7 +2974,7 @@ function resetProgress(data, { shift = false } = {}) {
   for (const x of dated) for (const k of [...PLAN_DATES, 'createdAt']) if (by && x[k]) x[k] = addDays(x[k], by);
   d.goals.forEach(g => { g.current = ''; if (g.status === 'achieved') g.status = 'active'; });
   d.states.forEach(s => Object.assign(s, { value: '', date: '', history: [] }));
-  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; });
+  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; });
   return d;
 }
 
@@ -2971,7 +2986,8 @@ function progressCounts(data) {
     measurements: data.states.reduce((n, s) => n + ((s.history || []).length || (isNum(s.value) ? 1 : 0)), 0)
       + data.goals.filter(g => isNum(g.current)).length,
     done: data.activities.filter(a => a.status === 'done').length + data.goals.filter(g => g.status === 'achieved').length,
-    started: data.activities.filter(a => a.status === 'doing').length,
+    // Those started by their start date alone (see startDueActivities) are not progress.
+    started: data.activities.filter(a => a.status === 'doing' && !(a.autoStarted && a.autoStarted === a.startDate)).length,
   };
 }
 const hasProgress = data => Object.values(progressCounts(data)).some(Boolean);

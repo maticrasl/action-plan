@@ -2491,8 +2491,11 @@ window.moreTests = async ({ step, assert }) => {
     on(30, () => {
       openPlan(plans.list.find(p => p.id !== id).id);
       openPlan(id);
-      eq(JSON.stringify({ goals: db.goals, states: db.states, activities: db.activities }),
-        JSON.stringify({ goals: before.goals, states: before.states, activities: before.activities }), 'a month later its dates are where they were');
+      // Activities whose start date came meanwhile are in progress now; nothing else changes.
+      const acts = list => list.map(({ status, autoStarted, updatedAt, ...rest }) => rest);
+      eq(JSON.stringify({ goals: db.goals, states: db.states, activities: acts(db.activities) }),
+        JSON.stringify({ goals: before.goals, states: before.states, activities: acts(before.activities) }), 'a month later its dates are where they were');
+      assert(db.activities.some(a => a.status === 'doing' && before.activities.find(b => b.id === a.id).status === 'todo'), 'an activity that started meanwhile is in progress');
     });
     deletePlan(id);
     return results.join(' | ');
@@ -3407,5 +3410,37 @@ window.moreTests = async ({ step, assert }) => {
     }
     deletePlan(plans.current);
     return ta;
+  });
+
+  await step('activities: on its start date a to-do activity is in progress, once per start date', () => {
+    fresh('Auto start');
+    const past = mk('activity', { startDate: d(-3) }), now = mk('activity', { startDate: d(0) }), soon = mk('activity', { startDate: d(1) });
+    const none = mk('activity'), done = mk('activity', { status: 'done', startDate: d(-5) });
+    const routine = mk('activity', { startDate: d(-10), repeat: { every: 1, unit: 'week', times: 2 }, checkins: {} });
+    setView('activities');
+    eq([past, now, soon, none, done, routine].map(a => a.status), ['doing', 'doing', 'todo', 'todo', 'done', 'todo'], 'statuses');
+    eq(past.autoStarted, past.startDate, 'remembers the start date it acted on');
+    assert($(`.col-doing [data-open="${past.id}"]`) && $(`.col-todo [data-open="${soon.id}"]`), 'cards sit in their columns');
+    eq(JSON.parse(localStorage.getItem(planKey(plans.current))).activities.find(a => a.id === now.id).status, 'doing', 'and it is saved');
+    // Set back by hand, it stays; a new start date starts it again.
+    runCtxAction('status:todo', past.id);
+    setView('dashboard'); setView('activities');
+    eq(past.status, 'todo', 'set back to to do, it stays');
+    past.startDate = d(-1);
+    render();
+    eq(past.status, 'doing', 'a new start date starts it again');
+    // A start date reached while the app was in the background.
+    soon.startDate = d(0);
+    document.dispatchEvent(new Event('visibilitychange'));
+    eq(soon.status, 'doing', 'coming back to the app starts it');
+    assert($(`.col-doing [data-open="${soon.id}"]`), 'and redraws the board');
+    // Only activities started by hand count as progress (when importing or saving a template).
+    eq(progressCounts(db).started, 0, 'started by date is not progress');
+    runCtxAction('status:doing', none.id);
+    eq(progressCounts(db).started, 1, 'started by hand is');
+    // A plan shared as a template starts over.
+    const tpl = resetProgress(db);
+    assert(tpl.activities.every(a => a.status === 'todo' && !('autoStarted' in a)), 'templates forget it');
+    deletePlan(plans.current);
   });
 };
