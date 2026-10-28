@@ -40,6 +40,7 @@ let db = emptyDb();
 const ui = {
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
   mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
+  tlDates: null, // the selected timeline item whose dates can be dragged: its bar was clicked, not just its row
   rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
 };
 
@@ -1680,6 +1681,8 @@ function renderTimeline() {
   const relSel = ui.tlDeps && db.relations.find(r => r.id === ui.mapRel && r.type === 'depends' && rows.some(x => x.item?.id === r.from) && rows.some(x => x.item?.id === r.to)) || null;
   const sel = !relSel && ui.mapSelected && rows.some(r => r.item?.id === ui.mapSelected) ? ui.mapSelected : null;
   const near = relSel ? new Set([relSel.from, relSel.to]) : neighbourhood(sel, db.relations);
+  // Dates only for the item whose bar was clicked, while it stays selected.
+  if (ui.tlDates !== sel) ui.tlDates = null;
 
   const geo = {};
   const body = rows.map((r, i) => {
@@ -1696,7 +1699,7 @@ function renderTimeline() {
       const lateHtml = overdue ? `<i class="tl-overdue" style="left:${x(dayNum(e) + 1)}px;width:${(todayN - dayNum(e)) * px}px" title="${esc(t('tl.overdue', { date: fmtDate(e) }))}"></i>` : '';
       const tip = `${item.title}: ${dateText} (${t('nodeState.' + st)})`;
       // The selected item's bar can be dragged to new dates (see "Moving dates in the timeline").
-      const drag = item.id === sel ? ` tl-drag" data-tl-drag="${item.id}` : '';
+      const drag = item.id === ui.tlDates ? ` tl-drag" data-tl-drag="${item.id}` : '';
       // Every row of an item, so an activity listed under several goals gets its arrows on each copy.
       const spot = s && e ? { start: left, end: left + width } : { start: left + px / 2 - 7, end: left + px / 2 + 7 };
       (geo[item.id] ||= []).push({ ...spot, y: i * ROW + ROW / 2, goal: r.goal });
@@ -1768,7 +1771,7 @@ function renderTimeline() {
         </div>
       </div>
     </div>` : `<div class="empty">${t('tl.noneShown')}</div>`}
-    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) + (geo[sel] ? `<p class="meta" style="margin-top:8px">${t(fixedEnd(findEntity(sel).item) ? 'tl.dragHintMove' : 'tl.dragHint')}</p>` : '') : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
+    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) + (geo[sel] ? `<p class="meta" style="margin-top:8px">${t(sel !== ui.tlDates ? 'tl.datesHint' : fixedEnd(findEntity(sel).item) ? 'tl.dragHintMove' : 'tl.dragHint')}</p>` : '') : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
 }
 
 /* ---------- Graphs (measurement history of each current state) ----------
@@ -2685,13 +2688,18 @@ viewEl.addEventListener('click', e => {
     const now = performance.now(), double = e.detail > 0 && lastNodeClick.id === node && now - lastNodeClick.t < 450;
     lastNodeClick = e.detail > 0 && !double ? { id: node, t: now } : { id: null, t: 0 };
     ui.mapRel = null;
+    // In the timeline, clicking the bar itself (the part that changes) also lets its dates be dragged.
+    const dates = !!e.target.closest('.tl-bar, .tl-milestone, .tl-grip');
     if (double) {
       ui.mapSelected = node;
       render();
       const ent = findEntity(node);
       return ent && openForm(ent.kind, node);
     }
-    ui.mapSelected = ui.mapSelected === node ? null : node;
+    // A second click on the same part deselects; the other part switches between the two.
+    const same = ui.mapSelected === node && (ui.tlDates === node) === dates;
+    ui.mapSelected = same ? null : node;
+    ui.tlDates = !same && dates ? node : null;
     return render();
   }
   if (el.hasAttribute('data-map-clear')) { ui.mapSelected = ui.mapRel = null; return render(); }

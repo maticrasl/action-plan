@@ -3257,11 +3257,14 @@ window.moreTests = async ({ step, assert }) => {
     ui.tlPx = TL.ZOOM.week; ui.tlDeps = true;
     setView('timeline');
     const px = ui.tlPx;
-    const sel = id => { ui.mapSelected = id; ui.mapRel = null; render(); };
+    // Selected with its dates open for changing, as a click on its bar does.
+    const sel = id => { ui.mapSelected = ui.tlDates = id; ui.mapRel = null; render(); };
     const row = id => $(`[data-tl-node="${id}"]`);
     const mouse = (type, el, x, y = 100) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 3, pointerType: 'mouse', button: 0, clientX: x, clientY: y }));
     const touch = (type, el, x, y = 100) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 4, pointerType: 'touch', clientX: x, clientY: y }));
     const click = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    // A single click, not read as the second of a double-click.
+    const click1 = el => { lastNodeClick = { id: null, t: 0 }; click(el); };
     const wait = ms => new Promise(res => setTimeout(res, ms));
     const drag = (el, days, steps = 3) => {
       mouse('pointerdown', el, 400);
@@ -3270,8 +3273,40 @@ window.moreTests = async ({ step, assert }) => {
       click(el);
     };
 
-    // Only the selected item can be dragged.
+    // Only the selected item can be dragged, and only once its bar (not just its row) was clicked.
     assert(!$('[data-tl-drag]'), 'nothing selected: nothing to drag');
+    click1(row(a.id).querySelector('.tl-label'));
+    assert(ui.mapSelected === a.id && row(a.id).classList.contains('selected'), 'a click on the row selects it');
+    assert(!$('[data-tl-drag]') && !$('.tl-grip'), 'but offers no dates to drag');
+    assert(viewEl.textContent.includes(t('tl.datesHint')) && !viewEl.textContent.includes(t('tl.dragHint')), 'the hint says to tap the bar');
+    click1(row(a.id).querySelector('.tl-bar'));
+    assert(ui.mapSelected === a.id && ui.tlDates === a.id, 'a click on its bar keeps it selected, now with its dates');
+    assert(row(a.id).querySelector('.tl-bar.tl-drag') && row(a.id).querySelectorAll('.tl-grip').length === 2, 'grips appear');
+    click1(row(a.id).querySelector('.tl-grip'));
+    assert(!ui.mapSelected && !ui.tlDates, 'a grip is part of the bar: a second click there deselects');
+    click1(row(a.id).querySelector('.tl-bar'));
+    click1(row(a.id).querySelector('.tl-label'));
+    assert(ui.mapSelected === a.id && !ui.tlDates && !$('.tl-grip'), 'a click on the row goes back to selecting only');
+    click1(row(a.id).querySelector('.tl-bar'));
+    click(row(a.id).querySelector('.tl-bar'));
+    assert(modal.open, 'a double-click on the bar still edits');
+    modal.close();
+    ui.mapSelected = ui.tlDates = a.id; render();
+    click1(row(a.id).querySelector('.tl-bar'));
+    assert(!ui.mapSelected && !ui.tlDates, 'a second click on the bar deselects');
+    click1(row(m.id).querySelector('.tl-milestone'));
+    assert(ui.tlDates === m.id && row(m.id).querySelector('.tl-milestone.tl-drag'), 'a milestone counts as its bar');
+    // Selected another way (the menu, Show in): selecting only.
+    ui.mapSelected = null; render();
+    runCtxAction('highlight', a.id);
+    assert(ui.mapSelected === a.id && !$('[data-tl-drag]'), 'highlighting from the menu: no dates');
+    // On a touch screen, a long-press on the bar of a row that is only selected opens the menu.
+    touch('pointerdown', row(a.id).querySelector('.tl-bar'), 400);
+    await wait(LONG_PRESS_MS + 80);
+    touch('pointerup', document, 400);
+    assert(!ctxMenu.hidden && !$('.tl-scroll').classList.contains('tl-dragging'), 'long-press on a selected row: the menu, not a drag');
+    closeCtxMenu();
+    await wait(20);
     sel(a.id);
     assert(row(a.id).querySelector('.tl-bar.tl-drag') && row(a.id).querySelectorAll('.tl-grip').length === 2, 'the selected bar and its two grips');
     assert(viewEl.textContent.includes(t('tl.dragHint')), 'the hint says how');
@@ -3334,7 +3369,7 @@ window.moreTests = async ({ step, assert }) => {
 
     // A plain click on the selected bar still deselects it, and nothing moves.
     const before = JSON.stringify(a);
-    mouse('pointerdown', row(a.id).querySelector('.tl-bar'), 400); mouse('pointerup', document, 400); click(row(a.id));
+    mouse('pointerdown', row(a.id).querySelector('.tl-bar'), 400); mouse('pointerup', document, 400); click1(row(a.id).querySelector('.tl-bar'));
     eq(ui.mapSelected, null, 'a click deselects');
     eq(JSON.stringify(a), before, 'a click changes nothing');
 
@@ -3584,7 +3619,7 @@ window.moreTests = async ({ step, assert }) => {
     res = await pinchOn(row(a.id), $('.tl-scroll .tl-scale') || $('.tl-scroll'));
     assert(!res.menu, 'second finger off any row: no menu');
     // With a bar selected, a pinch that starts on it does not pick it up.
-    ui.mapSelected = a.id; render();
+    ui.mapSelected = ui.tlDates = a.id; render();
     const start = a.startDate;
     res = await pinchOn(row(a.id).querySelector('.tl-bar'), row(b.id));
     assert(!res.menu && !tlDrag && !$('.tl-scroll').classList.contains('tl-dragging'), 'selected bar: not picked up, no menu');
@@ -3703,7 +3738,7 @@ window.moreTests = async ({ step, assert }) => {
     pick('timeline');
     const row = $(`[data-tl-node="${a.id}"]`);
     assert(ui.view === 'timeline' && ui.mapSelected === a.id && row.classList.contains('selected') && document.activeElement === row, 'timeline row selected');
-    assert(row.querySelector('.tl-drag'), 'its bar can be dragged, as on any selection');
+    assert(!row.querySelector('.tl-drag'), 'its dates are not offered for dragging yet');
     // Timeline → activities: the card is brought into view and glows.
     eq(rightClick(row), ['activities', 'map'], 'timeline row');
     pick('activities');
