@@ -815,7 +815,7 @@ function routineCard(a) {
   const blocked = blockers(a), now = today();
   const when = a.dueDate && a.dueDate < now ? `<span class="tag">${t('rt.ended')}</span>`
     : routineStart(a) > now ? `<span class="tag">${t('rt.starts', { date: fmtDate(routineStart(a)) })}</span>` : '';
-  return `<article class="card activity routine st-${st}" data-open="${a.id}">
+  return `<article class="card activity routine st-${st}" data-open="${a.id}" data-ctx-item="${a.id}">
     <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched">${esc(scheduleText(a))}</span></div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
     ${progressBar(p.target ? clamp(p.done / p.target * 100, 0, 100) : 0, `<span class="rt-progress">${esc(label)}</span>`)}
@@ -1160,7 +1160,7 @@ function activityCard(a) {
   const parent = relsFrom(a.id, 'subactivity')[0];
   const children = descendants(a.id, 'subactivity').map(id => db.activities.find(x => x.id === id)).filter(Boolean);
   const childrenDone = children.filter(c => c.status === 'done').length;
-  return `<article class="card activity" data-open="${a.id}" draggable="true" data-drag="${a.id}">
+  return `<article class="card activity" data-open="${a.id}" data-ctx-item="${a.id}" draggable="true" data-drag="${a.id}">
     <div class="card-head"><h3 class="${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</h3>${statusCheck(a)}</div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
     ${children.length ? progressBar(childrenDone / children.length * 100, t('acts.subDone', { done: childrenDone, total: children.length })) : ''}
@@ -2723,6 +2723,8 @@ viewEl.addEventListener('change', e => {
 
 function bindDragDrop() {
   document.querySelectorAll('[data-drag]').forEach(card => {
+    // Cards are dragged with the mouse; on touch screens a long-press opens their menu instead.
+    card.addEventListener('pointerdown', e => { card.draggable = e.pointerType === 'mouse'; });
     card.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', card.dataset.drag); e.dataTransfer.effectAllowed = 'move'; });
   });
   document.querySelectorAll('.col[data-status]').forEach(col => {
@@ -3383,12 +3385,15 @@ $('#navToggle').addEventListener('click', () => setNavCollapsed(!ui.navCollapsed
 const ctxMenu = $('#ctxMenu');
 // Map boxes and timeline rows both act as item "nodes".
 const NODE_SEL = '[data-map-node],[data-tl-node]';
-const nodeId = el => el?.dataset.mapNode || el?.dataset.tlNode;
+// The menu also opens on the activity and routine cards of the Activities view.
+const MENU_SEL = `${NODE_SEL},[data-ctx-item]`;
+const nodeId = el => el?.dataset.mapNode || el?.dataset.tlNode || el?.dataset.ctxItem;
 const LONG_PRESS_MS = 500;
 
 function ctxOptions(kind, item) {
   const opt = (act, label, extra = {}) => ({ act, label, ...extra });
-  const options = [opt('edit', t('btn.edit')), opt('highlight', t('ctx.highlight'))];
+  // Highlighting links only means something where they are drawn.
+  const options = [opt('edit', t('btn.edit')), ...(selectsInView() ? [opt('highlight', t('ctx.highlight'))] : [])];
   if (kind === 'goal') {
     options.push(
       opt('focus', t('ctx.focus')),
@@ -3504,7 +3509,7 @@ function runCtxAction(act, id) {
 
 viewEl.addEventListener('contextmenu', e => {
   if (tlDrag?.touch) return e.preventDefault();
-  const node = e.target.closest(NODE_SEL), line = e.target.closest('[data-rel-edit]');
+  const node = e.target.closest(MENU_SEL), line = e.target.closest('[data-rel-edit]');
   if (!node && !line) return;
   e.preventDefault();
   openMenuAt(line, node, e.clientX, e.clientY);
@@ -3513,7 +3518,7 @@ viewEl.addEventListener('contextmenu', e => {
 // Long-press for touch screens (iOS Safari never fires contextmenu).
 let press = null;
 viewEl.addEventListener('pointerdown', e => {
-  const node = e.target.closest(NODE_SEL), line = e.target.closest('[data-rel-edit]');
+  const node = e.target.closest(MENU_SEL), line = e.target.closest('[data-rel-edit]');
   if ((!node && !line) || e.pointerType === 'mouse' || e.target.closest('[data-tl-drag]')) return;
   const p = { x: e.clientX, y: e.clientY, fired: false };
   p.timer = setTimeout(() => { p.fired = true; openMenuAt(line, node, p.x, p.y + 12); }, LONG_PRESS_MS);

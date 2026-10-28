@@ -3483,4 +3483,63 @@ window.moreTests = async ({ step, assert }) => {
     eq(out[0], 'portrait=tabs', 'phones held upright keep the tab bar');
     return out.join(' ');
   });
+
+  await step('activities: a long-press (or right-click) on a card opens its menu', async () => {
+    fresh('Card menu');
+    const a = mk('activity', { title: 'Paint the fence' });
+    const r = mk('activity', { title: 'Stretch', startDate: d(-7), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
+    save();
+    setView('activities');
+    const card = id => $(`.board [data-ctx-item="${id}"], .routines [data-ctx-item="${id}"]`);
+    const touch = (type, el, x = 60, y = 60) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 11, clientX: x, clientY: y }));
+    const click = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    const wait = ms => new Promise(res => setTimeout(res, ms));
+    const longPress = async (el, withClick) => {
+      touch('pointerdown', el);
+      await wait(LONG_PRESS_MS + 80);
+      touch('pointerup', el);
+      if (withClick) click(el);
+    };
+    const acts = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
+    const tapMenu = act => { const b = ctxMenu.querySelector(`[data-ctx="${act}"]`); touch('pointerdown', b); touch('pointerup', b); click(b); };
+    for (const withClick of [false, true]) {
+      await longPress(card(a.id).querySelector('h3'), withClick);
+      assert(!ctxMenu.hidden && ctxMenu.dataset.id === a.id, `${withClick ? 'with' : 'without'} a lifting click: menu open`);
+      assert(!modal.open, 'the press does not also open the form');
+      eq(acts(), ['edit', 'status:todo', 'status:doing', 'status:done', 'add:activity:subactivity', 'link', 'delete'], 'activity options, no highlighting');
+      tapMenu('status:' + (withClick ? 'todo' : 'doing'));
+      assert(ctxMenu.hidden, 'one tap runs the item');
+      eq(a.status, withClick ? 'todo' : 'doing', 'status set from the menu');
+    }
+    assert($(`.col-todo [data-ctx-item="${a.id}"]`), 'the card moved column');
+    // Routines: tick today off from the menu.
+    await longPress(card(r.id));
+    assert(!ctxMenu.hidden && ctxMenu.dataset.id === r.id && acts().includes('checkin') && !acts().includes('status:done'), 'routine menu');
+    tapMenu('checkin');
+    assert(checkedOn(r, today()), 'ticked off today');
+    // A short tap still opens the form; a swipe opens nothing.
+    touch('pointerdown', card(a.id)); touch('pointerup', card(a.id)); click(card(a.id));
+    assert(modal.open && formCtx.id === a.id && ctxMenu.hidden, 'a short tap opens the form');
+    modal.close();
+    touch('pointerdown', card(a.id), 60, 60); touch('pointermove', card(a.id), 60, 90);
+    await wait(LONG_PRESS_MS + 80);
+    touch('pointerup', card(a.id), 60, 90);
+    assert(ctxMenu.hidden, 'a swipe (scrolling the board) opens no menu');
+    // On a touch screen the card is not picked up by the browser's drag and drop; with a mouse it is.
+    touch('pointerdown', card(a.id)); touch('pointerup', card(a.id));
+    assert(card(a.id).draggable === false, 'no native drag on touch');
+    card(a.id).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 }));
+    assert(card(a.id).draggable === true, 'mouse drags');
+    // Right-click with a mouse opens the same menu instead of the browser's.
+    const rc = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 100, clientY: 100 });
+    card(a.id).querySelector('.meta, h3').dispatchEvent(rc);
+    assert(rc.defaultPrevented && !ctxMenu.hidden && ctxMenu.dataset.id === a.id, 'right-click opens the menu');
+    closeCtxMenu();
+    // The map still offers highlighting.
+    setView('map');
+    openCtxMenu(a.id, 10, 10);
+    assert(acts().includes('highlight'), 'map menu still highlights');
+    closeCtxMenu();
+    deletePlan(plans.current);
+  });
 };

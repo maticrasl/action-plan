@@ -288,6 +288,8 @@ textarea { resize: vertical; min-height: 68px; }
 /* Activity: a plain tile; status is shown by the check */
 .card.activity { border-radius: var(--r-md); padding: 14px 14px 12px; gap: 8px; }
 .card.activity h3 { font-size: 16px; font-weight: 700; letter-spacing: 0; }
+/* A long-press opens the card's menu, not a text selection or the browser's own menu. */
+@media (pointer: coarse) { [data-ctx-item] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }
 
 .tag {
   display: inline-block; vertical-align: middle; padding: 2px 9px; border-radius: 999px;
