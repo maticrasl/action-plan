@@ -3507,7 +3507,7 @@ window.moreTests = async ({ step, assert }) => {
       await longPress(card(a.id).querySelector('h3'), withClick);
       assert(!ctxMenu.hidden && ctxMenu.dataset.id === a.id, `${withClick ? 'with' : 'without'} a lifting click: menu open`);
       assert(!modal.open, 'the press does not also open the form');
-      eq(acts(), ['edit', 'status:todo', 'status:doing', 'status:done', 'add:activity:subactivity', 'link', 'delete'], 'activity options, no highlighting');
+      eq(acts(), ['edit', 'status:todo', 'status:doing', 'status:done', 'add:activity:subactivity', 'show:timeline', 'show:map', 'link', 'delete'], 'activity options, no highlighting');
       tapMenu('status:' + (withClick ? 'todo' : 'doing'));
       assert(ctxMenu.hidden, 'one tap runs the item');
       eq(a.status, withClick ? 'todo' : 'doing', 'status set from the menu');
@@ -3663,5 +3663,82 @@ window.moreTests = async ({ step, assert }) => {
     assert(shown().join() === ids(due.slice(0, 3)) && more(), 'only three when the rest are due tomorrow');
     deletePlan(plans.current);
     return 'ok';
+  });
+
+  await step('item menu: show in another view, selected there', () => {
+    fresh('Show in'); changeLanguage('en');
+    const g = mk('goal', { startDate: d(-5), deadline: d(30) });
+    const a = mk('activity', { startDate: d(-2), dueDate: d(4) });
+    const done = mk('activity', { dueDate: d(-1), status: 'done' });
+    const s = mk('state', { value: 4, date: d(-1), history: [{ date: d(-9), value: 2 }, { date: d(-1), value: 4 }] });
+    const bare = mk('state');
+    rel(a, g, 'contributes'); rel(done, g, 'contributes'); rel(s, g, 'measures');
+    const rightClick = el => {
+      const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 });
+      el.dispatchEvent(e);
+      assert(e.defaultPrevented && !ctxMenu.hidden, `menu on ${el.className || el.tagName}`);
+      return [...ctxMenu.querySelectorAll('[data-ctx^="show:"]')].map(b => b.dataset.ctx.slice(5));
+    };
+    const pick = view => ctxMenu.querySelector(`[data-ctx="show:${view}"]`).click();
+    // Goals view → map: the box is selected and focused, its neighbours stay lit.
+    setView('goals');
+    eq(rightClick($(`.card[data-open="${g.id}"]`)), ['timeline', 'map'], 'goal card');
+    const showMap = ctxMenu.querySelector('[data-ctx="show:map"]');
+    assert(showMap.textContent === t('ctx.showIn') && showMap.querySelector('svg').outerHTML === $('.nav-item[data-view="map"] svg').outerHTML, '"Show in" and the map icon');
+    assert(showMap.getAttribute('aria-label') === t('ctx.showInView', { view: t('nav.map') }) && showMap.title === 'Show in Map view', 'named in full');
+    const box = showMap.querySelector('svg').getBoundingClientRect();
+    assert(box.width === 18 && box.height === 18 && getComputedStyle(showMap.querySelector('svg')).fill === 'none', 'icon drawn like in the navigation');
+    const all = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
+    eq(all(), ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'show:timeline', 'show:map', 'link', 'delete'], 'goal options: no highlight or focus outside the map and timeline');
+    pick('map');
+    const node = $(`[data-map-node="${g.id}"]`);
+    assert(ui.view === 'map' && ui.mapSelected === g.id && ctxMenu.hidden, 'map, goal selected');
+    assert(node.querySelector('rect').style.strokeWidth === '3' && document.activeElement === node, 'box drawn selected and focused');
+    assert(!$(`[data-map-node="${a.id}"]`).classList.contains('dim'), 'neighbours not dimmed');
+    // Map → timeline: the same item stays selected; a different one replaces the selection.
+    rightClick(node);
+    eq(all(), ['edit', 'highlight', 'focus', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'show:goals', 'show:timeline', 'link', 'delete'], 'goal options on the map');
+    closeCtxMenu();
+    eq(rightClick($(`[data-map-node="${a.id}"]`)), ['activities', 'timeline'], 'activity box');
+    pick('timeline');
+    const row = $(`[data-tl-node="${a.id}"]`);
+    assert(ui.view === 'timeline' && ui.mapSelected === a.id && row.classList.contains('selected') && document.activeElement === row, 'timeline row selected');
+    assert(row.querySelector('.tl-drag'), 'its bar can be dragged, as on any selection');
+    // Timeline → activities: the card is brought into view and glows.
+    eq(rightClick(row), ['activities', 'map'], 'timeline row');
+    pick('activities');
+    const card = $(`.card[data-open="${a.id}"]`);
+    assert(ui.view === 'activities' && card.classList.contains('flash'), 'card flashes');
+    card.dispatchEvent(new Event('animationend'));
+    assert(!card.classList.contains('flash'), 'and stops');
+    // States: graphs only for one with measurements; graphs → states.
+    setView('states');
+    eq(rightClick($(`.card[data-open="${s.id}"]`)), ['graphs', 'map'], 'state with data');
+    closeCtxMenu();
+    eq(rightClick($(`.card[data-open="${bare.id}"]`)), ['map'], 'state without data');
+    closeCtxMenu();
+    setView('graphs');
+    eq(rightClick($(`[data-gr="${s.id}"] .card-head`)), ['states', 'map'], 'graph heading');
+    pick('states');
+    assert(ui.view === 'states' && $(`.card[data-open="${s.id}"]`).classList.contains('flash'), 'state card flashes');
+    const plot = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    setView('graphs'); $(`[data-gr="${s.id}"] .gr-plot`).dispatchEvent(plot);
+    assert(!plot.defaultPrevented && ctxMenu.hidden, 'no menu on the chart itself');
+    // Overview rows have the menu too.
+    setView('dashboard');
+    eq(rightClick($(`.row[data-open="${a.id}"]`)), ['activities', 'timeline', 'map'], 'next action row');
+    pick('map');
+    assert(ui.view === 'map' && ui.mapSelected === a.id, 'from the overview to the map');
+    // Filters are left alone: a hidden item just isn't there.
+    setToggle('hideDone', true);
+    setView('activities');
+    openCtxMenu(done.id, 10, 10); pick('map');
+    assert(ui.view === 'map' && ui.hideDone && !$(`[data-map-node="${done.id}"]`), 'hide done kept, nothing shown');
+    setToggle('hideDone', false);
+    changeLanguage('sl');
+    setView('goals'); rightClick($(`.card[data-open="${g.id}"]`));
+    assert(ctxMenu.querySelector('[data-ctx="show:map"]').textContent === 'Prikaži v' && ctxMenu.querySelector('[data-ctx="show:map"]').getAttribute('aria-label') === 'Prikaži v pogledu Zemljevid', 'Slovenian');
+    closeCtxMenu(); changeLanguage('en');
+    deletePlan(plans.current);
   });
 };

@@ -832,7 +832,7 @@ function routineCard(a) {
 // A routine on the overview: tick today off and see this period at a glance.
 function routineRow(a) {
   const now = today(), on = checkedOn(a, now), p = periodProgress(a), streak = routineStreak(a);
-  return `<div class="row routine-row" data-open="${a.id}">
+  return `<div class="row routine-row" data-open="${a.id}" data-ctx-item="${a.id}">
     <button type="button" class="check ${on ? 'done' : ''}" data-checkin="${a.id}" data-date="${now}" aria-pressed="${on}" aria-label="${esc(t('rt.doneToday', { name: a.title }))}" title="${esc(t('rt.doneToday', { name: a.title }))}">${on ? '✓' : ''}</button>
     <span class="grow">${esc(a.title)} <span class="meta">${esc(scheduleText(a))}</span></span>
     <span class="tag ${p.met ? 'ok' : ''}">${esc(periodText(a, p))}</span>
@@ -1007,7 +1007,7 @@ function renderDashboard() {
 function activityRow(a) {
   const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
   const blocked = blockers(a).length;
-  return `<div class="row" data-open="${a.id}">
+  return `<div class="row" data-open="${a.id}" data-ctx-item="${a.id}">
     ${statusCheck(a)}
     <span class="grow ${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</span>
     ${blocked ? `<span class="tag bad" title="${esc(tp('blocked.title', blocked))}">${t('blocked')}</span>` : ''}
@@ -1027,7 +1027,7 @@ function goalCard(g) {
   const parent = relsFrom(g.id, 'subgoal')[0];
   const waits = g.status === 'achieved' ? [] : blockers(g, 'goal');
   const measured = byActivities(g), counted = measured ? countedActivities(g).length : 0;
-  return `<article class="card goal" data-open="${g.id}">
+  return `<article class="card goal" data-open="${g.id}" data-ctx-item="${g.id}">
     <div class="card-head"><h3>${esc(g.title)}</h3>${smartBadge(g)}</div>
     ${g.category ? `<div><button type="button" class="tag cat" data-category="${esc(g.category)}">${esc(g.category)}</button></div>` : ''}
     <p class="desc">${esc(g.specific)}</p>
@@ -1079,7 +1079,7 @@ function renderStates() {
     <div class="grid">${list.map(s => {
       const goals = relsFrom(s.id, 'measures').map(r => linkTag(r.to)).join('');
       const improvers = relsTo(s.id, 'improves').length;
-      return `<article class="card state" data-open="${s.id}">
+      return `<article class="card state" data-open="${s.id}" data-ctx-item="${s.id}">
         <div class="card-head"><h3>${esc(s.title)}</h3>${isNum(s.value) ? `<span class="tag state">${fmtNum(s.value)}${s.unit ? ' ' + esc(s.unit) : ''}</span>` : ''}</div>
         ${s.description ? `<p class="desc">${esc(s.description)}</p>` : ''}
         <div class="meta"><span>${t('states.asOf', { date: fmtDate(s.date) || '—' })}</span>${improvers ? `<span>${tp('states.improvers', improvers)}</span>` : ''}${(s.history?.length || 0) > 1 ? `<span>${tp('states.measurements', s.history.length)}</span>` : ''}</div>
@@ -1940,7 +1940,7 @@ function graphCard(s, width) {
   }).join('');
 
   return `<article class="card gr-card" data-gr="${s.id}">
-    <div class="card-head"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
+    <div class="card-head" data-ctx-item="${s.id}"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats"><strong class="gr-value">${esc(withUnit(fmtNum(last.value), unit))}</strong>${changeTag(s, change)}</div>
     ${legend}
     <div class="gr-plot" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
@@ -3387,18 +3387,18 @@ $('#navToggle').addEventListener('click', () => setNavCollapsed(!ui.navCollapsed
 const ctxMenu = $('#ctxMenu');
 // Map boxes and timeline rows both act as item "nodes".
 const NODE_SEL = '[data-map-node],[data-tl-node]';
-// The menu also opens on the activity and routine cards of the Activities view.
+// The menu also opens on the cards and rows of the other views (on a chart, only on its heading).
 const MENU_SEL = `${NODE_SEL},[data-ctx-item]`;
 const nodeId = el => el?.dataset.mapNode || el?.dataset.tlNode || el?.dataset.ctxItem;
 const LONG_PRESS_MS = 500;
 
 function ctxOptions(kind, item) {
   const opt = (act, label, extra = {}) => ({ act, label, ...extra });
-  // Highlighting links only means something where they are drawn.
+  // Highlighting links and showing one goal only mean something where links are drawn.
   const options = [opt('edit', t('btn.edit')), ...(selectsInView() ? [opt('highlight', t('ctx.highlight'))] : [])];
   if (kind === 'goal') {
     options.push(
-      opt('focus', t('ctx.focus')),
+      ...(selectsInView() ? [opt('focus', t('ctx.focus'))] : []),
       '-',
       item.status === 'achieved' ? opt('status:active', t('ctx.reactivate')) : opt('status:achieved', t('ctx.markAchieved')),
       '-',
@@ -3417,8 +3417,30 @@ function ctxOptions(kind, item) {
   } else {
     options.push('-', opt('add:activity:improves', t('ctx.addActivityState')));
   }
+  // "Show in" and the view's icon from the navigation; the full name is the accessible name and tooltip.
+  const views = SHOW_IN[kind].filter(v => v !== ui.view && (v !== 'graphs' || stateSeries(item).length));
+  if (views.length) options.push('-', ...views.map(v => opt('show:' + v, t('ctx.showIn'), { icon: v, name: t('ctx.showInView', { view: t('nav.' + v) }) })));
   options.push(opt('link', t('ctx.link')), '-', opt('delete', t('btn.delete'), { danger: true }));
   return options;
+}
+
+// The views each kind of item appears in (graphs: only states with measurements).
+const SHOW_IN = { goal: ['goals', 'timeline', 'map'], activity: ['activities', 'timeline', 'map'], state: ['states', 'graphs', 'map'] };
+
+// Switches to another view with the item selected there (map, timeline) or its card brought into
+// view. Filters stay as they are, so the item may not be shown.
+function showIn(view, id) {
+  if (view === 'map' || view === 'timeline') Object.assign(ui, { mapSelected: id, mapRel: null });
+  setView(view);
+  const el = view === 'map' ? $(`[data-map-node="${id}"]`)
+    : view === 'timeline' ? $(`[data-tl-node="${id}"]`)
+    : view === 'graphs' ? $(`[data-gr="${id}"]`) : $(`.card[data-open="${id}"]`);
+  if (!el) return;
+  // In the timeline, the bar (or milestone) rather than the start of the row.
+  (el.querySelector('.tl-bar, .tl-milestone') || el).scrollIntoView({ block: 'center', inline: 'center' });
+  if (el.tabIndex >= 0) return el.focus({ preventScroll: true });
+  el.classList.add('flash');
+  el.addEventListener('animationend', () => el.classList.remove('flash'), { once: true });
 }
 
 function openCtxMenu(id, x, y) {
@@ -3434,7 +3456,7 @@ function openCtxMenu(id, x, y) {
 function showCtxMenu(tagClass, tag, title, options, x, y) {
   ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag ${tagClass}">${tag}</span><strong title="${esc(title)}">${esc(title)}</strong></div>` +
     options.map(o => o === '-' ? '<hr>' :
-      `<button type="button" tabindex="-1" data-ctx="${o.act}" class="${o.danger ? 'danger' : ''}" role="${o.checked === undefined ? 'menuitem' : 'menuitemradio'}"${o.checked === undefined ? '' : ` aria-checked="${o.checked}"`}>${esc(o.label)}</button>`).join('');
+      `<button type="button" tabindex="-1" data-ctx="${o.act}" class="${o.danger ? 'danger' : ''}" role="${o.checked === undefined ? 'menuitem' : 'menuitemradio'}"${o.checked === undefined ? '' : ` aria-checked="${o.checked}"`}${o.name ? ` aria-label="${esc(o.name)}" title="${esc(o.name)}"` : ''}>${esc(o.label)}${o.icon ? $(`.nav-item[data-view="${o.icon}"] svg`).outerHTML : ''}</button>`).join('');
   ctxMenu.hidden = false;
   const { width, height } = ctxMenu.getBoundingClientRect();
   ctxMenu.style.left = `${Math.max(8, Math.min(x, innerWidth - width - 8))}px`;
@@ -3486,6 +3508,7 @@ function runCtxAction(act, id) {
   if (verb === 'edit') return openForm(kind, id);
   if (verb === 'checkin') return toggleCheckin(id, today());
   if (verb === 'highlight') { ui.mapSelected = id; return render(); }
+  if (verb === 'show') return showIn(arg, id);
   if (verb === 'focus') {
     Object.assign(ui, { [ui.view === 'timeline' ? 'timelineGoal' : 'mapGoal']: id, mapRefocus: true });
     if (!inCategory(item)) ui.category = '';

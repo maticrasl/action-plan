@@ -290,6 +290,9 @@ textarea { resize: vertical; min-height: 68px; }
 .card.activity h3 { font-size: 16px; font-weight: 700; letter-spacing: 0; }
 /* A long-press opens the card's menu, not a text selection or the browser's own menu. */
 @media (pointer: coarse) { [data-ctx-item] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }
+/* "Show in …" from another view: the card glows briefly. */
+.card.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { from { box-shadow: 0 0 0 4px color-mix(in srgb, var(--goal) 55%, transparent); } }
 
 .tag {
   display: inline-block; vertical-align: middle; padding: 2px 9px; border-radius: 999px;
@@ -645,6 +648,7 @@ textarea { resize: vertical; min-height: 68px; }
 .ctx-menu button:hover, .ctx-menu button:focus { background: var(--surface-2); outline: none; box-shadow: none; }
 .ctx-menu button[aria-checked="true"]::before { content: "✓"; position: absolute; left: 11px; color: var(--ok); font-weight: 800; }
 .ctx-menu button.danger { color: var(--bad); }
+.ctx-menu button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 @media (pointer: coarse) { .ctx-menu button { padding-top: 11px; padding-bottom: 11px; } }
 
 /* ---------- Dialogs ---------- */
