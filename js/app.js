@@ -1083,6 +1083,8 @@ function emptyState(title, text, kind) {
 }
 
 const byDueDate = (a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
+// Goals everywhere: the nearest deadline first, those without one last.
+const byDeadline = (a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999');
 const matchesSearch = item => !ui.search || (item.title + ' ' + (item.description || item.specific || '')).toLowerCase().includes(ui.search.toLowerCase());
 
 /* =========================================================
@@ -1141,7 +1143,7 @@ document.addEventListener('visibilitychange', () => {
 function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
 
-  const active = db.goals.filter(g => g.status !== 'achieved' && g.status !== 'paused');
+  const active = db.goals.filter(g => g.status !== 'achieved' && g.status !== 'paused').sort(byDeadline);
   const avg = active.length ? active.reduce((s, g) => s + goalProgress(g), 0) / active.length : 0;
   // Routines have no status of their own: they get their own list, and the counts leave them out.
   const oneOff = db.activities.filter(a => !isRoutine(a));
@@ -1239,7 +1241,7 @@ function renderGoals() {
   const list = inCat
     .filter(g => ui.goalFilter === 'all' || g.status === ui.goalFilter)
     .filter(matchesSearch)
-    .sort((a, b) => (a.deadline || '').localeCompare(b.deadline || ''));
+    .sort(byDeadline);
   return `
     ${categoryChips()}
     <div class="toolbar">
@@ -1332,7 +1334,7 @@ const GOAL_FILTERS = { activity: 'activityGoal', map: 'mapGoal', timeline: 'time
 // Goal picker limited to the selected category, grouped by category otherwise.
 function goalSelect(target, value) {
   const option = g => `<option value="${g.id}" ${value === g.id ? 'selected' : ''}>${esc(g.title)}</option>`;
-  const goals = db.goals.filter(inCategory);
+  const goals = db.goals.filter(inCategory).sort(byDeadline);
   const groups = ui.category || !categories().length
     ? goals.map(option).join('')
     : [...categories(), ''].map(c => {
@@ -1446,6 +1448,21 @@ function layoutMap(items, rels) {
     if (i) { link(up, n, c.chain[i - 1]); link(down, c.chain[i - 1], n); }
   }));
 
+  // Items linked to each other form a group; groups run left to right by their nearest goal deadline,
+  // and inside a group goals that tie are ordered by deadline too. Crossings are only reduced within a group.
+  const groupOf = {};
+  const find = id => (groupOf[id] === undefined || groupOf[id] === id ? (groupOf[id] = id) : (groupOf[id] = find(groupOf[id])));
+  rels.forEach(r => { groupOf[find(r.from)] = find(r.to); });
+  const due = {};
+  items.goal.forEach(g => { const k = find(g.id); if (!due[k] || (g.deadline || '9999') < due[k]) due[k] = g.deadline || '9999'; });
+  const order = [...new Set(Object.values(items).flat().map(x => find(x.id)))]
+    .map((k, i) => [k, due[k] || '9999', i]).sort((a, b) => a[1].localeCompare(b[1]) || a[2] - b[2]);
+  const rank = Object.fromEntries(order.map(([k], i) => [k, i]));
+  const deadlineOf = Object.fromEntries(items.goal.map(g => [g.id, g.deadline || '9999']));
+  chains.forEach(c => c.chain?.forEach(n => { if (n.dummy) n.src = c.r.from; }));
+  layers.forEach(L => L.list.forEach(n => { n.g = rank[find(n.dummy ? n.src : n.id)]; n.due = deadlineOf[n.id] || '9999'; }));
+  layers.forEach(L => L.list.sort((a, b) => a.g - b.g || a.due.localeCompare(b.due)));
+
   // 3. Crossing minimisation
   const reindex = () => layers.forEach(L => L.list.forEach((n, i) => (n.i = i)));
   reindex();
@@ -1465,7 +1482,7 @@ function layoutMap(items, rels) {
       const ns = nbrs.get(n);
       n.b = ns?.length ? ns.reduce((s, x) => s + x.i, 0) / ns.length : n.i;
     });
-    L.list.sort((a, b) => a.b - b.b || a.i - b.i);
+    L.list.sort((a, b) => a.g - b.g || a.b - b.b || a.due.localeCompare(b.due) || a.i - b.i);
     L.list.forEach((n, i) => (n.i = i));
   };
   let best = crossings(), bestOrder = layers.map(L => [...L.list]);
@@ -1488,7 +1505,7 @@ function layoutMap(items, rels) {
     layers.forEach(L => {
       for (let i = 0; i + 1 < L.list.length; i++) {
         const u = L.list[i], v = L.list[i + 1];
-        if (pairCross(v, u, up) + pairCross(v, u, down) < pairCross(u, v, up) + pairCross(u, v, down)) {
+        if (u.g === v.g && pairCross(v, u, up) + pairCross(v, u, down) < pairCross(u, v, up) + pairCross(u, v, down)) {
           L.list[i] = v; L.list[i + 1] = u; v.i = i; u.i = i + 1;
           improved = true;
         }
@@ -1836,14 +1853,14 @@ function timelineRows(scope, collapsed = new Set()) {
     placedGoals.add(g.id);
     const contributors = new Set(relsTo(g.id, 'contributes').map(r => r.from));
     const acts = db.activities.filter(a => contributors.has(a.id) && !ancestors(a.id, 'subactivity').some(p => contributors.has(p))).sort(byStart);
-    const subs = relsTo(g.id, 'subgoal').map(r => db.goals.find(x => x.id === r.from)).filter(x => x && visible('goal', x)).sort(byStart);
+    const subs = relsTo(g.id, 'subgoal').map(r => db.goals.find(x => x.id === r.from)).filter(x => x && visible('goal', x)).sort((a, b) => byDeadline(a, b) || byStart(a, b));
     const folded = collapsed.has(g.id);
     const here = hidden ? parent : rows.push({ kind: 'goal', item: g, depth, rel, parent, fold: acts.length + subs.length > 0, collapsed: folded }) - 1;
     acts.forEach(a => addActivity(a, depth + 1, 'contributes', here, g.id, hidden || folded));
     subs.forEach(sg => addGoal(sg, depth + 1, 'subgoal', here, hidden || folded));
   };
   const goalIds = new Set(goals.map(g => g.id));
-  goals.filter(g => !ancestors(g.id, 'subgoal').some(p => goalIds.has(p))).sort(byStart).forEach(g => addGoal(g, 0));
+  goals.filter(g => !ancestors(g.id, 'subgoal').some(p => goalIds.has(p))).sort((a, b) => byDeadline(a, b) || byStart(a, b)).forEach(g => addGoal(g, 0));
 
   const rest = db.activities.filter(a => !placed.has(a.id) && visible('activity', a));
   const restIds = new Set(rest.map(a => a.id));
@@ -2484,6 +2501,7 @@ const select = (name, opts, v) => `<select id="f-${name}" name="${name}">${Objec
 // a list of the other items (goals grouped by category) that typing filters and a click adds.
 function checklist(name, label, kind, items, selected, hint = '') {
   if (!items.length) return '';
+  if (kind === 'goal') items = [...items].sort(byDeadline);
   const opt = i => `<button type="button" class="pick-opt" role="option" data-pick="${i.id}" data-pick-title="${esc(fold(i.title))}" ${selected.includes(i.id) ? 'data-picked' : ''}>${esc(i.title)}</button>`;
   const options = kind === 'goal' && items.some(i => i.category)
     ? [...categories(), ''].map(c => [c, items.filter(i => (i.category || '') === c)]).filter(([, list]) => list.length)

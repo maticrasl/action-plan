@@ -2617,6 +2617,34 @@ window.moreTests = async ({ step, assert }) => {
     return 'ok';
   });
 
+  await step('goals by deadline: Goals, Overview and Timeline top to bottom, the map left to right', () => {
+    fresh('By deadline');
+    const now = today();
+    const none = mk('goal', { title: 'No deadline', status: 'active' });
+    const late = mk('goal', { title: 'Late', deadline: addDays(now, 90), startDate: addDays(now, -30), status: 'active' });
+    const soon = mk('goal', { title: 'Soon', deadline: addDays(now, 10), startDate: addDays(now, 5), status: 'active' });
+    const mid = mk('goal', { title: 'Mid', deadline: addDays(now, 40), startDate: addDays(now, -60), status: 'active' });
+    // A group: an activity for Mid and a state measuring it.
+    const a = mk('activity', { title: 'For mid', startDate: now, dueDate: addDays(now, 20) });
+    const s = mk('state', { title: 'Mid state', history: [] });
+    rel(a, mid, 'contributes'); rel(s, mid, 'measures');
+    save();
+    const want = ['Soon', 'Mid', 'Late', 'No deadline'];
+    setView('goals');
+    eq([...document.querySelectorAll('.card.goal h3')].map(h => h.textContent), want, 'Goals view, no deadline last');
+    setView('dashboard');
+    eq([...document.querySelectorAll('.card.goal h3')].map(h => h.textContent), want, 'Overview');
+    setView('timeline');
+    eq([...document.querySelectorAll('.tl-row.goal .tl-title')].map(x => x.textContent), want, 'Timeline: by deadline, not start');
+    setView('map');
+    const x = it => $(`[data-map-node="${it.id}"]`).getBoundingClientRect().left;
+    assert(x(soon) < x(mid) && x(mid) < x(late) && x(late) < x(none), 'map: left to right by deadline');
+    assert(x(a) > x(soon) && x(a) < x(late) && x(s) > x(soon) && x(s) < x(late), 'a goal’s activities and states stay in its group');
+    eq([...$('[data-goal-select]').options].slice(1).map(o => o.textContent), want, 'goal filter list');
+    deletePlan(plans.current);
+    return want.join(' < ');
+  });
+
   await step('map: clicking a line selects it; clicking it again or double-clicking opens it', () => {
     const { g, a, b, s } = mapFixture();
     const r = relOf(a, g);
@@ -2992,10 +3020,10 @@ window.moreTests = async ({ step, assert }) => {
 
   const foldFixture = () => {
     fresh('Fold');
-    const g1 = mk('goal', { title: 'G1', startDate: d(-10), deadline: d(60) });
+    const g1 = mk('goal', { title: 'G1', startDate: d(-10), deadline: d(30) });
     const g1a = mk('goal', { title: 'G1a', startDate: d(-8), deadline: d(40) });
     const g2 = mk('goal', { title: 'G2', startDate: d(-5), deadline: d(50) });
-    const g3 = mk('goal', { title: 'G3', startDate: d(-1), deadline: d(20) }); // nothing under it
+    const g3 = mk('goal', { title: 'G3', startDate: d(-1), deadline: d(60) }); // nothing under it; goals run by deadline
     const a = mk('activity', { title: 'A', startDate: d(-4), dueDate: d(10) });
     const a1 = mk('activity', { title: 'A1', startDate: d(-3), dueDate: d(5) });
     const b = mk('activity', { title: 'B', startDate: d(-2), dueDate: d(12) });
