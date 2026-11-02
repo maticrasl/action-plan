@@ -4587,4 +4587,47 @@ window.moreTests = async ({ step, assert }) => {
     assert(text === '3 km ta teden', text);
     return text;
   });
+
+  await step('map: + asks whether to add a goal, an activity or a current state', () => {
+    fresh('Map add');
+    const g = mk('goal', { title: 'Map goal' }); save();
+    setView('map');
+    const btn = $('#addBtn');
+    eq(btn.getAttribute('aria-label'), t('add.item'), 'the button just says Add');
+    btn.click();
+    const acts = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx).join(',');
+    assert(!ctxMenu.hidden && acts() === 'new:goal,new:activity,new:state' && !ctxMenu.querySelector('.ctx-head'), `offers the three kinds: ${acts()}`);
+    const r = btn.getBoundingClientRect(), m = ctxMenu.getBoundingClientRect();
+    assert(Math.abs(m.right - r.right) < 2 && m.top >= r.bottom, 'opens below the button, lined up with it');
+    ctxMenu.querySelector('[data-ctx="new:activity"]').click();
+    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'activity' && !formCtx.id, 'Activity opens a new activity');
+    modal.close();
+    for (const k of ['goal', 'state']) {
+      btn.click(); ctxMenu.querySelector(`[data-ctx="new:${k}"]`).click();
+      assert(modal.open && formCtx.kind === k && !formCtx.id, `${k}: opens its form`); modal.close();
+    }
+    // From the keyboard: the first item focused; Escape returns to the button.
+    btn.focus(); btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    assert(document.activeElement === ctxMenu.querySelector('[data-ctx="new:goal"]'), 'keyboard: first item focused');
+    ctxMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert(ctxMenu.hidden && document.activeElement === btn, 'Escape returns to the button');
+    // A box's menu afterwards is still the item's own.
+    $(`[data-map-node="${g.id}"]`).dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
+    $('[data-ctx="edit"]', ctxMenu).click();
+    assert(modal.open && formCtx.id === g.id, 'a box menu still works after'); modal.close();
+    // On phones the button floats at the bottom; the menu opens above it.
+    const phone = document.head.appendChild(document.createElement('style'));
+    phone.textContent = '.ctx-menu { animation: none !important } .topbar { backdrop-filter: none !important } .add-btn { position: fixed !important; right: 16px; bottom: 76px; z-index: 21 }';
+    btn.click();
+    const r2 = btn.getBoundingClientRect(), m2 = ctxMenu.getBoundingClientRect();
+    assert(m2.bottom <= r2.top && m2.right <= innerWidth - 8 + 1, `floating button: menu above it (${m2.bottom} ≤ ${r2.top})`);
+    closeCtxMenu(); phone.remove();
+    // The other views add straight away; the empty relationship list still adds a relationship.
+    setView('goals'); btn.click();
+    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'goal', 'goals view: + adds a goal directly'); modal.close();
+    changeLanguage('sl'); const sl = t('add.item'); changeLanguage('en');
+    eq(sl, 'Dodaj', 'Slovenian label');
+    deletePlan(plans.current);
+    return acts();
+  });
 };
