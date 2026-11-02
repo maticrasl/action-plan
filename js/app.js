@@ -1613,13 +1613,19 @@ function layoutMap(items, rels) {
     }
     return null;
   };
-  // How often two lines cross: both run top to bottom, so it is how often their order changes.
+  // How often two lines cross – both run top to bottom, so how often their order changes – or come so
+  // close that they seem to touch (away from the boxes they start and end at, where lines meet anyway).
   const timesCrossed = (a, b) => {
     const lo = Math.max(a[0][1], b[0][1]), hi = Math.min(a[a.length - 1][1], b[b.length - 1][1]);
-    let n = 0, side = 0;
-    for (let y = lo; y <= hi; y += 6) {
+    const ends = [a[0][1], a[a.length - 1][1], b[0][1], b[b.length - 1][1]];
+    let n = 0, side = 0, close = false;
+    for (let y = lo; y <= hi; y += 3) {
       const xa = xAt(a, y), xb = xAt(b, y);
-      if (xa === null || xb === null || Math.abs(xa - xb) < 1) continue;
+      if (xa === null || xb === null) continue;
+      const gap = Math.abs(xa - xb), touch = gap < 8 && !ends.some(e => Math.abs(y - e) < 24);
+      if (touch && !close) n++;
+      close = touch;
+      if (gap < 1) continue;
       const now = Math.sign(xa - xb);
       if (side && now !== side) n++;
       side = now;

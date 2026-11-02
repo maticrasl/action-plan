@@ -2607,6 +2607,20 @@ window.moreTests = async ({ step, assert }) => {
     const drawn = chains.filter(c => !c.same);
     const viaSlots = total(drawn.map(c => [c.raw[0].p, ...curve(c.raw)])), straight = total(drawn.map(c => c.line));
     assert(straight <= viaSlots, `crossings: ${straight} drawn, ${viaSlots} through the slots`);
+    // Nor do two lines pass so close that they seem to touch, away from where they start and end.
+    const grazes = [];
+    drawn.forEach((c, i) => drawn.slice(i + 1).forEach(o => {
+      const a = c.line, b = o.line, signs = new Set();
+      let min = Infinity;
+      for (let y = Math.max(a[0][1], b[0][1]) + 24; y <= Math.min(a.at(-1)[1], b.at(-1)[1]) - 24; y += 3) {
+        const xa = xAt(a, y), xb = xAt(b, y);
+        if (xa === null || xb === null) continue;
+        if (Math.abs(xa - xb) > 1) signs.add(Math.sign(xa - xb));
+        min = Math.min(min, Math.abs(xa - xb));
+      }
+      if (min < 6 && signs.size === 1) grazes.push(`${relText(c.r)} | ${relText(o.r)}`);
+    }));
+    eq(grazes, [], 'no lines grazing each other');
     deletePlan(plans.current);
 
     // A state measuring a goal crosses three rows of activities; nothing is in its way, so one curve.
