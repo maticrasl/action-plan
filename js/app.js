@@ -1548,6 +1548,31 @@ function layoutMap(items, rels) {
     for (let l = layers.length - 2; l >= 0; l--) place(layers[l], [down]);
   }
   layers.forEach(L => place(L, [up, down]));
+  // A long line runs straight down: its slots line up in one column wherever the rows leave room
+  // (top to bottom, a new column starts only where they don't). Nothing else moves.
+  const room = n => {
+    const L = layers[n.layer].list, a = L[n.i - 1], b = L[n.i + 1];
+    return [a ? a.x + sep(a, n) : -Infinity, b ? b.x - sep(n, b) : Infinity];
+  };
+  const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+  for (let it = 0; it < 3; it++) chains.forEach(c => {
+    const ds = c.chain?.slice(1, -1);
+    if (!ds?.length) return;
+    // Best between the line's two ends, so it bends one way only.
+    const ends = [c.chain[0].x, c.chain[c.chain.length - 1].x].sort((a, b) => a - b);
+    let run = [], lo = -Infinity, hi = Infinity;
+    const align = () => {
+      if (!run.length) return;
+      const x = clamp(clamp(median(run.map(d => d.x)), ...ends), lo, hi);
+      run.forEach(d => (d.x = x));
+    };
+    ds.forEach(d => {
+      const [a, b] = room(d);
+      if (Math.max(lo, a) > Math.min(hi, b)) { align(); run = []; lo = -Infinity; hi = Infinity; }
+      run.push(d); lo = Math.max(lo, a); hi = Math.min(hi, b);
+    });
+    align();
+  });
   const all = layers.flatMap(L => L.list);
   // Close empty vertical strips (e.g. between unrelated clusters) that placement leaves behind.
   const spans = all.map(n => [n.x - n.w / 2, n.x + n.w / 2]).sort((a, b) => a[0] - b[0]);
@@ -1592,101 +1617,30 @@ function layoutMap(items, rels) {
     list.sort((p, q) => p.other.x - q.other.x);
     list.forEach((p, i) => (p.c.pts[p.k] = [n.x - NW / 2 + (NW * (i + 1)) / (list.length + 1), layers[n.layer].y + (side === 'bottom' ? NH : 0)]));
   }));
-  // Real boxes, with a little room around them, that a line must not cross.
-  const boxes = all.filter(n => !n.dummy).map(n => ({ n, l: n.x - NW / 2 - 6, r: n.x + NW / 2 + 6, t: layers[n.layer].y - 6, b: layers[n.layer].y + NH + 6 }));
-  // A point on the curve drawn between two points: it leaves and arrives vertically.
-  const curveAt = (p, q, s) => {
-    const u = 1 - s, my = (p[1] + q[1]) / 2;
-    return [(u * u * u + 3 * u * u * s) * p[0] + (3 * u * s * s + s * s * s) * q[0], u * u * u * p[1] + 3 * u * s * my + s * s * s * q[1]];
-  };
-  // The line through `pts` (top to bottom) as points, for comparing lines with each other.
-  const trace = pts => pts.slice(1).reduce((out, q, i) => {
-    const p = pts[i];
-    if (p.d && p.d === q.d) out.push(q.p);
-    else for (let k = 1; k <= 12; k++) out.push(curveAt(p.p, q.p, k / 12));
-    return out;
-  }, [pts[0].p]);
-  const xAt = (line, y) => {
-    for (let i = 1; i < line.length; i++) {
-      const [x0, y0] = line[i - 1], [x1, y1] = line[i];
-      if (y >= y0 && y <= y1) return y1 === y0 ? x1 : x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+  chains.forEach(c => {
+    if (c.same) {
+      // Same layer: straight between neighbours, otherwise an arc above the row.
+      const dir = c.b.x > c.a.x ? 1 : -1, cy = layers[c.a.layer].y + NH / 2;
+      const sx = c.a.x + (dir * NW) / 2, tx = c.b.x - (dir * NW) / 2;
+      if (Math.abs(c.a.i - c.b.i) === 1) c.d = `M${sx},${cy} L${tx},${cy}`;
+      else c.d = `M${sx},${cy - 10} C${sx + dir * 50},${cy - 70} ${tx - dir * 50},${cy - 70} ${tx},${cy - 10}`;
+      return;
     }
-    return null;
-  };
-  // How often two lines cross – both run top to bottom, so how often their order changes – or come so
-  // close that they seem to touch (away from the boxes they start and end at, where lines meet anyway).
-  const timesCrossed = (a, b) => {
-    const lo = Math.max(a[0][1], b[0][1]), hi = Math.min(a[a.length - 1][1], b[b.length - 1][1]);
-    const ends = [a[0][1], a[a.length - 1][1], b[0][1], b[b.length - 1][1]];
-    let n = 0, side = 0, close = false;
-    for (let y = lo; y <= hi; y += 3) {
-      const xa = xAt(a, y), xb = xAt(b, y);
-      if (xa === null || xb === null) continue;
-      const gap = Math.abs(xa - xb), touch = gap < 8 && !ends.some(e => Math.abs(y - e) < 24);
-      if (touch && !close) n++;
-      close = touch;
-      if (gap < 1) continue;
-      const now = Math.sign(xa - xb);
-      if (side && now !== side) n++;
-      side = now;
-    }
-    return n;
-  };
-
-  // Top-to-bottom polylines: through each dummy the line runs straight down its layer.
-  const drawn = chains.filter(c => !c.same);
-  drawn.forEach(c => {
-    c.raw = [{ p: c.pts[0] }];
-    c.chain.slice(1, -1).forEach(d => {
-      const ly = layers[d.layer].y;
-      c.raw.push({ p: [d.x, ly], d }, { p: [d.x, ly + NH], d });
+    // Top to bottom: straight down through each column of slots, a curve in between.
+    let pts = [c.pts[0]];
+    c.chain.slice(1, -1).forEach((d, i, ds) => {
+      if (ds[i - 1]?.x !== d.x) pts.push([d.x, layers[d.layer].y]);
+      if (ds[i + 1]?.x !== d.x) pts.push([d.x, layers[d.layer].y + NH]);
     });
-    c.raw.push({ p: c.pts[c.pts.length - 1] });
-    c.line = trace(c.raw);
-  });
-  // The dummies keep room for a line and its order among the others. Where it would touch no real box
-  // and cross no more lines than before, it skips them and runs straight.
-  drawn.forEach(c => {
-    const pts = c.raw, ends = new Set([c.chain[0], c.chain[c.chain.length - 1]]);
-    const others = drawn.filter(o => o !== c);
-    const count = line => others.reduce((n, o) => n + timesCrossed(line, o.line), 0);
-    const clear = (p, q) => {
-      const lo = Math.min(p[1], q[1]), hi = Math.max(p[1], q[1]);
-      const near = boxes.filter(b => !ends.has(b.n) && b.b > lo && b.t < hi);
-      for (let k = 1; k < 20; k++) {
-        const [x, y] = curveAt(p, q, k / 20);
-        if (near.some(b => x > b.l && x < b.r && y > b.t && y < b.b)) return false;
-      }
-      return true;
-    };
-    let kept = [pts[0]], best = count(c.line);
-    for (let i = 0; i < pts.length - 1;) {
-      let j = pts.length - 1, line;
-      for (; j > i + 1; j--) {
-        if (!clear(pts[i].p, pts[j].p)) continue;
-        line = trace([...kept, ...pts.slice(j)]);
-        if (count(line) <= best) break;
-      }
-      if (j === i + 1) line = trace([...kept, ...pts.slice(j)]);
-      kept.push(pts[j]);
-      c.line = line;
-      best = count(line);
-      i = j;
-    }
-    const shown = c.reversed ? kept.reverse() : kept;
-    c.d = `M${shown[0].p[0]},${shown[0].p[1]}` + shown.slice(1).map((q, i) => {
-      const p = shown[i];
-      if (p.d && p.d === q.d) return ` L${q.p[0]},${q.p[1]}`;
-      const my = (p.p[1] + q.p[1]) / 2;
-      return ` C${p.p[0]},${my} ${q.p[0]},${my} ${q.p[0]},${q.p[1]}`;
+    pts.push(c.pts[c.pts.length - 1]);
+    c.line = pts;
+    if (c.reversed) pts = [...pts].reverse();
+    c.d = `M${pts[0][0]},${pts[0][1]}` + pts.slice(1).map((q, i) => {
+      const p = pts[i];
+      if (p[0] === q[0]) return ` L${q[0]},${q[1]}`;
+      const my = (p[1] + q[1]) / 2;
+      return ` C${p[0]},${my} ${q[0]},${my} ${q[0]},${q[1]}`;
     }).join('');
-  });
-  chains.filter(c => c.same).forEach(c => {
-    // Same layer: straight between neighbours, otherwise an arc above the row.
-    const dir = c.b.x > c.a.x ? 1 : -1, cy = layers[c.a.layer].y + NH / 2;
-    const sx = c.a.x + (dir * NW) / 2, tx = c.b.x - (dir * NW) / 2;
-    if (Math.abs(c.a.i - c.b.i) === 1) c.d = `M${sx},${cy} L${tx},${cy}`;
-    else c.d = `M${sx},${cy - 10} C${sx + dir * 50},${cy - 70} ${tx - dir * 50},${cy - 70} ${tx},${cy - 10}`;
   });
 
   return { node, layers, bands, chains, W, H };

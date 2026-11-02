@@ -2592,25 +2592,17 @@ window.moreTests = async ({ step, assert }) => {
       }
     }
     eq(crossed, 0, 'no line crosses another box');
-    // Running straight never makes lines cross more than they would through their slots.
-    const items = { goal: db.goals, activity: db.activities, state: db.states };
-    const { chains } = layoutMap(items, db.relations.filter(r => REL_TYPES[r.type]));
-    const curve = pts => pts.slice(1).flatMap((q, i) => {
-      const p = pts[i];
-      if (p.d && p.d === q.d) return [q.p];
-      const my = (p.p[1] + q.p[1]) / 2;
-      return Array.from({ length: 12 }, (_, k) => { const s = (k + 1) / 12, u = 1 - s; return [(u ** 3 + 3 * u * u * s) * p.p[0] + (3 * u * s * s + s ** 3) * q.p[0], u ** 3 * p.p[1] + 3 * u * s * my + s ** 3 * q.p[1]]; });
-    });
+    // Lines never pass so close that they seem to touch, away from where they start and end. And laying
+    // the sample out stays quick.
+    const lines = [...document.querySelectorAll('.edge-g')].map(g => {
+      const path = g.querySelector('.edge'), len = path.getTotalLength();
+      const pts = Array.from({ length: 121 }, (_, k) => { const p = path.getPointAtLength(len * k / 120); return [p.x, p.y]; }).sort((p, q) => p[1] - q[1]);
+      return { r: db.relations.find(x => x.id === g.dataset.relEdit), pts };
+    }).filter(l => l.pts.at(-1)[1] - l.pts[0][1] > MAP.NH);
     const xAt = (l, y) => { for (let i = 1; i < l.length; i++) if (y >= l[i - 1][1] && y <= l[i][1]) return l[i - 1][0] + (l[i][0] - l[i - 1][0]) * ((y - l[i - 1][1]) / ((l[i][1] - l[i - 1][1]) || 1)); return null; };
-    const cross = (a, b) => { let n = 0, side = 0; for (let y = Math.max(a[0][1], b[0][1]); y <= Math.min(a.at(-1)[1], b.at(-1)[1]); y += 6) { const xa = xAt(a, y), xb = xAt(b, y); if (xa === null || xb === null || Math.abs(xa - xb) < 1) continue; const now = Math.sign(xa - xb); if (side && now !== side) n++; side = now; } return n; };
-    const total = lines => lines.reduce((n, a, i) => n + lines.slice(i + 1).reduce((m, b) => m + cross(a, b), 0), 0);
-    const drawn = chains.filter(c => !c.same);
-    const viaSlots = total(drawn.map(c => [c.raw[0].p, ...curve(c.raw)])), straight = total(drawn.map(c => c.line));
-    assert(straight <= viaSlots, `crossings: ${straight} drawn, ${viaSlots} through the slots`);
-    // Nor do two lines pass so close that they seem to touch, away from where they start and end.
     const grazes = [];
-    drawn.forEach((c, i) => drawn.slice(i + 1).forEach(o => {
-      const a = c.line, b = o.line, signs = new Set();
+    lines.forEach((c, i) => lines.slice(i + 1).forEach(o => {
+      const a = c.pts, b = o.pts, signs = new Set();
       let min = Infinity;
       for (let y = Math.max(a[0][1], b[0][1]) + 24; y <= Math.min(a.at(-1)[1], b.at(-1)[1]) - 24; y += 3) {
         const xa = xAt(a, y), xb = xAt(b, y);
@@ -2621,6 +2613,9 @@ window.moreTests = async ({ step, assert }) => {
       if (min < 6 && signs.size === 1) grazes.push(`${relText(c.r)} | ${relText(o.r)}`);
     }));
     eq(grazes, [], 'no lines grazing each other');
+    const items = { goal: db.goals, activity: db.activities, state: db.states }, t0 = performance.now();
+    for (let k = 0; k < 5; k++) layoutMap(items, db.relations.filter(r => REL_TYPES[r.type]));
+    assert((performance.now() - t0) / 5 < 150, `layout takes ${Math.round((performance.now() - t0) / 5)} ms`);
     deletePlan(plans.current);
 
     // A state measuring a goal crosses three rows of activities; nothing is in its way, so one curve.
@@ -2630,7 +2625,9 @@ window.moreTests = async ({ step, assert }) => {
     rel(a, g, 'contributes'); rel(b, a, 'subactivity'); rel(c, b, 'subactivity'); rel(s, g, 'measures');
     save(); setView('map');
     const d = $(`[data-rel-edit="${db.relations.find(x => x.from === s.id).id}"] .edge`).getAttribute('d');
-    eq((d.match(/[CL]/g) || []).length, 1, 'one curve, not one per row: ' + d);
+    const xs = [...d.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(m => +m[1]);
+    assert(xs.every((x, i) => !i || (x - xs[i - 1]) * (xs.at(-1) - xs[0]) >= -0.5), 'no zigzag, it bends one way only: ' + d);
+    assert((d.match(/C/g) || []).length <= 2, 'straight down its column, curving only at the ends: ' + d);
     deletePlan(plans.current);
 
     // Goals sit as low as they can, next to the activities; parents still above their sub-goals.
