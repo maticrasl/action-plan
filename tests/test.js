@@ -108,7 +108,7 @@
     assert(s.history.map(h => h.value).join() === '2,5' && s.value === '5', 'same date replaced: ' + JSON.stringify(s.history));
     setView('graphs');
     const dates = [...$(`[data-gr="${s.id}"] .gr-table tbody`).rows].map(r => r.cells[0].textContent);
-    assert(dates.join() === [fmtDate('2099-01-02'), fmtDate(today())].join(), 'newest first: ' + dates);
+    assert(dates.join() === [fmtDate('2099-01-02'), t('day.today').replace(/^./, c => c.toUpperCase())].join(), 'newest first: ' + dates);
     $(`[data-gr="${s.id}"] [data-del-measure][data-date="2099-01-02"]`).click();
     assert(!s.history.some(h => h.date === '2099-01-02') && s.dropped['2099-01-02'], 'measurement deleted and remembered');
     assert(s.date === today() && s.value === s.history[s.history.length - 1].value, 'value follows the latest left');

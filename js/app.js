@@ -220,8 +220,16 @@ function fmtDate(date) {
   if (!date) return '';
   return new Date(date + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
-// "3 Mar 2026 – 9 Apr 2026", or the one date there is.
-const fmtSpan = (s, e) => (s && e ? `${fmtDate(s)} – ${fmtDate(e)}` : fmtDate(s || e));
+// "today", "tomorrow" or "yesterday" for those days, else the date (`other` formats it); `cap` for one
+// that stands alone, such as a tag or a table cell.
+function fmtRel(date, cap = false, other = fmtDate) {
+  const word = date && { '-1': 'yesterday', 0: 'today', 1: 'tomorrow' }[daysUntil(date)];
+  if (!word) return other(date);
+  const s = t('day.' + word);
+  return cap ? s.charAt(0).toLocaleUpperCase(locale()) + s.slice(1) : s;
+}
+// "3 Mar 2026 – tomorrow", or the one date there is.
+const fmtSpan = (s, e, cap = false) => (s && e ? `${fmtRel(s, cap)} – ${fmtRel(e)}` : fmtRel(s || e, cap));
 // A yyyy-mm-dd date in the app's language, read as a calendar day (no time zone shift).
 const fmtDay = (iso, opts) => new Date(iso + 'T00:00Z').toLocaleDateString(locale(), { ...opts, timeZone: 'UTC' });
 function fmtNum(n) {
@@ -769,7 +777,7 @@ function nextDueDay(a, from = today()) {
 function periodText(a, p = periodProgress(a)) {
   if (p.target) return t('rt.' + periodUnit(a), { done: p.done, target: p.target });
   const next = nextDueDay(a);
-  return next ? t('rt.next', { date: fmtDay(next, { weekday: 'short', day: 'numeric', month: 'short' }) }) : t('rt.ended');
+  return next ? t('rt.next', { date: fmtRel(next, false, d => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' })) }) : t('rt.ended');
 }
 const streakText = ({ n, unit }) => tp('rt.streak.' + unit, n);
 
@@ -849,7 +857,7 @@ function routineCard(a) {
   const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
   const blocked = blockers(a), now = today();
   const when = a.dueDate && a.dueDate < now ? `<span class="tag">${t('rt.ended')}</span>`
-    : routineStart(a) > now ? `<span class="tag">${t('rt.starts', { date: fmtDate(routineStart(a)) })}</span>` : '';
+    : routineStart(a) > now ? `<span class="tag">${t('rt.starts', { date: fmtRel(routineStart(a)) })}</span>` : '';
   return `<article class="card activity routine st-${st}" data-open="${a.id}" data-ctx-item="${a.id}">
     <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched">${esc(scheduleText(a))}</span></div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
@@ -1017,9 +1025,9 @@ function smartBadge(g) {
 function deadlineTag(date, done) {
   if (!date) return '';
   const d = daysUntil(date);
-  if (done) return `<span class="tag">${fmtDate(date)}</span>`;
+  if (done) return `<span class="tag">${fmtRel(date, true)}</span>`;
   if (d < 0) return `<span class="tag bad">${t('due.overdue', { n: -d })}</span>`;
-  if (d === 0) return `<span class="tag warn">${t('due.today')}</span>`;
+  if (d <= 1) return `<span class="tag warn">${fmtRel(date, true)}</span>`;
   if (d <= 7) return `<span class="tag warn">${t('due.left', { n: d })}</span>`;
   return `<span class="tag">${fmtDate(date)}</span>`;
 }
@@ -1258,7 +1266,7 @@ function renderStates() {
         ? `<span class="cu-head"><span class="tag state cu-total">${esc(totalText(s))}</span><button type="button" class="icon-btn cu-add" data-add-amount="${s.id}" title="${add}" aria-label="${add}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></span>`
         : isNum(s.value) ? `<span class="tag state">${fmtNum(s.value)}${s.unit ? ' ' + esc(s.unit) : ''}</span>` : '';
       const count = isCumulative(s) ? (entriesOf(s).length ? tp('cu.entries', entriesOf(s).length) : '') : (s.history?.length || 0) > 1 ? tp('states.measurements', s.history.length) : '';
-      const when = isCumulative(s) ? (stateDate(s) ? t('cu.lastEntry', { date: fmtDate(stateDate(s)) }) : t('cu.noEntries')) : t('states.asOf', { date: fmtDate(s.date) || '—' });
+      const when = isCumulative(s) ? (stateDate(s) ? t('cu.lastEntry', { date: fmtRel(stateDate(s)) }) : t('cu.noEntries')) : t('states.asOf', { date: fmtRel(s.date) || '—' });
       return `<article class="card state" data-open="${s.id}" data-ctx-item="${s.id}">
         <div class="card-head"><h3>${esc(s.title)}</h3>${head}</div>
         ${s.description ? `<p class="desc">${esc(s.description)}</p>` : ''}
@@ -1649,7 +1657,7 @@ function renderMap() {
     let st = '', sub, bar = '', pct = '';
     if (n.kind === 'goal') {
       st = goalState(item);
-      sub = st === 'blocked' ? t('acts.waitsFor', { n: blockers(item, 'goal').length }) : item.deadline ? fmtDate(item.deadline) : t('map.noDeadline');
+      sub = st === 'blocked' ? t('acts.waitsFor', { n: blockers(item, 'goal').length }) : item.deadline ? fmtRel(item.deadline, true) : t('map.noDeadline');
       // Progress shows as a green bar along the bottom of the box; the number stays in the tooltip.
       const p = goalProgress(item);
       pct = ` – ${Math.round(p)} %`;
@@ -1661,9 +1669,9 @@ function renderMap() {
       sub = periodText(item) + (streak.n ? ', ' + streakText(streak) : '');
     } else if (n.kind === 'activity') {
       st = activityState(item);
-      sub = (st === 'blocked' ? t('acts.waitsFor', { n: blockers(item).length }) : t('activity.' + item.status)) + (item.dueDate ? ', ' + fmtDate(item.dueDate) : '');
+      sub = (st === 'blocked' ? t('acts.waitsFor', { n: blockers(item).length }) : t('activity.' + item.status)) + (item.dueDate ? ', ' + fmtRel(item.dueDate) : '');
     } else {
-      sub = isNum(item.value) ? `${fmtNum(item.value)} ${item.unit || ''}, ${fmtDate(item.date)}` : fmtDate(item.date);
+      sub = isNum(item.value) ? `${fmtNum(item.value)} ${item.unit || ''}, ${fmtRel(item.date)}` : fmtRel(item.date, true);
     }
     const title = item.title.length > 22 ? item.title.slice(0, 21) + '…' : item.title;
     const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
@@ -1905,13 +1913,13 @@ function renderTimeline() {
     const { item, kind, depth } = r;
     const st = kind === 'goal' ? goalState(item) : activityState(item);
     const s = item.startDate, e = endOf(kind, item);
-    const dateText = fmtSpan(s, e) || t('tl.noDates');
+    const dateText = fmtSpan(s, e, true) || t('tl.noDates');
     let bar = `<span class="tl-nodates">${t('tl.noDates')}</span>`;
     if (s || e) {
       const a = dayNum(s || e), b = dayNum(e || s);
       const left = x(a), width = (b - a + 1) * px;
       const overdue = st === 'late' && e && dayNum(e) < todayN;
-      const lateHtml = overdue ? `<i class="tl-overdue" style="left:${x(dayNum(e) + 1)}px;width:${(todayN - dayNum(e)) * px}px" title="${esc(t('tl.overdue', { date: fmtDate(e) }))}"></i>` : '';
+      const lateHtml = overdue ? `<i class="tl-overdue" style="left:${x(dayNum(e) + 1)}px;width:${(todayN - dayNum(e)) * px}px" title="${esc(t('tl.overdue', { date: fmtRel(e) }))}"></i>` : '';
       const tip = `${item.title}: ${dateText} (${t('nodeState.' + st)})`;
       // The selected item's bar can be dragged to new dates (see "Moving dates in the timeline").
       const drag = item.id === ui.tlDates ? ` tl-drag" data-tl-drag="${item.id}` : '';
@@ -2074,7 +2082,7 @@ function changeTag(s, change) {
   const cls = good === null ? '' : good ? 'ok' : 'bad';
   const text = withUnit(signed(delta), esc(s.unit || '')) + (pct === null ? '' : ` (${signed(Math.round(pct * 10) / 10)} %)`);
   return `<span class="tag gr-delta ${cls}"><span aria-hidden="true">${arrow}</span> ${text}</span>
-    <span class="meta">${t('gr.since', { date: fmtDate(first.date) })}</span>`;
+    <span class="meta">${t('gr.since', { date: fmtRel(first.date) })}</span>`;
 }
 
 function graphCard(s, width) {
@@ -2154,7 +2162,7 @@ function graphCard(s, width) {
   // Newest first, each with a button to delete it.
   const rowsHtml = points.slice().reverse().map(p => {
     const del = t('gr.delete', { date: fmtDate(p.date) });
-    return `<tr><td>${fmtDate(p.date)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td>${p === points[0] ? '—' : esc(withUnit(signed(p.value - points[0].value), unit))}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
+    return `<tr><td>${fmtRel(p.date, true)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td>${p === points[0] ? '—' : esc(withUnit(signed(p.value - points[0].value), unit))}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
   }).join('');
 
   return `<article class="card gr-card" data-gr="${s.id}">
@@ -2314,7 +2322,7 @@ function periodGraphCard(s, width) {
   }
   const legend = grLegend([['key-bar', t('cu.legend.' + s.cumulative)], ...(targets.length ? [targetKey(targets)] : [])]);
   const rows = points.slice().reverse().map(p => `<tr class="gr-period"><td>${esc(periodLabel(s.cumulative, p.from, p.to))}</td><td><strong>${esc(withUnit(fmtNum(p.value), unit))}</strong></td><td></td></tr>
-    ${p.entries.slice().reverse().map(e => `<tr class="gr-entry"><td>${fmtDate(e.date)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td>${entryDel(s, e)}</tr>`).join('')}`).join('');
+    ${p.entries.slice().reverse().map(e => `<tr class="gr-entry"><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td>${entryDel(s, e)}</tr>`).join('')}`).join('');
   const table = `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.amount')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
   return grCardHtml(s, `<strong class="gr-value">${esc(totalText(s))}</strong>${change}`, legend, plot, table);
 }
@@ -2327,7 +2335,7 @@ function totalGraphCard(s, width) {
   let sum = 0;
   const points = Object.keys(byDay).sort().map(date => ({ date, day: dayNum(date), added: Number(byDay[date].toFixed(9)), value: (sum = Number((sum + byDay[date]).toFixed(9))) }));
   const todayN = dayNum(today()), end = Math.max(points.at(-1).day, todayN);
-  const tip = p => [['gr-tip-value', withUnit(fmtNum(p.value), unit)], ['gr-tip-date', fmtDate(p.date)],
+  const tip = p => [['gr-tip-value', withUnit(fmtNum(p.value), unit)], ['gr-tip-date', fmtRel(p.date, true)],
     ['gr-tip-row', t('cu.tipAdded', { value: withUnit(signed(p.added), unit) })],
     ...targets.map(tg => ['gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), unit) })])];
   const plot = plotSvg(s.id, {
@@ -2342,7 +2350,7 @@ function totalGraphCard(s, width) {
   const legend = grLegend([['key-measure', t('cu.legend.none')], ...(targets.length ? [targetKey(targets)] : [])]);
   let running = sumOf(entries);
   const rows = entries.slice().reverse().map(e => {
-    const row = `<tr><td>${fmtDate(e.date)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
+    const row = `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
     running = Number((running - Number(e.amount)).toFixed(9));
     return row;
   }).join('');
@@ -2394,7 +2402,7 @@ function showGraphPoint(plot, i) {
   if (c.tip) c.tip(p).forEach(([cls, text]) => row(cls, text));
   else {
     row('gr-tip-value', withUnit(fmtNum(p.value), c.unit));
-    row('gr-tip-date', fmtDate(p.date));
+    row('gr-tip-date', fmtRel(p.date, true));
     if (p !== c.points[0]) row('gr-tip-row', t('gr.tipChange', { value: withUnit(signed(p.value - c.points[0].value), c.unit) }));
     c.targets.forEach(tg => row('gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), c.unit) })));
   }
@@ -2606,7 +2614,7 @@ function stateForm(s) {
   const linked = s.id ? relsFrom(s.id, 'measures').map(r => r.to) : [];
   const history = (s.history || []).slice().sort((a, b) => b.date.localeCompare(a.date));
   // The value field records a new measurement, so it starts empty and dated today.
-  const latest = isNum(s.value) && !isCumulative(s) ? t('f.valueHint', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtDate(s.date) || '—' }) : '';
+  const latest = isNum(s.value) && !isCumulative(s) ? t('f.valueHint', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtRel(s.date) || '—' }) : '';
   const addsUp = { '': t('cu.opt.no'), ...Object.fromEntries(ADDS_UP.map(k => [k, t('cu.opt.' + k)])) };
   return `
     ${field('title', t('f.title'), text('title', s.title, t('f.statePh')))}
@@ -2620,7 +2628,7 @@ function stateForm(s) {
       ${field('date', t('f.asOf'), date('date', today()))}
     </div>
     ${checklist('goals', t('f.describesGoals'), 'goal', db.goals, linked, t('f.describesHint'))}
-    ${history.length > 1 ? `<div class="field" id="historyList"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtDate(h.date)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}
+    ${history.length > 1 ? `<div class="field" id="historyList"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtRel(h.date, true)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}
     ${isCumulative(s) && entriesOf(s).length ? entryList(s) : ''}`;
 }
 
@@ -2628,7 +2636,7 @@ function stateForm(s) {
 function entryList(s) {
   const days = {};
   entriesOf(s).forEach(e => (days[e.date] ||= []).push(e));
-  const rows = Object.keys(days).sort().reverse().map(d => `<div class="entry-day"><span>${fmtDate(d)}</span><span class="entry-amounts">${days[d].map(e => {
+  const rows = Object.keys(days).sort().reverse().map(d => `<div class="entry-day"><span>${fmtRel(d, true)}</span><span class="entry-amounts">${days[d].map(e => {
     const del = esc(t('cu.deleteEntry', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(d) }));
     return `<span class="entry" data-entry="${e.id}"><strong>${esc(withUnit(fmtNum(e.amount), s.unit || ''))}</strong><button type="button" class="entry-del" data-drop-entry="${e.id}" aria-pressed="false" title="${del}" aria-label="${del}">×</button></span>`;
   }).join('')}</span></div>`).join('');
@@ -3161,7 +3169,7 @@ function openStateValue(id, anchor) {
   const s = db.states.find(x => x.id === id);
   if (!s) return;
   if (isCumulative(s)) return openStateAmount(id, anchor);
-  const hint = isNum(s.value) ? t('sv.latest', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtDate(s.date) || '—' }) : '';
+  const hint = isNum(s.value) ? t('sv.latest', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtRel(s.date) || '—' }) : '';
   openAmountPop(anchor, { title: t('sv.title', { name: s.title }), hint, fields: [{ label: t('f.value'), unit: s.unit }], withDate: true, okLabel: t('btn.save') }, ([n], date) => {
     if (n === null) return;
     recordMeasurement(s, date, String(n));
@@ -4512,7 +4520,7 @@ function previewTlDrag(d) {
     if (dot) dot.style.left = `${left + px / 2}px`;
     if (label) label.style.left = `${bar ? left + width + 8 : left + px / 2 + 14}px`;
     row.querySelectorAll('[data-tl-edge]').forEach(g => { g.style.cssText = tlGrip(g.dataset.tlEdge, left, width); });
-    row.querySelector('.tl-dates').textContent = fmtSpan(s, e);
+    row.querySelector('.tl-dates').textContent = fmtSpan(s, e, true);
   });
   showTlDragTip(d, s, e);
 }
@@ -4530,7 +4538,7 @@ function showTlDragTip(d, s, e) {
     document.body.append(tip);
   }
   const endKey = d.kind === 'goal' ? 'f.deadline' : 'f.dueDate';
-  tip.textContent = d.edge ? `${t(d.edge === 'start' ? 'f.startDate' : endKey)}: ${fmtDate(d.edge === 'start' ? s : e)}` : fmtSpan(s, e);
+  tip.textContent = d.edge ? `${t(d.edge === 'start' ? 'f.startDate' : endKey)}: ${fmtRel(d.edge === 'start' ? s : e)}` : fmtSpan(s, e, true);
   const r = mark.getBoundingClientRect(), w = tip.offsetWidth;
   const x = d.edge === 'start' ? r.left : d.edge === 'end' ? r.right : r.left + r.width / 2;
   const top = Math.min(r.top, d.touch ? d.cy - 40 : r.top) - 8;
@@ -4561,7 +4569,7 @@ function endTlDrag(keep) {
   if (d.e0 || fixedEnd(ent.item)) ent.item[ent.kind === 'goal' ? 'deadline' : 'dueDate'] = e;
   save();
   render();
-  toast(t('tl.datesMoved', { name: ent.item.title, dates: fmtSpan(s, e) }));
+  toast(t('tl.datesMoved', { name: ent.item.title, dates: fmtSpan(s, e, true) }));
 }
 
 // Once a long-press has picked the bar up, moving the finger drags it instead of scrolling.
