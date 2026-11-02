@@ -3051,14 +3051,14 @@ function cycleStatus(id) {
 
 let amountPop = null; // { el, anchor, skip }
 
-function openAmountPop(anchor, { title, fields, withDate, okLabel, skipLabel }, submit, skip = null) {
+function openAmountPop(anchor, { title, hint, fields, withDate, okLabel, skipLabel }, submit, skip = null) {
   closeAmountPop();
   const el = document.createElement('form');
   el.className = 'amount-pop';
   el.noValidate = true;
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-label', title);
-  el.innerHTML = `<strong class="amount-title">${esc(title)}</strong>
+  el.innerHTML = `<strong class="amount-title">${esc(title)}</strong>${hint ? `<p class="amount-hint">${esc(hint)}</p>` : ''}
     ${fields.map((f, i) => `<label class="amount-field"><span>${esc(f.label)}</span><span class="amount-input">
       <input type="text" data-amount="${i}" inputmode="decimal" autocomplete="off" placeholder="0">${f.unit ? `<span class="amount-unit">${esc(f.unit)}</span>` : ''}</span></label>`).join('')}
     ${withDate ? `<label class="amount-field"><span>${t('f.asOf')}</span><input type="text" data-amount-date value="${esc(dateInput(today()))}" placeholder="${esc(t('f.datePh'))}" inputmode="numeric" autocomplete="off" maxlength="10"></label>` : ''}
@@ -3113,6 +3113,22 @@ function openStateAmount(id, anchor) {
     render();
     toast(t('cu.added', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));
     $(`[data-add-amount="${id}"]`)?.focus();
+  });
+}
+
+// A click on a state's card asks for a new measured value, dated today unless changed (one that adds
+// up asks for an amount instead); editing the state is in the card's menu.
+function openStateValue(id, anchor) {
+  const s = db.states.find(x => x.id === id);
+  if (!s) return;
+  if (isCumulative(s)) return openStateAmount(id, anchor);
+  const hint = isNum(s.value) ? t('sv.latest', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtDate(s.date) || '—' }) : '';
+  openAmountPop(anchor, { title: t('sv.title', { name: s.title }), hint, fields: [{ label: t('f.value'), unit: s.unit }], withDate: true, okLabel: t('btn.save') }, ([n], date) => {
+    if (n === null) return;
+    recordMeasurement(s, date, String(n));
+    save();
+    render();
+    toast(t('sv.saved', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));
   });
 }
 
@@ -3231,7 +3247,11 @@ viewEl.addEventListener('click', e => {
   if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
   if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry);
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
-  if (el.dataset.open) { const ent = findEntity(el.dataset.open); return ent && openForm(ent.kind, ent.item.id); }
+  if (el.dataset.open) {
+    const ent = findEntity(el.dataset.open);
+    if (ent?.kind === 'state' && el.matches('.card')) return openStateValue(ent.item.id, el);
+    return ent && openForm(ent.kind, ent.item.id);
+  }
   if (el.dataset.new) return el.dataset.new === 'relation' ? $('#addBtn').click() : openForm(el.dataset.new);
   if (el.hasAttribute('data-sample')) return loadSample();
   if (el.hasAttribute('data-templates')) return openTemplates();

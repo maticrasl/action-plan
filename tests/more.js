@@ -4169,6 +4169,46 @@ window.moreTests = async ({ step, assert }) => {
     return card.querySelector('.cu-total').textContent;
   });
 
+  await step('states: a click on a card asks for a new value; Edit is in its menu', () => {
+    fresh('State value');
+    const now = today();
+    const s = mk('state', { title: 'Weight', unit: 'kg', history: [] });
+    recordMeasurement(s, addDays(now, -3), '80');
+    const sum = mk('state', { title: 'Run', unit: 'km', cumulative: 'week', entries: [] });
+    save();
+    setView('states');
+    const card = id => $(`.card.state[data-open="${id}"]`);
+    card(s.id).click();
+    assert(!modal.open && $('.amount-pop'), 'a popup, not the form');
+    eq([$('.amount-pop .amount-title').textContent, $('.amount-pop .amount-hint').textContent, $('.amount-pop [data-amount-date]').value],
+      [t('sv.title', { name: 'Weight' }), t('sv.latest', { value: '80 kg', date: fmtDate(addDays(now, -3)) }), dateInput(now)], 'title, latest value, today');
+    $('.amount-pop [data-amount]').value = 'lots';
+    $('.amount-pop').requestSubmit();
+    assert($('.amount-pop .amount-err').textContent === t('err.number'), 'not a number: refused');
+    $('.amount-pop [data-amount]').value = '78,5';
+    $('.amount-pop').requestSubmit();
+    eq([s.value, s.date, s.history.length], ['78.5', now, 2], 'recorded as the latest');
+    eq($('#toast').textContent, t('sv.saved', { value: '78.5 kg', name: 'Weight' }), 'says so');
+    assert(card(s.id).querySelector('.tag.state').textContent === '78.5 kg', 'the card shows it');
+    // Empty saves nothing; Escape closes.
+    card(s.id).click(); $('.amount-pop').requestSubmit();
+    assert(!$('.amount-pop') && s.history.length === 2, 'empty: nothing');
+    card(s.id).click();
+    $('.amount-pop input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    assert(!$('.amount-pop'), 'Escape closes');
+    // A state that adds up asks for an amount.
+    card(sum.id).click();
+    assert($('.amount-pop .amount-title').textContent === t('cu.addTo', { name: 'Run' }) && !$('.amount-pop .amount-hint'), 'an amount for one that adds up');
+    closeAmountPop();
+    // Editing is in the card's menu.
+    card(s.id).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+    ctxMenu.querySelector('[data-ctx="edit"]').click();
+    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'state' && formCtx.id === s.id, 'Edit opens the form');
+    modal.close();
+    deletePlan(plans.current);
+    return `${s.history.length} measurements`;
+  });
+
   await step('cumulative: the form switches between adding up and single values, both ways', () => {
     fresh('Cumulative form');
     const now = today();
