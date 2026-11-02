@@ -1642,7 +1642,7 @@ function renderMap() {
   if (!itemCount()) return emptyState(t('map.emptyTitle'), t('map.emptyText'), 'goal');
 
   const scope = scopeFor(ui.mapGoal);
-  const keep = kind => item => (!scope || scope[kind].has(item.id)) && !(kind === 'activity' && ui.hideDone && item.status === 'done');
+  const keep = kind => item => (!scope || scope[kind].has(item.id)) && !(ui.hideDone && (kind === 'goal' ? isComplete('goal', item) : kind === 'activity' && item.status === 'done'));
   const items = {
     goal: db.goals.filter(keep('goal')),
     activity: db.activities.filter(keep('activity')),
@@ -1855,9 +1855,12 @@ function timelineRows(scope, collapsed = new Set()) {
     const acts = db.activities.filter(a => contributors.has(a.id) && !ancestors(a.id, 'subactivity').some(p => contributors.has(p))).sort(byStart);
     const subs = relsTo(g.id, 'subgoal').map(r => db.goals.find(x => x.id === r.from)).filter(x => x && visible('goal', x)).sort((a, b) => byDeadline(a, b) || byStart(a, b));
     const folded = collapsed.has(g.id);
-    const here = hidden ? parent : rows.push({ kind: 'goal', item: g, depth, rel, parent, fold: acts.length + subs.length > 0, collapsed: folded }) - 1;
-    acts.forEach(a => addActivity(a, depth + 1, 'contributes', here, g.id, hidden || folded));
-    subs.forEach(sg => addGoal(sg, depth + 1, 'subgoal', here, hidden || folded));
+    // An achieved goal hidden with the done items passes its place on to what is under it, like an activity.
+    const skip = !hidden && ui.hideDone && isComplete('goal', g);
+    const here = hidden || skip ? parent : rows.push({ kind: 'goal', item: g, depth, rel, parent, fold: acts.length + subs.length > 0, collapsed: folded }) - 1;
+    const inner = skip ? depth : depth + 1;
+    acts.forEach(a => addActivity(a, inner, skip ? rel : 'contributes', here, g.id, hidden || folded));
+    subs.forEach(sg => addGoal(sg, inner, skip ? rel : 'subgoal', here, hidden || folded));
   };
   const goalIds = new Set(goals.map(g => g.id));
   goals.filter(g => !ancestors(g.id, 'subgoal').some(p => goalIds.has(p))).sort((a, b) => byDeadline(a, b) || byStart(a, b)).forEach(g => addGoal(g, 0));

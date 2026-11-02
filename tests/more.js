@@ -3155,6 +3155,24 @@ window.moreTests = async ({ step, assert }) => {
     return rowsText(timelineRows(null));
   });
 
+  await step('hide done and achieved: achieved goals go too; what is under them stays', () => {
+    const { g1, g1a, a, b } = foldFixture();
+    const titles = () => [...document.querySelectorAll('.tl-row .tl-title')].map(x => x.textContent);
+    g1.status = 'achieved';
+    setToggle('hideDone', true);
+    assert(!titles().includes('G1') && titles().includes('G1a') && titles().includes('B'), 'timeline: G1 hidden, its sub-goal and open activity shown: ' + titles());
+    eq(timelineRows(null).find(r => r.item?.id === g1a.id).depth, 0, 'its sub-goal moves up to its place');
+    setView('map');
+    assert(!$(`[data-map-node="${g1.id}"]`) && $(`[data-map-node="${g1a.id}"]`) && $(`[data-map-node="${a.id}"]`), 'map: achieved goal hidden, the rest shown');
+    eq($('[data-hide-done]').textContent, t('acts.hideDone'), 'the toggle says so');
+    setToggle('hideDone', false);
+    assert($(`[data-map-node="${g1.id}"]`), 'shown again');
+    setView('timeline');
+    assert(titles().includes('G1') && b.status !== 'done', 'and on the timeline');
+    changeLanguage('sl'); eq($('[data-hide-done]').textContent, 'Skrij opravljeno in doseženo', 'Slovenian'); changeLanguage('en');
+    deletePlan(plans.current);
+  });
+
   await step('timeline: goals collapse and expand, remembered per plan', () => {
     const { g1, g1a, g2, g3, a, b } = foldFixture();
     assert(fold(g1.id) && fold(g2.id) && fold(g1a.id), 'goals with something under them can fold');
