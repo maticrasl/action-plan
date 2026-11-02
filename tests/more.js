@@ -2971,7 +2971,8 @@ window.moreTests = async ({ step, assert }) => {
     const r = mk('activity', { startDate: d(-3), repeat: { every: 1, unit: 'day' }, checkins: { [d(-3)]: 1, [d(-2)]: 1, [d(-1)]: 1 } });
     eq(badge(), ['🟡'], 'daily routine not ticked today');
     r.checkins[d(0)] = 1; eq(badge(), ['🟢'], 'ticked today');
-    delete r.checkins[d(-1)]; eq(badge(), ['🔴'], 'a missed day');
+    // A daily routine is late for a day missed this week; on a Monday yesterday was last week.
+    delete r.checkins[d(-1)]; eq(badge(), [weekday(today()) === 0 ? '🟢' : '🔴'], 'a missed day');
     r.checkins[d(-1)] = 1;
     // Another plan's badge comes from its saved data.
     save(); const busy = plans.current;
