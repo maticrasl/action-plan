@@ -2592,6 +2592,21 @@ window.moreTests = async ({ step, assert }) => {
       }
     }
     eq(crossed, 0, 'no line crosses another box');
+    // Running straight never makes lines cross more than they would through their slots.
+    const items = { goal: db.goals, activity: db.activities, state: db.states };
+    const { chains } = layoutMap(items, db.relations.filter(r => REL_TYPES[r.type]));
+    const curve = pts => pts.slice(1).flatMap((q, i) => {
+      const p = pts[i];
+      if (p.d && p.d === q.d) return [q.p];
+      const my = (p.p[1] + q.p[1]) / 2;
+      return Array.from({ length: 12 }, (_, k) => { const s = (k + 1) / 12, u = 1 - s; return [(u ** 3 + 3 * u * u * s) * p.p[0] + (3 * u * s * s + s ** 3) * q.p[0], u ** 3 * p.p[1] + 3 * u * s * my + s ** 3 * q.p[1]]; });
+    });
+    const xAt = (l, y) => { for (let i = 1; i < l.length; i++) if (y >= l[i - 1][1] && y <= l[i][1]) return l[i - 1][0] + (l[i][0] - l[i - 1][0]) * ((y - l[i - 1][1]) / ((l[i][1] - l[i - 1][1]) || 1)); return null; };
+    const cross = (a, b) => { let n = 0, side = 0; for (let y = Math.max(a[0][1], b[0][1]); y <= Math.min(a.at(-1)[1], b.at(-1)[1]); y += 6) { const xa = xAt(a, y), xb = xAt(b, y); if (xa === null || xb === null || Math.abs(xa - xb) < 1) continue; const now = Math.sign(xa - xb); if (side && now !== side) n++; side = now; } return n; };
+    const total = lines => lines.reduce((n, a, i) => n + lines.slice(i + 1).reduce((m, b) => m + cross(a, b), 0), 0);
+    const drawn = chains.filter(c => !c.same);
+    const viaSlots = total(drawn.map(c => [c.raw[0].p, ...curve(c.raw)])), straight = total(drawn.map(c => c.line));
+    assert(straight <= viaSlots, `crossings: ${straight} drawn, ${viaSlots} through the slots`);
     deletePlan(plans.current);
 
     // A state measuring a goal crosses three rows of activities; nothing is in its way, so one curve.
@@ -2641,6 +2656,15 @@ window.moreTests = async ({ step, assert }) => {
     assert(x(soon) < x(mid) && x(mid) < x(late) && x(late) < x(none), 'map: left to right by deadline');
     assert(x(a) > x(soon) && x(a) < x(late) && x(s) > x(soon) && x(s) < x(late), 'a goal’s activities and states stay in its group');
     eq([...$('[data-goal-select]').options].slice(1).map(o => o.textContent), want, 'goal filter list');
+    deletePlan(plans.current);
+    // Goals linked to each other stay together, wherever their dates fall; sharing an activity does not link them.
+    fresh('Goal trees');
+    const top = mk('goal', { title: 'Top', deadline: addDays(now, 100) }), sub = mk('goal', { title: 'Sub', deadline: addDays(now, 5) });
+    const early = mk('goal', { title: 'Early', deadline: addDays(now, 30) }), later = mk('goal', { title: 'Later', deadline: addDays(now, 60) });
+    const shared = mk('activity', { title: 'Shared', startDate: now, dueDate: addDays(now, 9) });
+    rel(sub, top, 'subgoal'); rel(shared, early, 'contributes'); rel(shared, later, 'contributes');
+    save(); setView('map');
+    assert(x(sub) < x(early) && x(early) < x(later), 'the tree (nearest: Sub, 5 days) first; then Early and Later, sharing an activity, by date');
     deletePlan(plans.current);
     return want.join(' < ');
   });
