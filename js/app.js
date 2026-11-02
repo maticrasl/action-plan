@@ -4031,7 +4031,7 @@ function ctxOptions(kind, item) {
       opt('add:activity:subactivity', t('ctx.addSubactivity')),
     );
   } else {
-    options.push('-', opt('add:activity:improves', t('ctx.addActivityState')));
+    options.push('-', opt('value', t(isCumulative(item) ? 'ctx.addAmount' : 'ctx.addValue')), opt('add:activity:improves', t('ctx.addActivityState')));
   }
   // "Show in" and the view's icon from the navigation; the full name is the accessible name and tooltip.
   const views = SHOW_IN[kind].filter(v => v !== ui.view && (v !== 'graphs' || hasGraph(item)));
@@ -4126,6 +4126,8 @@ function runCtxAction(act, id) {
   const [verb, arg, type] = act.split(':');
   if (verb === 'edit') return openForm(kind, id);
   if (verb === 'checkin') return toggleCheckin(id, today());
+  // The popup opens by what the menu was opened on: a card, a chart's heading or a box on the map.
+  if (verb === 'value') return openStateValue(id, $(`[data-ctx-item="${id}"], [data-map-node="${id}"]`) || viewEl);
   if (verb === 'highlight') { ui.mapSelected = id; return render(); }
   if (verb === 'show') return showIn(arg, id);
   if (verb === 'focus') {

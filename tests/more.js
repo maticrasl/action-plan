@@ -4205,6 +4205,24 @@ window.moreTests = async ({ step, assert }) => {
     ctxMenu.querySelector('[data-ctx="edit"]').click();
     assert(ctxMenu.hidden && modal.open && formCtx.kind === 'state' && formCtx.id === s.id, 'Edit opens the form');
     modal.close();
+    // So is adding: a value, or an amount for one that adds up; on the map too.
+    const menuOn = el => el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+    menuOn(card(s.id));
+    eq(ctxMenu.querySelector('[data-ctx="value"]').textContent, t('ctx.addValue'), 'Add a value in the menu');
+    ctxMenu.querySelector('[data-ctx="value"]').click();
+    assert(ctxMenu.hidden && !modal.open && $('.amount-pop .amount-title').textContent === t('sv.title', { name: 'Weight' }), 'it opens the popup');
+    closeAmountPop();
+    menuOn(card(sum.id));
+    eq(ctxMenu.querySelector('[data-ctx="value"]').textContent, t('ctx.addAmount'), 'Add an amount for one that adds up');
+    ctxMenu.querySelector('[data-ctx="value"]').click();
+    assert($('.amount-pop .amount-title').textContent === t('cu.addTo', { name: 'Run' }), 'it asks for an amount');
+    closeAmountPop();
+    setView('map');
+    menuOn($(`[data-map-node="${s.id}"]`));
+    ctxMenu.querySelector('[data-ctx="value"]').click();
+    $('.amount-pop [data-amount]').value = '77';
+    $('.amount-pop').requestSubmit();
+    assert(s.value === '77' && s.history.length === 2, 'from the map: same day replaced');
     deletePlan(plans.current);
     return `${s.history.length} measurements`;
   });
