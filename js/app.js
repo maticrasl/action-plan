@@ -1390,14 +1390,28 @@ function layoutMap(items, rels) {
     return (depth[id] = d);
   };
 
+  // Goals sit as low as they can, next to the activities: counted up from the bottom of their band.
+  const below = {};
+  Object.entries(above).forEach(([id, ups]) => ups.forEach(u => (below[u] ||= []).push(id)));
+  const height = {};
+  const heightOf = id => {
+    if (height[id] !== undefined) return height[id];
+    if (visiting.has(id)) return 0;
+    visiting.add(id);
+    const h = Math.max(-1, ...(below[id] || []).map(heightOf)) + 1;
+    visiting.delete(id);
+    return (height[id] = h);
+  };
+
   const layers = [], bands = [], node = {};
   ['goal', 'activity', 'state'].forEach(kind => {
     if (!items[kind].length) return;
     const base = layers.length;
-    const maxDepth = Math.max(...items[kind].map(it => depthOf(it.id)));
+    const levelOf = kind === 'goal' ? heightOf : depthOf;
+    const maxDepth = Math.max(...items[kind].map(it => levelOf(it.id)));
     for (let i = 0; i <= maxDepth; i++) layers.push({ list: [] });
     items[kind].forEach(it => {
-      const n = { id: it.id, kind, layer: base + depth[it.id], w: NW };
+      const n = { id: it.id, kind, layer: base + (kind === 'goal' ? maxDepth - height[it.id] : depth[it.id]), w: NW };
       node[it.id] = n;
       layers[n.layer].list.push(n);
     });
@@ -1549,6 +1563,8 @@ function layoutMap(items, rels) {
     list.sort((p, q) => p.other.x - q.other.x);
     list.forEach((p, i) => (p.c.pts[p.k] = [n.x - NW / 2 + (NW * (i + 1)) / (list.length + 1), layers[n.layer].y + (side === 'bottom' ? NH : 0)]));
   }));
+  // Real boxes, with a little room around them, that a line must not cross.
+  const boxes = all.filter(n => !n.dummy).map(n => ({ n, l: n.x - NW / 2 - 6, r: n.x + NW / 2 + 6, t: layers[n.layer].y - 6, b: layers[n.layer].y + NH + 6 }));
   chains.forEach(c => {
     if (c.same) {
       // Same layer: straight between neighbours, otherwise an arc above the row.
@@ -1565,7 +1581,27 @@ function layoutMap(items, rels) {
       pts.push({ p: [d.x, ly], d }, { p: [d.x, ly + NH], d });
     });
     pts.push({ p: c.pts[c.pts.length - 1] });
-    if (c.reversed) pts = pts.reverse();
+    // The dummies only keep room for the line; where it would not touch a real box, it skips them.
+    const ends = new Set([c.chain[0], c.chain[c.chain.length - 1]]);
+    const clear = (p, q) => {
+      const my = (p[1] + q[1]) / 2, lo = Math.min(p[1], q[1]), hi = Math.max(p[1], q[1]);
+      const near = boxes.filter(b => !ends.has(b.n) && b.b > lo && b.t < hi);
+      for (let k = 1; k < 20; k++) {
+        const s = k / 20, u = 1 - s;
+        const x = u * u * u * p[0] + 3 * u * s * (u * p[0] + s * q[0]) + s * s * s * q[0];
+        const yy = u * u * u * p[1] + 3 * u * u * s * my + 3 * u * s * s * my + s * s * s * q[1];
+        if (near.some(b => x > b.l && x < b.r && yy > b.t && yy < b.b)) return false;
+      }
+      return true;
+    };
+    const kept = [pts[0]];
+    for (let i = 0; i < pts.length - 1;) {
+      let j = pts.length - 1;
+      while (j > i + 1 && !clear(pts[i].p, pts[j].p)) j--;
+      kept.push(pts[j]);
+      i = j;
+    }
+    pts = c.reversed ? kept.reverse() : kept;
     c.d = `M${pts[0].p[0]},${pts[0].p[1]}` + pts.slice(1).map((q, i) => {
       const p = pts[i];
       if (p.d && p.d === q.d) return ` L${q.p[0]},${q.p[1]}`;

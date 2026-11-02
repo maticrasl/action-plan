@@ -2556,6 +2556,45 @@ window.moreTests = async ({ step, assert }) => {
   };
   const relOf = (from, to) => db.relations.find(r => r.from === from.id && r.to === to.id);
 
+  await step('map: lines go straight past rows with nothing in the way, and never through a box', () => {
+    loadSample();
+    setView('map');
+    const boxes = [...document.querySelectorAll('[data-map-node]')].map(g => ({ id: g.dataset.mapNode, r: g.getBoundingClientRect() }));
+    let crossed = 0;
+    for (const g of document.querySelectorAll('.edge-g')) {
+      const r = db.relations.find(x => x.id === g.dataset.relEdit), path = g.querySelector('.edge');
+      const m = path.getScreenCTM(), len = path.getTotalLength();
+      for (let k = 1; k < 40; k++) {
+        const p = new DOMPoint(...Object.values(path.getPointAtLength(len * k / 40)).slice(0, 2)).matrixTransform(m);
+        if (boxes.some(b => b.id !== r.from && b.id !== r.to && p.x > b.r.left + 2 && p.x < b.r.right - 2 && p.y > b.r.top + 2 && p.y < b.r.bottom - 2)) { crossed++; break; }
+      }
+    }
+    eq(crossed, 0, 'no line crosses another box');
+    deletePlan(plans.current);
+
+    // A state measuring a goal crosses three rows of activities; nothing is in its way, so one curve.
+    fresh('Straight lines');
+    const g = mk('goal', { title: 'G' }), s = mk('state', { title: 'S' });
+    const a = mk('activity', { title: 'A' }), b = mk('activity', { title: 'B' }), c = mk('activity', { title: 'C' });
+    rel(a, g, 'contributes'); rel(b, a, 'subactivity'); rel(c, b, 'subactivity'); rel(s, g, 'measures');
+    save(); setView('map');
+    const d = $(`[data-rel-edit="${db.relations.find(x => x.from === s.id).id}"] .edge`).getAttribute('d');
+    eq((d.match(/[CL]/g) || []).length, 1, 'one curve, not one per row: ' + d);
+    deletePlan(plans.current);
+
+    // Goals sit as low as they can, next to the activities; parents still above their sub-goals.
+    fresh('Low goals');
+    const top = mk('goal', { title: 'Parent' }), sub = mk('goal', { title: 'Sub' }), lone = mk('goal', { title: 'Lone' });
+    const mid = mk('goal', { title: 'Mid' }), deep = mk('goal', { title: 'Deep' });
+    rel(sub, top, 'subgoal'); rel(mid, top, 'subgoal'); rel(deep, mid, 'subgoal');
+    save(); setView('map');
+    const y = it => Math.round($(`[data-map-node="${it.id}"]`).getBoundingClientRect().top);
+    assert(y(top) < y(mid) && y(mid) < y(deep), 'a chain of sub-goals keeps its order');
+    eq([y(lone), y(sub)], [y(deep), y(deep)], 'a goal with nothing below it sits in the lowest goal row');
+    deletePlan(plans.current);
+    return 'ok';
+  });
+
   await step('map: clicking a line selects it; clicking it again or double-clicking opens it', () => {
     const { g, a, b, s } = mapFixture();
     const r = relOf(a, g);
