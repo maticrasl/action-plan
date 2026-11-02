@@ -1097,7 +1097,7 @@ const VIEWS = {
   activities: { add: 'activity', render: renderActivities },
   states: { add: 'state', render: renderStates },
   map: { add: 'item', render: renderMap },
-  timeline: { add: 'activity', render: renderTimeline },
+  timeline: { add: 'item', render: renderTimeline },
   graphs: { add: 'state', render: renderGraphs },
 };
 
@@ -1772,11 +1772,17 @@ function toggleTlFold(key) {
   render();
   $(`[data-tl-fold="${key}"]`)?.focus();
 }
-// Collapse all folds every goal with something under it, and the 'rest' group.
+// What can fold: every goal with something under it, and the 'rest' group.
+const tlFoldKeys = () => timelineRows(scopeFor(ui.timelineGoal)).filter(r => r.fold || r.kind === 'group').map(r => r.kind === 'group' ? 'rest' : r.item.id);
+// The one button reads Expand all once everything is folded, and Collapse all otherwise.
+function tlAllFolded() {
+  const keys = tlFoldKeys(), set = tlCollapsed();
+  return keys.length > 0 && keys.every(k => set.has(k));
+}
 function foldAllTl(collapse) {
-  const keys = collapse ? timelineRows(scopeFor(ui.timelineGoal)).filter(r => r.fold || r.kind === 'group').map(r => r.kind === 'group' ? 'rest' : r.item.id) : [];
-  setTlCollapsed(new Set(keys));
+  setTlCollapsed(new Set(collapse ? tlFoldKeys() : []));
   render();
+  $('[data-tl-fold-all]')?.focus();
 }
 
 const relText = r => `${findEntity(r.from).item.title} ${relLabel(r.type)} ${findEntity(r.to).item.title}`;
@@ -1999,8 +2005,7 @@ function renderTimeline() {
       ${goalSelect('timeline', ui.timelineGoal)}
       ${hideDoneToggle()}
       <button class="chip" data-tl-deps aria-pressed="${ui.tlDeps}">${t('tl.deps')}</button>
-      <button class="chip" data-tl-fold-all="collapse">${t('tl.collapseAll')}</button>
-      <button class="chip" data-tl-fold-all="expand">${t('tl.expandAll')}</button>
+      ${tlAllFolded() ? `<button class="chip" data-tl-fold-all="expand">${t('tl.expandAll')}</button>` : `<button class="chip" data-tl-fold-all="collapse">${t('tl.collapseAll')}</button>`}
       <div class="chips" role="group" aria-label="${esc(t('tl.zoom'))}">${zoom}</div>
     </div>
     <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
@@ -3283,8 +3288,8 @@ document.addEventListener('pointerdown', e => { if (!e.target.closest('#navSheet
 // The menu only exists on phones; close it when the window grows past that.
 matchMedia('(max-width: 720px)').addEventListener('change', e => { if (!e.matches) closeNavSheet(); });
 
-// On the map, the button asks what to add: a goal, an activity or a current state (links are drawn
-// between boxes there).
+// On the map and the timeline, the button asks what to add: a goal, an activity or a current state
+// (links are drawn between the items there).
 $('#addBtn').addEventListener('click', e => {
   const kind = VIEWS[ui.view].add;
   if (kind !== 'item') return openForm(kind);

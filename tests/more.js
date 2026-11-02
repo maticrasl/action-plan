@@ -3244,9 +3244,27 @@ window.moreTests = async ({ step, assert }) => {
     restFold.click();
     eq(shownRows(), 'G1 A A1 B G1a B G2 A A1 C G3 [group]', 'group folded');
     $('[data-tl-fold="rest"]').click();
-    // Collapse all / Expand all.
+    // Collapse all / Expand all: one button, reading Expand all only while everything is folded.
+    const foldAll = () => $$('[data-tl-fold-all]').map(b => `${b.dataset.tlFoldAll}:${b.textContent}`).join(',');
+    eq(foldAll(), `collapse:${t('tl.collapseAll')}`, 'nothing folded: Collapse all only');
+    fold(g1.id).click();
+    eq(foldAll(), `collapse:${t('tl.collapseAll')}`, 'some folded: still Collapse all');
     $('[data-tl-fold-all="collapse"]').click();
     eq(shownRows(), 'G1 G2 G3 [group]', 'collapse all: one line per goal');
+    eq(foldAll(), `expand:${t('tl.expandAll')}`, 'all folded: the button reads Expand all');
+    assert(document.activeElement === $('[data-tl-fold-all]'), 'focus stays on the button');
+    fold(g2.id).click();
+    eq(foldAll(), `collapse:${t('tl.collapseAll')}`, 'one opened by hand: back to Collapse all');
+    $('[data-tl-fold-all="collapse"]').click();
+    $('[data-tl-fold-all="expand"]').click();
+    eq(foldAll(), `collapse:${t('tl.collapseAll')}`, 'expanded: Collapse all again');
+    // Folding each by hand (the sub-goal first, while it shows) counts too.
+    for (const g of [g1a, g1, g2]) fold(g.id).click();
+    eq(foldAll(), `collapse:${t('tl.collapseAll')}`, 'the group still open: Collapse all');
+    $('[data-tl-fold="rest"]').click();
+    eq(foldAll(), `expand:${t('tl.expandAll')}`, 'folded one by one: Expand all too');
+    $('[data-tl-fold-all="expand"]').click();
+    $('[data-tl-fold-all="collapse"]').click();
     $('[data-tl-fold-all="expand"]').click();
     eq(shownRows(), 'G1 A A1 B G1a B G2 A A1 C G3 [group] U', 'expand all');
     eq(prefs.get('tlCollapsed.' + plans.current, null), [], 'saved as nothing folded');
@@ -4588,7 +4606,7 @@ window.moreTests = async ({ step, assert }) => {
     return text;
   });
 
-  await step('map: + asks whether to add a goal, an activity or a current state', () => {
+  await step('map and timeline: + asks whether to add a goal, an activity or a current state', () => {
     fresh('Map add');
     const g = mk('goal', { title: 'Map goal' }); save();
     setView('map');
@@ -4622,6 +4640,12 @@ window.moreTests = async ({ step, assert }) => {
     const r2 = btn.getBoundingClientRect(), m2 = ctxMenu.getBoundingClientRect();
     assert(m2.bottom <= r2.top && m2.right <= innerWidth - 8 + 1, `floating button: menu above it (${m2.bottom} ≤ ${r2.top})`);
     closeCtxMenu(); phone.remove();
+    // The timeline asks the same.
+    setView('timeline'); eq(btn.getAttribute('aria-label'), t('add.item'), 'timeline: the button just says Add');
+    btn.click();
+    assert(!ctxMenu.hidden && acts() === 'new:goal,new:activity,new:state', `timeline: offers the three kinds: ${acts()}`);
+    ctxMenu.querySelector('[data-ctx="new:goal"]').click();
+    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'goal' && !formCtx.id, 'timeline: Goal opens a new goal'); modal.close();
     // The other views add straight away; the empty relationship list still adds a relationship.
     setView('goals'); btn.click();
     assert(ctxMenu.hidden && modal.open && formCtx.kind === 'goal', 'goals view: + adds a goal directly'); modal.close();
