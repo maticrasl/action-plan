@@ -1278,6 +1278,18 @@ window.moreTests = async ({ step, assert }) => {
     drive.read = async () => ({ id: 'f', content: parseStore(JSON.stringify(file)), extra: ['dup1'] });
     await syncNow(true);
     eq(removed, ['dup1'], 'duplicates removed');
+
+    // During the tour sync leaves Drive alone (no retry loop); ending the tour syncs once.
+    let reads = 0;
+    drive.read = async () => { reads++; return { id: 'f', content: parseStore(JSON.stringify(file)), extra: [] }; };
+    clearTimeout(syncState.timer); syncState.timer = null;
+    startTour();
+    await syncNow(false); await syncNow(true);
+    assert(!reads && !syncState.again && !syncState.busy, 'no Drive calls during the tour');
+    endTour(false);
+    clearTimeout(syncState.timer);
+    await syncNow(false);
+    assert(reads === 1 && syncState.status === 'synced', 'syncs after the tour');
     disconnectSync();
     assert(!prefs.get('syncConnected', false) && $('#syncBtn').hidden, 'disconnected');
     return `${Object.values(out).join(',')} writes=${writes}`;
@@ -1535,7 +1547,7 @@ window.moreTests = async ({ step, assert }) => {
     return `${full.goals.length} goals`;
   });
 
-  await step('plan files: reading checks the format', () => {
+  await step('plan files: reading checks the format', async () => {
     const { name, data } = progressPlan();
     const ok = parsePlanFile(JSON.stringify({ format: 'actionplan-plan', version: 1, kind: 'template', name, ...data }), 'x.json');
     eq([ok.name, ok.kind, ok.data.goals.length, ok.data.relations.length], [name, 'template', 3, 1], 'new format');
@@ -1556,6 +1568,19 @@ window.moreTests = async ({ step, assert }) => {
     eq(reason(JSON.stringify({ format: 'actionplan-plan', version: 2, name: 'n', goals: [] }), 'newer'), 'version', 'a file from a newer version');
     const junk = parsePlanFile(JSON.stringify({ name: 'J', goals: [{ id: 'g', title: 'ok', status: 'active' }], extra: 'x', states: 7 }), 'j.json');
     assert(!('extra' in junk.data) && Array.isArray(junk.data.states) && junk.data.states.length === 0, 'unknown fields dropped, bad collections emptied');
+
+    // Ids go into the page unescaped: items with markup in their id, broken items and links to them are dropped.
+    const evil = 'x"><img src=x onerror="window.__pwned=1">';
+    const bad = parsePlanFile(JSON.stringify({ name: 'Bad', goals: [{ id: 'g1', title: 'Fine' }, { id: evil, title: 'Evil' }, null, 7, { title: 'No id' }],
+      activities: [{ id: 'a1', title: 'Act' }],
+      relations: [{ id: 'r1', from: 'a1', to: 'g1', type: 'contributes' }, { id: 'r2', from: 'a1', to: evil, type: 'contributes' },
+        { id: evil, from: 'a1', to: 'g1', type: 'related' }, null] }), 'b.json');
+    eq([bad.data.goals.map(g => g.id), bad.data.relations.map(r => r.id)], [['g1'], ['r1']], 'unsafe and broken items dropped');
+    addImported(bad.name, bad.data);
+    ['dashboard', 'goals', 'activities', 'map', 'timeline'].forEach(v => setView(v));
+    await tick();
+    assert(!window.__pwned && !$('#view img'), 'no markup from the file reaches the page');
+    deletePlan(plans.current);
     return 'ok';
   });
 

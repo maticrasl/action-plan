@@ -184,9 +184,14 @@ function mergePlanInto(fromId, toId, remove = false) {
   render();
 }
 
+// Ids go into the page's HTML unescaped, so only items with a plain id are kept (a shared file could
+// hide markup in one); relationships need plain ids at both ends too.
+const safeId = id => typeof id === 'string' && /^[\w-]{1,64}$/.test(id);
+
 function normalize(data) {
   const d = emptyDb();
-  for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k];
+  for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k].filter(x => x && typeof x === 'object' && safeId(x.id));
+  d.relations = d.relations.filter(r => safeId(r.from) && safeId(r.to));
   if (data?.deleted && typeof data.deleted === 'object' && !Array.isArray(data.deleted)) d.deleted = data.deleted;
   return d;
 }

@@ -130,7 +130,7 @@ function parseStore(text) {
   let raw;
   try { raw = JSON.parse(text); } catch (e) { throw new SyncError('error'); }
   if (raw?.format !== SYNC_FORMAT || !Array.isArray(raw.plans?.list)) throw new SyncError('error');
-  const list = raw.plans.list.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string');
+  const list = raw.plans.list.filter(p => p && safeId(p.id) && typeof p.name === 'string');
   return {
     plans: { list, deleted: raw.plans.deleted && typeof raw.plans.deleted === 'object' ? raw.plans.deleted : {} },
     data: Object.fromEntries(list.map(p => [p.id, normalize(raw.data?.[p.id])])),
@@ -191,7 +191,8 @@ function scheduleSync(delay = SYNC_DELAY) {
 
 // `interactive` is true when a click started the sync, so Google may show its sign-in popup.
 async function syncNow(interactive = false) {
-  if (!syncConnected()) return;
+  // During the tour the open plan is a temporary one; endTour syncs once it is over.
+  if (!syncConnected() || (typeof tour !== 'undefined' && tour.step >= 0)) return;
   if (syncState.busy) { syncState.again = true; return; }
   clearTimeout(syncState.timer);
   if (!navigator.onLine) return setSyncStatus('offline');
@@ -200,8 +201,8 @@ async function syncNow(interactive = false) {
   try {
     const token = await drive.getToken(interactive);
     const remote = await drive.read(token);
-    // During the tour the open plan is a temporary one: try again once it is over.
-    if (typeof tour !== 'undefined' && tour.step >= 0) { syncState.again = true; return setSyncStatus('idle'); }
+    // A tour that started while this sync waited: endTour syncs once it is over.
+    if (typeof tour !== 'undefined' && tour.step >= 0) return setSyncStatus('idle');
     // From here until applyStore nothing waits, so no local edit can slip in between.
     let local = localStore();
     if (!prefs.get('syncedOnce', false) && remote.content?.plans.list.length) local = dropStarterPlans(local);

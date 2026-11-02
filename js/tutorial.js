@@ -151,6 +151,7 @@ function endTour(keep) {
   removeEventListener('resize', placeTour);
   removeEventListener('scroll', placeTour, true);
   document.querySelectorAll('.tour-block, .tour-spot, .tour-card').forEach(el => el.remove());
+  scheduleSync(); // syncs paused during the tour
   if (keep) {
     setView('dashboard');
     toast(t('tour.kept'));
