@@ -2666,7 +2666,7 @@ function activityForm(a) {
     ${field('description', t('f.details'), area('description', a.description, t('f.detailsPh')))}
     <div class="row3">
       ${field('status', t('f.status'), select('status', statusLabels(ACTIVITY_STATUS, 'activity.'), a.status || 'todo'))}
-      ${field('startDate', t('f.startDate'), date('startDate', isRoutine(a) ? routineStart(a) : a.startDate))}
+      ${field('startDate', t('f.startDate'), date('startDate', isRoutine(a) ? routineStart(a) : a.id ? a.startDate : a.startDate || today()))}
       ${field('dueDate', t('f.dueDate'), date('dueDate', a.dueDate))}
     </div>
     ${repeatFields(a)}
@@ -2712,7 +2712,8 @@ function repeatFields(a) {
   const weekdays = Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(i => [i, weekdayName(i, 'long')]));
   const picked = r?.unit === 'month' && !r.times ? 'data-picked' : '';
   const days = r?.days || [weekday(start)];
-  const ends = r?.count ? 'after' : a.dueDate ? 'on' : 'never';
+  // Every routine ends, on a day or after a number of times; one that never did is asked for a day.
+  const ends = r?.count ? 'after' : 'on';
   const toggles = [0, 1, 2, 3, 4, 5, 6].map(i =>
     `<button type="button" class="chip day-toggle" data-day="${i}" aria-pressed="${days.includes(i)}" aria-label="${esc(weekdayName(i, 'long'))}">${esc(weekdayName(i, 'narrow'))}</button>`).join('');
   const radio = (value, label) => `<label class="rep-radio"><input type="radio" name="ends" value="${value}" ${ends === value ? 'checked' : ''}> ${label}</label>`;
@@ -2741,7 +2742,6 @@ function repeatFields(a) {
     <div id="repDays">${field('days', t('f.days'), `<div class="day-toggles" role="group" aria-label="${esc(t('f.days'))}">${toggles}</div><input type="hidden" name="days" value="${days.join(',')}">`)}</div>
     <div id="repTimes">${field('times', t('f.times'), num('times', r?.times ?? 3), '<span id="timesHint"></span>')}</div>
     <fieldset id="repeatEnds" class="rep-ends"><legend class="label">${t('f.ends')}</legend>
-      ${radio('never', t('f.endsNever'))}
       <div class="field rep-end" data-field="endDate">${radio('on', t('f.endsOn'))}${date('endDate', r?.count ? '' : a.dueDate)}<div class="err"></div></div>
       <div class="field rep-end" data-field="count">${radio('after', t('f.endsAfter'))}${num('count', r?.count ?? 10)}<span id="countUnit"></span><div class="err"></div></div>
     </fieldset>
@@ -2822,7 +2822,7 @@ function readRepeat(v, start) {
     if (on === 'nth') Object.assign(repeat, { nth: Number(v.nth), weekday: Number(v.weekday) });
   }
   let dueDate = '';
-  if (v.ends === 'on') {
+  if (v.ends !== 'after') {
     if (!v.endDate) return { errors: { endDate: t('err.endDate') } };
     if (v.endDate < start) return { errors: { endDate: t('err.startAfterDue') } };
     dueDate = v.endDate;
@@ -2971,10 +2971,13 @@ function submitForm() {
   }
 
   if (kind === 'activity') {
-    const startDate = v.startDate || (v.repeat === 'none' ? '' : existing && isRoutine(existing) ? routineStart(existing) : today());
+    // Every activity has a start and an end: a one-off its due date, a routine its end (readRepeat).
+    const startDate = v.startDate;
+    if (!startDate) return showErrors({ startDate: t('err.startRequired') });
     const { repeat, dueDate = v.dueDate, errors } = readRepeat(v, startDate);
     if (errors) return showErrors(errors);
-    if (!repeat && v.startDate && v.dueDate && v.startDate > v.dueDate) return showErrors({ dueDate: t('err.startAfterDue') });
+    if (!repeat && !dueDate) return showErrors({ dueDate: t('err.dueRequired') });
+    if (!repeat && startDate > dueDate) return showErrors({ dueDate: t('err.startAfterDue') });
     const a = Object.assign(existing || { id: uid(), createdAt: today() }, {
       title: v.title.trim(), description: v.description.trim(), status: v.status, startDate, dueDate,
     });

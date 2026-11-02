@@ -180,7 +180,7 @@ window.moreTests = async ({ step, assert }) => {
     const g2 = mk('goal', { title: 'Save money', category: 'Finance' });
     const g3 = mk('goal', { title: 'Življenje brez skrbi' });
     mk('goal', { title: 'Sleep well', category: 'Health' });
-    const a = mk('activity', { title: 'Train' });
+    const a = mk('activity', { title: 'Train', startDate: d(0), dueDate: d(7) });
     rel(a, g1, 'contributes');
     openForm('activity', a.id);
     const pk = modal.querySelector('.picker[data-picker="goal"]');
@@ -462,11 +462,16 @@ window.moreTests = async ({ step, assert }) => {
     assert(modal.open && modal.querySelector('[data-field="days"] .err').textContent === t('err.days'), 'needs a day');
     modal.querySelectorAll('.day-toggle')[0].click(); modal.querySelectorAll('.day-toggle')[3].click();
     [...modal.querySelectorAll('[data-name="goals"] .pick-opt')].find(o => o.textContent === 'Move more').click();
+    // Every routine ends: there is no "never", and a day is asked for.
+    assert(!modal.querySelector('[name="ends"][value="never"]') && modal.querySelector('[name="ends"]:checked').value === 'on', 'ends on a day by default');
+    submitForm();
+    assert(modal.open && modal.querySelector('[data-field="endDate"] .err').textContent === t('err.endDate'), 'needs an end');
+    $('#f-endDate').value = dateInput(addDays(now, 60));
     submitForm();
     const st = db.activities.find(a => a.title === 'Strength');
-    assert(!modal.open && st && JSON.stringify(st.repeat) === '{"every":1,"unit":"week","days":[0,3]}' && st.startDate === now && !st.dueDate, 'saved as a routine from today');
+    assert(!modal.open && st && JSON.stringify(st.repeat) === '{"every":1,"unit":"week","days":[0,3]}' && st.startDate === now && st.dueDate === addDays(now, 60), 'saved as a routine from today');
     openForm('activity', st.id);
-    assert($('#f-repeat').value === 'days' && modal.querySelector('[name="ends"]:checked').value === 'never', 'form shows the saved repeat');
+    assert($('#f-repeat').value === 'days' && modal.querySelector('[name="ends"]:checked').value === 'on', 'form shows the saved repeat');
     change('#f-repeat', 'custom');
     assert($('#f-unit').value === 'week' && $('#f-on').value === 'days' && shown('#repDays'), 'custom starts from specific days');
     modal.close();
@@ -480,6 +485,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(modal.querySelector('[data-field="times"] .err').textContent === t('err.times', { max: 7 }), 'at most 7 a week');
     $('#f-times').value = '3';
     $('#f-startDate').value = dateInput(addDays(now, -14));
+    $('#f-endDate').value = dateInput(addDays(now, 60));
     [...modal.querySelectorAll('[data-name="goals"] .pick-opt')].find(o => o.textContent === 'Move more').click();
     submitForm();
     const run = db.activities.find(a => a.title === 'Run');
@@ -2267,6 +2273,7 @@ window.moreTests = async ({ step, assert }) => {
       start('2027-03-10'); // the second Wednesday of March 2027
       change('#f-repeat', 'custom');
       change('#f-unit', 'month');
+      $('#f-endDate').value = dateInput('2027-12-31');
       setup();
       submitForm();
       return db.activities.find(a => a.title === title);
@@ -2318,7 +2325,7 @@ window.moreTests = async ({ step, assert }) => {
     modal.close();
 
     // An older routine opens with its days chosen, and saves in the new form.
-    const old = mk('activity', { title: 'Old monthly', status: 'todo', startDate: '2027-01-27', repeat: { every: 1, unit: 'month', on: 'last' } });
+    const old = mk('activity', { title: 'Old monthly', status: 'todo', startDate: '2027-01-27', dueDate: '2027-12-31', repeat: { every: 1, unit: 'month', on: 'last' } });
     openForm('activity', old.id);
     eq([$('#f-on').value, $('#f-nth').value, $('#f-weekday').value], ['nth', '-1', '2'], 'old “last Wednesday” shown as such');
     submitForm();
@@ -2377,10 +2384,11 @@ window.moreTests = async ({ step, assert }) => {
     fresh('Start dates');
     const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
     const now = today();
-    // Choosing how it repeats fills an empty start date with today, where it can be seen and changed.
+    // A new activity starts today, in plain sight; choosing how it repeats fills an emptied start date again.
     for (const preset of ['week', 'month', 'days', 'custom']) {
       openForm('activity');
-      eq($('#f-startDate').value, '', `${preset}: a new activity starts empty`);
+      eq($('#f-startDate').value, dateInput(now), `${preset}: a new activity starts today`);
+      $('#f-startDate').value = '';
       change('#f-repeat', preset);
       eq($('#f-startDate').value, dateInput(now), `${preset}: today filled in`);
       modal.close();
@@ -2395,16 +2403,24 @@ window.moreTests = async ({ step, assert }) => {
     change('#f-repeat', 'none');
     eq($('#f-startDate').value, dateInput('2026-09-01'), 'kept for a one-off too');
     modal.close();
-    // A one-off without dates stays without dates.
+    // Both dates are needed: a cleared start or a missing due date is refused.
     openForm('activity');
     $('#f-title').value = 'Plain';
+    $('#f-startDate').value = '';
     submitForm();
-    eq(db.activities.find(a => a.title === 'Plain').startDate, '', 'one-off saved without a start');
+    assert(modal.open && modal.querySelector('[data-field="startDate"] .err').textContent === t('err.startRequired'), 'a start is needed');
+    $('#f-startDate').value = dateInput(now);
+    submitForm();
+    assert(modal.open && modal.querySelector('[data-field="dueDate"] .err').textContent === t('err.dueRequired'), 'a due date is needed');
+    $('#f-dueDate').value = dateInput(addDays(now, 3));
+    submitForm();
+    eq([db.activities.find(a => a.title === 'Plain')?.startDate, db.activities.find(a => a.title === 'Plain')?.dueDate], [now, addDays(now, 3)], 'saved with both');
     // Filled in and changed before saving: the change is what is saved.
     openForm('activity');
     $('#f-title').value = 'Earlier';
     change('#f-repeat', 'days');
     $('#f-startDate').value = dateInput(addDays(now, -20));
+    $('#f-endDate').value = dateInput(addDays(now, 20));
     submitForm();
     eq(db.activities.find(a => a.title === 'Earlier').startDate, addDays(now, -20), 'the changed date is saved');
     return dateInput(now);
@@ -2418,13 +2434,19 @@ window.moreTests = async ({ step, assert }) => {
     eq(routineStart(old), created, 'runs from the day it was created');
     openForm('activity', old.id);
     eq($('#f-startDate').value, dateInput(created), 'the form shows that day');
+    // It never ended; now it needs an end before it saves.
     submitForm();
-    eq(old.startDate, created, 'saving keeps it, not today');
-    // Even if the field is cleared, an existing routine keeps where it started.
+    assert(modal.open && modal.querySelector('[data-field="endDate"] .err').textContent === t('err.endDate'), 'asked for an end when edited');
+    $('#f-endDate').value = dateInput(addDays(now, 30));
+    submitForm();
+    eq([old.startDate, old.dueDate], [created, addDays(now, 30)], 'saving keeps the start, not today');
+    // A cleared start is refused, so it keeps where it started.
     openForm('activity', old.id);
     $('#f-startDate').value = '';
     submitForm();
-    eq(old.startDate, created, 'a cleared field keeps the old start');
+    assert(modal.open && modal.querySelector('[data-field="startDate"] .err').textContent === t('err.startRequired'), 'a cleared start is refused');
+    modal.close();
+    eq(old.startDate, created, 'the old start stays');
     assert(checkedOn(old, addDays(now, -30)), 'its old check-ins still count');
     setView('activities');
     shiftRoutineWeek(old.id, -10);
@@ -3568,6 +3590,19 @@ window.moreTests = async ({ step, assert }) => {
     // A plan shared as a template starts over.
     const tpl = resetProgress(db);
     assert(tpl.activities.every(a => a.status === 'todo' && !('autoStarted' in a)), 'templates forget it');
+    // A new activity starts today unless changed, so it is in progress at once; editing one without
+    // a start date leaves it empty.
+    openForm('activity');
+    eq($('#f-startDate').value, dateInput(today()), 'a new activity starts today');
+    $('#f-title').value = 'Fresh';
+    $('#f-dueDate').value = dateInput(addDays(today(), 5));
+    submitForm();
+    const fresh1 = db.activities.find(a => a.title === 'Fresh');
+    eq([fresh1.startDate, fresh1.status], [today(), 'doing'], 'saved from today, in progress');
+    assert($(`.col-doing [data-open="${fresh1.id}"]`), 'on the board under In progress');
+    openForm('activity', none.id);
+    eq($('#f-startDate').value, '', 'an existing one without a start date stays empty');
+    modal.close();
     deletePlan(plans.current);
   });
 

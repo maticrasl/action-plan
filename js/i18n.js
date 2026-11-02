@@ -76,6 +76,8 @@ const I18N = {
       'cat.allInCategory': 'All goals in this category',
       'cat.none': 'No category',
       'err.startAfterDue': 'The due date can’t be before the start date.',
+      'err.startRequired': 'Choose the day it starts.',
+      'err.dueRequired': 'Choose the day it is due.',
 
       'view.dashboard': 'Overview',
       'view.goals': 'Goals',
@@ -627,7 +629,6 @@ const I18N = {
       'f.timesHint': '{every}, on any days',
       'f.days': 'Days',
       'f.ends': 'Ends',
-      'f.endsNever': 'Never',
       'f.endsOn': 'On',
       'f.endsAfter': 'After',
       'f.endsCount': { one: 'occurrence', other: 'occurrences' },
@@ -829,6 +830,8 @@ const I18N = {
       'cat.allInCategory': 'Vsi cilji v tej kategoriji',
       'cat.none': 'Brez kategorije',
       'err.startAfterDue': 'Rok ne more biti pred začetnim datumom.',
+      'err.startRequired': 'Izberite dan, ko se začne.',
+      'err.dueRequired': 'Izberite rok.',
 
       'view.dashboard': 'Pregled',
       'view.goals': 'Cilji',
@@ -1390,7 +1393,6 @@ const I18N = {
       'f.timesHint': '{every}, na poljubne dni',
       'f.days': 'Dnevi',
       'f.ends': 'Konec',
-      'f.endsNever': 'Nikoli',
       'f.endsOn': 'Na dan',
       'f.endsAfter': 'Po',
       'f.endsCount': { one: 'ponovitvi', two: 'ponovitvah', few: 'ponovitvah', other: 'ponovitvah' },
