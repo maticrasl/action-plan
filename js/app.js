@@ -4040,19 +4040,21 @@ function showIn(view, id) {
   el.addEventListener('animationend', () => el.classList.remove('flash'), { once: true });
 }
 
-function openCtxMenu(id, x, y) {
+function openCtxMenu(id, x, y, byKey = false) {
   const ent = findEntity(id);
   if (!ent) return;
   ctxMenu.dataset.id = id;
   ctxMenu.dataset.rel = '';
   ctxMenu.setAttribute('aria-label', t('ctx.label', { name: ent.item.title }));
-  showCtxMenu(ent.kind, t('kind.' + ent.kind), ent.item.title, ctxOptions(ent.kind, ent.item), x, y);
+  showCtxMenu(ent.kind, t('kind.' + ent.kind), ent.item.title, ctxOptions(ent.kind, ent.item), x, y, byKey);
 }
 
 let ctxOpenedAt = 0;
 
 // Fills the menu – a heading with a tag and a name, then its options – and shows it at x, y, kept on screen.
-function showCtxMenu(tagClass, tag, title, options, x, y) {
+// Opened from the keyboard, its first item takes focus; opened by a finger or the mouse, the menu itself
+// does, so no item is marked under the finger (the arrow keys still reach them).
+function showCtxMenu(tagClass, tag, title, options, x, y, byKey = false) {
   ctxOpenedAt = performance.now();
   ctxMenu.innerHTML = `<div class="ctx-head"><span class="tag ${tagClass}">${tag}</span><strong title="${esc(title)}">${esc(title)}</strong></div>` +
     options.map(o => o === '-' ? '<hr>' :
@@ -4061,7 +4063,7 @@ function showCtxMenu(tagClass, tag, title, options, x, y) {
   const { width, height } = ctxMenu.getBoundingClientRect();
   ctxMenu.style.left = `${Math.max(8, Math.min(x, innerWidth - width - 8))}px`;
   ctxMenu.style.top = `${Math.max(8, Math.min(y, innerHeight - height - 8))}px`;
-  ctxMenu.querySelector('button').focus();
+  (byKey ? ctxMenu.querySelector('button') : ctxMenu).focus();
 }
 
 function closeCtxMenu(refocus = false) {
@@ -4072,7 +4074,7 @@ function closeCtxMenu(refocus = false) {
 
 // A relationship line's menu (long-press, right-click or the menu key): it selects the line and
 // offers what the selection row below offers.
-function openRelMenu(relId, x, y) {
+function openRelMenu(relId, x, y, byKey = false) {
   const r = db.relations.find(x => x.id === relId);
   if (!r) return;
   Object.assign(ui, { mapRel: relId, mapSelected: null });
@@ -4082,7 +4084,7 @@ function openRelMenu(relId, x, y) {
   ctxMenu.setAttribute('aria-label', t('map.relLabel', { rel: relText(r) }));
   showCtxMenu('', t('kind.relation'), relText(r), [
     { act: 'rel-edit', label: t('btn.edit') }, { act: 'rel-remove', label: t('btn.remove'), danger: true }, { act: 'rel-deselect', label: t('btn.deselect') },
-  ], x, y);
+  ], x, y, byKey);
 }
 
 // The menu of a relationship line, or else of an item.
@@ -4587,7 +4589,7 @@ viewEl.addEventListener('keydown', e => {
   if (line && menuKey) {
     e.preventDefault();
     const box = line.getBoundingClientRect();
-    return openRelMenu(line.dataset.relEdit, box.left + box.width / 2, box.top + box.height / 2);
+    return openRelMenu(line.dataset.relEdit, box.left + box.width / 2, box.top + box.height / 2, true);
   }
   if (line && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
@@ -4599,7 +4601,7 @@ viewEl.addEventListener('keydown', e => {
   if (menuKey) {
     e.preventDefault();
     const r = node.getBoundingClientRect();
-    openCtxMenu(nodeId(node), r.left + 16, r.bottom + 4);
+    openCtxMenu(nodeId(node), r.left + 16, r.bottom + 4, true);
   } else if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
     const id = nodeId(node), ent = findEntity(id);
@@ -4648,7 +4650,8 @@ ctxMenu.addEventListener('click', e => {
 ctxMenu.addEventListener('keydown', e => {
   const items = [...ctxMenu.querySelectorAll('button')];
   const i = items.indexOf(document.activeElement);
-  const moves = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: items.length - 1 };
+  // With the menu itself focused (i = -1), Down goes to the first item and Up to the last.
+  const moves = { ArrowDown: i + 1, ArrowUp: (i < 0 ? items.length : i) - 1, Home: 0, End: items.length - 1 };
   if (e.key in moves) {
     e.preventDefault();
     items[(moves[e.key] + items.length) % items.length].focus();

@@ -3212,6 +3212,14 @@ window.moreTests = async ({ step, assert }) => {
     await longPress(line());
     assert(!ctxMenu.hidden, 'long-press opens a menu');
     eq(items(), [t('btn.edit'), t('btn.remove'), t('btn.deselect')], 'the three options');
+    // Opened by a finger, the menu takes focus but marks no item; the arrow keys still reach them.
+    const btns = () => [...ctxMenu.querySelectorAll('[data-ctx]')];
+    assert(document.activeElement === ctxMenu, 'the menu itself focused');
+    eq(btns().map(b => getComputedStyle(b).backgroundColor), btns().map(() => 'rgba(0, 0, 0, 0)'), 'no item marked');
+    press('ArrowUp', ctxMenu);
+    assert(document.activeElement === btns().at(-1), 'Up from the menu: last item');
+    ctxMenu.focus(); press('ArrowDown', ctxMenu);
+    assert(document.activeElement === btns()[0], 'Down from the menu: first item');
     assert(ctxMenu.textContent.includes('Act') && ctxMenu.textContent.includes('Goal') && ctxMenu.textContent.includes(t('kind.relation')), 'names the relationship');
     eq(ui.mapRel, r().id, 'the line is selected too');
     assert(line().classList.contains('sel'), 'drawn as selected');
@@ -3241,6 +3249,7 @@ window.moreTests = async ({ step, assert }) => {
     line().focus();
     press('ContextMenu', line());
     assert(!ctxMenu.hidden && items().length === 3, 'the menu key opens it');
+    assert(document.activeElement === ctxMenu.querySelector('[data-ctx]'), 'from the keyboard, the first item is focused');
     closeCtxMenu();
 
     await longPress(line());

@@ -647,7 +647,11 @@ textarea { resize: vertical; min-height: 68px; }
   display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0; background: none;
   padding: 8px 10px 8px 30px; border-radius: var(--r-sm); font-size: 14.5px; font-weight: 600; cursor: pointer; position: relative;
 }
-.ctx-menu button:hover, .ctx-menu button:focus { background: var(--surface-2); outline: none; box-shadow: none; }
+/* Only a mouse hover or keyboard focus marks an item: a finger lifting after the long-press would
+   leave the item under it (or the first one, focused on opening) marked. */
+.ctx-menu button:focus { outline: none; box-shadow: none; }
+.ctx-menu button:focus-visible { background: var(--surface-2); }
+@media (hover: hover) { .ctx-menu button:hover { background: var(--surface-2); } }
 .ctx-menu button[aria-checked="true"]::before { content: "✓"; position: absolute; left: 11px; color: var(--ok); font-weight: 800; }
 .ctx-menu button.danger { color: var(--bad); }
 .ctx-menu button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
