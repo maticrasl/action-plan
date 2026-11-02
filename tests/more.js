@@ -3322,6 +3322,13 @@ window.moreTests = async ({ step, assert }) => {
     $('.map-wrap').dispatchEvent(new Event('scroll'));
     assert(!ctxMenu.hidden, 'a scroll right after opening leaves the item menu open');
     await new Promise(r => setTimeout(r, 450));
+    // On a short screen (a phone held sideways) the menu scrolls inside itself, and that keeps it open.
+    ctxMenu.style.maxHeight = '120px';
+    assert(ctxMenu.scrollHeight > ctxMenu.clientHeight && getComputedStyle(ctxMenu).overflowY === 'auto', 'a menu taller than the screen scrolls');
+    assert(ctxMenu.querySelector('button').offsetHeight >= 30, 'its items keep their height');
+    ctxMenu.scrollTop = 40; ctxMenu.dispatchEvent(new Event('scroll'));
+    assert(!ctxMenu.hidden && ctxMenu.scrollTop > 0, 'scrolling the menu leaves it open');
+    ctxMenu.style.maxHeight = '';
     $('.map-wrap').dispatchEvent(new Event('scroll'));
     assert(ctxMenu.hidden, 'a scroll later closes it');
     // A short tap still selects as before.

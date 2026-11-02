@@ -4763,7 +4763,8 @@ addEventListener('resize', () => closeCtxMenu());
 // Scrolling closes the menu, but not a scroll that arrives right after it opened: browsers deliver
 // scroll events on the next frame, so one from just before (a redraw putting the map's scroll back,
 // as a line's menu does when it selects the line, or the end of a swipe) can land after it.
-document.addEventListener('scroll', () => { if (performance.now() - ctxOpenedAt > 400) closeCtxMenu(); }, true);
+// Scrolling the menu itself (taller than a phone held sideways) keeps it open.
+document.addEventListener('scroll', e => { if (e.target !== ctxMenu && performance.now() - ctxOpenedAt > 400) closeCtxMenu(); }, true);
 
 /* ---------- Plan switcher (sidebar on desktop, menu on mobile) ---------- */
 

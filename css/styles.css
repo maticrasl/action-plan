@@ -637,9 +637,11 @@ textarea { resize: vertical; min-height: 68px; }
   position: fixed; z-index: 60; min-width: 232px; max-width: min(320px, calc(100vw - 16px));
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
   box-shadow: var(--shadow-pop); padding: 6px; display: flex; flex-direction: column;
+  max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain;
   animation: rise .12s ease-out;
 }
 .ctx-menu[hidden] { display: none; }
+.ctx-menu > * { flex-shrink: 0; }
 .ctx-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 6px 10px 8px; font-size: 14px; }
 .ctx-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .ctx-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
