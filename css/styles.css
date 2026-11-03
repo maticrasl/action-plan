@@ -860,6 +860,8 @@ textarea { resize: vertical; min-height: 68px; }
 .gr-grid { stroke: var(--line); stroke-width: 1; }
 .gr-axis { fill: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .gr-today { fill: var(--today); stroke: var(--today-edge); stroke-width: 1; }
+/* Over a bar it needs more colour to show, and lets the hover layer through. */
+.gr-today.over { fill: color-mix(in srgb, var(--blaze) 28%, transparent); stroke: color-mix(in srgb, var(--blaze) 60%, transparent); pointer-events: none; }
 .gr-target { stroke: var(--goal); stroke-width: 2; stroke-dasharray: 6 4; stroke-linecap: round; }
 .gr-target-end { fill: var(--goal); stroke: var(--surface); stroke-width: 2; }
 .gr-line { fill: none; stroke: var(--rel-state); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }

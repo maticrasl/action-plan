@@ -2277,11 +2277,11 @@ function zoomedWidth(id, base, width, days) {
 
 // Today is a column as wide as the day (never thinner than 3 px), behind the data. `from` is where the day
 // starts on the axis: a bar's day starts at its number, a measurement sits in the middle of its day.
-function todayCol(px, from, x0, x1, W) {
+function todayCol(px, from, x0, x1, W, over = false) {
   if (from + 1 <= x0 || from >= x1) return null;
   const a = clamp(px(from), GR.L, W - GR.R), b = clamp(px(from + 1), GR.L, W - GR.R);
   const w = Math.max(b - a, 3), x = (a + b - w) / 2;
-  return { svg: `<rect class="gr-today" x="${x}" y="${GR.T}" width="${w}" height="${GR.H - GR.T - GR.B}"/>`, box: [x, GR.T, x + w, GR.H - GR.B] };
+  return { svg: `<rect class="gr-today${over ? ' over' : ''}" x="${x}" y="${GR.T}" width="${w}" height="${GR.H - GR.T - GR.B}"/>`, box: [x, GR.T, x + w, GR.H - GR.B] };
 }
 
 const yLabels = (ticks, py) => ticks.map(v => `<text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`).join('');
@@ -2339,10 +2339,10 @@ function renderGraphs() {
    point has its `day` (where the crosshair snaps) and its own tooltip rows (`tip`). */
 
 const GR_SLOT = 12; // the narrowest a period's bar gets; longer histories scroll sideways
-const GR_BAR = 44; // the widest
-// A bar's left edge and width in a period running from day `a` to day `b`, centred when capped.
+// A bar's left edge and width in a period running from day `a` to day `b`: it fills the period, with
+// a hairline between neighbours, so the bars touch.
 function barBox(px, a, b) {
-  const slot = px(b) - px(a), w = clamp(slot - 2, 2, GR_BAR);
+  const slot = px(b) - px(a), w = Math.max(slot - 1, 1);
   return { x: px(a) + (slot - w) / 2, w };
 }
 
@@ -2378,7 +2378,8 @@ function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, ti
   grCharts[id] = { points, targets, px, py, unit, tip, zoom };
   const grid = ticks.map(v => `<line class="gr-grid" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`).join('') + yLabels(ticks, py);
   const xAxis = dateAxis(px, x0, x1, W > width, !bars);
-  const todayLine = todayCol(px, bars ? todayN : todayN - 0.5, x0, x1, W)?.svg || '';
+  // Over the bars, so today shows inside the period under way; behind a line.
+  const todayLine = todayCol(px, bars ? todayN : todayN - 0.5, x0, x1, W, bars)?.svg || '';
   const targetLines = targets.map(tg => {
     const xe = px(tg.end && tg.end > x0 && tg.end < x1 ? tg.end : x1);
     const ty = py(tg.value) + (py(tg.value) - GR.T < 16 ? 14 : -6);
@@ -2389,7 +2390,7 @@ function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, ti
   }).join('');
   return `<div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(aria)}">
       <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
-        ${grid}${todayLine}${marks(px, py)}${targetLines}${xAxis}
+        ${grid}${bars ? '' : todayLine}${marks(px, py)}${bars ? todayLine : ''}${targetLines}${xAxis}
         <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
         <circle class="gr-focus" r="6" hidden/>
       </svg>${W > width ? yAxisPinned(ticks, py) : ''}
@@ -2516,7 +2517,7 @@ function routineGraphCard(a, width) {
     marks: (px, py) => points.map(p => {
       const { x, w } = barBox(px, p.a, p.b);
       return `<rect class="gr-bar${p.met ? ' met' : ''}${p.now ? ' now' : ''}" x="${x}" y="${py(p.value)}" width="${w}" height="${py(0) - py(p.value)}" rx="2"/>
-        ${p.target ? `<line class="gr-goal" x1="${x - 4}" x2="${x + w + 4}" y1="${py(p.target)}" y2="${py(p.target)}"/>` : ''}`;
+        ${p.target ? `<line class="gr-goal" x1="${x}" x2="${x + w}" y1="${py(p.target)}" y2="${py(p.target)}"/>` : ''}`;
     }).join(''),
   }, width);
   const streak = routineStreak(a);
