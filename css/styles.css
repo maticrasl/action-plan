@@ -681,6 +681,7 @@ textarea { resize: vertical; min-height: 68px; }
 .field .err:empty { display: none; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+#measureFields:not([hidden]) { display: flex; flex-direction: column; gap: 12px; }
 
 .smart-block { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; margin: 0; }
 .smart-block legend { padding: 0 6px; font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 8px; }
@@ -893,6 +894,10 @@ textarea { resize: vertical; min-height: 68px; }
 
 /* States that add up: the total and a + on the card, a quick amount by the button or tick */
 .cu-head { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+/* With this period's sum too, the sums move under the title rather than squeeze it. */
+.card-head:has(.cu-now) { flex-wrap: wrap; row-gap: 8px; }
+/* The graph's scale switch: compact enough for five on one row of a phone. */
+.gr-scale .chip { padding: 5px 10px; }
 .cu-add { width: 30px; height: 30px; border: 1px solid var(--line-strong); }
 .cu-add svg { width: 16px; height: 16px; fill: none; stroke-width: 2.2; stroke-linecap: round; }
 .cu-periods { font-size: 13px; }

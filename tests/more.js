@@ -4759,7 +4759,7 @@ window.moreTests = async ({ step, assert }) => {
     deletePlan(plans.current);
   });
 
-  await step('cumulative: the scale switch fits a phone, wrapping rather than widening the page', async () => {
+  await step('cumulative: the scale switch fits a phone on one row, in both languages', async () => {
     const km = { id: 'k', cumulative: true, scale: 'week' };
     const out = [];
     for (const lang of ['en', 'sl']) {
@@ -4773,11 +4773,49 @@ window.moreTests = async ({ step, assert }) => {
       assert(btns.length === 5 && btns.every(r => r.left >= card.left - 1 && r.right <= card.right + 1), `${lang}: every chip inside the card`);
       assert(doc.documentElement.scrollWidth <= 390, `${lang}: no sideways scroll (${doc.documentElement.scrollWidth})`);
       assert(btns.every(r => r.height >= 24), `${lang}: chips big enough to tap (${Math.min(...btns.map(r => r.height))} px)`);
-      out.push(`${lang} ${new Set(btns.map(r => Math.round(r.top))).size} row(s)`);
+      const rows = new Set(btns.map(r => Math.round(r.top))).size;
+      assert(rows === 1, `${lang}: one row (${rows})`);
+      out.push(`${lang} ${rows} row`);
       frame.remove();
     }
     changeLanguage('en');
     return out.join(', ');
+  });
+
+  await step('cumulative: a state card with both sums keeps its title on one line and everything inside the card', async () => {
+    loadSample();
+    setView('states');
+    const km = db.states.find(s => s.cumulative && s.scale === 'week');
+    const html = $(`.card.state[data-open="${km.id}"]`).outerHTML, out = [];
+    // A phone, and the narrowest column of the desktop grid (320 px).
+    for (const [name, width, pad] of [['phone', 390, 16], ['desktop column', 352, 16]]) {
+      const frame = document.createElement('iframe');
+      Object.assign(frame.style, { width: `${width}px`, height: '400px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+      frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 ${pad}px">${html}</body>`;
+      await new Promise(res => { frame.onload = res; document.body.append(frame); });
+      const doc = frame.contentDocument, card = doc.querySelector('.card').getBoundingClientRect();
+      const title = doc.querySelector('.card-head h3'), head = doc.querySelector('.cu-head').getBoundingClientRect();
+      const lineH = parseFloat(frame.contentWindow.getComputedStyle(title).lineHeight) || 24;
+      assert(head.right <= card.right + 1 && head.left >= card.left - 1, `${name}: the sums and + inside the card (${Math.round(head.right)} > ${Math.round(card.right)})`);
+      assert(title.getBoundingClientRect().height < lineH * 1.5, `${name}: title on one line (${Math.round(title.getBoundingClientRect().height)} px)`);
+      out.push(`${name} ok`);
+      frame.remove();
+    }
+    deletePlan(plans.current);
+    return out.join(', ');
+  });
+
+  await step('cumulative: Counts in the goal form has room like the fields around it', () => {
+    loadSample();
+    const km = db.states.find(s => s.cumulative), g = db.goals.find(x => relsFrom(km.id, 'measures').some(r => r.to === x.id));
+    openForm('goal', g.id);
+    const field = $('[data-field="period"]').getBoundingClientRect();
+    const above = $('[data-field="unit"]').closest('.row2').getBoundingClientRect(), below = $('[data-field="baseline"]').closest('.row3').getBoundingClientRect();
+    const gaps = [Math.round(field.top - above.bottom), Math.round(below.top - field.bottom)];
+    assert(gaps.every(px => px >= 10), `gaps above and below Counts: ${gaps}`);
+    modal.close();
+    deletePlan(plans.current);
+    return gaps.join(', ') + ' px';
   });
 
   await step('cumulative: three years of daily amounts draw on every scale', () => {
