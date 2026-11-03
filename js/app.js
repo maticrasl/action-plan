@@ -193,6 +193,7 @@ function normalize(data) {
   for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k].filter(x => x && typeof x === 'object' && safeId(x.id));
   d.relations = d.relations.filter(r => safeId(r.from) && safeId(r.to));
   if (data?.deleted && typeof data.deleted === 'object' && !Array.isArray(data.deleted)) d.deleted = data.deleted;
+  migrateCumulative(d);
   return d;
 }
 
@@ -216,9 +217,17 @@ function daysUntil(date) {
   if (!date) return null;
   return Math.round((new Date(date + 'T00:00') - new Date(today() + 'T00:00')) / 86400000);
 }
+// A date or number formatter for the app's language. Making one is slow (toLocaleString makes one on
+// every call), and a long table formats thousands of values, so each is made once and kept.
+const formatters = new Map();
+function formatter(Kind, opts) {
+  const key = `${Kind.name} ${locale()} ${JSON.stringify(opts)}`;
+  if (!formatters.has(key)) formatters.set(key, new Kind(locale(), opts));
+  return formatters.get(key);
+}
 function fmtDate(date) {
   if (!date) return '';
-  return new Date(date + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
+  return formatter(Intl.DateTimeFormat, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(date + 'T00:00'));
 }
 // "today", "tomorrow" or "yesterday" for those days, else the date (`other` formats it); `cap` for one
 // that stands alone, such as a tag or a table cell.
@@ -231,9 +240,9 @@ function fmtRel(date, cap = false, other = fmtDate) {
 // "3 Mar 2026 – tomorrow", or the one date there is.
 const fmtSpan = (s, e, cap = false) => (s && e ? `${fmtRel(s, cap)} – ${fmtRel(e)}` : fmtRel(s || e, cap));
 // A yyyy-mm-dd date in the app's language, read as a calendar day (no time zone shift).
-const fmtDay = (iso, opts) => new Date(iso + 'T00:00Z').toLocaleDateString(locale(), { ...opts, timeZone: 'UTC' });
+const fmtDay = (iso, opts) => formatter(Intl.DateTimeFormat, { ...opts, timeZone: 'UTC' }).format(new Date(iso + 'T00:00Z'));
 function fmtNum(n) {
-  return Number(n).toLocaleString(locale(), { maximumFractionDigits: 2 });
+  return formatter(Intl.NumberFormat, { maximumFractionDigits: 2 }).format(Number(n));
 }
 // A number typed with a decimal dot or comma ("78.5", "78,5", "1 234,5", "1,234.5"); NaN if it isn't one.
 function parseNum(s) {
@@ -431,15 +440,16 @@ function measuringState(g) {
     .filter(s => s && isNum(stateValue(s)))
     .sort((a, b) => (stateDate(b) || '').localeCompare(stateDate(a) || ''))[0] || null;
 }
-// What a state says about a goal: its value, or for a state that adds up per period the higher of
-// this period's total and the last complete one's – so progress does not drop when a period starts,
-// and a period still under way counts once it is past the last one (for better or worse).
-const goalMeasure = s => (byPeriod(s) ? Math.max(stateTotal(s), lastPeriodTotal(s)) : Number(stateValue(s)));
+// What a state says about a goal: its value, or for a state that adds up and a goal counting it per
+// period the higher of this period's total and the last complete one's – so progress does not drop
+// when a period starts, and a period still under way counts once it is past the last one (for
+// better or worse).
+const goalMeasure = (s, period) => (isCumulative(s) && period !== 'total' ? Math.max(stateTotal(s, period), lastPeriodTotal(s, period)) : Number(stateValue(s)));
 function goalCurrent(g) {
   if (byRoutines(g)) return Math.round(goalProgress(g));
   if (byActivities(g)) return countedActivities(g).filter(a => a.status === 'done').length;
   const st = measuringState(g);
-  if (st) return goalMeasure(st);
+  if (st) return goalMeasure(st, goalPeriod(g));
   if (isNum(g.current)) return Number(g.current);
   return isNum(g.baseline) ? Number(g.baseline) : 0;
 }
@@ -462,13 +472,13 @@ function metricProgress(g, current) {
   return clamp(((current - b) / (target - b)) * 100, 0, 100);
 }
 
-// Whether a goal has reached its target. For a goal measured by a state that adds up per period,
+// Whether a goal has reached its target. For a goal counting a state that adds up per period,
 // only a complete period counts: one strong Wednesday does not reach "30 km a week". Consistency
 // has no target to reach (it is 100 % after the first tick).
 function goalReached(g) {
   if (g.status !== 'active' || byRoutines(g)) return false;
   const st = ownMetric(g) ? measuringState(g) : null;
-  if (st && byPeriod(st)) return metricProgress(g, lastPeriodTotal(st)) >= 100;
+  if (isCumulative(st) && goalPeriod(g) !== 'total') return metricProgress(g, lastPeriodTotal(st, goalPeriod(g))) >= 100;
   return goalProgress(g) >= 100;
 }
 
@@ -807,7 +817,7 @@ function setRoutineDay(a, iso, on, amounts = []) {
 
 const mondayOf = iso => addDays(iso, -weekday(iso));
 // "13–19 Oct" in the app's language.
-const fmtRange = (from, to) => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short', timeZone: 'UTC' })
+const fmtRange = (from, to) => formatter(Intl.DateTimeFormat, { day: 'numeric', month: 'short', timeZone: 'UTC' })
   .formatRange(new Date(from + 'T00:00Z'), new Date(to + 'T00:00Z'));
 
 // The weeks a routine's strip can show: from the week it started in to the week of its end date or
@@ -886,19 +896,37 @@ function routineRow(a) {
 const activeRoutine = a => isRoutine(a) && runsOn(a, today());
 
 /* ---------- Cumulative states: amounts that add up ----------
-   A state with `cumulative` keeps `entries` ({ id, date, amount, routine? }) that add up, several a
-   day if need be, instead of one value per date: per calendar 'day', 'week' (Monday to Sunday),
-   'month' or 'year', or in total ('none'). `routine` is the routine whose tick the entry belongs to.
+   A state with `cumulative: true` keeps `entries` ({ id, date, amount, routine? }) that add up,
+   several a day if need be, instead of one value per date. `routine` is the routine whose tick the
+   entry belongs to. How the sums are looked at is not the state's: its graph shows them per
+   calendar 'day', 'week' (Monday to Sunday), 'month' or 'year', or in total, as last chosen
+   (`scale`), and each goal it measures counts them by its own `period`.
    Deleted entry ids stay in `droppedEntries`, so syncing with an older copy does not bring them
-   back. `value` and `date` keep a copy of the total for older readers; stateValue() reads it fresh,
-   as a period's total changes when the period ends.
+   back. `value` and `date` keep a copy of the total for older readers.
    A routine that improves a cumulative state and the state keep in step: ticking a day can add
    an amount, an amount added on the state ticks the routine, unticking removes the routine's
    amounts that day, and deleting its last amount that day unticks it. */
 
-const ADDS_UP = ['day', 'week', 'month', 'year', 'none'];
+const PERIODS = ['day', 'week', 'month', 'year'];
+const SCALES = [...PERIODS, 'total'];
 const isCumulative = s => !!s?.cumulative;
-const byPeriod = s => isCumulative(s) && s.cumulative !== 'none';
+const stateScale = s => (SCALES.includes(s?.scale) ? s.scale : 'total');
+const goalPeriod = g => (PERIODS.includes(g?.period) ? g.period : 'total');
+
+// Before, a state added up per period itself (`cumulative: 'week'`, or 'none' for in total): the
+// period becomes its graph's scale and the period of the goals it measures that have none yet.
+function migrateCumulative(d) {
+  for (const s of d.states) {
+    if (typeof s.cumulative !== 'string') continue;
+    const was = s.cumulative === 'none' ? 'total' : s.cumulative;
+    Object.assign(s, { cumulative: true, scale: SCALES.includes(was) ? was : 'total' });
+    refreshTotal(s); // the stored copy was the period's total
+    d.relations.filter(r => r.type === 'measures' && r.from === s.id).forEach(r => {
+      const g = d.goals.find(x => x.id === r.to);
+      if (g && !g.period) g.period = s.scale;
+    });
+  }
+}
 
 // The calendar day, week, month or year around a date.
 function calPeriod(unit, iso) {
@@ -910,14 +938,14 @@ const entriesOf = s => (s.entries || []).filter(e => e.date && isNum(e.amount));
 // Rounded, so 0.1 + 0.2 adds up to 0.3.
 const sumOf = list => Number(list.reduce((n, e) => n + Number(e.amount), 0).toFixed(9));
 
-// The total of the period around `iso`, or of everything up to it.
-function stateTotal(s, iso = today()) {
-  if (!byPeriod(s)) return sumOf(entriesOf(s).filter(e => e.date <= iso));
-  const { from, to } = calPeriod(s.cumulative, iso);
+// The total of the `period` around `iso`, or in total of everything up to it.
+function stateTotal(s, period = 'total', iso = today()) {
+  if (period === 'total') return sumOf(entriesOf(s).filter(e => e.date <= iso));
+  const { from, to } = calPeriod(period, iso);
   return sumOf(entriesOf(s).filter(e => e.date >= from && e.date <= to));
 }
-// The previous period's total (period states only).
-const lastPeriodTotal = (s, iso = today()) => stateTotal(s, addDays(calPeriod(s.cumulative, iso).from, -1));
+// The previous period's total.
+const lastPeriodTotal = (s, period, iso = today()) => stateTotal(s, period, addDays(calPeriod(period, iso).from, -1));
 
 // A state's value and date: the latest measurement, or a cumulative state's total ('' with no entries yet).
 function stateValue(s) {
@@ -933,15 +961,21 @@ function refreshTotal(s) {
   Object.assign(s, { value: v === '' ? '' : String(v), date: stateDate(s) });
 }
 
-// Each period from the first entry's to today's (or the latest entry's), empty ones included.
-function periodTotals(s) {
+// Each `period` from the first entry's to today's (or the latest entry's), empty ones included.
+function periodTotals(s, period) {
   const list = entriesOf(s);
-  if (!list.length || !byPeriod(s)) return [];
+  if (!list.length || !PERIODS.includes(period)) return [];
   const dates = list.map(e => e.date).sort();
   const end = dates.at(-1) > today() ? dates.at(-1) : today();
+  // Entries sorted into their periods in one pass: years of daily periods would each scan them all.
+  const byPeriod = new Map();
+  list.forEach(e => {
+    const i = unitIndex(e.date, period);
+    byPeriod.has(i) ? byPeriod.get(i).push(e) : byPeriod.set(i, [e]);
+  });
   const out = [];
-  for (let p = calPeriod(s.cumulative, dates[0]); p.from <= end && out.length < 5000; p = calPeriod(s.cumulative, addDays(p.to, 1))) {
-    const entries = list.filter(e => e.date >= p.from && e.date <= p.to);
+  for (let p = calPeriod(period, dates[0]); p.from <= end && out.length < 5000; p = calPeriod(period, addDays(p.to, 1))) {
+    const entries = byPeriod.get(unitIndex(p.from, period)) || [];
     out.push({ ...p, total: sumOf(entries), entries });
   }
   return out;
@@ -988,7 +1022,7 @@ function dropRoutineEntries(a, iso) {
 }
 
 // Plain → cumulative: each measurement becomes an entry. Cumulative → plain: each day's entries add
-// up to that day's measurement. Changing the period only changes how the entries are added up.
+// up to that day's measurement. The graph's scale is kept either way.
 function convertState(s, addsUp) {
   if (!addsUp) {
     if (!isCumulative(s)) return;
@@ -1005,15 +1039,14 @@ function convertState(s, addsUp) {
     (s.entries || []).forEach(e => (s.droppedEntries = { ...s.droppedEntries, [e.id]: 1 }));
     s.entries = (s.history || []).filter(h => h.date && isNum(h.value)).map(h => ({ id: uid(), date: h.date, amount: String(h.value) }));
   }
-  s.cumulative = addsUp;
+  s.cumulative = true;
   refreshTotal(s);
 }
 
-// "18 km this week", "€2,450 in total".
-function totalText(s, iso = today()) {
-  const v = withUnit(fmtNum(stateTotal(s, iso)), s.unit || '');
-  return t('cu.total.' + s.cumulative, { value: v });
-}
+// "€2,450 in total".
+const totalText = s => t('cu.inTotal', { value: withUnit(fmtNum(stateTotal(s)), s.unit || '') });
+// "18 km this week": the sum of the period around `iso`.
+const scaleText = (s, period, iso = today()) => t('cu.now.' + period, { value: withUnit(fmtNum(stateTotal(s, period, iso)), s.unit || '') });
 
 /* ---------- Small render helpers ---------- */
 
@@ -1221,7 +1254,7 @@ function goalCard(g) {
     <div class="meta"><span>${t('f.progressActs')}: <strong>${goalCurrent(g)} / ${counted}</strong></span></div>`
     : `${trail(pct, `${fmtNum(isNum(g.baseline) ? g.baseline : 0)}${unit}`, `${fmtNum(g.target)}${unit}`)}
     <div class="meta"><span>${esc(g.metric)}: <strong>${fmtNum(goalCurrent(g))}${unit}</strong></span></div>
-    ${st && byPeriod(st) ? `<div class="meta cu-periods">${esc(t('cu.goalLine.' + st.cumulative, { now: withUnit(fmtNum(stateTotal(st)), st.unit || g.unit || ''), last: withUnit(fmtNum(lastPeriodTotal(st)), st.unit || g.unit || '') }))}</div>` : ''}`}
+    ${isCumulative(st) && goalPeriod(g) !== 'total' ? `<div class="meta cu-periods">${esc(t('cu.goalLine.' + goalPeriod(g), { now: withUnit(fmtNum(stateTotal(st, goalPeriod(g))), st.unit || g.unit || ''), last: withUnit(fmtNum(lastPeriodTotal(st, goalPeriod(g))), st.unit || g.unit || '') }))}</div>` : ''}`}
     <div class="meta">
       ${g.status !== 'active' ? `<span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${t('goal.' + g.status)}</span>` : ''}
       ${waits.length ? waitsForTag(waits) : ''}
@@ -1265,7 +1298,7 @@ function renderStates() {
       const add = esc(t('cu.addTo', { name: s.title }));
       // A state that adds up shows its total and takes a new amount right here.
       const head = isCumulative(s)
-        ? `<span class="cu-head"><span class="tag state cu-total">${esc(totalText(s))}</span><button type="button" class="icon-btn cu-add" data-add-amount="${s.id}" title="${add}" aria-label="${add}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></span>`
+        ? `<span class="cu-head">${stateScale(s) !== 'total' ? `<span class="tag cu-now">${esc(scaleText(s, stateScale(s)))}</span>` : ''}<span class="tag state cu-total">${esc(totalText(s))}</span><button type="button" class="icon-btn cu-add" data-add-amount="${s.id}" title="${add}" aria-label="${add}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></span>`
         : isNum(s.value) ? `<span class="tag state">${fmtNum(s.value)}${s.unit ? ' ' + esc(s.unit) : ''}</span>` : '';
       const count = isCumulative(s) ? (entriesOf(s).length ? tp('cu.entries', entriesOf(s).length) : '') : (s.history?.length || 0) > 1 ? tp('states.measurements', s.history.length) : '';
       const when = isCumulative(s) ? (stateDate(s) ? t('cu.lastEntry', { date: fmtRel(stateDate(s)) }) : t('cu.noEntries')) : t('states.asOf', { date: fmtRel(s.date) || '—' });
@@ -2232,7 +2265,7 @@ function renderGraphs() {
   const viewStyle = getComputedStyle(viewEl);
   const width = clamp(viewEl.clientWidth - parseFloat(viewStyle.paddingLeft) - parseFloat(viewStyle.paddingRight) - 38, GR.MIN_W, GR.MAX_W);
   Object.keys(grCharts).forEach(k => delete grCharts[k]);
-  const card = s => (byPeriod(s) ? periodGraphCard(s, width) : isCumulative(s) ? totalGraphCard(s, width) : graphCard(s, width));
+  const card = s => (!isCumulative(s) ? graphCard(s, width) : stateScale(s) === 'total' ? totalGraphCard(s, width) : periodGraphCard(s, width));
   const cards = [...withData.map(card), ...kept.map(a => routineGraphCard(a, width))];
   return `${categoryChips()}
     <div class="toolbar">${goalSelect('graphs', ui.graphGoal)}${searchBox()}</div>
@@ -2263,9 +2296,10 @@ function periodLabel(unit, from, to) {
   return fmtDate(from);
 }
 
-// Goals a state measures with a target, for target lines.
-const stateTargets = s => relsFrom(s.id, 'measures').map(r => db.goals.find(g => g.id === r.to))
-  .filter(g => g && ownMetric(g) && isNum(g.target))
+// Goals a state measures with a target, for target lines. On a state that adds up, only those
+// counting it as the graph shows it: a weekly target on monthly bars would mislead.
+const stateTargets = (s, scale) => relsFrom(s.id, 'measures').map(r => db.goals.find(g => g.id === r.to))
+  .filter(g => g && ownMetric(g) && isNum(g.target) && (!scale || goalPeriod(g) === scale))
   .map(g => ({ goal: g, value: Number(g.target), end: g.deadline ? dayNum(g.deadline) : null }));
 
 // The plot shared by bar and step graphs: grid, date axis, today, target lines and labels, and the
@@ -2309,15 +2343,20 @@ function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, ti
 const grLegend = items => `<div class="gr-legend">${items.map(([cls, text]) => `<span><i class="key ${cls}"></i>${esc(text)}</span>`).join('')}</div>`;
 const targetKey = targets => ['key-target', targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title })];
 
-function grCardHtml(item, stats, legend, plot, table) {
+function grCardHtml(item, stats, legend, plot, table, scales = '') {
   return `<article class="card gr-card" data-gr="${item.id}">
     <div class="card-head" data-ctx-item="${item.id}"><h3>${esc(item.title)}</h3><button class="btn small ghost" data-open="${item.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats">${stats}</div>
+    ${scales}
     ${legend}
     ${plot}
     <details class="gr-table"><summary>${t('gr.table')}</summary>${table}</details>
   </article>`;
 }
+
+// Sums per day, week, month or year, or the running total, for a state that adds up.
+const scaleSwitch = s => `<div class="chips gr-scale" role="group" aria-label="${esc(t('cu.scaleLabel'))}">${SCALES.map(k =>
+  `<button class="chip ${k === stateScale(s) ? 'active' : ''}" data-gr-scale="${k}" data-state="${s.id}" aria-pressed="${k === stateScale(s)}">${t('cu.scale.' + k)}</button>`).join('')}</div>`;
 
 const entryDel = (s, e) => {
   const del = t('cu.deleteEntry', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(e.date) });
@@ -2326,12 +2365,12 @@ const entryDel = (s, e) => {
 
 // A bar for each period; the change tag compares the last complete period with the one before.
 function periodGraphCard(s, width) {
-  const unit = s.unit || '', now = today(), periods = periodTotals(s), targets = stateTargets(s);
+  const unit = s.unit || '', now = today(), scale = stateScale(s), periods = periodTotals(s, scale), targets = stateTargets(s, scale);
   const points = periods.map(p => {
     const a = dayNum(p.from), b = dayNum(p.to) + 1;
     return { ...p, value: p.total, day: (a + b) / 2, a, b, now: p.from <= now && p.to >= now };
   });
-  const tip = p => [['gr-tip-value', withUnit(fmtNum(p.value), unit)], ['gr-tip-date', periodLabel(s.cumulative, p.from, p.to)],
+  const tip = p => [['gr-tip-value', withUnit(fmtNum(p.value), unit)], ['gr-tip-date', periodLabel(scale, p.from, p.to)],
     ['gr-tip-row', tp('cu.entries', p.entries.length)],
     ...targets.map(tg => ['gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), unit) })])];
   const plot = plotSvg(s.id, {
@@ -2351,18 +2390,18 @@ function periodGraphCard(s, width) {
     const aim = targets.length ? Math.sign(targets[0].value - prev.value) : 0;
     const cls = !aim || !delta ? '' : Math.sign(delta) === aim ? 'ok' : 'bad';
     change = `<span class="tag gr-delta ${cls}"><span aria-hidden="true">${delta > 0 ? '▲' : delta < 0 ? '▼' : '→'}</span> ${esc(withUnit(signed(delta), unit))}</span>
-      <span class="meta">${esc(t('cu.vsPrev.' + s.cumulative, { period: periodLabel(s.cumulative, last.from, last.to) }))}</span>`;
+      <span class="meta">${esc(t('cu.vsPrev.' + scale, { period: periodLabel(scale, last.from, last.to) }))}</span>`;
   }
-  const legend = grLegend([['key-bar', t('cu.legend.' + s.cumulative)], ...(targets.length ? [targetKey(targets)] : [])]);
-  const rows = points.slice().reverse().map(p => `<tr class="gr-period"><td>${esc(periodLabel(s.cumulative, p.from, p.to))}</td><td><strong>${esc(withUnit(fmtNum(p.value), unit))}</strong></td><td></td></tr>
+  const legend = grLegend([['key-bar', t('cu.legend.' + scale)], ...(targets.length ? [targetKey(targets)] : [])]);
+  const rows = points.slice().reverse().map(p => `<tr class="gr-period"><td>${esc(periodLabel(scale, p.from, p.to))}</td><td><strong>${esc(withUnit(fmtNum(p.value), unit))}</strong></td><td></td></tr>
     ${p.entries.slice().reverse().map(e => `<tr class="gr-entry"><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td>${entryDel(s, e)}</tr>`).join('')}`).join('');
   const table = `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.amount')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
-  return grCardHtml(s, `<strong class="gr-value">${esc(totalText(s))}</strong>${change}`, legend, plot, table);
+  return grCardHtml(s, `<strong class="gr-value">${esc(scaleText(s, scale))}</strong>${change}`, legend, plot, table, scaleSwitch(s));
 }
 
 // A step line of the running total; the tag shows what was added in the last 30 days.
 function totalGraphCard(s, width) {
-  const unit = s.unit || '', targets = stateTargets(s), entries = entriesOf(s).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const unit = s.unit || '', targets = stateTargets(s, 'total'), entries = entriesOf(s).slice().sort((a, b) => a.date.localeCompare(b.date));
   const byDay = {};
   entries.forEach(e => (byDay[e.date] = (byDay[e.date] || 0) + Number(e.amount)));
   let sum = 0;
@@ -2380,7 +2419,7 @@ function totalGraphCard(s, width) {
   }, width);
   const recent = sumOf(entries.filter(e => e.date > dayStr(todayN - 30) && e.date <= today()));
   const stats = `<strong class="gr-value">${esc(totalText(s))}</strong><span class="tag gr-delta ${recent > 0 ? 'ok' : ''}">${esc(withUnit(signed(recent), unit))}</span><span class="meta">${t('cu.last30')}</span>`;
-  const legend = grLegend([['key-measure', t('cu.legend.none')], ...(targets.length ? [targetKey(targets)] : [])]);
+  const legend = grLegend([['key-measure', t('cu.legend.total')], ...(targets.length ? [targetKey(targets)] : [])]);
   let running = sumOf(entries);
   const rows = entries.slice().reverse().map(e => {
     const row = `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
@@ -2388,7 +2427,7 @@ function totalGraphCard(s, width) {
     return row;
   }).join('');
   const table = `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.amount')}</th><th>${t('cu.col.total')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
-  return grCardHtml(s, stats, legend, plot, table);
+  return grCardHtml(s, stats, legend, plot, table, scaleSwitch(s));
 }
 
 // Check-ins in each of a routine's periods, against what the period asks for (met: filled in).
@@ -2606,6 +2645,9 @@ function goalForm(g) {
   const parents = { '': t('f.none') };
   db.goals.filter(x => x.id !== g.id && !(g.id && reaches(x.id, g.id, 'subgoal'))).forEach(x => (parents[x.id] = x.title));
   const st = g.id ? measuringState(g) : null;
+  // A state that adds up but has no amounts yet does not measure anything, but the goal can already
+  // pick how it will count it.
+  const cu = isCumulative(st) ? st : !st && g.id ? relsTo(g.id, 'measures').map(r => db.states.find(s => s.id === r.from)).find(isCumulative) : null;
   return `
     <div class="smart-summary"><span id="smartLive"></span><span id="smartLiveText"></span></div>
     ${smartSection('S', `
@@ -2620,10 +2662,11 @@ function goalForm(g) {
         ${field('metric', t('f.metric'), text('metric', g.metric, t('f.metricPh')))}
         ${field('unit', t('f.unit'), text('unit', g.unit, t('f.unitPh')))}
       </div>
+      ${cu ? field('period', t('cu.counts'), select('period', Object.fromEntries(['total', ...PERIODS].map(k => [k, t('cu.count.' + k)])), goalPeriod(g)), esc(t('cu.countsHint', { name: cu.title }))) : ''}
       <div class="row3">
         ${field('baseline', t('f.baseline'), num('baseline', g.baseline ?? '', '0'),
           // A running total counts everything before the goal too; starting from it counts only what comes next.
-          st && isCumulative(st) && !byPeriod(st) ? esc(t('cu.baselineHint', { total: withUnit(fmtNum(stateTotal(st)), st.unit || '') })) : '')}
+          isCumulative(st) && goalPeriod(g) === 'total' ? esc(t('cu.baselineHint', { total: withUnit(fmtNum(stateTotal(st)), st.unit || '') })) : '')}
         ${field('current', t('f.current'), num('current', g.current ?? '', ''), st ? esc(t('f.currentFrom', { name: st.title })) : t('f.currentHint'))}
         ${field('target', t('f.target'), num('target', g.target ?? ''))}
       </div>
@@ -2649,12 +2692,12 @@ function stateForm(s) {
   const history = (s.history || []).slice().sort((a, b) => b.date.localeCompare(a.date));
   // The value field records a new measurement, so it starts empty and dated today.
   const latest = isNum(s.value) && !isCumulative(s) ? t('f.valueHint', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtRel(s.date) || '—' }) : '';
-  const addsUp = { '': t('cu.opt.no'), ...Object.fromEntries(ADDS_UP.map(k => [k, t('cu.opt.' + k)])) };
+  const addsUp = { '': t('cu.opt.no'), yes: t('cu.opt.yes') };
   return `
     ${field('title', t('f.title'), text('title', s.title, t('f.statePh')))}
     ${field('description', t('f.stateDesc'), area('description', s.description, t('f.stateDescPh')))}
     <div class="row2">
-      ${field('addsUp', t('cu.addsUp'), select('addsUp', addsUp, s.cumulative || ''), `<span id="addsUpHint"></span>`)}
+      ${field('addsUp', t('cu.addsUp'), select('addsUp', addsUp, isCumulative(s) ? 'yes' : ''), `<span id="addsUpHint"></span>`)}
       ${field('unit', t('f.unit'), text('unit', s.unit, t('f.unitPh')))}
     </div>
     <div class="row2">
@@ -2683,12 +2726,12 @@ function updateStateFields() {
   const sel = $('#f-addsUp');
   if (!sel || formCtx?.kind !== 'state') return;
   const s = formCtx.id ? db.states.find(x => x.id === formCtx.id) : null;
-  const addsUp = sel.value, was = s?.cumulative || '';
+  const addsUp = sel.value, was = isCumulative(s) ? 'yes' : '';
   const unit = $('#f-unit').value.trim();
   $('[data-field="value"] label').textContent = t(addsUp ? 'cu.addAmount' : 'f.value');
   const hint = $('#valueHint');
   hint.textContent = !addsUp ? hint.dataset.plain
-    : s && isCumulative(s) && entriesOf(s).length ? t('cu.valueHint', { total: totalText({ ...s, cumulative: addsUp, unit }) }) : t('cu.valueHintNew');
+    : s && isCumulative(s) && entriesOf(s).length ? t('cu.valueHint', { total: totalText({ ...s, unit }) }) : t('cu.valueHintNew');
   const has = s && (isCumulative(s) ? entriesOf(s).length : (s.history || []).length);
   $('#addsUpHint').textContent = !has || !addsUp === !was ? '' : t(addsUp ? 'cu.toCumulative' : 'cu.toPlain');
   $('#historyList')?.toggleAttribute('hidden', !!addsUp);
@@ -2984,6 +3027,8 @@ function submitForm() {
     // The metric fields are kept while measuring by activities, in case the goal switches back.
     if (ownMetric(v)) delete g.progress;
     else g.progress = v.progress;
+    // How a state that adds up counts; kept when the field is not shown.
+    if (v.period) g.period = v.period;
     if (!existing) db.goals.push(g);
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
@@ -2994,7 +3039,7 @@ function submitForm() {
   if (kind === 'state') {
     // Switching between adding up and single measurements turns what is there into the other kind.
     const had = existing && (isCumulative(existing) ? entriesOf(existing).length : (existing.history || []).length);
-    if (had && !v.addsUp !== !existing.cumulative && !confirm(t(v.addsUp ? 'cu.confirmToCumulative' : 'cu.confirmToPlain', { name: existing.title }))) return;
+    if (had && !v.addsUp !== !isCumulative(existing) && !confirm(t(v.addsUp ? 'cu.confirmToCumulative' : 'cu.confirmToPlain', { name: existing.title }))) return;
     const s = Object.assign(existing || { id: uid(), history: [], value: '' }, {
       title: v.title.trim(), description: v.description.trim(), unit: v.unit.trim(),
     });
@@ -3002,7 +3047,7 @@ function submitForm() {
     if (!existing) db.states.push(s);
     setLinks(s.id, 'measures', arr('goals'));
     modal.querySelectorAll('[data-drop-entry][aria-pressed="true"]').forEach(b => deleteEntry(s, b.dataset.dropEntry));
-    convertState(s, v.addsUp);
+    convertState(s, !!v.addsUp);
     // An empty value keeps the latest measurement; a value for a date that has one replaces it.
     // A state that adds up takes it as one more amount.
     if (isNum(v.value)) {
@@ -3221,6 +3266,16 @@ function openTickAmount(a, iso, anchor) {
     () => setRoutineDay(a, iso, true));
 }
 
+// The graph of a state that adds up shows another scale; it is kept on the state.
+function setGraphScale(id, scale) {
+  const s = db.states.find(x => x.id === id);
+  if (!s || !SCALES.includes(scale)) return;
+  s.scale = scale;
+  save();
+  render();
+  $(`[data-gr="${id}"] [data-gr-scale="${scale}"]`)?.focus();
+}
+
 function removeEntry(id, entryId) {
   const s = db.states.find(x => x.id === id);
   const e = s?.entries?.find(x => x.id === entryId);
@@ -3304,7 +3359,7 @@ $('#addBtn').addEventListener('click', e => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-add-amount],[data-del-measure],[data-del-entry],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -3336,6 +3391,7 @@ viewEl.addEventListener('click', e => {
   if (el.dataset.addAmount) return openStateAmount(el.dataset.addAmount, el);
   if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
   if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry);
+  if (el.dataset.grScale) return setGraphScale(el.dataset.state, el.dataset.grScale);
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
   if (el.dataset.open) {
     const ent = findEntity(el.dataset.open);
@@ -3837,7 +3893,7 @@ function sampleData() {
       { id: bathroom, progress: 'activities', startDate: d(-25), deadline: d(45), status: 'active' },
       { id: heating, unit: '€', baseline: '180', current: '', target: '120', startDate: d(-60), deadline: d(180), status: 'active' },
       { id: exercise, progress: 'routines', startDate: d(-35), deadline: d(150), status: 'active' },
-      { id: weeklyKm, unit: 'km', baseline: '12', current: '', target: '30', startDate: d(-35), deadline: d(150), status: 'active' },
+      { id: weeklyKm, unit: 'km', baseline: '12', current: '', target: '30', period: 'week', startDate: d(-35), deadline: d(150), status: 'active' },
     ], txt.goals),
     // Enough measurements for the graphs to tell a story: each starts before its goal (at the goal's
     // starting value on the goal's start date) and wobbles on its way, as real readings do.
@@ -3848,7 +3904,7 @@ function sampleData() {
       { id: bodyWeight, unit: 'kg', ...readings([[-63, 82.4], [-56, 82.1], [-49, 82.3], [-42, 81.8], [-35, 81.4], [-30, 81], [-23, 80.3], [-16, 79.6], [-9, 78.9], [-1, 78]]) },
       { id: itemsSold, ...readings([[-38, 0], [-33, 1], [-27, 2], [-20, 2], [-15, 3], [-11, 4], [-7, 5], [-4, 6]]) },
       { id: heatingBill, unit: '€', ...readings([[-150, 195], [-120, 188], [-90, 184], [-60, 180], [-30, 172], [-5, 165]]) },
-      { id: distance, unit: 'km', cumulative: 'week', entries: [], value: '', date: '', history: [] },
+      { id: distance, unit: 'km', cumulative: true, scale: 'week', entries: [], value: '', date: '', history: [] },
     ], txt.states),
     activities: withText([
       { id: a[0], status: 'done', startDate: d(-30), dueDate: d(-20) },   // running shoes
@@ -3948,7 +4004,7 @@ function templateData(tpl) {
     (g.deps || []).forEach(x => rel(g.k, 'depends', x));
   }
   for (const s of tpl.states) {
-    data.states.push({ id: id(s.k), ...texts(s, ['title', 'description', 'unit']), value: '', date: '', history: [], ...(s.cumulative && { cumulative: s.cumulative, entries: [] }) });
+    data.states.push({ id: id(s.k), ...texts(s, ['title', 'description', 'unit']), value: '', date: '', history: [], ...(s.cumulative && { cumulative: true, scale: s.scale || 'total', entries: [] }) });
     (s.measures || []).forEach(x => rel(s.k, 'measures', x));
   }
   for (const a of tpl.activities) {

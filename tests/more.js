@@ -2613,9 +2613,7 @@ window.moreTests = async ({ step, assert }) => {
       if (min < 6 && signs.size === 1) grazes.push(`${relText(c.r)} | ${relText(o.r)}`);
     }));
     eq(grazes, [], 'no lines grazing each other');
-    const items = { goal: db.goals, activity: db.activities, state: db.states }, t0 = performance.now();
-    for (let k = 0; k < 5; k++) layoutMap(items, db.relations.filter(r => REL_TYPES[r.type]));
-    assert((performance.now() - t0) / 5 < 150, `layout takes ${Math.round((performance.now() - t0) / 5)} ms`);
+    // (Its draw time is checked in perf.js: the clock stands still here.)
     deletePlan(plans.current);
 
     // A state measuring a goal crosses three rows of activities; nothing is in its way, so one curve.
@@ -4180,31 +4178,30 @@ window.moreTests = async ({ step, assert }) => {
     eq(calPeriod('month', '2028-02-10'), { from: '2028-02-01', to: '2028-02-29' }, 'a leap February');
     eq(calPeriod('year', '2026-12-31'), { from: '2026-01-01', to: '2026-12-31' }, 'year');
     eq(calPeriod('day', '2026-03-29'), { from: '2026-03-29', to: '2026-03-29' }, 'day');
-    const wk = { cumulative: 'week', entries: [entry('2026-10-25', 5), entry('2026-10-26', 3), entry('2026-10-26', 2.5), entry('2026-11-01', 1)] };
-    assert(stateTotal(wk, '2026-10-25') === 5, 'Sunday belongs to the week before');
-    assert(stateTotal(wk, '2026-10-28') === 6.5, `Monday starts a new week; two entries on one day add up: ${stateTotal(wk, '2026-10-28')}`);
-    assert(lastPeriodTotal(wk, '2026-10-28') === 5, 'the week before');
-    const mo = { cumulative: 'month', entries: [entry('2026-01-31', 1), entry('2026-02-01', 2), entry('2026-12-31', 4), entry('2027-01-01', 8)] };
-    assert(stateTotal(mo, '2026-01-15') === 1 && stateTotal(mo, '2026-02-28') === 2 && stateTotal(mo, '2026-12-01') === 4 && stateTotal(mo, '2027-01-31') === 8, 'month ends');
-    const yr = { cumulative: 'year', entries: mo.entries };
-    assert(stateTotal(yr, '2026-06-01') === 7 && stateTotal(yr, '2027-06-01') === 8, 'year ends');
-    const day = { cumulative: 'day', entries: [entry('2026-05-05', 0.1), entry('2026-05-05', 0.2), entry('2026-05-06', 1)] };
-    assert(stateTotal(day, '2026-05-05') === 0.3, `per day, and 0.1 + 0.2 is 0.3: ${stateTotal(day, '2026-05-05')}`);
-    const all = { cumulative: 'none', entries: [entry('2026-01-01', 100), entry('2026-06-01', 50.5), entry('2099-01-01', 7)] };
-    assert(stateTotal(all, '2026-12-31') === 150.5, 'in total: everything up to the day');
+    const wk = { cumulative: true, entries: [entry('2026-10-25', 5), entry('2026-10-26', 3), entry('2026-10-26', 2.5), entry('2026-11-01', 1)] };
+    assert(stateTotal(wk, 'week', '2026-10-25') === 5, 'Sunday belongs to the week before');
+    assert(stateTotal(wk, 'week', '2026-10-28') === 6.5, `Monday starts a new week; two entries on one day add up: ${stateTotal(wk, 'week', '2026-10-28')}`);
+    assert(lastPeriodTotal(wk, 'week', '2026-10-28') === 5, 'the week before');
+    const mo = { cumulative: true, entries: [entry('2026-01-31', 1), entry('2026-02-01', 2), entry('2026-12-31', 4), entry('2027-01-01', 8)] };
+    assert(stateTotal(mo, 'month', '2026-01-15') === 1 && stateTotal(mo, 'month', '2026-02-28') === 2 && stateTotal(mo, 'month', '2026-12-01') === 4 && stateTotal(mo, 'month', '2027-01-31') === 8, 'month ends');
+    assert(stateTotal(mo, 'year', '2026-06-01') === 7 && stateTotal(mo, 'year', '2027-06-01') === 8, 'year ends');
+    const day = { cumulative: true, entries: [entry('2026-05-05', 0.1), entry('2026-05-05', 0.2), entry('2026-05-06', 1)] };
+    assert(stateTotal(day, 'day', '2026-05-05') === 0.3, `per day, and 0.1 + 0.2 is 0.3: ${stateTotal(day, 'day', '2026-05-05')}`);
+    const all = { cumulative: true, entries: [entry('2026-01-01', 100), entry('2026-06-01', 50.5), entry('2099-01-01', 7)] };
+    assert(stateTotal(all, 'total', '2026-12-31') === 150.5 && stateTotal(all, undefined, '2026-12-31') === 150.5, 'in total: everything up to the day');
     // Entries without a date or a number are left out.
-    assert(stateTotal({ cumulative: 'none', entries: [entry('', 5), { id: 'x', date: '2026-01-01', amount: 'abc' }] }) === 0, 'bad entries ignored');
+    assert(stateTotal({ cumulative: true, entries: [entry('', 5), { id: 'x', date: '2026-01-01', amount: 'abc' }] }) === 0, 'bad entries ignored');
     return 'week, month, year, day, total';
   });
 
   await step('cumulative: the value is the running total, fresh when a period ends without an edit', () => {
     const now = today(), y = addDays(now, -1);
-    const s = { cumulative: 'day', entries: [entry(y, 4)] };
-    assert(stateValue(s) === 0 && lastPeriodTotal(s) === 4, 'yesterday’s amount is no longer today’s total');
+    const s = { cumulative: true, scale: 'day', entries: [entry(y, 4)] };
+    assert(stateTotal(s, 'day') === 0 && lastPeriodTotal(s, 'day') === 4, 'yesterday’s amount is no longer today’s total');
+    assert(stateValue(s) === 4, 'the value is the total, whatever the scale');
     s.entries.push(entry(now, 2.5));
-    assert(stateValue(s) === 2.5 && stateDate(s) === now, 'today');
-    assert(stateValue({ cumulative: 'week', entries: [] }) === '' && stateDate({ cumulative: 'week' }) === '', 'no entries: no value yet');
-    s.cumulative = 'none';
+    assert(stateTotal(s, 'day') === 2.5 && stateDate(s) === now, 'today');
+    assert(stateValue({ cumulative: true, entries: [] }) === '' && stateDate({ cumulative: true }) === '', 'no entries: no value yet');
     assert(stateValue(s) === 6.5, 'in total');
     refreshTotal(s);
     assert(s.value === '6.5' && s.date === now, 'stored copy');
@@ -4212,16 +4209,33 @@ window.moreTests = async ({ step, assert }) => {
     const p = { history: [] };
     recordMeasurement(p, now, '5'); recordMeasurement(p, now, '7');
     assert(p.history.length === 1 && stateValue(p) === '7', 'plain: same date replaces');
-    const periods = periodTotals({ cumulative: 'week', entries: [entry(addDays(now, -15), 1), entry(now, 2)] });
+    const periods = periodTotals({ cumulative: true, entries: [entry(addDays(now, -15), 1), entry(now, 2)] }, 'week');
+    assert(!periodTotals({ cumulative: true, entries: [entry(now, 2)] }, 'total').length, 'no bars in total');
     assert(periods.length >= 3 && periods.some(p => p.total === 0) && periods.at(-1).total === 2, `empty weeks included: ${periods.map(p => p.total)}`);
     return `${periods.length} weeks`;
+  });
+
+  await step('cumulative: old states migrate to adds up + scale; their goals keep the period', () => {
+    const old = { states: [
+        { id: 'w', cumulative: 'week', entries: [{ id: 'e1', date: '2020-01-06', amount: '18' }, { id: 'e2', date: '2020-02-03', amount: '5' }], value: '5', date: '2020-02-03' }, { id: 'n', cumulative: 'none', entries: [] }, { id: 'x', cumulative: 'fortnight', entries: [] },
+        { id: 'p', value: '3' }],
+      goals: [{ id: 'g1' }, { id: 'g2' }, { id: 'g3', period: 'month' }, { id: 'g4' }],
+      relations: [{ id: 'r1', from: 'w', to: 'g1', type: 'measures' }, { id: 'r2', from: 'n', to: 'g2', type: 'measures' },
+        { id: 'r3', from: 'w', to: 'g3', type: 'measures' }] };
+    const d = normalize(old);
+    eq(d.states.map(s => [s.cumulative, s.scale]), [[true, 'week'], [true, 'total'], [true, 'total'], [undefined, undefined]], 'states');
+    eq(d.goals.map(g => g.period), ['week', 'total', 'month', undefined], 'goals get the old period; one set already is kept');
+    eq([d.states[0].value, d.states[0].date], ['23', '2020-02-03'], 'the stored copy is the total now, not the old week’s');
+    eq(normalize(JSON.parse(JSON.stringify(d))), d, 'running it again changes nothing');
+    eq([stateScale({ scale: 'bogus' }), goalPeriod({ period: 'total' }), goalPeriod({})], ['total', 'total', 'total'], 'defaults');
+    return d.goals.map(g => g.period).join(',');
   });
 
   await step('cumulative: goals use the higher of this and the last period; reached only by a complete one', () => {
     fresh('Cumulative goals');
     const now = today(), lastWeek = addDays(now, -7);
-    const s = mk('state', { cumulative: 'week', entries: [entry(lastWeek, 20)] });
-    const g = mk('goal', { title: 'Run 30 km a week', unit: 'km', baseline: '10', target: '30', metric: 'Weekly km' });
+    const s = mk('state', { cumulative: true, scale: 'month', entries: [entry(lastWeek, 20)] });
+    const g = mk('goal', { title: 'Run 30 km a week', unit: 'km', baseline: '10', target: '30', metric: 'Weekly km', period: 'week' });
     rel(s, g, 'measures');
     refreshTotal(s);
     assert(goalCurrent(g) === 20 && Math.round(goalProgress(g)) === 50, `last week counts while this week is behind: ${goalCurrent(g)}`);
@@ -4233,19 +4247,23 @@ window.moreTests = async ({ step, assert }) => {
     s.entries.push(entry(lastWeek, 11));
     assert(goalReached(g), 'a complete week at the target is');
     // A goal that goes down: a month under way only counts once it is worse than the last full one.
-    const sp = mk('state', { cumulative: 'month', entries: [entry(addDays(calPeriod('month', now).from, -1), 350), entry(now, 50)] });
-    const h = mk('goal', { title: 'Spend less', unit: '€', baseline: '400', target: '300', metric: 'Spending' });
+    const sp = mk('state', { cumulative: true, entries: [entry(addDays(calPeriod('month', now).from, -1), 350), entry(now, 50)] });
+    const h = mk('goal', { title: 'Spend less', unit: '€', baseline: '400', target: '300', metric: 'Spending', period: 'month' });
     rel(sp, h, 'measures');
     assert(goalCurrent(h) === 350 && Math.round(goalProgress(h)) === 50, `last month: ${goalCurrent(h)}`);
     sp.entries.push(entry(now, 330));
     assert(goalCurrent(h) === 380, 'this month once it is worse');
+    // The same state counted in total by another goal.
+    const k = mk('goal', { title: 'Spend under 1000 in all', unit: '€', baseline: '0', target: '1000', metric: 'Spending' });
+    rel(sp, k, 'measures');
+    assert(goalCurrent(k) === 730 && goalPeriod(k) === 'total' && !goalReached(k), `in total: ${goalCurrent(k)}`);
     // Goal card: the two periods side by side.
     setView('goals');
     ui.goalFilter = 'all'; render();
     const line = $(`.card.goal[data-open="${g.id}"] .cu-periods`).textContent;
     assert(line === 'This week: 35 km · last week: 31 km', line);
     // An in-total state suggests its total as the starting value.
-    const tot = mk('state', { cumulative: 'none', unit: '€', entries: [entry(now, 2450)] });
+    const tot = mk('state', { cumulative: true, unit: '€', entries: [entry(now, 2450)] });
     const f = mk('goal', { title: 'Save 6000 more', unit: '€', baseline: '', target: '6000', metric: 'Saved' });
     rel(tot, f, 'measures');
     openForm('goal', f.id);
@@ -4255,11 +4273,56 @@ window.moreTests = async ({ step, assert }) => {
     return line;
   });
 
+  await step('cumulative: a goal picks how it counts a state that adds up', () => {
+    fresh('Goal counts');
+    const now = today(), lastWeek = addDays(calPeriod('week', now).from, -1);
+    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'month', entries: [entry(lastWeek, 24), entry(now, 6)] });
+    const g = mk('goal', { title: 'Run 30 a week', specific: 'Run thirty kilometres every week.', achievable: 'Three short runs.', relevant: 'For the marathon.', unit: 'km', baseline: '0', target: '30', metric: 'Km', startDate: addDays(now, -30), deadline: addDays(now, 60) });
+    // A new state that adds up, nothing added yet: the goal can already pick how it counts.
+    const empty = mk('state', { title: 'New km', unit: 'km', cumulative: true, entries: [] });
+    const g0 = mk('goal', { title: 'Run 20 a week' });
+    rel(empty, g0, 'measures');
+    openForm('goal', g0.id);
+    assert($('#f-period') && $('[data-field="period"] .hint').textContent.includes('New km'), 'Counts before the first amount');
+    modal.close();
+    rel(km, g, 'measures');
+    save();
+    openForm('goal', g.id);
+    eq([...$('#f-period').options].map(o => o.value), ['total', 'day', 'week', 'month', 'year'], 'Counts: in total or per period');
+    assert($('#f-period').value === 'total' && $('[data-field="baseline"] .hint').textContent, 'in total by default, with the baseline hint');
+    $('#f-period').value = 'week';
+    submitForm();
+    assert(g.period === 'week' && goalCurrent(g) === 24, `per week: ${goalCurrent(g)}`);
+    setView('goals');
+    ui.goalFilter = 'all'; render();
+    eq($(`.card.goal[data-open="${g.id}"] .cu-periods`).textContent, 'This week: 6 km · last week: 24 km', 'goal card line');
+    openForm('goal', g.id);
+    assert($('#f-period').value === 'week' && !$('[data-field="baseline"] .hint')?.textContent, 'per week: no baseline hint');
+    modal.close();
+    // Several states: the most recently updated one counts, and it adds up.
+    const old = mk('state', { title: 'Old', history: [] });
+    recordMeasurement(old, addDays(now, -20), '3');
+    rel(old, g, 'measures');
+    openForm('goal', g.id);
+    assert($('#f-period') && measuringState(g) === km, 'the newer state adds up: Counts shown');
+    modal.close();
+    // Switched to plain: the period stays on the goal but is not used, and Counts is not shown.
+    convertState(km, false);
+    save();
+    openForm('goal', g.id);
+    assert(!$('#f-period'), 'no Counts for a plain state');
+    $('#f-target').value = '31';
+    submitForm();
+    assert(g.period === 'week' && goalCurrent(g) === Number(stateValue(km)), `kept, unused: ${goalCurrent(g)}`);
+    deletePlan(plans.current);
+    return g.period;
+  });
+
   await step('cumulative: a tick asks how much; untick, delete and an amount on the state keep both in step', async () => {
     fresh('Cumulative routines');
     const now = today(), y = addDays(now, -1);
     const run = mk('activity', { title: 'Run', startDate: addDays(now, -30), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
-    const km = mk('state', { title: 'Km', unit: 'km', cumulative: 'week', entries: [] });
+    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [] });
     const longest = mk('state', { title: 'Longest', history: [] });
     rel(run, km, 'improves'); rel(run, longest, 'improves');
     save();
@@ -4322,7 +4385,7 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('cumulative: + on the state card adds an amount with its date', () => {
     fresh('Cumulative card');
-    const s = mk('state', { title: 'Saved', unit: '€', cumulative: 'none', entries: [] });
+    const s = mk('state', { title: 'Saved', unit: '€', cumulative: true, entries: [] });
     save();
     setView('states');
     assert($(`.card.state[data-open="${s.id}"]`).textContent.includes(t('cu.noEntries')), 'nothing added yet');
@@ -4347,6 +4410,21 @@ window.moreTests = async ({ step, assert }) => {
     assert(!$('.amount-pop'), 'click elsewhere closes');
     deletePlan(plans.current);
     return card.querySelector('.cu-total').textContent;
+  });
+
+  await step('cumulative: the card shows the total, and this period’s sum when the graph shows periods', () => {
+    fresh('Cumulative scale card');
+    const s = mk('state', { title: 'Run', unit: 'km', cumulative: true, scale: 'week', entries: [entry(addDays(calPeriod('week', today()).from, -1), 12)] });
+    save();
+    setView('states');
+    const card = () => $(`.card.state[data-open="${s.id}"]`);
+    eq([card().querySelector('.cu-total').textContent, card().querySelector('.cu-now').textContent], ['12 km in total', '0 km this week'], 'total, and nothing yet this week');
+    eq(scaleText(s, 'week'), '0 km this week', 'scaleText');
+    s.scale = 'total'; render();
+    assert(!card().querySelector('.cu-now'), 'in total: just the total');
+    const text = card().querySelector('.cu-total').textContent;
+    deletePlan(plans.current);
+    return text;
   });
 
   await step('dates: today, tomorrow and yesterday where an item’s date is shown, in both languages', () => {
@@ -4377,7 +4455,7 @@ window.moreTests = async ({ step, assert }) => {
     const now = today();
     const s = mk('state', { title: 'Weight', unit: 'kg', history: [] });
     recordMeasurement(s, addDays(now, -3), '80');
-    const sum = mk('state', { title: 'Run', unit: 'km', cumulative: 'week', entries: [] });
+    const sum = mk('state', { title: 'Run', unit: 'km', cumulative: true, scale: 'week', entries: [] });
     save();
     setView('states');
     const card = id => $(`.card.state[data-open="${id}"]`);
@@ -4439,7 +4517,8 @@ window.moreTests = async ({ step, assert }) => {
     openForm('state', s.id);
     const change = (sel, v) => { $(sel).value = v; $(sel).dispatchEvent(new Event('change', { bubbles: true })); };
     assert($('[data-field="value"] label').textContent === t('f.value') && !$('#addsUpHint').textContent, 'plain form');
-    change('#f-addsUp', 'week');
+    eq([...$('#f-addsUp').options].map(o => o.value), ['', 'yes'], 'adds up: no or yes');
+    change('#f-addsUp', 'yes');
     assert($('[data-field="value"] label').textContent === t('cu.addAmount') && $('#addsUpHint').textContent === t('cu.toCumulative'), 'labels follow');
     let asked = '';
     window.confirm = m => { asked = m; return false; };
@@ -4448,14 +4527,14 @@ window.moreTests = async ({ step, assert }) => {
     window.confirm = () => true;
     $('#f-value').value = '5';
     submitForm();
-    assert(s.cumulative === 'week' && s.entries.length === 3, `measurements became entries, plus the new amount: ${s.entries.length}`);
+    assert(s.cumulative === true && s.entries.length === 3 && stateScale(s) === 'total', `measurements became entries, plus the new amount: ${s.entries.length}`);
     eq(entriesOf(s).filter(e => e.date === now).map(e => e.amount).sort(), ['20', '5'], 'today: two entries');
-    // Changing the period only changes the totals.
+    // Saving again keeps the graph's scale and the entries.
+    s.scale = 'month';
     openForm('state', s.id);
-    assert($('#entryList') && !$('#entryList').hidden, 'entry list');
-    change('#f-addsUp', 'month');
+    assert($('#entryList') && !$('#entryList').hidden && $('#f-addsUp').value === 'yes', 'entry list');
     submitForm();
-    assert(s.cumulative === 'month' && s.entries.length === 3, 'period change keeps the entries');
+    assert(s.cumulative === true && s.scale === 'month' && s.entries.length === 3, 'scale and entries kept');
     // Marking an entry deletes it on saving, not on cancelling.
     openForm('state', s.id);
     const first = $('[data-drop-entry]');
@@ -4483,8 +4562,8 @@ window.moreTests = async ({ step, assert }) => {
   await step('cumulative: sync merges entries by id, keeps deletions, recomputes the total', () => {
     const now = today();
     const e = (id, amount, date = now) => ({ id, date, amount: String(amount) });
-    const x = { id: 's', cumulative: 'week', updatedAt: '2099-01-01', entries: [e('a', 1), e('b', 2)], value: '3', date: now };
-    const y = { id: 's', cumulative: 'week', updatedAt: '2099-02-01', entries: [e('a', 10), e('c', 4)], droppedEntries: { b: 1 }, value: '14', date: now };
+    const x = { id: 's', cumulative: true, scale: 'week', updatedAt: '2099-01-01', entries: [e('a', 1), e('b', 2)], value: '3', date: now };
+    const y = { id: 's', cumulative: true, scale: 'week', updatedAt: '2099-02-01', entries: [e('a', 10), e('c', 4)], droppedEntries: { b: 1 }, value: '14', date: now };
     const m = mergeState(x, y);
     eq(m.entries.map(x => `${x.id}=${x.amount}`), ['a=10', 'c=4'], 'b deleted, a from the newer copy, c added');
     eq(m.droppedEntries, { b: 1 }, 'deletion remembered');
@@ -4495,6 +4574,9 @@ window.moreTests = async ({ step, assert }) => {
     // Through whole plans.
     const p = { ...emptyDb(), states: [x] }, q = { ...emptyDb(), states: [y] };
     assert(mergePlans(p, q).states[0].entries.length === 2, 'mergePlans');
+    // A copy from a device still on the old form is read the new way.
+    const older = normalize({ states: [mergeState({ ...x, cumulative: 'week', scale: undefined, updatedAt: '2099-04-01' }, y)] }).states[0];
+    eq([older.cumulative, older.scale], [true, 'week'], 'old form from sync migrated');
     return m.entries.length + ' entries';
   });
 
@@ -4558,15 +4640,15 @@ window.moreTests = async ({ step, assert }) => {
   await step('cumulative graphs: bars per period, running total, a graph per routine, Show in', () => {
     loadSample();
     setView('graphs');
-    const km = db.states.find(s => s.cumulative === 'week'), run = db.activities.find(a => relsFrom(a.id, 'improves').some(r => r.to === km.id) && isRoutine(a));
+    const km = db.states.find(s => s.cumulative === true && s.scale === 'week'), run = db.activities.find(a => relsFrom(a.id, 'improves').some(r => r.to === km.id) && isRoutine(a));
     const card = $(`[data-gr="${km.id}"]`);
-    assert(card.querySelectorAll('.gr-bar').length === periodTotals(km).length && card.querySelectorAll('.gr-bar.now').length === 1, 'a bar per week, this one lighter');
-    assert(card.querySelector('.gr-value').textContent === totalText(km), 'total');
+    assert(card.querySelectorAll('.gr-bar').length === periodTotals(km, 'week').length && card.querySelectorAll('.gr-bar.now').length === 1, 'a bar per week, this one lighter');
+    assert(card.querySelector('.gr-value').textContent === scaleText(km, 'week'), 'this week');
     const plot = card.querySelector('.gr-plot');
     plot.focus();
-    assert(plot.querySelector('.gr-tip-date').textContent.startsWith('Week of') && plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(stateTotal(km)), 'km'), plot.querySelector('.gr-tip').textContent);
+    assert(plot.querySelector('.gr-tip-date').textContent.startsWith('Week of') && plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(stateTotal(km, 'week')), 'km'), plot.querySelector('.gr-tip').textContent);
     plot.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
-    assert(plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(periodTotals(km)[0].total), 'km'), 'Home: the first week');
+    assert(plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(periodTotals(km, 'week')[0].total), 'km'), 'Home: the first week');
     plot.blur();
     // Every routine with check-ins has a graph; its bars show check-ins against the period's target.
     const rc = $(`[data-gr="${run.id}"]`);
@@ -4577,9 +4659,33 @@ window.moreTests = async ({ step, assert }) => {
     del.click();
     assert(km.entries.length === n - 1 && $(`[data-gr="${km.id}"] .gr-table`).open, 'deleted from the table, which stays open');
     // A running total: a step line.
-    km.cumulative = 'none'; render();
+    km.scale = 'total'; render();
     assert($(`[data-gr="${km.id}"] .gr-line`).getAttribute('d').includes('H') && $(`[data-gr="${km.id}"] .gr-value`).textContent.endsWith('in total'), 'step line of the total');
-    km.cumulative = 'week'; render();
+    km.scale = 'week'; render();
+    // The switch above the graph: per day, week, month or year, or in total; the choice is kept on the state.
+    const scaleBtns = () => [...document.querySelectorAll(`[data-gr="${km.id}"] .gr-scale button`)];
+    eq(scaleBtns().map(b => b.dataset.grScale), ['day', 'week', 'month', 'year', 'total'], 'five scales');
+    eq(scaleBtns().filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.grScale), ['week'], 'the current one pressed');
+    eq(scaleBtns().filter(b => b.classList.contains('active')).map(b => b.dataset.grScale), ['week'], 'and shown as selected');
+    const goal = db.goals.find(g => relsFrom(km.id, 'measures').some(r => r.to === g.id));
+    assert(goalPeriod(goal) === 'week' && $(`[data-gr="${km.id}"] .gr-target`), 'a weekly goal’s target on weekly bars');
+    const before = km.updatedAt = '2000-01-01T00:00:00.000Z';
+    $(`[data-gr="${km.id}"] [data-gr-scale="month"]`).click();
+    assert(km.scale === 'month' && km.updatedAt !== before, 'saved on the state');
+    const mc = $(`[data-gr="${km.id}"]`);
+    assert(mc.querySelectorAll('.gr-bar').length === periodTotals(km, 'month').length && mc.querySelector('.gr-period td').textContent === periodLabel('month', calPeriod('month', today()).from, calPeriod('month', today()).to), 'monthly bars');
+    assert(!mc.querySelector('.gr-target'), 'no weekly target on monthly bars');
+    assert(document.activeElement === mc.querySelector('[data-gr-scale="month"]'), 'focus stays on the switch');
+    mc.querySelector('[data-gr-scale="total"]').click();
+    assert($(`[data-gr="${km.id}"] .gr-line`) && !$(`[data-gr="${km.id}"] .gr-bar`) && !$(`[data-gr="${km.id}"] .gr-target`), 'in total: a line, the weekly target left out');
+    goal.period = 'total'; render();
+    assert($(`[data-gr="${km.id}"] .gr-target`), 'an in-total goal’s target on the running total');
+    goal.period = 'week'; km.scale = 'week'; render();
+    setView('states');
+    assert($(`.card.state[data-open="${km.id}"] .cu-now`).textContent === scaleText(km, 'week'), 'the state card follows the scale');
+    setView('graphs');
+    const plain = db.states.find(s => !isCumulative(s) && $(`[data-gr="${s.id}"]`));
+    assert(!$(`[data-gr="${plain.id}"] .gr-scale`), 'plain states have no switch');
     // Show in Graphs, for a routine too.
     setView('activities');
     const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 });
@@ -4587,11 +4693,110 @@ window.moreTests = async ({ step, assert }) => {
     $('#ctxMenu [data-ctx="show:graphs"]').click();
     assert(ui.view === 'graphs' && $(`[data-gr="${run.id}"]`), 'shown in Graphs');
     // Long daily histories scroll, starting at the latest days.
-    km.cumulative = 'day'; km.entries.push(entry(addDays(today(), -200), 3)); render();
+    km.scale = 'day'; km.entries.push(entry(addDays(today(), -200), 3)); render();
     const daily = $(`[data-gr="${km.id}"] .gr-plot`);
     assert(daily.classList.contains('scroll') && daily.scrollLeft > 0, `daily bars scroll: ${daily.scrollLeft}`);
     deletePlan(plans.current);
-    return `${periodTotals(km).length} days`;
+    return `${periodTotals(km, 'day').length} days`;
+  });
+
+  await step('cumulative: an old export imports in the new form, and its goals keep counting per period', () => {
+    const now = today(), lastWeek = addDays(calPeriod('week', now).from, -1);
+    const raw = { name: 'Old export', goals: [{ id: 'g', title: 'Run 30 a week', status: 'active', baseline: '0', target: '30', metric: 'Km' }],
+      states: [{ id: 's', title: 'Km', unit: 'km', cumulative: 'week', entries: [{ id: 'e', date: lastWeek, amount: '30' }], value: '0', date: lastWeek }],
+      relations: [{ id: 'r', from: 's', to: 'g', type: 'measures' }] };
+    const { data } = parsePlanFile(JSON.stringify(raw), 'old.json');
+    eq([data.states[0].cumulative, data.states[0].scale, data.states[0].value, data.goals[0].period], [true, 'week', '30', 'week'], 'migrated on import');
+    createPlan('Imported old', data);
+    assert(goalCurrent(db.goals[0]) === 30 && goalReached(db.goals[0]), 'last full week reached the target, as before');
+    deletePlan(plans.current);
+    return data.goals[0].period;
+  });
+
+  await step('cumulative: the graph scale and a goal’s period sync like any other change', () => {
+    const now = today();
+    const e = (id, amount) => ({ id, date: now, amount: String(amount) });
+    // Device A switched the graph to months later; device B added an amount earlier.
+    const a = { id: 's', cumulative: true, scale: 'month', updatedAt: '2099-02-01', entries: [e('x', 1)], value: '1', date: now };
+    const b = { id: 's', cumulative: true, scale: 'week', updatedAt: '2099-01-01', entries: [e('x', 1), e('y', 2)], value: '3', date: now };
+    const m = mergeState(a, b);
+    eq([m.scale, m.entries.map(x => x.id), m.value], ['month', ['x', 'y'], '3'], 'newer scale, entries from both, total recomputed');
+    const ga = { id: 'g', title: 'G', period: 'week', updatedAt: '2099-03-01' }, gb = { id: 'g', title: 'G', period: 'month', updatedAt: '2099-01-01' };
+    const merged = mergePlans({ ...emptyDb(), goals: [gb], states: [b] }, { ...emptyDb(), goals: [ga], states: [a] });
+    eq([merged.goals[0].period, merged.states[0].scale], ['week', 'month'], 'whole plans');
+    return m.scale;
+  });
+
+  await step('cumulative: switching to plain and back keeps the graph’s scale', () => {
+    const s = { cumulative: true, scale: 'month', history: [], entries: [{ id: 'a', date: today(), amount: '4' }] };
+    convertState(s, false);
+    assert(!s.cumulative && s.scale === 'month' && s.history.length === 1, 'plain, scale left on it');
+    convertState(s, true);
+    eq([s.cumulative, stateScale(s), stateValue(s)], [true, 'month', 4], 'adds up again, same scale');
+    return stateScale(s);
+  });
+
+  await step('cumulative: the scale switch and Counts in Slovenian', () => {
+    fresh('Slovenian scales');
+    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [{ id: 'a', date: today(), amount: '5' }] });
+    const g = mk('goal', { title: 'Teči' });
+    rel(km, g, 'measures');
+    save();
+    changeLanguage('sl');
+    setView('graphs');
+    eq([...document.querySelectorAll(`[data-gr="${km.id}"] .gr-scale button`)].map(b => b.textContent), ['Dan', 'Teden', 'Mesec', 'Leto', 'Skupaj'], 'switch');
+    eq($(`[data-gr="${km.id}"] .gr-scale`).getAttribute('aria-label'), 'Prikaži vsote po', 'its label');
+    eq($(`[data-gr="${km.id}"] .gr-value`).textContent, '5 km ta teden', 'this week');
+    setView('states');
+    eq($(`.card.state[data-open="${km.id}"] .cu-total`).textContent, '5 km skupaj', 'card total');
+    openForm('goal', g.id);
+    eq([$('[data-field="period"] label').textContent, $('#f-period').selectedOptions[0].textContent], ['Šteje', 'Skupno'], 'Counts');
+    modal.close();
+    openForm('state', km.id);
+    eq([...$('#f-addsUp').options].map(o => o.textContent), ['Ne – vsaka vrednost nadomesti prejšnjo', 'Da – količine se seštevajo'], 'adds up');
+    modal.close();
+    changeLanguage('en');
+    deletePlan(plans.current);
+  });
+
+  await step('cumulative: the scale switch fits a phone, wrapping rather than widening the page', async () => {
+    const km = { id: 'k', cumulative: true, scale: 'week' };
+    const out = [];
+    for (const lang of ['en', 'sl']) {
+      changeLanguage(lang);
+      const frame = document.createElement('iframe');
+      Object.assign(frame.style, { width: '390px', height: '300px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+      frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px"><article class="card gr-card">${scaleSwitch(km)}</article></body>`;
+      await new Promise(res => { frame.onload = res; document.body.append(frame); });
+      const doc = frame.contentDocument, card = doc.querySelector('.gr-card').getBoundingClientRect();
+      const btns = [...doc.querySelectorAll('.gr-scale button')].map(b => b.getBoundingClientRect());
+      assert(btns.length === 5 && btns.every(r => r.left >= card.left - 1 && r.right <= card.right + 1), `${lang}: every chip inside the card`);
+      assert(doc.documentElement.scrollWidth <= 390, `${lang}: no sideways scroll (${doc.documentElement.scrollWidth})`);
+      assert(btns.every(r => r.height >= 24), `${lang}: chips big enough to tap (${Math.min(...btns.map(r => r.height))} px)`);
+      out.push(`${lang} ${new Set(btns.map(r => Math.round(r.top))).size} row(s)`);
+      frame.remove();
+    }
+    changeLanguage('en');
+    return out.join(', ');
+  });
+
+  await step('cumulative: three years of daily amounts draw on every scale', () => {
+    // Draw time is not checked here: the test browser runs on virtual time, where the clock stands
+    // still during a script (measured outside it: about 0.3 s a render, nearly all of it the table).
+    fresh('Long history');
+    const entries = Array.from({ length: 1100 }, (_, i) => ({ id: 'e' + i, date: addDays(today(), -i), amount: String(i % 7) }));
+    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'day', entries });
+    save();
+    const bars = {};
+    for (const scale of SCALES) {
+      km.scale = scale;
+      setView('graphs');
+      bars[scale] = document.querySelectorAll(`[data-gr="${km.id}"] .gr-bar`).length;
+    }
+    eq(bars, { day: 1100, week: periodTotals(km, 'week').length, month: periodTotals(km, 'month').length, year: periodTotals(km, 'year').length, total: 0 }, 'a bar per period');
+    assert($(`[data-gr="${km.id}"] .gr-line`) && $(`[data-gr="${km.id}"] .gr-value`).textContent === totalText(km), 'in total: the line');
+    deletePlan(plans.current);
+    return JSON.stringify(bars);
   });
 
   await step('cumulative: wording in both languages', () => {
@@ -4599,10 +4804,28 @@ window.moreTests = async ({ step, assert }) => {
     const missing = keys.filter(k => !(k in I18N.sl.strings));
     assert(keys.length > 50 && !missing.length, `missing in Slovenian: ${missing}`);
     changeLanguage('sl');
-    const s = { cumulative: 'week', unit: 'km', entries: [entry(today(), 3)] };
-    const text = totalText(s);
+    const s = { cumulative: true, unit: 'km', entries: [entry(today(), 3)] };
+    const text = scaleText(s, 'week');
     changeLanguage('en');
     assert(text === '3 km ta teden', text);
+    const added = ['cu.opt.yes', 'cu.inTotal', 'cu.now.day', 'cu.now.week', 'cu.now.month', 'cu.now.year', 'cu.scaleLabel',
+      ...SCALES.map(k => 'cu.scale.' + k), 'cu.counts', 'cu.countsHint', ...['total', ...PERIODS].map(k => 'cu.count.' + k), 'cu.legend.total'];
+    const gone = ['cu.opt.day', 'cu.opt.week', 'cu.opt.month', 'cu.opt.year', 'cu.opt.none', 'cu.total.week', 'cu.total.none', 'cu.legend.none'];
+    added.forEach(k => assert(I18N.en.strings[k] && I18N.sl.strings[k] && I18N.en.strings[k] !== I18N.sl.strings[k], `${k} in both languages`));
+    gone.forEach(k => assert(!(k in I18N.en.strings) && !(k in I18N.sl.strings), `${k} removed`));
+    // Help and tour no longer speak of a state adding up per period; they tell of the switch and of goals.
+    const en = I18N.en.strings, sl = I18N.sl.strings;
+    assert(!/per day, week, month or year, or in total/.test(en['help.view.states']) && !/po dnevih, tednih, mesecih ali letih ali skupno:/.test(sl['help.view.states']), 'help.view.states');
+    assert(en['help.view.graphs'].includes('switch above the graph') && sl['help.view.graphs'].includes('preklopite nad grafom'), 'help.view.graphs');
+    assert(!en['help.tip.addAmount'].includes('the better of this period') && !sl['help.tip.addAmount'].includes('boljše od tekočega'), 'help.tip.addAmount');
+    assert(en['tour.goals.text'].includes('picks how it counts') && sl['tour.goals.text'].includes('izbere, kako šteje'), 'tour.goals.text');
+    assert(en['tour.graphs.text'].includes('per day, week, month or year, or in total') && sl['tour.graphs.text'].includes('po dnevih, tednih, mesecih ali letih ali skupno'), 'tour.graphs.text');
+    // Sample plan and the Marathon template are in the new form.
+    const sample = sampleData(), dist = sample.states.find(s => s.cumulative);
+    const wk = sample.goals.find(g => sample.relations.some(r => r.type === 'measures' && r.from === dist.id && r.to === g.id));
+    eq([dist.cumulative, dist.scale, wk.period], [true, 'week', 'week'], 'sample');
+    const weekly = templateData(TEMPLATES.find(x => x.id === 'marathon')).states.find(s => s.cumulative);
+    eq([weekly.cumulative, weekly.scale], [true, 'week'], 'Marathon template');
     return text;
   });
 
