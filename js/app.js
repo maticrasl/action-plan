@@ -1878,6 +1878,22 @@ const tlGrip = (edge, left, width) => {
   return `left:${edge === 'start' ? left - 12 : left + width - inner}px;width:${12 + inner}px`;
 };
 
+// A routine that falls on set days marks each of them along the bottom of its bar: done, missed, or
+// still to come (today too, until it is ticked). One without an end marks them to the timeline's end.
+// Narrow days merge into one band of colour.
+function tlRoutineDays(a, from, to, x, px) {
+  if (!isRoutine(a) || isFlexible(a)) return '';
+  const now = today(), w = px > 4 ? px - 2 : px, out = [];
+  const last = Math.min(to, a.dueDate ? dayNum(a.dueDate) : to);
+  for (let n = Math.max(from, dayNum(routineStart(a))); n <= last; n++) {
+    const iso = dayStr(n);
+    if (!isDueDay(a, iso)) continue;
+    const st = checkedOn(a, iso) ? 'done' : iso < now ? 'missed' : 'due';
+    out.push(`<i class="tl-day ${st}" style="left:${x(n) + (px - w) / 2}px;width:${w}px"></i>`);
+  }
+  return out.join('');
+}
+
 // Rows in plan order: each top-level goal, its activity trees, then its sub-goals (recursively).
 // Prerequisites that work toward no goal themselves are listed under the activity that waits for them.
 // An activity that serves several goals is listed under each of them (its rows carry `also`: the
@@ -2016,6 +2032,7 @@ function renderTimeline() {
         bar = `${lateHtml}${grips}<div class="tl-bar ${kind} st-${st}${drag}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
       }
     }
+    if (s || e) bar += tlRoutineDays(item, from, to, x, px);
     const dim = (sel || relSel) && !near.has(item.id) ? 'dim' : '';
     const also = r.also ? t('tl.alsoUnder', { goals: r.also.join(', ') }) : '';
     const fold = r.fold ? foldBtn(item.id, item.title, r.collapsed) : '';
@@ -2055,6 +2072,7 @@ function renderTimeline() {
       <div class="chips" role="group" aria-label="${esc(t('tl.zoom'))}">${zoom}</div>
     </div>
     <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
+    ${rows.some(r => isRoutine(r.item) && !isFlexible(r.item)) ? `<div class="map-legend tl-legend"><span class="ctl-label">${t('tl.days')}</span>${['done', 'missed', 'due'].map(k => `<span><i class="swatch tl-day ${k}"></i>${esc(t('tl.day.' + k))}</span>`).join('')}</div>` : ''}
     <div class="map-legend tl-legend"><span class="ctl-label">${t('tl.links')}</span>${['contributes', 'subactivity', 'subgoal', ...(ui.tlDeps || rows.some(r => r.rel === 'depends') ? ['depends'] : [])].map(k =>
       `<span><i class="line-key${REL_TYPES[k].dash ? ' dash' : ''}" style="--rel:${REL_TYPES[k].color}"></i>${esc(relLabel(k))}</span>`).join('')}</div>
     ${rows.length ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + 145)}" data-from="${from}" data-to="${to}">
@@ -2928,6 +2946,12 @@ function updateRepeatFields(e) {
   // Switching from a common kind to custom starts from what it was.
   const was = REPEAT_PRESETS[sel.dataset.prev];
   if (e?.target === sel && sel.value === 'custom' && was) { unitSel.value = was.unit; onSel.dataset.want = was.on; }
+  // Turning an activity into a routine, or back, carries its end date across when the other is empty.
+  const flip = e?.target === sel && (sel.dataset.prev === 'none') !== (sel.value === 'none');
+  if (flip) {
+    const [from, to] = sel.value === 'none' ? ['#f-endDate', '#f-dueDate'] : ['#f-dueDate', '#f-endDate'];
+    if ($(from).value.trim() && !$(to).value.trim()) $(to).value = $(from).value;
+  }
   sel.dataset.prev = sel.value;
   // A routine runs from its start date: choosing one fills an empty start with today, in plain sight.
   if (e?.target === sel && sel.value !== 'none' && !$('#f-startDate').value.trim()) $('#f-startDate').value = dateInput(today());

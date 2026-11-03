@@ -597,6 +597,33 @@ window.moreTests = async ({ step, assert }) => {
     eq(mergePlans({ ...emptyDb(), activities: [newer] }, { ...emptyDb(), activities: [older] }).activities[0].checkins, m.checkins, 'symmetric');
   });
 
+  await step('routines: the due date typed before turning an activity into a routine becomes its end, and back', () => {
+    fresh('Carry end');
+    const now = today();
+    const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    openForm('activity');
+    $('#f-title').value = 'Yoga';
+    $('#f-dueDate').value = dateInput(addDays(now, 30));
+    change('#f-repeat', 'week');
+    eq($('#f-endDate').value, dateInput(addDays(now, 30)), 'due date carried to the end');
+    // Changing the kind of repeat keeps a changed end; an end already there is not overwritten.
+    $('#f-endDate').value = dateInput(addDays(now, 40));
+    change('#f-repeat', 'days');
+    eq($('#f-endDate').value, dateInput(addDays(now, 40)), 'kept between kinds of repeat');
+    change('#f-repeat', 'none');
+    eq($('#f-dueDate').value, dateInput(addDays(now, 30)), 'back to one-off: its own due date was still there');
+    $('#f-dueDate').value = '';
+    change('#f-repeat', 'week');
+    change('#f-repeat', 'none');
+    eq($('#f-dueDate').value, dateInput(addDays(now, 40)), 'an empty due date takes the end');
+    change('#f-repeat', 'week');
+    $('#f-times').value = '2';
+    submitForm();
+    const y = db.activities.find(a => a.title === 'Yoga');
+    assert(!modal.open && y.dueDate === addDays(now, 40), `saved with the end: ${y.dueDate}`);
+    return y.dueDate;
+  });
+
   await step('routines: sample plan, tour and wording', () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
@@ -3662,6 +3689,35 @@ window.moreTests = async ({ step, assert }) => {
     }
     deletePlan(plans.current);
     return ta;
+  });
+
+  await step('timeline: a routine on set days marks each one done, missed or to come; a flexible one none', () => {
+    fresh('Routine days');
+    const g = mk('goal', { startDate: d(-20), deadline: d(30) });
+    // Every day from 6 days ago to 3 days ahead: two done, today not yet.
+    const a = mk('activity', { title: 'Stretch', repeat: { every: 1, unit: 'day' }, startDate: d(-6), dueDate: d(3), checkins: { [d(-6)]: 1, [d(-2)]: 1 } });
+    const open = mk('activity', { title: 'Weigh in', repeat: { every: 1, unit: 'week' }, startDate: d(-14) });
+    const flex = mk('activity', { title: 'Run', repeat: { times: 3, per: 'week' }, startDate: d(-6), dueDate: d(3) });
+    [a, open, flex].forEach(x => rel(x, g, 'contributes')); save();
+    setView('timeline');
+    ui.tlPx = TL.ZOOM.week; render();
+    const marks = id => [...$(`[data-tl-node="${id}"]`).querySelectorAll('.tl-day')];
+    const kinds = id => marks(id).map(m => m.classList[1]);
+    eq(kinds(a.id), ['done', 'missed', 'missed', 'missed', 'done', 'missed', 'due', 'due', 'due', 'due'], 'each day in order');
+    const from = Number($('.tl-scroll').dataset.from), x0 = Number(marks(a.id)[0].style.left.slice(0, -2));
+    assert(Math.abs(x0 - ((dayNum(d(-6)) - from) * TL.ZOOM.week + 1)) < 0.01, `on its own day: ${x0}`);
+    eq(marks(flex.id).length, 0, 'a flexible routine has no set days');
+    const ends = Number($('.tl-scroll').dataset.to), weeks = kinds(open.id);
+    assert(weeks.length === Math.floor((ends - dayNum(d(-14))) / 7) + 1 && weeks.slice(0, 2).join() === 'missed,missed', `without an end: every week to the timeline's end (${weeks.length})`);
+    // Narrow days merge into a band; the legend names the colours.
+    ui.tlPx = TL.MIN; render();
+    const w = marks(a.id).map(m => m.style.width);
+    assert(w.every(x => x === `${TL.MIN}px`), `merged: ${w[0]}`);
+    eq([...$$('.tl-legend .swatch.tl-day')].map(s => s.classList[2]), ['done', 'missed', 'due'], 'legend');
+    a.repeat = { times: 3, per: 'week' }; open.repeat = { times: 1, per: 'week' }; save(); render();
+    assert(!$('.tl-legend .tl-day'), 'no legend without routines on set days');
+    ui.tlPx = TL.ZOOM.month;
+    return weeks.length + ' weeks';
   });
 
   await step('graphs: zoom stretches the time axis around the pointer, within limits; today is a column', async () => {
