@@ -4698,6 +4698,41 @@ window.moreTests = async ({ step, assert }) => {
     return firstText;
   });
 
+  await step('routine graphs: switch to check-ins per day, week, month or year, or in total', () => {
+    fresh('Routine scales');
+    const a = mk('activity', { title: 'Swim', repeat: { times: 2, per: 'week' }, startDate: d(-20), checkins: { [d(-15)]: 1, [d(-8)]: 1, [d(-7)]: 1, [d(-6)]: 0, [d(0)]: 1 } });
+    save();
+    setView('graphs');
+    const card = () => $(`[data-gr="${a.id}"]`), pressed = () => [...card().querySelectorAll('.gr-scale [aria-pressed="true"]')].map(b => b.dataset.grScale);
+    const bars = () => [...card().querySelectorAll('.gr-bar')], tipOf = i => { const p = card().querySelector('.gr-plot'); showGraphPoint(p, i); return p.querySelector('.gr-tip-value').textContent; };
+    eq([...card().querySelectorAll('.gr-scale button')].map(b => b.dataset.grScale), SCALES, 'five scales, as on a state');
+    eq(pressed(), [periodUnit(a)], 'starts on its own period');
+    assert(card().querySelectorAll('.gr-goal').length === bars().length, 'which shows what each period asks for');
+    a.updatedAt = '2000-01-01T00:00:00.000Z';
+    card().querySelector('[data-gr-scale="day"]').click();
+    assert(a.scale === 'day' && a.updatedAt !== '2000-01-01T00:00:00.000Z', 'kept on the routine and synced');
+    eq(pressed(), ['day'], 'day pressed');
+    assert(bars().length === 16 && !card().querySelector('.gr-goal'), `a bar a day from the first check-in: ${bars().length}`);
+    const axis = [...card().querySelectorAll('.gr-axis[text-anchor="end"]')].map(x => x.textContent).filter(x => /^[\d.,]+$/.test(x));
+    assert(axis.length >= 2 && axis.every(x => Number.isInteger(Number(x))), `whole numbers on the axis: ${axis}`);
+    assert(card().querySelectorAll('.gr-bar.now').length === 1 && tipOf(15) === tp('rt.checkins', 1) && tipOf(14) === tp('rt.checkins', 0), 'today lighter; a day unticked counts nothing');
+    eq(card().querySelector('.gr-value').textContent, t('cu.now.day', { value: tp('rt.checkins', 1) }), 'today’s count');
+    assert(!card().querySelector('[data-del-entry]') && card().querySelectorAll('.gr-table tbody tr').length === 16, 'its table lists the days, with nothing to delete');
+    card().querySelector('[data-gr-scale="week"]').click();
+    assert(card().querySelector('.gr-goal'), 'its own period again: what each week asks for');
+    card().querySelector('[data-gr-scale="month"]').click();
+    const sum = bars().reduce((n, b, i) => n + parseInt(tipOf(i), 10), 0);
+    assert(sum === 4 && !card().querySelector('.gr-goal'), `monthly bars add up to every check-in: ${sum}`);
+    card().querySelector('[data-gr-scale="total"]').click();
+    assert(card().querySelector('.gr-line').getAttribute('d').includes('H') && !card().querySelector('.gr-bar'), 'in total: a step line');
+    eq(card().querySelector('.gr-value').textContent, t('cu.inTotal', { value: tp('rt.checkins', 4) }), 'four in total');
+    eq(card().querySelector('.gr-scale').getAttribute('aria-label'), t('cu.scaleLabelRoutine'), 'the switch counts check-ins');
+    setLanguage('sl'); render();
+    eq(card().querySelector('.gr-value').textContent, '4 izvedbe skupaj', 'in Slovenian');
+    setLanguage('en'); render();
+    return `day 16 bars, month ${sum}, total ok`;
+  });
+
   await step('cumulative graphs: bars per period, running total, a graph per routine, Show in', () => {
     loadSample();
     setView('graphs');

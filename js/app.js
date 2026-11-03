@@ -912,6 +912,8 @@ const PERIODS = ['day', 'week', 'month', 'year'];
 const SCALES = [...PERIODS, 'total'];
 const isCumulative = s => !!s?.cumulative;
 const stateScale = s => (SCALES.includes(s?.scale) ? s.scale : 'total');
+// A routine's graph shows its own periods (with what each asks for) until another scale is picked.
+const graphScale = item => (!isRoutine(item) ? stateScale(item) : SCALES.includes(item.scale) ? item.scale : periodUnit(item));
 const goalPeriod = g => (PERIODS.includes(g?.period) ? g.period : 'total');
 
 // Before, a state added up per period itself (`cumulative: 'week'`, or 'none' for in total): the
@@ -962,9 +964,13 @@ function refreshTotal(s) {
   Object.assign(s, { value: v === '' ? '' : String(v), date: stateDate(s) });
 }
 
+// What a graph adds up: a state's amounts, or a routine's check-ins, one each.
+const graphEntries = item => (!isRoutine(item) ? entriesOf(item)
+  : Object.keys(item.checkins || {}).filter(d => item.checkins[d] === 1).sort().map(date => ({ id: date, date, amount: '1' })));
+
 // Each `period` from the first entry's to today's (or the latest entry's), empty ones included.
 function periodTotals(s, period) {
-  const list = entriesOf(s);
+  const list = graphEntries(s);
   if (!list.length || !PERIODS.includes(period)) return [];
   const dates = list.map(e => e.date).sort();
   const end = dates.at(-1) > today() ? dates.at(-1) : today();
@@ -2078,9 +2084,10 @@ const GR = { H: 210, L: 48, R: 14, T: 14, B: 26, MIN_W: 280, MAX_W: 960 };
 const grCharts = {}; // state id → points and scales, for the hover layer
 
 // About `count` clean steps (1, 2 or 5 × 10ⁿ) covering lo–hi.
-function niceTicks(lo, hi, count = 4) {
+// `whole`: counts, so no step smaller than 1.
+function niceTicks(lo, hi, count = 4, whole = false) {
   if (lo === hi) { lo -= Math.abs(lo) * 0.1 || 1; hi += Math.abs(hi) * 0.1 || 1; }
-  const raw = (hi - lo) / count;
+  const raw = whole ? Math.max((hi - lo) / count, 1) : (hi - lo) / count;
   const mag = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 5, 10].map(m => m * mag).find(s => s >= raw);
   const ticks = [];
@@ -2254,8 +2261,11 @@ function graphCard(s, width) {
   </article>`;
 }
 
-const graphFor = (item, width) => (isRoutine(item) ? routineGraphCard(item, width) : !isCumulative(item) ? graphCard(item, width)
-  : stateScale(item) === 'total' ? totalGraphCard(item, width) : periodGraphCard(item, width));
+// A routine's graph adds up its check-ins like a state's amounts, but on its own period's scale it
+// shows what each period asks for.
+const graphFor = (item, width) => (isRoutine(item) && graphScale(item) === periodUnit(item) ? routineGraphCard(item, width)
+  : !isRoutine(item) && !isCumulative(item) ? graphCard(item, width)
+  : graphScale(item) === 'total' ? totalGraphCard(item, width) : periodGraphCard(item, width));
 let grDrawW = 0; // the width graphs were last drawn to fit
 
 // Zoomed in, a graph is drawn wider and scrolls sideways; zoomed out, it is never narrower than the card,
@@ -2353,7 +2363,7 @@ const stateTargets = (s, scale) => relsFrom(s.id, 'measures').map(r => db.goals.
 
 // The plot shared by bar and step graphs: grid, date axis, today, target lines and labels, and the
 // hover layer. `marks` draws the data with the scales; `bars` widens a long history so it scrolls.
-function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, tip, aria, ys = [] }, width) {
+function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, tip, aria, ys = [], whole = false }, width) {
   const todayN = dayNum(today());
   // Bars end with the period under way: weeks to a far deadline would only squeeze them.
   let x0 = from, x1 = bars ? to : Math.max(to, ...targets.map(tg => tg.end || 0));
@@ -2361,7 +2371,7 @@ function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, ti
   const base = bars ? Math.max(width, GR.L + GR.R + Math.ceil((x1 - x0) / ((to - from) / bars) * GR_SLOT)) : width;
   const { W, zoom } = zoomedWidth(id, base, width, x1 - x0);
   const values = [0, ...points.map(p => p.value), ...targets.map(tg => tg.value), ...ys];
-  const ticks = niceTicks(Math.min(...values), Math.max(...values));
+  const ticks = niceTicks(Math.min(...values), Math.max(...values), 4, whole);
   const y0 = ticks[0], y1 = ticks[ticks.length - 1];
   const px = d => GR.L + (d - x0) / (x1 - x0) * (W - GR.L - GR.R);
   const py = v => GR.T + (1 - (v - y0) / (y1 - y0)) * (GR.H - GR.T - GR.B);
@@ -2401,9 +2411,9 @@ function grCardHtml(item, stats, legend, plot, table, scales = '') {
   </article>`;
 }
 
-// Sums per day, week, month or year, or the running total, for a state that adds up.
-const scaleSwitch = s => `<div class="chips gr-scale" role="group" aria-label="${esc(t('cu.scaleLabel'))}">${SCALES.map(k =>
-  `<button class="chip ${k === stateScale(s) ? 'active' : ''}" data-gr-scale="${k}" data-state="${s.id}" aria-pressed="${k === stateScale(s)}">${t('cu.scale.' + k)}</button>`).join('')}</div>`;
+// Sums per day, week, month or year, or the running total, for a state that adds up or a routine.
+const scaleSwitch = s => `<div class="chips gr-scale" role="group" aria-label="${esc(t(isRoutine(s) ? 'cu.scaleLabelRoutine' : 'cu.scaleLabel'))}">${SCALES.map(k =>
+  `<button class="chip ${k === graphScale(s) ? 'active' : ''}" data-gr-scale="${k}" data-state="${s.id}" aria-pressed="${k === graphScale(s)}">${t('cu.scale.' + k)}</button>`).join('')}</div>`;
 
 const entryDel = (s, e) => {
   const del = t('cu.deleteEntry', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(e.date) });
@@ -2411,18 +2421,20 @@ const entryDel = (s, e) => {
 };
 
 // A bar for each period; the change tag compares the last complete period with the one before.
+// A routine's bars count its check-ins.
 function periodGraphCard(s, width) {
-  const unit = s.unit || '', now = today(), scale = stateScale(s), periods = periodTotals(s, scale), targets = stateTargets(s, scale);
+  const rt = isRoutine(s), unit = s.unit || '', now = today(), scale = graphScale(s), periods = periodTotals(s, scale), targets = rt ? [] : stateTargets(s, scale);
+  const amount = n => (rt ? tp('rt.checkins', n) : withUnit(fmtNum(n), unit));
   const points = periods.map(p => {
     const a = dayNum(p.from), b = dayNum(p.to) + 1;
     return { ...p, value: p.total, day: (a + b) / 2, a, b, now: p.from <= now && p.to >= now };
   });
-  const tip = p => [['gr-tip-value', withUnit(fmtNum(p.value), unit)], ['gr-tip-date', periodLabel(scale, p.from, p.to)],
-    ['gr-tip-row', tp('cu.entries', p.entries.length)],
+  const tip = p => [['gr-tip-value', amount(p.value)], ['gr-tip-date', periodLabel(scale, p.from, p.to)],
+    ...(rt ? [] : [['gr-tip-row', tp('cu.entries', p.entries.length)]]),
     ...targets.map(tg => ['gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), unit) })])];
   const plot = plotSvg(s.id, {
-    points, targets, unit, tip, from: points[0].a, to: points.at(-1).b, bars: points.length,
-    aria: t('cu.aria', { name: s.title }),
+    points, targets, unit, tip, from: points[0].a, to: points.at(-1).b, bars: points.length, whole: rt,
+    aria: t(rt ? 'cu.routineAria' : 'cu.aria', { name: s.title }),
     marks: (px, py) => points.map(p => {
       const { x, w } = barBox(px, p.a, p.b), y = py(Math.max(0, p.value)), h = Math.abs(py(p.value) - py(0));
       return `<rect class="gr-bar${p.now ? ' now' : ''}" x="${x}" y="${p.value < 0 ? py(0) : y}" width="${w}" height="${h}" rx="2"/>`;
@@ -2439,41 +2451,50 @@ function periodGraphCard(s, width) {
     change = `<span class="tag gr-delta ${cls}"><span aria-hidden="true">${delta > 0 ? '▲' : delta < 0 ? '▼' : '→'}</span> ${esc(withUnit(signed(delta), unit))}</span>
       <span class="meta">${esc(t('cu.vsPrev.' + scale, { period: periodLabel(scale, last.from, last.to) }))}</span>`;
   }
-  const legend = grLegend([['key-bar', t('cu.legend.' + scale)], ...(targets.length ? [targetKey(targets)] : [])]);
-  const rows = points.slice().reverse().map(p => `<tr class="gr-period"><td>${esc(periodLabel(scale, p.from, p.to))}</td><td><strong>${esc(withUnit(fmtNum(p.value), unit))}</strong></td><td></td></tr>
+  const legend = grLegend([['key-bar', t(rt ? 'cu.legendRoutine' : 'cu.legend.' + scale)], ...(targets.length ? [targetKey(targets)] : [])]);
+  // A routine's check-ins are ticked on the routine, so its table lists only the periods.
+  const rows = points.slice().reverse().map(p => rt ? `<tr><td>${esc(periodLabel(scale, p.from, p.to))}</td><td>${esc(amount(p.value))}</td></tr>`
+    : `<tr class="gr-period"><td>${esc(periodLabel(scale, p.from, p.to))}</td><td><strong>${esc(amount(p.value))}</strong></td><td></td></tr>
     ${p.entries.slice().reverse().map(e => `<tr class="gr-entry"><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td>${entryDel(s, e)}</tr>`).join('')}`).join('');
-  const table = `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.amount')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
-  return grCardHtml(s, `<strong class="gr-value">${esc(scaleText(s, scale))}</strong>${change}`, legend, plot, table, scaleSwitch(s));
+  const table = rt ? `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.checkins')}</th></tr></thead><tbody>${rows}</tbody></table>`
+    : `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.amount')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
+  const value = rt ? t('cu.now.' + scale, { value: amount(points.find(p => p.now)?.value || 0) }) : scaleText(s, scale);
+  return grCardHtml(s, `<strong class="gr-value">${esc(value)}</strong>${change}`, legend, plot, table, scaleSwitch(s));
 }
 
 // A step line of the running total; the tag shows what was added in the last 30 days.
 function totalGraphCard(s, width) {
-  const unit = s.unit || '', targets = stateTargets(s, 'total'), entries = entriesOf(s).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const rt = isRoutine(s), unit = s.unit || '', targets = rt ? [] : stateTargets(s, 'total'), entries = graphEntries(s).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const amount = n => (rt ? tp('rt.checkins', n) : withUnit(fmtNum(n), unit));
   const byDay = {};
   entries.forEach(e => (byDay[e.date] = (byDay[e.date] || 0) + Number(e.amount)));
   let sum = 0;
   const points = Object.keys(byDay).sort().map(date => ({ date, day: dayNum(date), added: Number(byDay[date].toFixed(9)), value: (sum = Number((sum + byDay[date]).toFixed(9))) }));
   const todayN = dayNum(today()), end = Math.max(points.at(-1).day, todayN);
-  const tip = p => [['gr-tip-value', withUnit(fmtNum(p.value), unit)], ['gr-tip-date', fmtRel(p.date, true)],
-    ['gr-tip-row', t('cu.tipAdded', { value: withUnit(signed(p.added), unit) })],
+  const tip = p => [['gr-tip-value', amount(p.value)], ['gr-tip-date', fmtRel(p.date, true)],
+    ...(rt ? [] : [['gr-tip-row', t('cu.tipAdded', { value: withUnit(signed(p.added), unit) })]]),
     ...targets.map(tg => ['gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), unit) })])];
   const plot = plotSvg(s.id, {
-    points, targets, unit, tip, from: points[0].day, to: end + 0.5, aria: t('cu.aria', { name: s.title }),
+    points, targets, unit, tip, from: points[0].day, to: end + 0.5, whole: rt, aria: t(rt ? 'cu.routineAria' : 'cu.aria', { name: s.title }),
     marks: (px, py) => {
       const path = points.map((p, i) => (i ? `H${px(p.day).toFixed(1)}V${py(p.value).toFixed(1)}` : `M${px(p.day).toFixed(1)},${py(p.value).toFixed(1)}`)).join('') + `H${px(end).toFixed(1)}`;
       return `<path class="gr-line" d="${path}"/>${points.map(p => `<circle class="gr-dot" cx="${px(p.day)}" cy="${py(p.value)}" r="3.5"/>`).join('')}`;
     },
   }, width);
   const recent = sumOf(entries.filter(e => e.date > dayStr(todayN - 30) && e.date <= today()));
-  const stats = `<strong class="gr-value">${esc(totalText(s))}</strong><span class="tag gr-delta ${recent > 0 ? 'ok' : ''}">${esc(withUnit(signed(recent), unit))}</span><span class="meta">${t('cu.last30')}</span>`;
+  const total = rt ? t('cu.inTotal', { value: amount(entries.length) }) : totalText(s);
+  const stats = `<strong class="gr-value">${esc(total)}</strong><span class="tag gr-delta ${recent > 0 ? 'ok' : ''}">${esc(withUnit(signed(recent), unit))}</span><span class="meta">${t('cu.last30')}</span>`;
   const legend = grLegend([['key-measure', t('cu.legend.total')], ...(targets.length ? [targetKey(targets)] : [])]);
   let running = sumOf(entries);
+  // A routine's table lists the days it was done, with the count so far.
   const rows = entries.slice().reverse().map(e => {
-    const row = `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
+    const row = rt ? `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(fmtNum(running))}</td></tr>`
+      : `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
     running = Number((running - Number(e.amount)).toFixed(9));
     return row;
   }).join('');
-  const table = `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.amount')}</th><th>${t('cu.col.total')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
+  const table = rt ? `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.total')}</th></tr></thead><tbody>${rows}</tbody></table>`
+    : `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.amount')}</th><th>${t('cu.col.total')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
   return grCardHtml(s, stats, legend, plot, table, scaleSwitch(s));
 }
 
@@ -2490,7 +2511,7 @@ function routineGraphCard(a, width) {
   const unit = periodUnit(a);
   const tip = p => [['gr-tip-value', t('cu.ofTarget', { done: p.value, target: p.target })], ['gr-tip-date', periodLabel(unit, p.from, p.to)]];
   const plot = plotSvg(a.id, {
-    points, unit: '', tip, ys: points.map(p => p.target),
+    points, unit: '', tip, ys: points.map(p => p.target), whole: true,
     from: points[0].a, to: points.at(-1).b, bars: points.length, aria: t('cu.routineAria', { name: a.title }),
     marks: (px, py) => points.map(p => {
       const { x, w } = barBox(px, p.a, p.b);
@@ -2503,7 +2524,7 @@ function routineGraphCard(a, width) {
   const legend = grLegend([['key-bar', t('cu.legendRoutine')], ['key-goal', t('cu.legendAsks')]]);
   const rows = points.slice().reverse().map(p => `<tr><td>${esc(periodLabel(unit, p.from, p.to))}</td><td>${esc(t('cu.ofTarget', { done: p.value, target: p.target }))}</td><td>${p.met ? '✓' : ''}</td></tr>`).join('');
   const table = `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.checkins')}</th><th>${t('cu.col.met')}</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return grCardHtml(a, stats, legend, plot, table);
+  return grCardHtml(a, stats, legend, plot, table, scaleSwitch(a));
 }
 
 // Hover / touch / keyboard: a crosshair snaps to the nearest measurement and a tooltip lists its values.
@@ -3321,9 +3342,9 @@ function openTickAmount(a, iso, anchor) {
     () => setRoutineDay(a, iso, true));
 }
 
-// The graph of a state that adds up shows another scale; it is kept on the state.
+// The graph of a state that adds up, or of a routine, shows another scale; it is kept on the item.
 function setGraphScale(id, scale) {
-  const s = db.states.find(x => x.id === id);
+  const s = db.states.find(x => x.id === id) || db.activities.find(x => x.id === id && isRoutine(x));
   if (!s || !SCALES.includes(scale)) return;
   s.scale = scale;
   save();
