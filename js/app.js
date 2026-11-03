@@ -42,6 +42,7 @@ const ui = {
   mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
   tlDates: null, // the selected timeline item whose dates can be dragged: its bar was clicked, not just its row
   rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
+  grZoom: {}, // how far each graph is zoomed: 1 fits the card
 };
 
 // Small per-device preferences (view, hidden relation types, hide-done, theme).
@@ -1152,10 +1153,16 @@ function render() {
   const prevScroll = old && { left: old.scrollLeft, top: old.scrollTop };
   ui.mapRefocus = false;
   viewEl.dataset.view = ui.view;
+  // A graph redrawn at the same width stays scrolled where it was.
+  const grScroll = {};
+  viewEl.querySelectorAll('[data-gr] .gr-plot').forEach(p => (grScroll[p.closest('[data-gr]').dataset.gr] = { left: p.scrollLeft, w: p.scrollWidth }));
   viewEl.innerHTML = v.render();
   if (ui.view === 'activities') bindDragDrop();
   // Long charts start at their latest bars.
-  viewEl.querySelectorAll('.gr-plot.scroll').forEach(p => (p.scrollLeft = p.scrollWidth));
+  viewEl.querySelectorAll('.gr-plot.scroll').forEach(p => {
+    const was = grScroll[p.closest('[data-gr]').dataset.gr];
+    p.scrollLeft = was && was.w === p.scrollWidth ? was.left : p.scrollWidth;
+  });
   // Keep the map / timeline where the user left it; on first show, centre on the goals / today.
   const wrap = $('.map-wrap, .tl-scroll');
   if (wrap) {
@@ -2052,7 +2059,7 @@ function renderTimeline() {
             <span class="tl-today-flag" style="left:${x(todayN) + px / 2}px">${t('tl.today')}</span></div>
         </div>
         <div class="tl-body">
-          <div class="tl-grid">${lines.join('')}<i class="tl-today" style="left:${x(todayN) + px / 2}px"></i></div>
+          <div class="tl-grid">${lines.join('')}<i class="tl-today" style="left:${x(todayN) + px / 2}px;width:${Math.max(px, 3)}px"></i></div>
           <svg class="tl-deps" width="${W}" height="${rows.length * ROW}">
             <defs><marker id="tl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>${deps}
           </svg>
@@ -2161,24 +2168,22 @@ function graphCard(s, width) {
   const last = points[points.length - 1];
 
   // Scales: time from the first measurement to the latest of today / last measurement / deadlines.
-  const W = width;
   const x0 = points[0].day;
-  let x1 = Math.max(last.day, dayNum(today()), ...targets.map(tg => tg.end || 0));
+  // Half a day past the latest, so today's column and the last dot are not cut in half at the edge.
+  let x1 = Math.max(last.day + 0.5, dayNum(today()) + 0.5, ...targets.map(tg => tg.end || 0));
   if (x1 - x0 < 14) x1 = x0 + 14;
+  const { W, zoom } = zoomedWidth(s.id, width, width, x1 - x0);
   const ticks = niceTicks(Math.min(...points.map(p => p.value), ...targets.map(tg => tg.value)), Math.max(...points.map(p => p.value), ...targets.map(tg => tg.value)));
   const y0 = ticks[0], y1 = ticks[ticks.length - 1];
   const px = d => GR.L + (d - x0) / (x1 - x0) * (W - GR.L - GR.R);
   const py = v => GR.T + (1 - (v - y0) / (y1 - y0)) * (GR.H - GR.T - GR.B);
-  grCharts[s.id] = { s, points, targets, change, px, py, unit };
+  grCharts[s.id] = { s, points, targets, change, px, py, unit, zoom };
 
-  const grid = ticks.map(v => `<line class="gr-grid" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>
-    <text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`).join('');
-  // Date ticks: first measurement, the end of the axis, and today when it is not crowded.
-  const dateTicks = [x0, x1];
+  const grid = ticks.map(v => `<line class="gr-grid" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`).join('') + yLabels(ticks, py);
   const todayN = dayNum(today());
-  if (todayN > x0 && todayN < x1 && px(todayN) - px(x0) > 80 && px(x1) - px(todayN) > 80) dateTicks.push(todayN);
-  const xAxis = dateTicks.map((d, i) => `<text class="gr-axis" x="${px(d)}" y="${GR.H - 6}" text-anchor="${['start', 'end', 'middle'][i]}">${esc(fmtDate(dayStr(d)))}</text>`).join('');
-  const todayLine = todayN > x0 && todayN <= x1 ? `<line class="gr-today" x1="${px(todayN)}" x2="${px(todayN)}" y1="${GR.T}" y2="${GR.H - GR.B}"/>` : '';
+  const xAxis = dateAxis(px, x0, x1, W > width, true);
+  const todayMark = todayCol(px, todayN - 0.5, x0, x1, W);
+  const todayLine = todayMark?.svg || '';
 
   const targetLines = targets.map(tg => {
     const xe = px(tg.end && tg.end > x0 ? tg.end : x1);
@@ -2215,7 +2220,7 @@ function graphCard(s, width) {
     const steps = Math.ceil(Math.hypot(bx - ax, by - ay) / 4);
     for (let k = 0; k <= steps; k++) { const x = ax + (bx - ax) * k / steps, y = ay + (by - ay) * k / steps; hard.push([x - 1, y - 1, x + 1, y + 1]); }
   });
-  const todayBox = todayN > x0 && todayN <= x1 ? [[px(todayN) - 1, GR.T, px(todayN) + 1, GR.H - GR.B]] : [];
+  const todayBox = todayMark ? [todayMark.box] : [];
   const free = (s, obstacles) => inside(s.box) && !obstacles.some(o => overlaps(s.box, o));
   const spot = spots.find(s => free(s, [...hard, ...todayBox])) || spots.find(s => free(s, hard)) || spots[0];
   const valueLabel = `<text class="gr-label" x="${spot.x}" y="${spot.y}" text-anchor="${spot.anchor}">${esc(vText)}</text>`;
@@ -2235,18 +2240,62 @@ function graphCard(s, width) {
     <div class="card-head" data-ctx-item="${s.id}"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats"><strong class="gr-value">${esc(withUnit(fmtNum(last.value), unit))}</strong>${changeTag(s, change)}</div>
     ${legend}
-    <div class="gr-plot" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
+    <div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
       <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
         ${grid}${todayLine}${targetLines}<path class="gr-line" d="${path}"/>${dots}${targetLabels}${valueLabel}${xAxis}
         <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
         <circle class="gr-focus" r="6" hidden/>
-      </svg>
+      </svg>${W > width ? yAxisPinned(ticks, py) : ''}
       <div class="gr-tip" hidden></div>
     </div>
     <details class="gr-table"><summary>${t('gr.table')}</summary>
       <table><thead><tr><th>${t('gr.col.date')}</th><th>${t('gr.col.value')}</th><th>${t('gr.col.change')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </details>
   </article>`;
+}
+
+const graphFor = (item, width) => (isRoutine(item) ? routineGraphCard(item, width) : !isCumulative(item) ? graphCard(item, width)
+  : stateScale(item) === 'total' ? totalGraphCard(item, width) : periodGraphCard(item, width));
+let grDrawW = 0; // the width graphs were last drawn to fit
+
+// Zoomed in, a graph is drawn wider and scrolls sideways; zoomed out, it is never narrower than the card,
+// nor stretched past the timeline's closest zoom. `base` is its width unzoomed; `zoom` the range allowed.
+function zoomedWidth(id, base, width, days) {
+  const zoom = [Math.min(width / base, 1), Math.max((GR.L + GR.R + days * TL.MAX) / base, 1)];
+  return { W: Math.round(base * clamp(ui.grZoom[id] || 1, ...zoom)), zoom };
+}
+
+// Today is a column as wide as the day (never thinner than 3 px), behind the data. `from` is where the day
+// starts on the axis: a bar's day starts at its number, a measurement sits in the middle of its day.
+function todayCol(px, from, x0, x1, W) {
+  if (from + 1 <= x0 || from >= x1) return null;
+  const a = clamp(px(from), GR.L, W - GR.R), b = clamp(px(from + 1), GR.L, W - GR.R);
+  const w = Math.max(b - a, 3), x = (a + b - w) / 2;
+  return { svg: `<rect class="gr-today" x="${x}" y="${GR.T}" width="${w}" height="${GR.H - GR.T - GR.B}"/>`, box: [x, GR.T, x + w, GR.H - GR.B] };
+}
+
+const yLabels = (ticks, py) => ticks.map(v => `<text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`).join('');
+// A graph wider than the card scrolls under its values, which stay at the left like the timeline's labels.
+const yAxisPinned = (ticks, py) => `<svg class="gr-yaxis" width="${GR.L}" height="${GR.H}" style="margin-top:-${GR.H}px" aria-hidden="true">${yLabels(ticks, py)}</svg>`;
+
+// Dates under a graph: where it starts and ends, and today when there is room. One wider than the card
+// (zoomed in, or a long history of bars) also marks days, Mondays, months, quarters or years, about
+// every 110 px – the first of these steps that leaves that much room.
+function dateAxis(px, x0, x1, wide, withToday) {
+  const todayN = dayNum(today()), perDay = (px(x1) - px(x0)) / (x1 - x0);
+  const ticks = [[x0, 'start', fmtDate(dayStr(x0))], [x1, 'end', fmtDate(dayStr(x1))]];
+  const room = n => ticks.every(([m]) => Math.abs(px(m) - px(n)) > 80);
+  if (withToday && todayN > x0 && todayN < x1 && room(todayN)) ticks.push([todayN, 'middle', fmtDate(today())]);
+  if (wide) {
+    const steps = [[1, () => true], [7, d => d.getUTCDay() === 1], [30, d => d.getUTCDate() === 1],
+      [91, d => d.getUTCDate() === 1 && d.getUTCMonth() % 3 === 0], [365, d => d.getUTCDate() === 1 && d.getUTCMonth() === 0]];
+    const [days, starts] = steps.find(([n]) => n * perDay >= 110) || steps.at(-1);
+    const opts = days < 30 ? { day: 'numeric', month: 'short' } : days < 365 ? { month: 'short', year: 'numeric' } : { year: 'numeric' };
+    for (let n = Math.ceil(x0); n < x1; n++) {
+      if (starts(new Date(n * DAY_MS)) && room(n)) ticks.push([n, 'middle', fmtDay(dayStr(n), opts)]);
+    }
+  }
+  return ticks.map(([n, anchor, text]) => `<text class="gr-axis" x="${px(n)}" y="${GR.H - 6}" text-anchor="${anchor}">${esc(text)}</text>`).join('');
 }
 
 // States with measurements or amounts, and routines with check-ins, have a graph.
@@ -2265,8 +2314,8 @@ function renderGraphs() {
   const viewStyle = getComputedStyle(viewEl);
   const width = clamp(viewEl.clientWidth - parseFloat(viewStyle.paddingLeft) - parseFloat(viewStyle.paddingRight) - 38, GR.MIN_W, GR.MAX_W);
   Object.keys(grCharts).forEach(k => delete grCharts[k]);
-  const card = s => (!isCumulative(s) ? graphCard(s, width) : stateScale(s) === 'total' ? totalGraphCard(s, width) : periodGraphCard(s, width));
-  const cards = [...withData.map(card), ...kept.map(a => routineGraphCard(a, width))];
+  grDrawW = width;
+  const cards = [...withData, ...kept].map(item => graphFor(item, width));
   return `${categoryChips()}
     <div class="toolbar">${goalSelect('graphs', ui.graphGoal)}${searchBox()}</div>
     ${cards.length ? `<div class="gr-list">${cards.join('')}</div>` : `<div class="empty">${t('gr.none')}</div>`}
@@ -2309,19 +2358,17 @@ function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, ti
   // Bars end with the period under way: weeks to a far deadline would only squeeze them.
   let x0 = from, x1 = bars ? to : Math.max(to, ...targets.map(tg => tg.end || 0));
   if (x1 - x0 < 14) x1 = x0 + 14;
-  const W = bars ? Math.max(width, GR.L + GR.R + Math.ceil((x1 - x0) / ((to - from) / bars) * GR_SLOT)) : width;
+  const base = bars ? Math.max(width, GR.L + GR.R + Math.ceil((x1 - x0) / ((to - from) / bars) * GR_SLOT)) : width;
+  const { W, zoom } = zoomedWidth(id, base, width, x1 - x0);
   const values = [0, ...points.map(p => p.value), ...targets.map(tg => tg.value), ...ys];
   const ticks = niceTicks(Math.min(...values), Math.max(...values));
   const y0 = ticks[0], y1 = ticks[ticks.length - 1];
   const px = d => GR.L + (d - x0) / (x1 - x0) * (W - GR.L - GR.R);
   const py = v => GR.T + (1 - (v - y0) / (y1 - y0)) * (GR.H - GR.T - GR.B);
-  grCharts[id] = { points, targets, px, py, unit, tip };
-  const grid = ticks.map(v => `<line class="gr-grid" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>
-    <text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`).join('');
-  const dateTicks = [x0, x1];
-  if (!bars && todayN > x0 && todayN < x1 && px(todayN) - px(x0) > 80 && px(x1) - px(todayN) > 80) dateTicks.push(todayN);
-  const xAxis = dateTicks.map((d, i) => `<text class="gr-axis" x="${px(d)}" y="${GR.H - 6}" text-anchor="${['start', 'end', 'middle'][i]}">${esc(fmtDate(dayStr(d)))}</text>`).join('');
-  const todayLine = todayN > x0 && todayN <= x1 ? `<line class="gr-today" x1="${px(todayN)}" x2="${px(todayN)}" y1="${GR.T}" y2="${GR.H - GR.B}"/>` : '';
+  grCharts[id] = { points, targets, px, py, unit, tip, zoom };
+  const grid = ticks.map(v => `<line class="gr-grid" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`).join('') + yLabels(ticks, py);
+  const xAxis = dateAxis(px, x0, x1, W > width, !bars);
+  const todayLine = todayCol(px, bars ? todayN : todayN - 0.5, x0, x1, W)?.svg || '';
   const targetLines = targets.map(tg => {
     const xe = px(tg.end && tg.end > x0 && tg.end < x1 ? tg.end : x1);
     const ty = py(tg.value) + (py(tg.value) - GR.T < 16 ? 14 : -6);
@@ -2335,7 +2382,7 @@ function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, ti
         ${grid}${todayLine}${marks(px, py)}${targetLines}${xAxis}
         <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
         <circle class="gr-focus" r="6" hidden/>
-      </svg>
+      </svg>${W > width ? yAxisPinned(ticks, py) : ''}
       <div class="gr-tip" hidden></div>
     </div>`;
 }
@@ -2411,7 +2458,7 @@ function totalGraphCard(s, width) {
     ['gr-tip-row', t('cu.tipAdded', { value: withUnit(signed(p.added), unit) })],
     ...targets.map(tg => ['gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), unit) })])];
   const plot = plotSvg(s.id, {
-    points, targets, unit, tip, from: points[0].day, to: end, aria: t('cu.aria', { name: s.title }),
+    points, targets, unit, tip, from: points[0].day, to: end + 0.5, aria: t('cu.aria', { name: s.title }),
     marks: (px, py) => {
       const path = points.map((p, i) => (i ? `H${px(p.day).toFixed(1)}V${py(p.value).toFixed(1)}` : `M${px(p.day).toFixed(1)},${py(p.value).toFixed(1)}`)).join('') + `H${px(end).toFixed(1)}`;
       return `<path class="gr-line" d="${path}"/>${points.map(p => `<circle class="gr-dot" cx="${px(p.day)}" cy="${py(p.value)}" r="3.5"/>`).join('')}`;
@@ -2518,6 +2565,14 @@ viewEl.addEventListener('keydown', e => {
   if (!plot) return;
   const n = grCharts[plot.closest('[data-gr]').dataset.gr].points.length;
   const i = Number(plot.dataset.i ?? n - 1);
+  const factor = { '+': 1.25, '=': 1.25, '-': 0.8 }[e.key];
+  if (factor && !e.ctrlKey && !e.metaKey) {
+    // Around the point the crosshair is on.
+    e.preventDefault();
+    const c = grCharts[plot.closest('[data-gr]').dataset.gr];
+    zoomGraph(plot, factor, plot.querySelector('svg').getBoundingClientRect().left + c.px(c.points[clamp(i, 0, n - 1)].day));
+    return showGraphPoint(plot, i);
+  }
   const next = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: n - 1 }[e.key];
   if (next === undefined) return;
   e.preventDefault();
@@ -4331,8 +4386,8 @@ document.addEventListener('click', e => {
 document.addEventListener('pointerdown', () => { if (press?.fired) press = null; }, true);
 
 /* ---------- Zoom: ctrl + scroll, pinch, trackpad gestures ---------- */
-// The map scales as a whole; the timeline only stretches its time axis. Both keep the point under the
-// pointer (or between the fingers) in place.
+// The map scales as a whole; the timeline and the graphs only stretch their time axis. All keep the point
+// under the pointer (or between the fingers) in place.
 
 function zoomMap(scale, cx, cy) {
   const wrap = $('.map-wrap'), svg = wrap?.querySelector('svg');
@@ -4365,18 +4420,38 @@ function zoomTimeline(factor, cx) {
   $('.tl-scroll').scrollLeft += a.left + (day - a.from) * p - x;
 }
 
+// Only that graph is redrawn, into the same element, so a pinch that started on it keeps going.
+function zoomGraph(plot, factor, cx) {
+  const id = plot.closest('[data-gr]')?.dataset.gr, c = grCharts[id], item = id && findEntity(id)?.item;
+  if (!c || !item) return;
+  const z0 = clamp(ui.grZoom[id] || 1, ...c.zoom), z = clamp(z0 * factor, ...c.zoom);
+  if (z === z0) return;
+  const svg = plot.querySelector('svg'), w0 = Number(svg.getAttribute('width'));
+  const u = (cx - svg.getBoundingClientRect().left - GR.L) / (w0 - GR.L - GR.R);
+  ui.grZoom[id] = z;
+  const fresh = document.createElement('div');
+  fresh.innerHTML = graphFor(item, grDrawW);
+  const next = fresh.querySelector('.gr-plot');
+  plot.className = next.className;
+  plot.replaceChildren(...next.childNodes);
+  const now = plot.querySelector('svg'), w = Number(now.getAttribute('width'));
+  plot.scrollLeft += now.getBoundingClientRect().left + GR.L + u * (w - GR.L - GR.R) - cx;
+}
+
 // Coalesce bursts of wheel / touch events into one zoom per frame.
 let zoomQueue = null;
 function queueZoom(wrap, factor, cx, cy) {
   if (zoomQueue) return Object.assign(zoomQueue, { factor: zoomQueue.factor * factor, cx, cy });
-  zoomQueue = { map: wrap.classList.contains('map-wrap'), factor, cx, cy };
+  zoomQueue = { wrap, factor, cx, cy };
   requestAnimationFrame(() => {
     const z = zoomQueue;
     zoomQueue = null;
-    if (z.map) zoomMap(ui.mapScale * z.factor, z.cx, z.cy); else zoomTimeline(z.factor, z.cx);
+    if (z.wrap.classList.contains('map-wrap')) zoomMap(ui.mapScale * z.factor, z.cx, z.cy);
+    else if (z.wrap.classList.contains('gr-plot')) zoomGraph(z.wrap, z.factor, z.cx);
+    else zoomTimeline(z.factor, z.cx);
   });
 }
-const ZOOM_SEL = '.map-wrap, .tl-scroll';
+const ZOOM_SEL = '.map-wrap, .tl-scroll, .gr-plot';
 
 // Ctrl + wheel; trackpad pinch in Chrome, Edge and Firefox also arrives as ctrl + wheel.
 viewEl.addEventListener('wheel', e => {
@@ -4464,7 +4539,7 @@ viewEl.addEventListener('touchend', e => {
   lastTap = tap ? { x: t.clientX, y: t.clientY, t: e.timeStamp } : null;
 });
 
-// Click and drag with the mouse pans the map and the timeline (touch screens pan natively).
+// Click and drag with the mouse pans the map, the timeline and a zoomed graph (touch screens pan natively).
 let pan = null;
 viewEl.addEventListener('pointerdown', e => {
   const wrap = e.pointerType === 'mouse' && e.button === 0 && !e.target.closest('[data-map-node],[data-tl-drag]') && e.target.closest(ZOOM_SEL);

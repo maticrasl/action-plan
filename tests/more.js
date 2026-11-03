@@ -3648,14 +3648,13 @@ window.moreTests = async ({ step, assert }) => {
     return `px=${px}`;
   });
 
-  await step('graphs: a pinch on a chart zooms the page; a sideways swipe still moves the crosshair', () => {
+  await step('graphs: a pinch zooms the chart, not the page; a sideways swipe still moves the crosshair', () => {
     loadSample();
     setView('graphs');
     const plots = [...viewEl.querySelectorAll('.gr-plot')];
     assert(plots.length, 'charts drawn');
     const ta = getComputedStyle(plots[0]).touchAction;
-    assert(ta.includes('pinch-zoom'), `pinch zooms: ${ta}`);
-    assert(ta.includes('pan-y') && !ta.includes('pan-x') && ta !== 'auto', `up and down scrolls, sideways is the app's: ${ta}`);
+    assert(ta === 'pan-y', `up and down scrolls; sideways and pinch are the app's: ${ta}`);
     for (const v of ['map', 'timeline']) {
       setView(v);
       const own = getComputedStyle($(ZOOM_SEL)).touchAction;
@@ -3663,6 +3662,68 @@ window.moreTests = async ({ step, assert }) => {
     }
     deletePlan(plans.current);
     return ta;
+  });
+
+  await step('graphs: zoom stretches the time axis around the pointer, within limits; today is a column', async () => {
+    fresh('Graph zoom');
+    const s = mk('state', { title: 'Weight', history: [{ date: d(-60), value: '1' }, { date: d(-30), value: '3' }, { date: d(0), value: '5' }] });
+    save();
+    setView('graphs');
+    const plot = () => $(`[data-gr="${s.id}"] .gr-plot`), svg = () => plot().querySelector('svg'), W = () => Number(svg().getAttribute('width'));
+    const c = () => grCharts[s.id], el = plot(), w0 = W(), todayN = dayNum(today());
+    assert(!el.classList.contains('scroll'), 'unzoomed it fits the card');
+    // Today: a column a day wide around today's measurement, inside the plot.
+    const col = svg().querySelector('.gr-today'), cw = Number(col.getAttribute('width')), cx0 = Number(col.getAttribute('x'));
+    const dayW = c().px(todayN + 0.5) - c().px(todayN - 0.5);
+    assert(Math.abs(cw - Math.max(dayW, 3)) < 0.01 && Math.abs(cx0 + cw / 2 - c().px(todayN)) < 0.01, `today column ${cw.toFixed(1)} px for a ${dayW.toFixed(1)} px day`);
+    assert(cx0 + cw <= w0 - GR.R + 0.01, 'not cut off at the edge');
+    // Limits: never narrower than the card, never more than TL.MAX px a day.
+    zoomGraph(el, 1e6, svg().getBoundingClientRect().left + 100);
+    const max = W(), days = c().points.length && (60.5);
+    assert(max === Math.round(GR.L + GR.R + days * TL.MAX), `zoomed all the way in: ${max}`);
+    assert(plot() === el && el.classList.contains('scroll'), 'same element, now scrolls');
+    zoomGraph(el, 1e-6, svg().getBoundingClientRect().left + 100);
+    assert(W() === w0 && !el.classList.contains('scroll'), `zoomed out to the card: ${W()}`);
+    // The day under the pointer stays put.
+    const at = () => svg().getBoundingClientRect().left + c().px(dayNum(d(-30)));
+    const x = at();
+    zoomGraph(el, 4, x);
+    assert(Math.abs(at() - x) < 1.5 && el.scrollLeft > 0, `anchored: ${x.toFixed(1)} → ${at().toFixed(1)}, scrolled ${el.scrollLeft}`);
+    // Zoomed, the values stay at the left and more dates show; unzoomed, only the ends and today.
+    const yax = el.querySelector('.gr-yaxis'), dates = el.querySelectorAll(`svg:not(.gr-yaxis) .gr-axis[y="${GR.H - 6}"]`).length;
+    assert(yax && Math.abs(yax.getBoundingClientRect().left - el.getBoundingClientRect().left) < 2, 'value axis pinned while scrolled');
+    assert(dates > 3, `dates along a zoomed axis: ${dates}`);
+    // A redraw keeps the zoom and the scroll; ctrl + wheel and + / − zoom too.
+    const zoomed = W(), left = el.scrollLeft;
+    render();
+    assert(W() === zoomed && Math.abs(plot().scrollLeft - left) < 1, `kept over a redraw: ${plot().scrollLeft} vs ${left}`);
+    const r = plot().getBoundingClientRect();
+    plot().dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100, clientX: r.left + 200, clientY: r.top + 50 }));
+    await tick(); await tick();
+    assert(W() > zoomed, `ctrl + wheel zooms in: ${zoomed} → ${W()}`);
+    const wheeled = W();
+    plot().focus();
+    plot().dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true, cancelable: true }));
+    assert(W() < wheeled && !plot().querySelector('.gr-focus').hidden, `− zooms out, crosshair kept: ${W()}`);
+    plot().dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true }));
+    assert(W() > wheeled * 0.99, `+ zooms back in: ${W()}`);
+    plot().blur();
+
+    // Bars: today's column covers today's day.
+    const rt = mk('activity', { title: 'Run', repeat: { times: 1, per: 'week' }, checkins: { [d(-8)]: 1, [d(0)]: 1 }, startDate: d(-20) });
+    save(); render();
+    const bc = grCharts[rt.id], bcol = $(`[data-gr="${rt.id}"] .gr-today`), bw = Number(bcol.getAttribute('width'));
+    const bday = bc.px(todayN + 1) - bc.px(todayN);
+    assert(Math.abs(Number(bcol.getAttribute('x')) + bw / 2 - (bc.px(todayN) + bday / 2)) < 0.01 && Math.abs(bw - Math.max(bday, 3)) < 0.01, `bar chart today ${bw.toFixed(1)} px`);
+
+    // Timeline: the column is a day wide, at least 3 px, behind the bars.
+    const g = mk('goal', { startDate: d(-5), deadline: d(30) }); save();
+    setView('timeline');
+    const widths = [30, 8, 1.5].map(p => { ui.tlPx = p; render(); return $('.tl-today').getBoundingClientRect().width; });
+    assert(Math.abs(widths[0] - 30) < 0.5 && Math.abs(widths[1] - 8) < 0.5 && Math.abs(widths[2] - 3) < 0.5, `timeline today ${widths.join(', ')}`);
+    assert(getComputedStyle($('.tl-today')).zIndex === 'auto', 'drawn behind the bars');
+    ui.tlPx = TL.ZOOM.month; ui.grZoom = {};
+    return `card ${w0}, max ${max}, wheel ${wheeled}, today ${cw.toFixed(1)}/${bw.toFixed(1)} px, timeline ${widths.join('/')}`;
   });
 
   await step('activities: on its start date a to-do activity is in progress, once per start date', () => {
