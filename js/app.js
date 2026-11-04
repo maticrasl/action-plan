@@ -733,14 +733,37 @@ function lastOccurrence(a, count) {
   return '';
 }
 
+/* Set days are strict: only a tick on a due day counts. With `repeat.makeUp` a tick on another day of
+   the period counts too – it makes up for a missed due day (the earliest first) or counts ahead. */
+const makesUp = a => !isFlexible(a) && !!a.repeat?.makeUp;
+// The due days, up to yesterday, in the period around `iso` that ticks on other days made up for.
+function madeUpDays(a, iso) {
+  if (!makesUp(a)) return new Set();
+  const { from, to } = periodOf(a, iso), now = today();
+  const days = daysBetween(from, to < now ? to : now).filter(d => runsOn(a, d));
+  const extra = days.filter(d => !isDueDay(a, d) && checkedOn(a, d)).length;
+  return new Set(days.filter(d => d < now && isDueDay(a, d) && !checkedOn(a, d)).slice(0, extra));
+}
+// Whether a due day was kept: ticked, or made up for; the made-up days are worked out once per period.
+function keptDay(a) {
+  const byPeriod = new Map();
+  return d => {
+    if (checkedOn(a, d)) return true;
+    if (!makesUp(a)) return false;
+    const k = periodOf(a, d).from;
+    if (!byPeriod.has(k)) byPeriod.set(k, madeUpDays(a, d));
+    return byPeriod.get(k).has(d);
+  };
+}
+
 // Check-ins in the period around `iso` against what the period asks for. Specific days count only
-// when they are due; days before the start or after the end do not count.
+// when they are due (unless they can be made up); days before the start or after the end do not count.
 function periodProgress(a, iso = today()) {
   const { from, to } = periodOf(a, iso);
   const days = daysBetween(from, to).filter(d => runsOn(a, d));
   if (!isFlexible(a)) {
     const due = days.filter(d => isDueDay(a, d));
-    const done = due.filter(d => checkedOn(a, d)).length;
+    const done = makesUp(a) ? Math.min(due.length, days.filter(d => checkedOn(a, d)).length) : due.filter(d => checkedOn(a, d)).length;
     return { from, to, done, target: due.length, met: due.length > 0 && done >= due.length };
   }
   const done = days.filter(d => checkedOn(a, d)).length;
@@ -772,8 +795,12 @@ function behindSince(a, p, now) {
     return p.target - before > daysBetween(d, p.to).filter(x => runsOn(a, x)).length;
   }) || '';
 }
-// Due days of a fixed routine between two dates that were not ticked.
-const missedDays = (a, from, to) => (isFlexible(a) ? [] : daysBetween(from, to).filter(d => runsOn(a, d) && isDueDay(a, d) && !checkedOn(a, d)));
+// Due days of a fixed routine between two dates that were not ticked (nor made up for).
+function missedDays(a, from, to) {
+  if (isFlexible(a)) return [];
+  const kept = keptDay(a);
+  return daysBetween(from, to).filter(d => runsOn(a, d) && isDueDay(a, d) && !kept(d));
+}
 
 // What today asks of a running routine: 'done' (ticked), 'due' (a set day, or a flexible routine that
 // needs every day left), 'any' (a flexible one that can wait), 'met' (the period is done) or 'rest'
@@ -783,12 +810,16 @@ function routineToday(a) {
   if (!runsOn(a, now)) return null;
   if (checkedOn(a, now)) return 'done';
   const p = periodProgress(a, now);
-  if (!isFlexible(a)) return isDueDay(a, now) ? 'due' : 'rest';
+  if (!isFlexible(a)) {
+    // A routine whose days can be made up is done once the period is met, and says when one is missing.
+    if (isDueDay(a, now)) return makesUp(a) && p.met ? 'met' : 'due';
+    return makesUp(a) && !p.met && missedDays(a, p.from, addDays(now, -1)).length ? 'makeUp' : 'rest';
+  }
   if (p.met) return 'met';
   const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
   return p.target - p.done >= left ? 'due' : 'any';
 }
-const TODAY_TAG = { done: 'ok', due: 'warn', any: '', met: 'ok', rest: '' };
+const TODAY_TAG = { done: 'ok', due: 'warn', makeUp: 'warn', any: '', met: 'ok', rest: '' };
 function todayTag(a) {
   const k = routineToday(a);
   if (!k) return '';
@@ -803,9 +834,10 @@ function routineStreak(a) {
   const now = today(), start = routineStart(a);
   let n = 0;
   if (!isFlexible(a)) {
+    const kept = keptDay(a);
     for (let d = now; d >= start && n < 3660; d = addDays(d, -1)) {
       if (!isDueDay(a, d) || (a.dueDate && d > a.dueDate)) continue;
-      if (checkedOn(a, d)) n++;
+      if (kept(d)) n++;
       else if (d !== now) break;
     }
     return { n, unit: 'day' };
@@ -830,10 +862,11 @@ function consistency(a, from = '') {
   if (start > end) return null;
   let kept = 0, total = 0;
   if (!isFlexible(a)) {
+    const keptOn = keptDay(a);
     daysBetween(start, end).filter(d => isDueDay(a, d)).forEach(d => {
       if (d === now && !checkedOn(a, d)) return;
       total++;
-      if (checkedOn(a, d)) kept++;
+      if (keptOn(d)) kept++;
     });
   } else {
     for (let p = periodOf(a, start); p.from <= end; p = periodOf(a, addDays(p.to, 1))) {
@@ -854,8 +887,10 @@ const nthWord = (nth, day) => t(`rt.nth.${nth < 0 ? 'last' : nth}${[2, 5, 6].inc
 // "the second Friday" or "the last Wednesday" of a month.
 const nthWeekdayText = (nth, day) => t('rt.monthNth', { nth: nthWord(nth, day), day: weekdayName(day, 'long') });
 
-// A short summary, like a calendar's: every day, every Mon, Thu, every 2 weeks on Mon, 3× a week.
-function scheduleText(a) {
+// A short summary, like a calendar's: every day, every Mon, Thu, every 2 weeks on Mon, 3× a week;
+// days that can be made up add "or another day".
+const scheduleText = a => (makesUp(a) ? t('rt.orAnotherDay', { text: baseSchedule(a) }) : baseSchedule(a));
+function baseSchedule(a) {
   const s = sched(a), start = routineStart(a);
   const every = tp('rt.every.' + s.unit, s.every);
   if (s.times) return s.every === 1 ? tp(s.unit === 'month' ? 'rt.perMonth' : 'rt.perWeek', s.times) : t('rt.timesEvery', { times: tp('rt.times', s.times), every });
@@ -948,12 +983,14 @@ function routineWeek(a, from = shownWeek(a)) {
   const arrow = (dir, off, tip = esc(t(dir < 0 ? 'rt.prevWeek' : 'rt.nextWeek'))) => `<button type="button" class="icon-btn rt-arrow" data-rt-week="${a.id}" data-dir="${dir}" title="${tip}" aria-label="${tip}" ${off ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${dir < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg></button>`;
   // Each day is one of: done, due (outlined), missed (hatched), not due (fixed routines' other days)
   // or any day (flexible routines); today is ringed.
+  // A missed day that a tick on another day made up for shows as made up.
+  const kept = keptDay(a);
   const strip = daysBetween(from, addDays(from, 6)).map(d => {
     const on = checkedOn(a, d), off = d > now || !runsOn(a, d), fixed = !isFlexible(a), due = fixed && isDueDay(a, d);
-    const missed = due && !on && !off && d < now;
-    const kind = on ? 'on' : missed ? 'missed' : due ? 'due' : fixed ? 'rest' : '';
+    const past = due && !on && !off && d < now;
+    const kind = on ? 'on' : past ? (kept(d) ? 'made' : 'missed') : due ? 'due' : fixed ? 'rest' : '';
     const cls = ['rt-day', due ? 'due' : '', kind, d === now ? 'today' : ''].filter(Boolean).join(' ');
-    const said = t({ on: 'rt.dayOn', missed: 'rt.dayMissed', due: 'rt.dayDue', rest: 'rt.dayRest' }[kind] || 'rt.dayOff', { date: fmt(d) });
+    const said = t({ on: 'rt.dayOn', missed: 'rt.dayMissed', made: 'rt.dayMadeUp', due: 'rt.dayDue', rest: 'rt.dayRest' }[kind] || 'rt.dayOff', { date: fmt(d) });
     const label = esc(d === now ? t('rt.dayToday', { label: said }) : said);
     return `<button type="button" class="${cls}" data-checkin="${a.id}" data-date="${d}" aria-pressed="${on}" ${off ? 'aria-disabled="true"' : ''} title="${label}" aria-label="${label}"><span aria-hidden="true">${esc(weekdayName(weekday(d), 'narrow'))}</span></button>`;
   }).join('');
@@ -990,7 +1027,7 @@ function routineCard(a) {
 function routineItems(a, iso) {
   const n = dayItemsDone(a, iso);
   return `<div class="rt-items"><span class="label">${esc(t('list.today', { done: n, total: a.list.length }))}</span>
-    <div class="li-ticks" role="group" aria-label="${esc(t('list.todayLabel'))}">${a.list.map(i => {
+    <div class="li-ticks" role="group" aria-label="${esc(t('list.todayLabel'))}">${doneLast(a.list, i => itemOn(a, iso, i.id)).map(i => {
       const on = itemOn(a, iso, i.id);
       return `<button type="button" class="li-tick${on ? ' done' : ''}" role="checkbox" aria-checked="${on}" data-li-tick="${a.id}" data-li="${i.id}" data-date="${iso}"><span class="li-box" aria-hidden="true">${on ? '✓' : ''}</span><span class="li-text">${esc(i.text)}</span></button>`;
     }).join('')}</div></div>`;
@@ -998,9 +1035,10 @@ function routineItems(a, iso) {
 
 // What the week strip's days mean; due, missed and not-due days only when some routine falls on set days.
 function routineLegend(routines) {
-  const fixed = routines.some(a => !isFlexible(a));
-  const keys = ['on', ...(fixed ? ['due', 'missed', 'rest'] : []), 'today'];
-  return `<div class="map-legend rt-legend">${keys.map(k => `<span><i class="rt-day rt-swatch ${k === 'today' ? 'rest today' : k === 'missed' ? 'due missed' : k}" aria-hidden="true"></i>${esc(t('rt.legend.' + k))}</span>`).join('')}</div>`;
+  const fixed = routines.some(a => !isFlexible(a)), made = routines.some(makesUp);
+  const keys = ['on', ...(fixed ? ['due', 'missed', ...(made ? ['made'] : []), 'rest'] : []), 'today'];
+  const look = { today: 'rest today', missed: 'due missed', made: 'due made' };
+  return `<div class="map-legend rt-legend">${keys.map(k => `<span><i class="rt-day rt-swatch ${look[k] || k}" aria-hidden="true"></i>${esc(t('rt.legend.' + k))}</span>`).join('')}</div>`;
 }
 
 // A routine on the overview: tick today off and see this period at a glance.
@@ -1516,10 +1554,13 @@ function goalSelect(target, value) {
 }
 
 // A list's items on its card, each ticked off with a tap, under how many are done.
+// Ticked items go below the ones still to do, each group in the list's own order.
+const doneLast = (list, done = i => i.done) => [...list.filter(i => !done(i)), ...list.filter(done)];
+
 function listTicks(a) {
   const n = listDone(a);
   return `${a.list.length ? progressBar(n / a.list.length * 100, t('list.done', { done: n, total: a.list.length })) : ''}
-    <div class="li-ticks">${a.list.map(i => `<button type="button" class="li-tick${i.done ? ' done' : ''}" role="checkbox" aria-checked="${!!i.done}" data-li-tick="${a.id}" data-li="${i.id}"><span class="li-box" aria-hidden="true">${i.done ? '✓' : ''}</span><span class="li-text">${esc(i.text)}</span></button>`).join('')}</div>`;
+    <div class="li-ticks">${doneLast(a.list).map(i => `<button type="button" class="li-tick${i.done ? ' done' : ''}" role="checkbox" aria-checked="${!!i.done}" data-li-tick="${a.id}" data-li="${i.id}"><span class="li-box" aria-hidden="true">${i.done ? '✓' : ''}</span><span class="li-text">${esc(i.text)}</span></button>`).join('')}</div>`;
 }
 
 function activityCard(a) {
@@ -2014,12 +2055,13 @@ const tlGrip = (edge, left, width) => {
 // Narrow days merge into one band of colour.
 function tlRoutineDays(a, from, to, x, px) {
   if (!isRoutine(a) || isFlexible(a)) return '';
-  const now = today(), w = px > 4 ? px - 2 : px, out = [];
+  const now = today(), w = px > 4 ? px - 2 : px, out = [], kept = keptDay(a);
   const last = Math.min(to, a.dueDate ? dayNum(a.dueDate) : to);
   for (let n = Math.max(from, dayNum(routineStart(a))); n <= last; n++) {
     const iso = dayStr(n);
     if (!isDueDay(a, iso)) continue;
-    const st = checkedOn(a, iso) ? 'done' : iso < now ? 'missed' : 'due';
+    // A day made up for on another day counts as done.
+    const st = kept(iso) ? 'done' : iso < now ? 'missed' : 'due';
     out.push(`<i class="tl-day ${st}" style="left:${x(n) + (px - w) / 2}px;width:${w}px"></i>`);
   }
   return out.join('');
@@ -3002,21 +3044,37 @@ function activityForm(a) {
 }
 
 // A list's items in its form: tick, rename or remove each; Enter in one adds the next below it.
-const listRow = (i = { id: '', text: '', done: false }) => `<div class="li-row" data-li-row="${i.id}">
+// `pos` is the item's place in the list, so an unticked row can go back to it.
+const listRow = (i = { id: '', text: '', done: false }, pos = '') => `<div class="li-row" data-li-row="${i.id}" data-pos="${pos}">
   <input type="checkbox" class="li-check" ${i.done ? 'checked' : ''} aria-label="${esc(t('list.tick'))}">
   <input type="text" class="li-input" enterkeyhint="enter" value="${esc(i.text)}" placeholder="${esc(t('list.itemPh'))}" aria-label="${esc(t('list.item'))}">
   <button type="button" class="icon-btn li-del" data-li-del aria-label="${esc(t('list.remove'))}" title="${esc(t('list.remove'))}">×</button></div>`;
 function listEditor(list) {
   return `<div class="field" data-field="list"><span class="label">${t('list.items')}</span>
-    <div class="li-rows" id="listRows">${(list.length ? list : [undefined]).map(i => listRow(i)).join('')}</div>
+    <div class="li-rows" id="listRows">${(list.length ? doneLast(list) : [undefined]).map(i => listRow(i, list.indexOf(i))).join('')}</div>
     <button type="button" class="btn ghost li-add" data-li-add><span aria-hidden="true">+</span> ${t('list.add')}</button>
     <div class="err"></div><div class="hint">${t('list.hint')}</div></div>`;
 }
-function addListRow(after = null) {
-  const rows = $('#listRows');
+// New rows go above the ticked ones; `focus` puts the cursor in the new row.
+function addListRow(after = null, focus = true) {
+  const rows = $('#listRows'), firstDone = [...rows.children].find(r => r.querySelector('.li-check').checked);
   if (after) after.insertAdjacentHTML('afterend', listRow());
+  else if (firstDone) firstDone.insertAdjacentHTML('beforebegin', listRow());
   else rows.insertAdjacentHTML('beforeend', listRow());
-  (after ? after.nextElementSibling : rows.lastElementChild).querySelector('.li-input').focus();
+  const row = after ? after.nextElementSibling : firstDone ? firstDone.previousElementSibling : rows.lastElementChild;
+  if (focus) row.querySelector('.li-input').focus();
+}
+// Ticking an item in the form moves it below the ones still to do; unticking moves it back above them.
+function placeListRow(row) {
+  const rows = $('#listRows'), done = row.querySelector('.li-check').checked;
+  row.remove();
+  const firstDone = [...rows.children].find(r => r.querySelector('.li-check').checked);
+  // Back above the first row still to do that came after it in the list, or else above the ticked ones.
+  const pos = Number(row.dataset.pos), later = !done && row.dataset.pos !== '' && [...rows.children].find(r => !r.querySelector('.li-check').checked && r.dataset.pos !== '' && Number(r.dataset.pos) > pos);
+  if (later) later.before(row);
+  else if (done || !firstDone) rows.append(row);
+  else firstDone.before(row);
+  row.querySelector('.li-check').focus();
 }
 
 // The first step of a new activity: one done once, a list to tick off, a routine, or a list ticked off each time.
@@ -3095,6 +3153,7 @@ function repeatFields(a) {
     </div>
     <div id="repDays">${field('days', t('f.days'), `<div class="day-toggles" role="group" aria-label="${esc(t('f.days'))}">${toggles}</div><input type="hidden" name="days" value="${days.join(',')}">`)}</div>
     <div id="repTimes">${field('times', t('f.times'), num('times', r?.times ?? 3), '<span id="timesHint"></span>')}</div>
+    <div id="repMakeUp" class="field" data-field="makeUp"><label class="rep-check"><input type="checkbox" id="f-makeUp" name="makeUp" ${r?.makeUp ? 'checked' : ''}> ${t('f.makeUp')}</label><div class="err"></div><div class="hint">${t('f.makeUpHint')}</div></div>
     <fieldset id="repeatEnds" class="rep-ends"><legend class="label">${t('f.ends')}</legend>
       <div class="field rep-end" data-field="endDate">${radio('on', t('f.endsOn'))}${date('endDate', r?.count ? '' : a.dueDate)}<div class="err"></div></div>
       <div class="field rep-end" data-field="count">${radio('after', t('f.endsAfter'))}${num('count', r?.count ?? 10)}<span id="countUnit"></span><div class="err"></div></div>
@@ -3149,6 +3208,8 @@ function updateRepeatFields(e) {
   modal.querySelector('[data-field="on"]').hidden = !onSel.options.length;
   $('#repDays').hidden = !(unit === 'week' && on === 'days');
   $('#repTimes').hidden = on !== 'times';
+  // Only set days can be made up on another day.
+  $('#repMakeUp').hidden = mode === 'none' || on === 'times';
   $('#timesHint').textContent = t('f.timesHint', { every: tp('rt.every.' + unit, every) });
   $('#countUnit').textContent = tp('f.endsCount', Math.max(1, parseInt($('#f-count').value, 10) || 1));
   $('#repeatEnds').hidden = mode === 'none';
@@ -3184,6 +3245,7 @@ function readRepeat(v, start) {
     }
     if (on === 'nth') Object.assign(repeat, { nth: Number(v.nth), weekday: Number(v.weekday) });
   }
+  if (on !== 'times' && v.makeUp) repeat.makeUp = true;
   let dueDate = '';
   if (v.ends !== 'after') {
     if (!v.endDate) return { errors: { endDate: t('err.endDate') } };
@@ -3794,10 +3856,14 @@ $('#modalBody').addEventListener('click', e => {
   if (e.target.closest('[data-li-add]')) return addListRow();
   const del = e.target.closest('[data-li-del]');
   if (del) {
+    // Focus moves to the next row's remove button, not its text: on a phone that would open the keyboard.
     const row = del.closest('.li-row'), next = row.nextElementSibling || row.previousElementSibling;
     row.remove();
-    if (!next) return addListRow();
-    return next.querySelector('.li-input').focus();
+    if (!next) {
+      addListRow(null, false);
+      return modal.querySelector('[data-li-add]').focus();
+    }
+    return next.querySelector('[data-li-del]').focus();
   }
   const b = e.target.closest('[data-act-kind]');
   if (b && formCtx?.choose) openForm('activity', null, { ...formCtx.choose, repeat: b.dataset.actKind });
@@ -3812,6 +3878,7 @@ $('#modalForm').addEventListener('focusin', e => {
   if (row && e.target.type !== 'radio') row.querySelector('input[type="radio"]').checked = true;
 });
 $('#modalForm').addEventListener('change', e => {
+  if (e.target.matches('.li-check')) return placeListRow(e.target.closest('.li-row'));
   if (e.target.id === 'f-from' || e.target.id === 'f-to') return fillRelTypes();
   if (['f-monthDay', 'f-nth', 'f-weekday'].includes(e.target.id)) e.target.setAttribute('data-picked', '');
   if (['f-addsUp', 'f-unit'].includes(e.target.id) && formCtx?.kind === 'state') return updateStateFields();

@@ -185,7 +185,7 @@ window.moreTests = async ({ step, assert }) => {
     openForm('activity', a.id);
     const pk = modal.querySelector('.picker[data-picker="goal"]');
     const list = pk.querySelector('.pick-list'), search = pk.querySelector('.picker-search');
-    assert(!modal.querySelector('input[type="checkbox"]'), 'no checkboxes');
+    assert(!modal.querySelector('.picker input[type="checkbox"]'), 'no checkboxes in the link pickers');
     assert(list.hidden && search.getAttribute('aria-expanded') === 'false', 'list closed at first');
     const chosen = () => [...pk.querySelectorAll('[data-unpick]')].map(b => b.dataset.unpick);
     eq(chosen(), [g1.id], 'linked goal shown as chosen');
@@ -322,7 +322,8 @@ window.moreTests = async ({ step, assert }) => {
     eq(relsFrom(a.id, 'contributes').map(r => r.to), [g.id], 'linked to the goal');
     // On the card: tick one, then the other.
     render();
-    const tick = i => document.querySelectorAll(`.card.activity [data-li-tick="${a.id}"]`)[i];
+    // Items by their place in the list (ticked ones are shown last).
+    const tick = i => document.querySelector(`.card.activity [data-li-tick="${a.id}"][data-li="${a.list[i].id}"]`);
     assert(tick(0) && tick(0).getAttribute('aria-checked') === 'false', 'items on the card');
     assert(document.querySelector(`.card.activity[data-open="${a.id}"]`).textContent.includes(t('list.done', { done: 0, total: 2 })), 'card shows 0/2 done');
     tick(0).click();
@@ -339,12 +340,13 @@ window.moreTests = async ({ step, assert }) => {
     const ids = a.list.map(i => i.id);
     openForm('activity', a.id);
     assert(!btns().length && $('#listRows').children.length === 2, 'editing opens the list');
-    assert($('#listRows').children[0].querySelector('.li-check').checked && !$('#listRows').children[1].querySelector('.li-check').checked, 'ticks shown in the form');
-    $('#listRows').children[1].querySelector('.li-check').checked = true;
-    input(1).value = 'GPS watch';
+    eq([...$('#listRows').children].map(r => r.dataset.liRow), [ids[1], ids[0]], 'the form lists the ticked item last');
+    assert(!$('#listRows').children[0].querySelector('.li-check').checked && $('#listRows').children[1].querySelector('.li-check').checked, 'ticks shown in the form');
+    $('#listRows').children[0].querySelector('.li-check').checked = true;
+    input(0).value = 'GPS watch';
     submitForm();
-    eq(a.list.map(i => i.id), ids, 'ids kept');
-    eq(a.list[1].text, 'GPS watch', 'renamed');
+    eq(a.list.map(i => i.id).sort(), [...ids].sort(), 'ids kept');
+    eq(a.list.find(i => i.id === ids[1]).text, 'GPS watch', 'renamed');
     eq(a.status, 'done', 'all ticked in the form: done');
     // Blocked lists still finish, with the usual warning.
     const pre = mk('activity', { title: 'Register', status: 'todo' });
@@ -410,18 +412,20 @@ window.moreTests = async ({ step, assert }) => {
     document.querySelector(`[data-li-tick="${a.id}"][data-li="p"]`).click();
     assert(a.list[0].at > '2000-01-01' && a.list[1].at === '2000-01-01', 'a tick stamps that item only');
     openForm('activity', a.id);
-    const rows = () => $('#listRows').children;
-    rows()[1].querySelector('.li-input').value = 'Cap and gloves';
-    rows()[2].querySelector('[data-li-del]').click();
+    const rows = () => $('#listRows').children, row = id => $(`#listRows [data-li-row="${id}"]`);
+    row('q').querySelector('.li-input').value = 'Cap and gloves';
+    row('r').querySelector('[data-li-del]').click();
     modal.querySelector('[data-li-add]').click();
-    rows()[2].querySelector('.li-input').value = 'Socks';
+    eq(rows()[1].dataset.liRow, '', 'a new item goes above the ticked ones');
+    rows()[1].querySelector('.li-input').value = 'Socks';
     submitForm();
-    eq(a.list.map(i => i.text), ['Pins', 'Cap and gloves', 'Socks'], 'saved');
-    assert(a.list[1].at > '2000-01-01' && a.list[2].at && safeId(a.list[2].id), 'renamed and new items stamped');
+    eq(a.list.map(i => i.text), ['Cap and gloves', 'Socks', 'Pins'], 'saved in the order shown, ticked last');
+    const by = text => a.list.find(i => i.text === text);
+    assert(by('Cap and gloves').at > '2000-01-01' && by('Socks').at && safeId(by('Socks').id), 'renamed and new items stamped');
     eq(a.droppedItems, { r: 1 }, 'removed item remembered');
-    const pinsAt = a.list[0].at;
+    const pinsAt = by('Pins').at;
     openForm('activity', a.id); submitForm();
-    eq(a.list[0].at, pinsAt, 'saving unchanged keeps the times');
+    eq(by('Pins').at, pinsAt, 'saving unchanged keeps the times');
     const r = resetProgress(db).activities.find(x => x.id === a.id);
     assert(r.list.every(i => !i.done && !i.at) && !r.droppedItems, 'reset clears ticks, times and removals');
     assert(!('droppedItems' in normalize({ activities: [{ id: 'z', title: 'Z', droppedItems: { x: 1 } }] }).activities[0]), 'removals without a list dropped on import');
@@ -521,7 +525,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(a.repeat.times === 3 && a.status === 'todo' && !a.listDays, 'three times a week, nothing ticked');
     render();
     const card = () => $(`.card.routine[data-open="${a.id}"]`);
-    const item = i => card().querySelectorAll('.rt-items [data-li-tick]')[i];
+    const item = i => card().querySelector(`.rt-items [data-li-tick][data-li="${a.list[i].id}"]`);
     eq(card().querySelectorAll('.rt-items [data-li-tick]').length, 2, 'today’s items on the card');
     eq(card().querySelector('.rt-items .label').textContent, t('list.today', { done: 0, total: 2 }), 'counted for today');
     eq(item(0).dataset.date, now, 'items are today’s');
@@ -726,6 +730,173 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('en');
   });
 
+  await step('lists: ticked items move below the rest, on the card and in the form', () => {
+    fresh('Done last');
+    const a = mk('activity', { title: 'Pack', status: 'todo', startDate: today(), dueDate: addDays(today(), 4), list: ['a', 'b', 'c', 'd'].map(id => ({ id, text: id.toUpperCase(), done: false })) });
+    save(); setView('activities');
+    const shown = () => [...document.querySelectorAll(`.card.activity [data-li-tick="${a.id}"]`)].map(b => b.dataset.li);
+    const tick = id => document.querySelector(`[data-li-tick="${a.id}"][data-li="${id}"]`);
+    eq(shown(), ['a', 'b', 'c', 'd'], 'in order at first');
+    tick('b').click();
+    eq(shown(), ['a', 'c', 'd', 'b'], 'ticked one goes to the bottom');
+    eq(document.activeElement, tick('b'), 'focus follows the item');
+    tick('a').click();
+    eq(shown(), ['c', 'd', 'a', 'b'], 'ticked ones keep their own order at the bottom');
+    tick('b').click();
+    eq(shown(), ['b', 'c', 'd', 'a'], 'unticked goes back to its place among the rest');
+    eq(a.list.map(i => i.id), ['a', 'b', 'c', 'd'], 'the stored order is unchanged by ticks');
+    // In the form: the ticked rows are last; ticking one there moves it down, unticking moves it back up.
+    openForm('activity', a.id);
+    const rows = () => [...$('#listRows').children].map(r => r.dataset.liRow);
+    eq(rows(), ['b', 'c', 'd', 'a'], 'form: ticked last');
+    const check = id => $(`#listRows [data-li-row="${id}"] .li-check`);
+    check('c').click();
+    eq(rows(), ['b', 'd', 'a', 'c'], 'form: ticking moves the row down');
+    eq(document.activeElement, check('c'), 'form: focus stays on the tick');
+    check('a').click();
+    eq(rows(), ['a', 'b', 'd', 'c'], 'form: unticking moves it above the ticked ones');
+    modal.querySelector('[data-li-add]').click();
+    eq(rows().length, 5, 'added');
+    eq(rows()[3], '', 'form: a new item goes above the ticked ones');
+    eq(document.activeElement, $('#listRows').children[3].querySelector('.li-input'), 'form: Add item puts the cursor in it');
+    $('#listRows').children[3].querySelector('.li-input').value = 'E';
+    submitForm();
+    eq(a.list.map(i => i.text), ['A', 'B', 'D', 'E', 'C'], 'saved in the order shown');
+    eq(a.list.map(i => !!i.done), [false, false, false, false, true], 'ticks saved');
+    // A routine list does the same with today's ticks.
+    const r = mk('activity', { title: 'Morning', startDate: addDays(today(), -3), dueDate: addDays(today(), 20), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {}, list: ['x', 'y', 'z'].map(id => ({ id, text: id, done: false })) });
+    save(); render();
+    const rshown = () => [...document.querySelectorAll(`.rt-items [data-li-tick="${r.id}"]`)].map(b => b.dataset.li);
+    tickListItem(r.id, 'x', today());
+    eq(rshown(), ['y', 'z', 'x'], 'routine list: today’s ticked item last');
+    tickListItem(r.id, 'x', today());
+    eq(rshown(), ['x', 'y', 'z'], 'routine list: unticked, back in place');
+    deletePlan(plans.current);
+  });
+
+  await step('routines: set days can be made up on another day', () => {
+    fresh('Make up');
+    const MON = '2026-11-02', TUE = '2026-11-03', WED = '2026-11-04', THU = '2026-11-05', FRI = '2026-11-06', SUN = '2026-11-08';
+    const onDay = (iso, fn) => { const real = window.today; window.today = () => iso; try { return fn(); } finally { window.today = real; } };
+    const mk2 = (makeUp, checkins) => mk('activity', { title: makeUp ? 'Loose' : 'Strict', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 3], ...(makeUp ? { makeUp: true } : {}) }, checkins });
+    const strict = mk2(false, { [TUE]: 1 }), loose = mk2(true, { [TUE]: 1 });
+    save();
+    onDay(WED, () => {
+      eq(periodProgress(strict).done, 0, 'strict: Tuesday does not count');
+      eq(periodProgress(loose).done, 1, 'loose: Tuesday counts');
+      eq([...madeUpDays(loose, WED)], [MON], 'loose: it makes up Monday');
+      eq(madeUpDays(strict, WED).size, 0, 'strict: nothing made up');
+      eq(missedDays(strict, MON, TUE), [MON], 'strict: Monday missed');
+      eq(missedDays(loose, MON, TUE), [], 'loose: Monday not missed');
+      eq(routineToday(loose), 'rest', 'loose: nothing to make up, not due today');
+      setView('activities');
+      const day = (a, iso) => $(`.card.routine[data-open="${a.id}"] [data-checkin][data-date="${iso}"]`);
+      assert(day(strict, MON).classList.contains('missed') && day(loose, MON).classList.contains('made'), 'strip: missed vs made up');
+      eq(day(loose, MON).title, t('rt.dayMadeUp', { date: fmtDay(MON, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }), 'made-up day says so');
+      assert(!day(loose, MON).classList.contains('missed'), 'not hatched');
+      const cs = getComputedStyle(day(loose, MON));
+      assert(cs.borderTopStyle === 'solid' && cs.backgroundImage === 'none', 'made up: solid, not hatched');
+      eq(scheduleText(loose), t('rt.orAnotherDay', { text: scheduleText(strict) }), 'schedule says “or another day”');
+      assert([...$('.rt-legend').querySelectorAll('span')].some(s => s.textContent === t('rt.legend.made')), 'legend has Made up');
+      // The timeline shows a made-up day as done; a missed one stays red.
+      const tl = tlRoutineDays(loose, dayNum(MON), dayNum(SUN), n => n, 10), tls = tlRoutineDays(strict, dayNum(MON), dayNum(SUN), n => n, 10);
+      assert(tl.startsWith('<i class="tl-day done"') && tls.startsWith('<i class="tl-day missed"'), 'timeline: made up done, strict missed');
+    });
+    // One tick per missed day: two missed, one extra tick.
+    loose.checkins = { [FRI]: 1 };
+    onDay(SUN, () => {
+      eq([...madeUpDays(loose, SUN)], [MON], 'the earliest missed day is made up first');
+      eq(missedDays(loose, MON, addDays(SUN, -1)), [THU], 'Thursday still missed');
+      eq(periodProgress(loose), { ...periodProgress(loose), done: 1, target: 2, met: false }, '1 of 2');
+      eq(routineState(loose), 'doing', 'ticked after Monday and Thursday: not late');
+      eq(routineToday(loose), 'makeUp', 'Sunday: asks to make up a day');
+      eq(planHealth({ ...db, activities: [loose] }) === 'late', false, 'the badge is not red for it');
+      eq(planHealth({ ...db, activities: [strict] }), 'late', 'while a strict one that missed both days is');
+      setView('activities');
+      const tag = $(`.card.routine[data-open="${loose.id}"] [data-today]`);
+      assert(tag.textContent === t('rt.today.makeUp') && tag.classList.contains('warn'), 'tag: make up a missed day');
+      loose.checkins[SUN] = 1;
+      eq(periodProgress(loose).met, true, 'ticked Sunday too: week met');
+      eq(routineState(loose), 'done', 'done for the week');
+      eq(missedDays(loose, MON, addDays(SUN, -1)), [], 'nothing missed');
+    });
+    // Ahead: ticks before a due day count toward it, and the due day is then not needed.
+    loose.checkins = { [MON]: 1, [TUE]: 1 };
+    onDay(THU, () => {
+      eq(periodProgress(loose).met, true, 'Mon and Tue: the week is met');
+      eq(routineToday(loose), 'met', 'Thursday: target met, not due');
+      eq(planHealth({ ...db, activities: [loose] }), 'ok', 'no yellow badge for it');
+    });
+    onDay(FRI, () => {
+      eq(missedDays(loose, MON, THU), [], 'Thursday not missed: Tuesday counted ahead');
+      eq(madeUpDays(loose, FRI).has(THU), true, 'Thursday made up');
+    });
+    // Streak and consistency count made-up days as kept; strict ones do not.
+    const ls = mk2(true, { '2026-10-26': 1, '2026-10-30': 1, [MON]: 1 }), ss = mk2(false, { '2026-10-26': 1, '2026-10-30': 1, [MON]: 1 });
+    onDay(WED, () => {
+      eq(routineStreak(ls).n, 3, 'loose streak: Mon, (Thu made up by Fri), Mon');
+      eq(routineStreak(ss).n, 1, 'strict streak broken by the missed Thursday');
+      assert(consistency(ls) > consistency(ss), 'loose consistency counts the made-up day');
+    });
+    // Extra ticks never count beyond what the period asks.
+    const many = mk2(true, { [MON]: 1, [TUE]: 1, [WED]: 1 });
+    onDay(WED, () => eq(periodProgress(many).done, 2, 'capped at the target'));
+    // Monthly: made up within the month.
+    const monthly = mk('activity', { title: 'Check', startDate: '2026-09-01', repeat: { every: 1, unit: 'month', on: 'day', day: 1, makeUp: true }, checkins: { '2026-11-03': 1 } });
+    onDay('2026-11-10', () => {
+      eq(missedDays(monthly, '2026-11-01', '2026-11-09'), [], 'monthly: the 1st made up on the 3rd');
+      eq(routineState(monthly), 'done', 'monthly: met');
+    });
+    deletePlan(plans.current);
+  });
+
+  await step('routines: the make-up option in the form', () => {
+    fresh('Make up form');
+    openForm('activity', null, { repeat: 'routine' });
+    const box = () => $('#repMakeUp'), set = (id, val) => { $(id).value = val; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    assert(box().hidden, 'a number of times a week: no make-up option');
+    set('#f-repeat', 'days');
+    assert(!box().hidden && !$('#f-makeUp').checked, 'set days: offered, off by default (strict)');
+    eq(box().querySelector('label').textContent.trim(), t('f.makeUp'), 'labelled');
+    eq(box().querySelector('.hint').textContent, t('f.makeUpHint'), 'explained');
+    set('#f-repeat', 'custom'); set('#f-unit', 'month'); set('#f-on', 'times');
+    assert(box().hidden, 'custom times: hidden');
+    set('#f-on', 'day');
+    assert(!box().hidden, 'monthly day: offered');
+    set('#f-repeat', 'none');
+    assert(box().hidden, 'no repeat: hidden');
+    set('#f-repeat', 'days');
+    $('#f-title').value = 'Gym'; $('#f-endDate').value = dateInput(addDays(today(), 30));
+    $('#f-makeUp').checked = true;
+    submitForm();
+    const a = db.activities.find(x => x.title === 'Gym');
+    assert(a && a.repeat.makeUp === true && a.repeat.days, 'saved with make-up');
+    openForm('activity', a.id);
+    assert($('#f-makeUp').checked && !box().hidden, 'shown checked when editing');
+    $('#f-makeUp').checked = false; submitForm();
+    assert(!('makeUp' in a.repeat), 'turned off: strict again');
+    // A flexible routine never keeps it, even if the box was left ticked.
+    openForm('activity', a.id);
+    $('#f-makeUp').checked = true;
+    set('#f-repeat', 'week');
+    submitForm();
+    assert(a.repeat.times && !a.repeat.makeUp, 'times a week: no make-up');
+    // Older plans without it are strict; it syncs with the rest of the repeat.
+    assert(!makesUp({ repeat: { every: 1, unit: 'week', days: [0] } }), 'missing: strict');
+    eq(normalize({ activities: [{ id: 'k', title: 'K', repeat: { every: 1, unit: 'week', days: [0], makeUp: true } }] }).activities[0].repeat.makeUp, true, 'kept on import');
+    // Slovenian.
+    changeLanguage('sl');
+    openForm('activity', a.id); set('#f-repeat', 'days');
+    eq(box().querySelector('label').textContent.trim(), I18N.sl.strings['f.makeUp'], 'Slovenian label');
+    modal.close();
+    a.repeat = { every: 1, unit: 'week', days: [0, 3], makeUp: true };
+    assert(scheduleText(a).endsWith(I18N.sl.strings['rt.orAnotherDay'].split('}')[1]), 'Slovenian schedule');
+    changeLanguage('en');
+    // The help tip mentions it.
+    assert(t('help.tip.routines').includes('made up'), 'help explains making up');
+    deletePlan(plans.current);
+  });
+
   await step('lists: around the app', async () => {
     fresh('Lists around');
     const g = mk('goal', { title: 'Race day', progress: 'activities', startDate: today(), deadline: addDays(today(), 20) });
@@ -792,9 +963,16 @@ window.moreTests = async ({ step, assert }) => {
     // Removing every row leaves one empty row to type in; Enter in the middle adds right below.
     openForm('activity', a.id);
     const rows = () => [...$('#listRows').children];
+    // Removing a row moves focus to the next row's remove button – never into its text, which would
+    // open the keyboard on a phone.
+    const second = rows()[1];
+    rows()[0].querySelector('[data-li-del]').click();
+    assert(document.activeElement === second.querySelector('[data-li-del]') && !document.activeElement.matches('input'), 'next row’s remove button focused, not its text');
+    rows().at(-1).querySelector('[data-li-del]').click();
+    assert(document.activeElement === rows().at(-1).querySelector('[data-li-del]'), 'removing the last row focuses the one above');
     while (rows().length > 1) rows()[0].querySelector('[data-li-del]').click();
     rows()[0].querySelector('[data-li-del]').click();
-    assert(rows().length === 1 && rows()[0].querySelector('.li-input').value === '' && document.activeElement === rows()[0].querySelector('.li-input'), 'last row removed: a fresh empty one, focused');
+    assert(rows().length === 1 && rows()[0].querySelector('.li-input').value === '' && document.activeElement === modal.querySelector('[data-li-add]'), 'last row removed: a fresh empty one, Add item focused, no text field');
     modal.close();
     openForm('activity', a.id);
     rows()[0].querySelector('.li-input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
@@ -824,7 +1002,7 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     document.querySelector(`[data-li-tick="${a.id}"][data-li="p"]`).click();
     openForm('activity', a.id);
-    $('#listRows').children[2].querySelector('[data-li-del]').click();
+    $('#listRows [data-li-row="r"] [data-li-del]').click();
     submitForm();
     // The other device, offline: ticks Cap and adds Gels, a little later.
     const later = new Date(Date.now() + 60000).toISOString();
@@ -833,7 +1011,7 @@ window.moreTests = async ({ step, assert }) => {
     o.list.push({ id: 'n', text: 'Gels', done: false, at: later });
     o.updatedAt = later;
     const m = mergePlans(db, other).activities.find(x => x.id === a.id);
-    eq(m.list.map(i => `${i.text}:${i.done ? 'x' : '-'}`), ['Pins:x', 'Cap:x', 'Gels:-'], 'both ticks kept, Bib stays removed, Gels added');
+    eq(m.list.map(i => `${i.text}:${i.done ? 'x' : '-'}`).sort(), ['Cap:x', 'Gels:-', 'Pins:x'], 'both ticks kept, Bib stays removed, Gels added');
     eq(m.status, 'doing', 'in progress');
     // Ticking Gels on the merged copy finishes it.
     const m2 = mergePlans({ ...emptyDb(), activities: [m] }, { ...emptyDb(), activities: [{ ...m, updatedAt: new Date(Date.now() + 120000).toISOString(), list: m.list.map(i => (i.id === 'n' ? { ...i, done: true, at: new Date(Date.now() + 120000).toISOString() } : i)) }] }).activities[0];
@@ -851,7 +1029,9 @@ window.moreTests = async ({ step, assert }) => {
     const items = [...doc.querySelectorAll('.li-tick')].map(b => b.getBoundingClientRect());
     assert(items.length === 3 && items.every(r => r.left >= card.left && r.right <= card.right + 0.5), 'items inside the card');
     assert(doc.documentElement.scrollWidth <= 390, `no sideways scroll (${doc.documentElement.scrollWidth})`);
-    assert(items[1].height > items[0].height * 2, 'a long item wraps');
+    // Shown as b, c, then the ticked a.
+    assert(items[0].height > items[2].height * 2, 'a long item wraps');
+    eq([...doc.querySelectorAll('.li-tick')].map(b => b.dataset.li), ['b', 'c', 'a'], 'the ticked item last');
     frame.remove();
     db.activities = db.activities.filter(x => x.id !== 'ph');
   });

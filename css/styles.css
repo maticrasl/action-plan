@@ -417,6 +417,8 @@ textarea { resize: vertical; min-height: 68px; }
 .rt-day.rest { border: 1px dotted var(--line-strong); background: transparent; color: var(--ink-3); font-weight: 600; }
 .rt-day.missed { border: 2px dashed var(--ink-3); color: var(--ink-3); text-decoration: line-through; background: repeating-linear-gradient(135deg, var(--sunken) 0 3px, transparent 3px 7px); }
 .rt-day.on { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+/* Made up: a missed day that a tick on another day stood in for – outlined in green, not filled. */
+.rt-day.made { border: 2px solid var(--ok); color: var(--ok); background: var(--fill-done); }
 .rt-day.due.today:not(.on) { background: var(--goal-soft); color: var(--goal); }
 .rt-day.today { outline: 2px solid var(--ink); outline-offset: 2px; }
 .rt-day:hover:not([aria-disabled="true"]) { border-color: var(--ink-2); }
@@ -448,6 +450,8 @@ textarea { resize: vertical; min-height: 68px; }
 .rep-end .err { flex-basis: 100%; }
 .day-toggle[aria-pressed="true"] { background: var(--goal); border-color: var(--goal); color: var(--surface); }
 .rt-stats { margin: 0; }
+.rep-check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.rep-check input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--goal); }
 
 /* ---------- Map ---------- */
 .map-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
