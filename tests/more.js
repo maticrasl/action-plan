@@ -238,13 +238,13 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     document.querySelector('[data-new="activity"]').click();
     const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
-    assert(modal.open && btns().map(b => b.dataset.actKind).join() === 'once,routine', 'two choices shown');
+    assert(modal.open && btns().map(b => b.dataset.actKind).join() === 'once,list,routine', 'three choices shown');
     assert($('#saveBtn').hidden && !$('#f-title'), 'no form and no Save yet');
     eq($('#modalTitle').textContent, t('new.activity'), 'titled New activity');
     await new Promise(r => setTimeout(r, 60));
     eq(document.activeElement, btns()[0], 'the first choice is focused');
     $('#modalForm').requestSubmit();
-    assert(modal.open && db.activities.length === 0 && btns().length === 2, 'Enter on the form saves nothing');
+    assert(modal.open && db.activities.length === 0 && btns().length === 3, 'Enter on the form saves nothing');
     btns()[0].click();
     assert(modal.open && !$('#saveBtn').hidden && $('#f-title'), 'one-time: the form opens');
     eq($('#f-repeat').value, 'none', 'one-time: does not repeat');
@@ -254,8 +254,8 @@ window.moreTests = async ({ step, assert }) => {
     assert(once && !isRoutine(once), 'saved as a one-time activity');
     // From a goal's menu: the goal stays linked through the choice.
     openForm('activity', null, { contributes: [g.id] });
-    assert(btns().length === 2, 'menu add asks too');
-    btns()[1].click();
+    assert(btns().length === 3, 'menu add asks too');
+    btns()[2].click();
     eq($('#f-repeat').value, 'week', 'routine: a number of times a week');
     assert(!$('#repeatEnds').hidden && modal.querySelector('[data-field="status"]').hidden && modal.querySelector('[data-field="dueDate"]').hidden, 'routine: ends shown, status and due date hidden');
     assert(modal.querySelector('[data-unpick]')?.closest('.tag')?.textContent.includes('Fit'), 'the goal is still picked');
@@ -278,7 +278,91 @@ window.moreTests = async ({ step, assert }) => {
     eq(db.activities.length, 2, 'nothing saved from the cancelled choice');
     changeLanguage('sl');
     openForm('activity');
-    eq(btns()[1].querySelector('strong').textContent, I18N.sl.strings['f.actKind.routine'], 'Slovenian labels');
+    eq(btns()[2].querySelector('strong').textContent, I18N.sl.strings['f.actKind.routine'], 'Slovenian labels');
+    modal.close();
+    changeLanguage('en');
+  });
+
+  await step('lists: items to tick off; all ticked means done', async () => {
+    fresh('Lists');
+    const g = mk('goal', { title: 'Race', progress: 'activities' });
+    save();
+    setView('activities');
+    openForm('activity', null, { contributes: [g.id] });
+    const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
+    eq(btns().map(b => b.dataset.actKind).join(), 'once,list,routine', 'three kinds offered');
+    btns()[1].click();
+    assert($('#listRows') && !$('#f-repeat') && !$('#f-status'), 'list: items, no repeat or status');
+    eq($('#listRows').children.length, 1, 'one empty item to start');
+    $('#f-title').value = 'Pack'; $('#f-startDate').value = dateInput(addDays(today(), 1)); $('#f-dueDate').value = dateInput(addDays(today(), 5));
+    submitForm();
+    assert(modal.open && modal.querySelector('[data-field="list"]').classList.contains('invalid'), 'an empty list is not saved');
+    eq(db.activities.length, 0, 'nothing saved yet');
+    const input = i => $('#listRows').children[i].querySelector('.li-input');
+    input(0).value = 'Shoes';
+    input(0).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    assert(modal.open && $('#listRows').children.length === 2 && document.activeElement === input(1), 'Enter adds the next item and focuses it');
+    input(1).value = 'Gels';
+    modal.querySelector('[data-li-add]').click();
+    input(2).value = 'Watch';
+    modal.querySelector('[data-li-add]').click();
+    eq($('#listRows').children.length, 4, 'Add item adds a row');
+    $('#listRows').children[1].querySelector('[data-li-del]').click();
+    eq([...$('#listRows').querySelectorAll('.li-input')].map(i => i.value), ['Shoes', 'Watch', ''], 'remove drops the row');
+    submitForm();
+    const a = db.activities.find(x => x.title === 'Pack');
+    assert(a && isList(a) && !isRoutine(a), 'saved as a list');
+    eq(a.list.map(i => i.text), ['Shoes', 'Watch'], 'empty rows left out');
+    assert(a.list.every(i => safeId(i.id) && !i.done), 'items have ids, none done');
+    eq(a.status, 'todo', 'starts to do (its start is tomorrow)');
+    eq(relsFrom(a.id, 'contributes').map(r => r.to), [g.id], 'linked to the goal');
+    // On the card: tick one, then the other.
+    render();
+    const tick = i => document.querySelectorAll(`.card.activity [data-li-tick="${a.id}"]`)[i];
+    assert(tick(0) && tick(0).getAttribute('aria-checked') === 'false', 'items on the card');
+    assert(document.querySelector(`.card.activity[data-open="${a.id}"]`).textContent.includes(t('list.done', { done: 0, total: 2 })), 'card shows 0/2 done');
+    tick(0).click();
+    assert(!modal.open, 'ticking does not open the form');
+    assert(a.list[0].done && a.status === 'doing', 'one ticked: in progress');
+    eq(goalProgress(g), 0, 'goal not done yet');
+    tick(1).click();
+    eq(a.status, 'done', 'all ticked: done');
+    eq(goalProgress(g), 100, 'goal counts it done');
+    eq($('#toast').textContent, t('list.complete', { name: 'Pack' }), 'says it is done');
+    tick(1).click();
+    eq(a.status, 'doing', 'unticking one: back in progress');
+    // The form keeps ids and ticks; ticking all there completes it too.
+    const ids = a.list.map(i => i.id);
+    openForm('activity', a.id);
+    assert(!btns().length && $('#listRows').children.length === 2, 'editing opens the list');
+    assert($('#listRows').children[0].querySelector('.li-check').checked && !$('#listRows').children[1].querySelector('.li-check').checked, 'ticks shown in the form');
+    $('#listRows').children[1].querySelector('.li-check').checked = true;
+    input(1).value = 'GPS watch';
+    submitForm();
+    eq(a.list.map(i => i.id), ids, 'ids kept');
+    eq(a.list[1].text, 'GPS watch', 'renamed');
+    eq(a.status, 'done', 'all ticked in the form: done');
+    // Blocked lists still finish, with the usual warning.
+    const pre = mk('activity', { title: 'Register', status: 'todo' });
+    rel(a, pre, 'depends');
+    a.list[0].done = false; a.status = 'doing'; save(); render();
+    tick(0).click();
+    eq($('#toast').textContent, t('acts.notDone', { name: 'Register' }), 'warns about what it waits for');
+    // On the overview row: a count.
+    assert(activityRow(a).includes('>2/2<'), 'row shows the count');
+    // Import: bad items dropped, bad lists removed.
+    const d = normalize({ activities: [{ id: 'x1', title: 'L', list: [{ id: 'ok', text: 'a' }, { id: '<b>', text: 'x' }, { id: 'n', text: 3 }, null] }, { id: 'x2', title: 'M', list: 'nope' }] });
+    eq(d.activities[0].list.map(i => i.id), ['ok'], 'unsafe items dropped');
+    assert(!('list' in d.activities[1]), 'a list that is not an array is dropped');
+    // Resetting progress unticks every item.
+    const r = resetProgress(db);
+    assert(r.activities.find(x => x.id === a.id).list.every(i => !i.done), 'reset unticks items');
+    // Wording in Slovenian.
+    changeLanguage('sl');
+    openForm('activity');
+    eq(btns()[1].querySelector('strong').textContent, I18N.sl.strings['f.actKind.list'], 'Slovenian kind');
+    btns()[1].click();
+    eq(modal.querySelector('[data-li-add]').textContent.trim(), '+ ' + I18N.sl.strings['list.add'], 'Slovenian add button');
     modal.close();
     changeLanguage('en');
   });

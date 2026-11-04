@@ -1012,12 +1012,24 @@ textarea { resize: vertical; min-height: 68px; }
 .tpl-inside p { margin: 8px 0 2px; }
 .tpl-inside ul { margin: 0; padding-left: 20px; color: var(--ink-2); line-height: 1.45; }
 .tpl-card .btn { align-self: flex-start; }
-.act-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
-.act-choice-btn { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; text-align: left; font: inherit; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
+.act-choice { display: flex; flex-direction: column; gap: 10px; }
+.act-choice-btn { display: flex; flex-direction: column; gap: 4px; padding: 14px 18px; text-align: left; font: inherit; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
 .act-choice-btn:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .act-choice-btn:focus-visible { outline: none; box-shadow: var(--focus); }
 .act-choice-btn strong { font-size: 16px; }
 .act-choice-btn span { font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+.li-ticks { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 4px; }
+.li-tick { display: flex; align-items: flex-start; gap: 8px; padding: 4px 2px; text-align: left; font: inherit; font-size: 14px; line-height: 1.35; color: var(--ink); background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.li-tick:hover { background: var(--surface-2); }
+.li-tick:focus-visible { outline: none; box-shadow: var(--focus); }
+.li-box { flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border: 1.5px solid var(--line-strong); border-radius: 4px; font-size: 12px; font-weight: 800; color: var(--surface); }
+.li-tick.done .li-box { background: var(--ok); border-color: var(--ok); }
+.li-tick.done .li-text { color: var(--ink-3); text-decoration: line-through; }
+.li-rows { display: flex; flex-direction: column; gap: 6px; }
+.li-row { display: flex; align-items: center; gap: 8px; }
+.li-row .li-check { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--ok); }
+.li-row .li-input { flex: 1; min-width: 0; }
+.li-add { align-self: flex-start; margin-top: 8px; }
 .empty-alt { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 8px; }
 
 /* Export and import of a single plan */

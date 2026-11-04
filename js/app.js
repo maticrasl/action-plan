@@ -194,6 +194,10 @@ function normalize(data) {
   for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k].filter(x => x && typeof x === 'object' && safeId(x.id));
   d.relations = d.relations.filter(r => safeId(r.from) && safeId(r.to));
   if (data?.deleted && typeof data.deleted === 'object' && !Array.isArray(data.deleted)) d.deleted = data.deleted;
+  d.activities.forEach(a => {
+    if (Array.isArray(a.list)) a.list = a.list.filter(i => i && safeId(i.id) && typeof i.text === 'string');
+    else delete a.list;
+  });
   migrateCumulative(d);
   return d;
 }
@@ -595,6 +599,28 @@ function goalScope(goalId) {
    from its start date to its due date, if any. Weeks start on Monday. */
 
 const isRoutine = a => !!a?.repeat;
+
+/* A list is a one-off activity with `list`: items ({ id, text, done }) to tick off. It is done once
+   every item is ticked; unticking one puts a done list back in progress. */
+const isList = a => !isRoutine(a) && Array.isArray(a?.list);
+const listDone = a => a.list.filter(i => i.done).length;
+function followList(a) {
+  const n = listDone(a);
+  if (a.list.length && n === a.list.length) a.status = 'done';
+  else if (a.status === 'done' || (n && a.status === 'todo')) a.status = 'doing';
+}
+
+function tickListItem(id, itemId) {
+  const a = db.activities.find(x => x.id === id), it = a && isList(a) && a.list.find(i => i.id === itemId);
+  if (!it) return;
+  it.done = !it.done;
+  const was = a.status;
+  followList(a);
+  const waits = blockers(a);
+  if (a.status === 'done' && was !== 'done') toast(waits.length ? t('acts.notDone', { name: waits[0].title }) : t('list.complete', { name: a.title }));
+  save();
+  render();
+}
 // Monday = 0 (day 0 of the epoch, 1 January 1970, was a Thursday).
 const weekday = iso => (dayNum(iso) + 3) % 7;
 const addDays = (iso, n) => dayStr(dayNum(iso) + n);
@@ -1238,6 +1264,7 @@ function activityRow(a) {
   return `<div class="row" data-open="${a.id}" data-ctx-item="${a.id}">
     ${statusCheck(a)}
     <span class="grow ${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</span>
+    ${isList(a) && a.list.length ? `<span class="tag">${t('list.count', { done: listDone(a), total: a.list.length })}</span>` : ''}
     ${blocked ? `<span class="tag bad" title="${esc(tp('blocked.title', blocked))}">${t('blocked')}</span>` : ''}
     <span class="links">${goals}</span>
     ${deadlineTag(a.dueDate, a.status === 'done')}
@@ -1392,6 +1419,13 @@ function goalSelect(target, value) {
   </select>`;
 }
 
+// A list's items on its card, each ticked off with a tap, under how many are done.
+function listTicks(a) {
+  const n = listDone(a);
+  return `${a.list.length ? progressBar(n / a.list.length * 100, t('list.done', { done: n, total: a.list.length })) : ''}
+    <div class="li-ticks">${a.list.map(i => `<button type="button" class="li-tick${i.done ? ' done' : ''}" role="checkbox" aria-checked="${!!i.done}" data-li-tick="${a.id}" data-li="${i.id}"><span class="li-box" aria-hidden="true">${i.done ? '✓' : ''}</span><span class="li-text">${esc(i.text)}</span></button>`).join('')}</div>`;
+}
+
 function activityCard(a) {
   const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
   const blocked = blockers(a);
@@ -1402,6 +1436,7 @@ function activityCard(a) {
     <div class="card-head"><h3 class="${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</h3>${statusCheck(a)}</div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
     ${children.length ? progressBar(childrenDone / children.length * 100, t('acts.subDone', { done: childrenDone, total: children.length })) : ''}
+    ${isList(a) ? listTicks(a) : ''}
     <div class="meta">
       ${deadlineTag(a.dueDate, a.status === 'done')}
       ${blocked.length ? waitsForTag(blocked) : ''}
@@ -2851,15 +2886,18 @@ function activityForm(a) {
   const parents = { '': t('f.none') };
   others.filter(x => !below.includes(x.id)).forEach(x => (parents[x.id] = x.title));
   const children = a.id ? relsTo(a.id, 'subactivity').map(r => r.from) : [];
+  // A list's status follows its items, and a list does not repeat.
+  const list = a.id ? isList(a) && a.list : a.links?.repeat === 'list' && [];
   return `
-    ${field('title', t('f.activity'), text('title', a.title, t('f.activityPh')))}
+    ${field('title', t('f.activity'), text('title', a.title, t(list ? 'f.listPh' : 'f.activityPh')))}
     ${field('description', t('f.details'), area('description', a.description, t('f.detailsPh')))}
-    <div class="row3">
-      ${field('status', t('f.status'), select('status', statusLabels(ACTIVITY_STATUS, 'activity.'), a.status || 'todo'))}
+    ${list ? listEditor(list) : ''}
+    <div class="${list ? 'row2' : 'row3'}">
+      ${list ? '' : field('status', t('f.status'), select('status', statusLabels(ACTIVITY_STATUS, 'activity.'), a.status || 'todo'))}
       ${field('startDate', t('f.startDate'), date('startDate', isRoutine(a) ? routineStart(a) : a.id ? a.startDate : a.startDate || today()))}
       ${field('dueDate', t('f.dueDate'), date('dueDate', a.dueDate))}
     </div>
-    ${repeatFields(a)}
+    ${list ? '' : repeatFields(a)}
     ${field('parent', t('f.parentActivity'), select('parent', parents, pick('subactivity')[0] || ''), t('f.parentActivityHint'))}
     ${children.length ? `<div class="field"><span class="label">${t('f.subActivities')}</span><div class="links">${children.map(linkTag).join('')}</div></div>` : ''}
     ${checklist('goals', t('f.contributes'), 'goal', db.goals, pick('contributes'))}
@@ -2867,8 +2905,26 @@ function activityForm(a) {
     ${checklist('depends', t('f.depends'), 'activity', others, pick('depends'))}`;
 }
 
-// The first step of a new activity: one done once, or a routine.
-const activityChoice = () => `<div class="act-choice" role="group" aria-label="${esc(t('f.actKind'))}">${['once', 'routine'].map(k =>
+// A list's items in its form: tick, rename or remove each; Enter in one adds the next below it.
+const listRow = (i = { id: '', text: '', done: false }) => `<div class="li-row" data-li-row="${i.id}">
+  <input type="checkbox" class="li-check" ${i.done ? 'checked' : ''} aria-label="${esc(t('list.tick'))}">
+  <input type="text" class="li-input" value="${esc(i.text)}" placeholder="${esc(t('list.itemPh'))}" aria-label="${esc(t('list.item'))}">
+  <button type="button" class="icon-btn li-del" data-li-del aria-label="${esc(t('list.remove'))}" title="${esc(t('list.remove'))}">×</button></div>`;
+function listEditor(list) {
+  return `<div class="field" data-field="list"><span class="label">${t('list.items')}</span>
+    <div class="li-rows" id="listRows">${(list.length ? list : [undefined]).map(i => listRow(i)).join('')}</div>
+    <button type="button" class="btn ghost li-add" data-li-add><span aria-hidden="true">+</span> ${t('list.add')}</button>
+    <div class="err"></div><div class="hint">${t('list.hint')}</div></div>`;
+}
+function addListRow(after = null) {
+  const rows = $('#listRows');
+  if (after) after.insertAdjacentHTML('afterend', listRow());
+  else rows.insertAdjacentHTML('beforeend', listRow());
+  (after ? after.nextElementSibling : rows.lastElementChild).querySelector('.li-input').focus();
+}
+
+// The first step of a new activity: one done once, a list to tick off, or a routine.
+const activityChoice = () => `<div class="act-choice" role="group" aria-label="${esc(t('f.actKind'))}">${['once', 'list', 'routine'].map(k =>
   `<button type="button" class="act-choice-btn" data-act-kind="${k}"><strong>${esc(t('f.actKind.' + k))}</strong><span>${esc(t('f.actKind.' + k + 'Hint'))}</span></button>`).join('')}</div>`;
 
 // Whether and how an activity repeats; a repeating activity is a routine. The common kinds – a number
@@ -3176,8 +3232,12 @@ function submitForm() {
   if (kind === 'activity') {
     // Every activity has a start and an end: a one-off its due date, a routine its end (readRepeat).
     const startDate = v.startDate;
+    const rows = $('#listRows');
+    // Empty rows are left out; an item keeps its id so ticks and sync follow it.
+    const list = rows && [...rows.querySelectorAll('.li-row')].map(r => ({ id: r.dataset.liRow || uid(), text: r.querySelector('.li-input').value.trim(), done: r.querySelector('.li-check').checked })).filter(i => i.text);
+    if (list && !list.length) return showErrors({ list: t('err.listEmpty') });
     if (!startDate) return showErrors({ startDate: t('err.startRequired') });
-    const { repeat, dueDate = v.dueDate, errors } = readRepeat(v, startDate);
+    const { repeat, dueDate = v.dueDate, errors } = list ? {} : readRepeat(v, startDate);
     if (errors) return showErrors(errors);
     if (!repeat && !dueDate) return showErrors({ dueDate: t('err.dueRequired') });
     if (!repeat && startDate > dueDate) return showErrors({ dueDate: t('err.startAfterDue') });
@@ -3187,6 +3247,11 @@ function submitForm() {
     // A routine keeps its check-ins even when it stops repeating, in case it is switched back.
     if (repeat) Object.assign(a, { repeat, status: 'todo', checkins: a.checkins || {} });
     else delete a.repeat;
+    if (list) {
+      if (!existing) a.status = 'todo';
+      a.list = list;
+      followList(a);
+    }
     if (!existing) db.activities.push(a);
     setLinks(a.id, 'subactivity', v.parent ? [v.parent] : []);
     setLinks(a.id, 'contributes', arr('goals'));
@@ -3475,7 +3540,7 @@ $('#addBtn').addEventListener('click', e => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -3504,6 +3569,7 @@ viewEl.addEventListener('click', e => {
   }
   if (el.dataset.rtWeek) return el.disabled || shiftRoutineWeek(el.dataset.rtWeek, Number(el.dataset.dir));
   if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date, el);
+  if (el.dataset.liTick) return tickListItem(el.dataset.liTick, el.dataset.li);
   if (el.dataset.addAmount) return openStateAmount(el.dataset.addAmount, el);
   if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
   if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry);
@@ -3603,8 +3669,19 @@ function bindDragDrop() {
   });
 }
 
+$('#modalForm').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.matches('.li-input')) { e.preventDefault(); addListRow(e.target.closest('.li-row')); }
+});
 $('#modalForm').addEventListener('submit', e => { e.preventDefault(); if (!formCtx?.choose) submitForm(); });
 $('#modalBody').addEventListener('click', e => {
+  if (e.target.closest('[data-li-add]')) return addListRow();
+  const del = e.target.closest('[data-li-del]');
+  if (del) {
+    const row = del.closest('.li-row'), next = row.nextElementSibling || row.previousElementSibling;
+    row.remove();
+    if (!next) return addListRow();
+    return next.querySelector('.li-input').focus();
+  }
   const b = e.target.closest('[data-act-kind]');
   if (b && formCtx?.choose) openForm('activity', null, { ...formCtx.choose, repeat: b.dataset.actKind });
 });
@@ -3853,7 +3930,7 @@ function resetProgress(data, { shift = false } = {}) {
   for (const x of dated) for (const k of [...PLAN_DATES, 'createdAt']) if (by && x[k]) x[k] = addDays(x[k], by);
   d.goals.forEach(g => { g.current = ''; if (g.status === 'achieved') g.status = 'active'; delete g.offeredAt; });
   d.states.forEach(s => { Object.assign(s, { value: '', date: '', history: [] }); delete s.dropped; if (s.entries) s.entries = []; delete s.droppedEntries; });
-  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; });
+  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; a.list?.forEach(i => (i.done = false)); });
   return d;
 }
 
