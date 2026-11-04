@@ -1012,6 +1012,12 @@ textarea { resize: vertical; min-height: 68px; }
 .tpl-inside p { margin: 8px 0 2px; }
 .tpl-inside ul { margin: 0; padding-left: 20px; color: var(--ink-2); line-height: 1.45; }
 .tpl-card .btn { align-self: flex-start; }
+.act-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.act-choice-btn { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; text-align: left; font: inherit; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
+.act-choice-btn:hover { border-color: var(--line-strong); background: var(--surface-2); }
+.act-choice-btn:focus-visible { outline: none; box-shadow: var(--focus); }
+.act-choice-btn strong { font-size: 16px; }
+.act-choice-btn span { font-size: 14px; line-height: 1.45; color: var(--ink-2); }
 .empty-alt { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 8px; }
 
 /* Export and import of a single plan */

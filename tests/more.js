@@ -225,8 +225,60 @@ window.moreTests = async ({ step, assert }) => {
     assert(!acts.querySelector('.pick-head') && acts.querySelector('[data-unpick]').closest('.tag').textContent.includes('Train'), 'activities flat, contributing one chosen');
     modal.close();
     changeLanguage('sl');
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     assert(modal.querySelector('.pick-none').textContent === I18N.sl.strings['pick.none'], 'Slovenian empty text');
+    modal.close();
+    changeLanguage('en');
+  });
+
+  await step('a new activity first asks: one-time or routine', async () => {
+    fresh('Kind first');
+    const g = mk('goal', { title: 'Fit' });
+    save();
+    setView('activities');
+    document.querySelector('[data-new="activity"]').click();
+    const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
+    assert(modal.open && btns().map(b => b.dataset.actKind).join() === 'once,routine', 'two choices shown');
+    assert($('#saveBtn').hidden && !$('#f-title'), 'no form and no Save yet');
+    eq($('#modalTitle').textContent, t('new.activity'), 'titled New activity');
+    await new Promise(r => setTimeout(r, 60));
+    eq(document.activeElement, btns()[0], 'the first choice is focused');
+    $('#modalForm').requestSubmit();
+    assert(modal.open && db.activities.length === 0 && btns().length === 2, 'Enter on the form saves nothing');
+    btns()[0].click();
+    assert(modal.open && !$('#saveBtn').hidden && $('#f-title'), 'one-time: the form opens');
+    eq($('#f-repeat').value, 'none', 'one-time: does not repeat');
+    assert(!modal.querySelector('[data-field="status"]').hidden && !modal.querySelector('[data-field="dueDate"]').hidden, 'one-time: status and due date shown');
+    $('#f-title').value = 'Sign up'; $('#f-dueDate').value = dateInput(addDays(today(), 7)); submitForm();
+    const once = db.activities.find(a => a.title === 'Sign up');
+    assert(once && !isRoutine(once), 'saved as a one-time activity');
+    // From a goal's menu: the goal stays linked through the choice.
+    openForm('activity', null, { contributes: [g.id] });
+    assert(btns().length === 2, 'menu add asks too');
+    btns()[1].click();
+    eq($('#f-repeat').value, 'week', 'routine: a number of times a week');
+    assert(!$('#repeatEnds').hidden && modal.querySelector('[data-field="status"]').hidden && modal.querySelector('[data-field="dueDate"]').hidden, 'routine: ends shown, status and due date hidden');
+    assert(modal.querySelector('[data-unpick]')?.closest('.tag')?.textContent.includes('Fit'), 'the goal is still picked');
+    $('#f-title').value = 'Run'; $('#f-endDate').value = dateInput(addDays(today(), 30)); submitForm();
+    const run = db.activities.find(a => a.title === 'Run');
+    assert(run && isRoutine(run) && run.repeat.unit === 'week' && run.repeat.times === 3, 'saved as a routine');
+    eq(relsFrom(run.id, 'contributes').map(r => r.to), [g.id], 'linked to the goal');
+    // Editing skips the choice; so does anything else new.
+    openForm('activity', run.id);
+    assert(!btns().length && $('#f-title').value === 'Run' && !$('#saveBtn').hidden, 'editing opens the form');
+    modal.close();
+    openForm('goal');
+    assert(!btns().length && !$('#saveBtn').hidden, 'a goal opens its form');
+    modal.close();
+    // Cancel from the choice leaves nothing behind; the next form shows Save again.
+    openForm('activity'); modal.close();
+    openForm('state');
+    assert(!$('#saveBtn').hidden && formCtx.kind === 'state' && !formCtx.choose, 'Save back after cancelling the choice');
+    modal.close();
+    eq(db.activities.length, 2, 'nothing saved from the cancelled choice');
+    changeLanguage('sl');
+    openForm('activity');
+    eq(btns()[1].querySelector('strong').textContent, I18N.sl.strings['f.actKind.routine'], 'Slovenian labels');
     modal.close();
     changeLanguage('en');
   });
@@ -451,7 +503,7 @@ window.moreTests = async ({ step, assert }) => {
     const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
     const shown = sel => !modal.querySelector(sel).closest('[hidden]');
     // Create a routine in the form: specific days.
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Strength';
     assert(shown('[data-field="status"]') && !shown('#repeatCustom') && !shown('#repeatEnds') && !shown('#repDays') && !shown('#repTimes'), 'one-off by default');
     eq([...$('#f-repeat').options].map(o => o.value), ['none', 'week', 'month', 'days', 'custom'], 'kinds of repeat');
@@ -476,7 +528,7 @@ window.moreTests = async ({ step, assert }) => {
     assert($('#f-unit').value === 'week' && $('#f-on').value === 'days' && shown('#repDays'), 'custom starts from specific days');
     modal.close();
     // A number of times per week, with validation.
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Run';
     change('#f-repeat', 'week');
     assert(shown('#repTimes') && !shown('#repDays') && !shown('#repeatCustom'), 'times shown');
@@ -492,7 +544,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(JSON.stringify(run.repeat) === '{"every":1,"unit":"week","times":3}', 'count routine saved');
 
     // Presets, custom months and when it ends.
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Check-up';
     $('#f-startDate').value = dateInput('2099-01-28'); // the fourth and last Wednesday of January 2099
     $('#f-startDate').dispatchEvent(new Event('input', { bubbles: true }));
@@ -601,7 +653,7 @@ window.moreTests = async ({ step, assert }) => {
     fresh('Carry end');
     const now = today();
     const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Yoga';
     $('#f-dueDate').value = dateInput(addDays(now, 30));
     change('#f-repeat', 'week');
@@ -682,7 +734,7 @@ window.moreTests = async ({ step, assert }) => {
 
     fresh('Dates');
     changeLanguage('sl');
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     const due = $('#f-dueDate');
     assert(due.type === 'text' && due.placeholder === 'dd/mm/llll' && $('[data-field="dueDate"] .date-pick').title === 'Izberi datum', 'Slovenian dd/mm/llll field');
     const type = ch => { due.value += ch; due.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ch })); };
@@ -2295,7 +2347,7 @@ window.moreTests = async ({ step, assert }) => {
     const shown = sel => !$(sel).closest('[hidden]');
     const start = d => { $('#f-startDate').value = dateInput(d); $('#f-startDate').dispatchEvent(new Event('input', { bubbles: true })); $('#f-startDate').dispatchEvent(new Event('change', { bubbles: true })); };
     const make = (title, setup) => {
-      openForm('activity');
+      openForm('activity', null, { repeat: 'once' });
       $('#f-title').value = title;
       start('2027-03-10'); // the second Wednesday of March 2027
       change('#f-repeat', 'custom');
@@ -2369,7 +2421,7 @@ window.moreTests = async ({ step, assert }) => {
     modal.close();
 
     // Changing the start date moves the defaults until they are chosen by hand.
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Moves';
     change('#f-repeat', 'custom');
     change('#f-unit', 'month');
@@ -2413,7 +2465,7 @@ window.moreTests = async ({ step, assert }) => {
     const now = today();
     // A new activity starts today, in plain sight; choosing how it repeats fills an emptied start date again.
     for (const preset of ['week', 'month', 'days', 'custom']) {
-      openForm('activity');
+      openForm('activity', null, { repeat: 'once' });
       eq($('#f-startDate').value, dateInput(now), `${preset}: a new activity starts today`);
       $('#f-startDate').value = '';
       change('#f-repeat', preset);
@@ -2421,7 +2473,7 @@ window.moreTests = async ({ step, assert }) => {
       modal.close();
     }
     // A date already there is kept, also when switching between kinds.
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-startDate').value = dateInput('2026-09-01');
     change('#f-repeat', 'week');
     change('#f-repeat', 'custom');
@@ -2431,7 +2483,7 @@ window.moreTests = async ({ step, assert }) => {
     eq($('#f-startDate').value, dateInput('2026-09-01'), 'kept for a one-off too');
     modal.close();
     // Both dates are needed: a cleared start or a missing due date is refused.
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Plain';
     $('#f-startDate').value = '';
     submitForm();
@@ -2443,7 +2495,7 @@ window.moreTests = async ({ step, assert }) => {
     submitForm();
     eq([db.activities.find(a => a.title === 'Plain')?.startDate, db.activities.find(a => a.title === 'Plain')?.dueDate], [now, addDays(now, 3)], 'saved with both');
     // Filled in and changed before saving: the change is what is saved.
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Earlier';
     change('#f-repeat', 'days');
     $('#f-startDate').value = dateInput(addDays(now, -20));
@@ -3813,7 +3865,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(tpl.activities.every(a => a.status === 'todo' && !('autoStarted' in a)), 'templates forget it');
     // A new activity starts today unless changed, so it is in progress at once; editing one without
     // a start date leaves it empty.
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     eq($('#f-startDate').value, dateInput(today()), 'a new activity starts today');
     $('#f-title').value = 'Fresh';
     $('#f-dueDate').value = dateInput(addDays(today(), 5));

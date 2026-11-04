@@ -119,7 +119,7 @@
   });
 
   await step('activity form + parent + validation', () => {
-    openForm('activity');
+    openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Child act';
     $('#f-startDate').value = '2099-02-01';
     $('#f-dueDate').value = '2099-01-01';

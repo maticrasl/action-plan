@@ -2709,13 +2709,23 @@ function smartSection(letter, body) {
 
 // `links` pre-fills a new item's relations by type, e.g. { subactivity: [parentId] };
 // for a new relationship, { from: id } pre-selects its source.
+// A new activity first asks whether it is done once or repeats; `links.repeat` carries the answer.
 function openForm(kind, id = null, links = {}) {
   formCtx = { kind, id };
   cal = null;
   let item = null;
   if (id) item = kind === 'relation' ? db.relations.find(r => r.id === id) : findEntity(id)?.item;
   $('#deleteBtn').hidden = !item;
+  $('#saveBtn').hidden = false;
   $('#modalTitle').textContent = t((item ? 'edit.' : 'new.') + kind);
+  if (kind === 'activity' && !item && !links.repeat) {
+    formCtx.choose = links;
+    $('#saveBtn').hidden = true;
+    $('#modalBody').innerHTML = activityChoice();
+    if (!modal.open) modal.showModal();
+    setTimeout(() => modal.querySelector('[data-act-kind]')?.focus(), 30);
+    return;
+  }
   $('#modalBody').innerHTML = { goal: goalForm, state: stateForm, activity: activityForm, relation: relationForm }[kind](item || { links });
   if (kind === 'relation') {
     const r = item || links;
@@ -2726,7 +2736,7 @@ function openForm(kind, id = null, links = {}) {
   if (kind === 'goal') { updateProgressFields(); updateSmartLive(); }
   if (kind === 'activity') updateRepeatFields();
   if (kind === 'state') updateStateFields();
-  modal.showModal();
+  if (!modal.open) modal.showModal();
   if (!item) setTimeout(() => modal.querySelector('input, select, textarea')?.focus(), 30);
 }
 
@@ -2857,6 +2867,10 @@ function activityForm(a) {
     ${checklist('depends', t('f.depends'), 'activity', others, pick('depends'))}`;
 }
 
+// The first step of a new activity: one done once, or a routine.
+const activityChoice = () => `<div class="act-choice" role="group" aria-label="${esc(t('f.actKind'))}">${['once', 'routine'].map(k =>
+  `<button type="button" class="act-choice-btn" data-act-kind="${k}"><strong>${esc(t('f.actKind.' + k))}</strong><span>${esc(t('f.actKind.' + k + 'Hint'))}</span></button>`).join('')}</div>`;
+
 // Whether and how an activity repeats; a repeating activity is a routine. The common kinds – a number
 // of times a week or month, or specific weekdays – or a custom recurrence, and when it ends.
 // Each common kind is a unit and what it falls on, as in the custom recurrence.
@@ -2883,7 +2897,8 @@ const formStart = () => parseDateInput($('#f-startDate')?.value || '') || today(
 function repeatFields(a) {
   const r = isRoutine(a) ? sched(a) : null;
   const start = a.startDate || today();
-  const mode = repeatPreset(r);
+  // A new routine starts as a number of times a week.
+  const mode = a.links?.repeat === 'routine' ? 'week' : repeatPreset(r);
   const unit = r?.unit || 'week';
   const on = r?.times ? 'times' : unit === 'week' ? 'days' : r?.on || 'day';
   // A monthly day or n-th weekday, the start's until chosen (updateRepeatFields follows the start date).
@@ -3588,7 +3603,11 @@ function bindDragDrop() {
   });
 }
 
-$('#modalForm').addEventListener('submit', e => { e.preventDefault(); submitForm(); });
+$('#modalForm').addEventListener('submit', e => { e.preventDefault(); if (!formCtx?.choose) submitForm(); });
+$('#modalBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-act-kind]');
+  if (b && formCtx?.choose) openForm('activity', null, { ...formCtx.choose, repeat: b.dataset.actKind });
+});
 $('#modalForm').addEventListener('input', updateSmartLive);
 $('#modalForm').addEventListener('input', e => {
   if (['f-every', 'f-count', 'f-startDate'].includes(e.target.id)) updateRepeatFields(e);
