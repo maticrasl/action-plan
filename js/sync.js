@@ -123,10 +123,16 @@ function mergeEntries(merged, newer, older) {
 }
 
 // Routines: check-ins from both versions are kept per date (the newer version wins on a clash,
-// so un-ticking a day carries over too). Lists: items are merged by id (see mergeList).
+// so un-ticking a day carries over too), and so are a list routine's item ticks per date and item.
+// Lists: items are merged by id (see mergeList).
 function mergeActivity(x, y) {
   const newer = newerOf(x, y), older = newer === x ? y : x;
-  const merged = newer.checkins || older.checkins ? { ...newer, checkins: { ...older.checkins, ...newer.checkins } } : newer;
+  let merged = newer.checkins || older.checkins ? { ...newer, checkins: { ...older.checkins, ...newer.checkins } } : newer;
+  if (newer.listDays || older.listDays) {
+    const days = { ...older.listDays };
+    Object.entries(newer.listDays || {}).forEach(([d, ticks]) => (days[d] = { ...days[d], ...ticks }));
+    merged = { ...merged, listDays: days };
+  }
   return Array.isArray(newer.list) && Array.isArray(older.list) ? mergeList({ ...merged }, newer, older) : merged;
 }
 

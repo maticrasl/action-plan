@@ -238,13 +238,13 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     document.querySelector('[data-new="activity"]').click();
     const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
-    assert(modal.open && btns().map(b => b.dataset.actKind).join() === 'once,list,routine', 'three choices shown');
+    assert(modal.open && btns().map(b => b.dataset.actKind).join() === 'once,list,routine,listRoutine', 'four choices shown');
     assert($('#saveBtn').hidden && !$('#f-title'), 'no form and no Save yet');
     eq($('#modalTitle').textContent, t('new.activity'), 'titled New activity');
     await new Promise(r => setTimeout(r, 60));
     eq(document.activeElement, btns()[0], 'the first choice is focused');
     $('#modalForm').requestSubmit();
-    assert(modal.open && db.activities.length === 0 && btns().length === 3, 'Enter on the form saves nothing');
+    assert(modal.open && db.activities.length === 0 && btns().length === 4, 'Enter on the form saves nothing');
     btns()[0].click();
     assert(modal.open && !$('#saveBtn').hidden && $('#f-title'), 'one-time: the form opens');
     eq($('#f-repeat').value, 'none', 'one-time: does not repeat');
@@ -254,7 +254,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(once && !isRoutine(once), 'saved as a one-time activity');
     // From a goal's menu: the goal stays linked through the choice.
     openForm('activity', null, { contributes: [g.id] });
-    assert(btns().length === 3, 'menu add asks too');
+    assert(btns().length === 4, 'menu add asks too');
     btns()[2].click();
     eq($('#f-repeat').value, 'week', 'routine: a number of times a week');
     assert(!$('#repeatEnds').hidden && modal.querySelector('[data-field="status"]').hidden && modal.querySelector('[data-field="dueDate"]').hidden, 'routine: ends shown, status and due date hidden');
@@ -290,9 +290,10 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     openForm('activity', null, { contributes: [g.id] });
     const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
-    eq(btns().map(b => b.dataset.actKind).join(), 'once,list,routine', 'three kinds offered');
+    eq(btns().map(b => b.dataset.actKind).join(), 'once,list,routine,listRoutine', 'four kinds offered');
     btns()[1].click();
-    assert($('#listRows') && !$('#f-repeat') && !$('#f-status'), 'list: items, no repeat or status');
+    assert($('#listRows') && $('#f-repeat').value === 'none' && !$('#f-status'), 'list: items, no status, does not repeat');
+    assert(!$('#listRows').classList.contains('no-ticks') && !modal.querySelector('[data-field="dueDate"]').hidden, 'list: ticks and due date shown');
     eq($('#listRows').children.length, 1, 'one empty item to start');
     $('#f-title').value = 'Pack'; $('#f-startDate').value = dateInput(addDays(today(), 1)); $('#f-dueDate').value = dateInput(addDays(today(), 5));
     submitForm();
@@ -435,15 +436,14 @@ window.moreTests = async ({ step, assert }) => {
     // Each context-menu "add activity" asks, then keeps its link.
     const cases = [['subactivity', parent, () => $('#f-parent').value === parent.id], ['contributes', g, () => !!modal.querySelector('[data-picker="goal"] [data-picked-id]')], ['improves', s, () => !!modal.querySelector('[data-picker="state"] [data-picked-id]')]];
     for (const [type, item, picked] of cases) {
-      for (const kind of ['once', 'list', 'routine']) {
+      for (const kind of ['once', 'list', 'routine', 'listRoutine']) {
         runCtxAction(`add:activity:${type}`, item.id);
-        assert(modal.open && btns().length === 3 && formCtx.choose, `${type}: asks first`);
+        assert(modal.open && btns().length === 4 && formCtx.choose, `${type}: asks first`);
         btns().find(b => b.dataset.actKind === kind).click();
         assert(!formCtx.choose && !$('#saveBtn').hidden, `${type}/${kind}: the form, with Save`);
         assert(picked(), `${type}/${kind}: link kept`);
-        assert(!!$('#listRows') === (kind === 'list') && !!$('#f-repeat') === (kind !== 'list'), `${type}/${kind}: the right fields`);
-        if (kind === 'routine') eq($('#f-repeat').value, 'week', `${type}: routine preset`);
-        if (kind === 'once') eq($('#f-repeat').value, 'none', `${type}: one-time preset`);
+        assert(!!$('#listRows') === kind.startsWith('list') && !!$('#f-repeat'), `${type}/${kind}: the right fields`);
+        eq($('#f-repeat').value, kind.includes('outine') ? 'week' : 'none', `${type}/${kind}: repeat preset`);
         modal.close();
       }
     }
@@ -458,12 +458,12 @@ window.moreTests = async ({ step, assert }) => {
     // The empty board's button and the view's Add button ask too.
     setView('activities');
     $('#addBtn').click();
-    assert(modal.open && btns().length === 3, 'Add button asks');
+    assert(modal.open && btns().length === 4, 'Add button asks');
     modal.close();
     // Clicking around the choices (not on one) changes nothing.
     openForm('activity');
     modal.querySelector('.act-choice').click();
-    assert(modal.open && btns().length === 3 && formCtx.choose, 'a click between the choices does nothing');
+    assert(modal.open && btns().length === 4 && formCtx.choose, 'a click between the choices does nothing');
     modal.close();
     // Every choice is a button with its own name; the group has a label, in both languages.
     for (const lang of ['en', 'sl']) {
@@ -485,10 +485,243 @@ window.moreTests = async ({ step, assert }) => {
       frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px"><div class="modal-body">${activityChoice()}</div></body>`;
       await new Promise(res => { frame.onload = res; document.body.append(frame); });
       const doc = frame.contentDocument, rs = [...doc.querySelectorAll('.act-choice-btn')].map(b => b.getBoundingClientRect());
-      assert(rs.length === 3 && rs.every(r => r.left >= 15 && r.right <= 375), `${lang}: inside the gutters`);
-      assert(rs[0].bottom <= rs[1].top && rs[1].bottom <= rs[2].top, `${lang}: one under another`);
+      assert(rs.length === 4 && rs.every(r => r.left >= 15 && r.right <= 375), `${lang}: inside the gutters`);
+      assert(rs.every((r, i) => !i || rs[i - 1].bottom <= r.top), `${lang}: one under another`);
+      assert(rs.at(-1).bottom <= 700, `${lang}: all four fit on the screen`);
       assert(doc.documentElement.scrollWidth <= 390, `${lang}: no sideways scroll`);
       frame.remove();
+    }
+    changeLanguage('en');
+  });
+
+  await step('routine lists: made from the choice, items ticked each day, the day follows them', async () => {
+    fresh('Routine lists');
+    const now = today();
+    save();
+    setView('activities');
+    openForm('activity');
+    const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
+    btns().find(b => b.dataset.actKind === 'listRoutine').click();
+    assert($('#listRows') && $('#f-repeat').value === 'week' && !$('#f-status'), 'items and a repeat, no status');
+    assert($('#listRows').classList.contains('no-ticks') && getComputedStyle($('#listRows .li-check')).display === 'none', 'no ticks in the form');
+    assert(modal.querySelector('[data-field="dueDate"]').hidden && !$('#repeatEnds').hidden, 'ends instead of a due date');
+    eq($('#f-title').placeholder, t('f.listPh'), 'list placeholder');
+    $('#f-title').value = 'Morning'; $('#f-endDate').value = dateInput(addDays(now, 30));
+    submitForm();
+    assert(modal.open && modal.querySelector('[data-field="list"].invalid') && !db.activities.length, 'an empty list is refused');
+    $('#listRows .li-input').value = 'Stretch';
+    $('#listRows .li-input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    $('#listRows').children[1].querySelector('.li-input').value = 'Water';
+    // A hidden tick left checked is not saved: a routine list's items are ticked per day.
+    $('#listRows .li-check').checked = true;
+    submitForm();
+    const a = db.activities.find(x => x.title === 'Morning');
+    assert(a && isListRoutine(a) && !isList(a) && isRoutine(a), 'saved as a routine list');
+    eq(a.list.map(i => [i.text, i.done]), [['Stretch', false], ['Water', false]], 'items saved, none done');
+    assert(a.repeat.times === 3 && a.status === 'todo' && !a.listDays, 'three times a week, nothing ticked');
+    render();
+    const card = () => $(`.card.routine[data-open="${a.id}"]`);
+    const item = i => card().querySelectorAll('.rt-items [data-li-tick]')[i];
+    eq(card().querySelectorAll('.rt-items [data-li-tick]').length, 2, 'today’s items on the card');
+    eq(card().querySelector('.rt-items .label').textContent, t('list.today', { done: 0, total: 2 }), 'counted for today');
+    eq(item(0).dataset.date, now, 'items are today’s');
+    item(0).focus(); item(0).click();
+    assert(itemOn(a, now, a.list[0].id) && !checkedOn(a, now) && !modal.open, 'one item: ticked, the day not yet');
+    eq(document.activeElement, item(0), 'focus kept on the item');
+    eq(item(0).getAttribute('aria-checked'), 'true', 'announced as checked');
+    item(1).click();
+    assert(checkedOn(a, now), 'the last item ticks the day');
+    eq($('#toast').textContent, t('list.dayDone', { name: 'Morning' }), 'says the day is done');
+    assert($(`[data-checkin="${a.id}"][data-date="${now}"]`).getAttribute('aria-pressed') === 'true', 'the strip shows the day ticked');
+    item(0).click();
+    assert(!checkedOn(a, now) && itemOn(a, now, a.list[1].id) && !itemOn(a, now, a.list[0].id), 'unticking one unticks the day, the other stays');
+    eq(a.checkins[now], 0, 'untick kept for sync');
+    // The strip ticks and unticks the whole list.
+    const day = iso => $(`.card.routine[data-open="${a.id}"] [data-checkin][data-date="${iso}"]`);
+    day(now).click();
+    assert(checkedOn(a, now) && a.list.every(i => itemOn(a, now, i.id)), 'ticking the day ticks every item');
+    day(now).click();
+    assert(!checkedOn(a, now) && a.list.every(i => !itemOn(a, now, i.id)), 'unticking the day unticks every item');
+    // An earlier day keeps its own ticks; today's list is not touched.
+    const y = addDays(now, -1);
+    a.startDate = addDays(now, -10); save(); render();
+    ui.rtWeek[a.id] = mondayOf(y); render();
+    day(y).click();
+    assert(checkedOn(a, y) && a.list.every(i => itemOn(a, y, i.id)) && a.list.every(i => !itemOn(a, now, i.id)), 'yesterday ticked whole, today untouched');
+    ui.rtWeek = {}; render();
+    eq(card().querySelector('.rt-items .label').textContent, t('list.today', { done: 0, total: 2 }), 'tomorrow – today – starts afresh');
+    // A tick on a day that was ticked without its items (a routine that later got a list) leaves it ticked.
+    setCheckin(a, addDays(now, -2), true); delete a.listDays[addDays(now, -2)];
+    tickListItem(a.id, a.list[0].id, addDays(now, -2));
+    assert(checkedOn(a, addDays(now, -2)), 'a ticked day stays ticked when one item is ticked');
+    tickListItem(a.id, a.list[0].id, addDays(now, -2));
+    assert(!checkedOn(a, addDays(now, -2)), 'and unticking an item unticks it');
+    // Days it does not run on cannot be ticked, through the items either.
+    tickListItem(a.id, a.list[0].id, addDays(now, 1));
+    tickListItem(a.id, a.list[0].id, addDays(now, -40));
+    assert(!a.listDays[addDays(now, 1)] && !a.listDays[addDays(now, -40)], 'no ticks outside its days');
+    tickListItem(a.id, 'no-such-item', now);
+    assert(!a.listDays[now]?.['no-such-item'], 'an unknown item is ignored');
+    // On the overview: a count until the day is ticked; the circle ticks every item.
+    setView('dashboard');
+    const row = () => $(`.routine-row[data-open="${a.id}"]`);
+    assert(row().textContent.includes(t('list.count', { done: 0, total: 2 })), 'overview: 0/2');
+    tickListItem(a.id, a.list[0].id, now);
+    assert(row().textContent.includes(t('list.count', { done: 1, total: 2 })), 'overview: 1/2');
+    row().querySelector('[data-checkin]').click();
+    assert(checkedOn(a, now) && a.list.every(i => itemOn(a, now, i.id)), 'overview circle ticks the list');
+    assert(!row().textContent.includes('/2'), 'no count once the day is ticked');
+    // The context menu's "done today" too.
+    runCtxAction('checkin', a.id);
+    assert(!checkedOn(a, now) && a.list.every(i => !itemOn(a, now, i.id)), 'menu untick unticks the list');
+    setView('activities');
+    // A routine that has not started, or has ended, shows no items to tick.
+    const later = mk('activity', { title: 'Later', startDate: addDays(now, 3), repeat: { every: 1, unit: 'week', times: 2 }, dueDate: addDays(now, 20), list: [{ id: 'l1', text: 'X' }] });
+    const ended = mk('activity', { title: 'Ended', startDate: addDays(now, -20), repeat: { every: 1, unit: 'week', times: 2 }, dueDate: addDays(now, -2), list: [{ id: 'e1', text: 'Y' }] });
+    save(); ui.hideDone = false; render();
+    assert(!$(`.card.routine[data-open="${later.id}"] .rt-items`), 'not started: no items');
+    assert(!$(`.card.routine[data-open="${ended.id}"]`)?.querySelector('.rt-items'), 'ended: no items');
+    // Every view draws it.
+    const before = __errors.length;
+    for (const v of ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs']) { setView(v); render(); }
+    eq(__errors.length, before, 'no errors in any view');
+  });
+
+  await step('routine lists: a week met says so; improving a state asks how much on the last item', async () => {
+    fresh('Routine list amounts');
+    const now = today();
+    const a = mk('activity', { title: 'Swim', startDate: addDays(now, -10), dueDate: addDays(now, 30), repeat: { every: 1, unit: 'week', times: 1 }, checkins: {}, list: [{ id: 'w', text: 'Warm up' }, { id: 'l', text: 'Laps' }] });
+    save();
+    setView('activities');
+    const item = id => $(`.card.routine[data-open="${a.id}"] [data-li-tick="${a.id}"][data-li="${id}"]`);
+    const weekTicked = () => daysBetween(periodOf(a, now).from, now).some(d => checkedOn(a, d));
+    if (!weekTicked()) {
+      item('w').click(); item('l').click();
+      eq($('#toast').textContent, t('rt.metWeek'), 'the week met wins over the day’s message');
+    }
+    item('w').click();
+    assert(!checkedOn(a, now), 'unticked');
+    // With a state that adds up: the last item asks first and stays unticked until answered.
+    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [] });
+    rel(a, km, 'improves'); save(); render();
+    if (itemOn(a, now, 'l')) item('l').click();
+    item('w').click();
+    assert(itemOn(a, now, 'w') && !itemOn(a, now, 'l') && !checkedOn(a, now) && !$('.amount-pop'), 'state set up: one ticked, not asked yet');
+    item('l').click();
+    assert($('.amount-pop') && !itemOn(a, now, 'l') && !checkedOn(a, now), 'asks how much, nothing ticked yet');
+    closeAmountPop();
+    assert(!itemOn(a, now, 'l') && !checkedOn(a, now), 'closing the question leaves the last item unticked');
+    item('l').click();
+    $('.amount-pop [data-amount]').value = '1,5';
+    $('.amount-pop').requestSubmit();
+    assert(!$('.amount-pop') && checkedOn(a, now) && itemOn(a, now, 'l') && itemOn(a, now, 'w'), 'answered: the day and its items ticked');
+    eq(km.entries.map(e => [e.date, e.amount, e.routine]), [[now, '1.5', a.id]], 'amount added');
+    item('w').click();
+    assert(!checkedOn(a, now) && !km.entries.length, 'unticking an item unticks the day and takes its amount back');
+    // Escape on the question only ticks.
+    item('w').click();
+    $('.amount-pop [data-amount]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert(checkedOn(a, now) && itemOn(a, now, 'w') && itemOn(a, now, 'l') && !km.entries.length, 'Escape ticks without an amount');
+  });
+
+  await step('routine lists: switching kinds, items edited, import, reset, sync', () => {
+    fresh('Routine list edits');
+    const now = today();
+    const a = mk('activity', { title: 'Evening', startDate: addDays(now, -5), dueDate: addDays(now, 20), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {}, list: [{ id: 'a1', text: 'Teeth', done: false }, { id: 'a2', text: 'Read', done: false }] });
+    save();
+    setView('activities');
+    tickListItem(a.id, 'a1', now);
+    // Editing keeps ids and today's ticks; renaming and adding work as on a list.
+    openForm('activity', a.id);
+    assert($('#listRows').children.length === 2 && $('#listRows').classList.contains('no-ticks') && $('#f-repeat').value === 'week', 'edit: items, no ticks, repeats');
+    $('#listRows').children[1].querySelector('.li-input').value = 'Read a chapter';
+    modal.querySelector('[data-li-add]').click();
+    $('#listRows').children[2].querySelector('.li-input').value = 'Lights out';
+    submitForm();
+    assert(isListRoutine(a) && a.list.length === 3 && a.list[0].id === 'a1' && a.list[1].text === 'Read a chapter', 'saved');
+    assert(itemOn(a, now, 'a1') && a.list.every(i => !i.done), 'today’s ticks kept, no item done');
+    // Turning it into a one-off list: ticks shown again, status follows the items.
+    openForm('activity', a.id);
+    $('#f-repeat').value = 'none';
+    $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
+    assert(!$('#listRows').classList.contains('no-ticks') && !modal.querySelector('[data-field="dueDate"]').hidden, 'no repeat: ticks and due date back');
+    $('#listRows .li-check').checked = true;
+    submitForm();
+    assert(isList(a) && !isRoutine(a) && a.list[0].done && a.status === 'doing', 'now a list, in progress');
+    // And back: a list that repeats.
+    openForm('activity', a.id);
+    $('#f-repeat').value = 'days';
+    $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
+    assert($('#listRows').classList.contains('no-ticks'), 'repeat: ticks hidden');
+    submitForm();
+    assert(isListRoutine(a) && a.list.every(i => !i.done) && a.status === 'todo', 'a routine list again, items not done');
+    // Import keeps good day ticks and drops bad ones.
+    const n = normalize({ activities: [
+      { id: 'r1', title: 'R', repeat: { every: 1, unit: 'week', times: 2 }, list: [{ id: 'i', text: 'I' }], listDays: { [now]: { i: 1 } } },
+      { id: 'r2', title: 'S', repeat: { every: 1, unit: 'week', times: 2 }, list: [{ id: 'i', text: 'I' }], listDays: ['nope'] },
+      { id: 'r3', title: 'T', repeat: { every: 1, unit: 'week', times: 2 }, listDays: { [now]: { i: 1 } } },
+    ] }).activities;
+    eq(n[0].listDays, { [now]: { i: 1 } }, 'day ticks kept');
+    assert(!('listDays' in n[1]) && !('listDays' in n[2]), 'bad day ticks, or ones without a list, dropped');
+    // Reset clears the day ticks with the check-ins.
+    tickListItem(a.id, 'a1', now);
+    const r = resetProgress(db).activities.find(x => x.id === a.id);
+    assert(!r.listDays && !r.checkins && r.list.length === 3, 'reset clears day ticks, keeps items');
+    // Sync: day ticks from both copies, per item; the newer copy wins a clash, unticks included.
+    const base = { id: 'm', title: 'M', repeat: { every: 1, unit: 'week', times: 3 }, list: [{ id: 'x', text: 'X' }, { id: 'y', text: 'Y' }] };
+    const phone = { ...base, updatedAt: '2099-01-02', checkins: { d1: 1 }, listDays: { d1: { x: 1, y: 1 }, d2: { x: 1 } } };
+    const laptop = { ...base, updatedAt: '2099-01-03', checkins: { d3: 1 }, listDays: { d2: { x: 0, y: 1 }, d3: { x: 1, y: 1 } } };
+    const m = mergeActivity(phone, laptop);
+    eq(m.listDays, { d1: { x: 1, y: 1 }, d2: { x: 0, y: 1 }, d3: { x: 1, y: 1 } }, 'merged per day and item, newer wins');
+    eq(m.checkins, { d1: 1, d3: 1 }, 'check-ins merged as before');
+    assert(phone.listDays.d2.x === 1 && !laptop.listDays.d1, 'copies left as they were');
+    eq(mergeActivity(laptop, phone).listDays, m.listDays, 'same either way round');
+    assert(!('listDays' in mergeActivity({ ...base, updatedAt: '1' }, { ...base, updatedAt: '2' })), 'no day ticks: none added');
+  });
+
+  await step('routine lists: escaping, help, Slovenian, the sample plan, kind icons', async () => {
+    fresh('Routine list around');
+    const now = today(), evil = '<img src=x onerror="window.__xss=1">';
+    const a = mk('activity', { title: 'Daily', startDate: addDays(now, -3), dueDate: addDays(now, 30), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {}, list: [{ id: 'q', text: evil }, { id: 'r', text: 'Ok' }] });
+    save();
+    setView('activities');
+    assert(!window.__xss && !$('.rt-items img') && [...document.querySelectorAll('.rt-items .li-text')].some(e => e.textContent === evil), 'item text shown as text');
+    setView('dashboard');
+    assert(!$('.routine-row img'), 'overview row: nothing unescaped');
+    setView('activities');
+    setHelp(true);
+    const dot = $('[data-help-tip="routineList"]');
+    assert(dot && dot.parentElement.matches('.rt-items > .label'), 'help dot by the label');
+    dot.click();
+    eq($('#helpTip')?.textContent, t('help.tip.routineList'), 'help text shown');
+    assert(!$('.rt-items [data-help-tip="list"]'), 'the one-off list tip is not put on it');
+    setHelp(false);
+    changeLanguage('sl');
+    render();
+    eq($('.rt-items .label').textContent, I18N.sl.strings['list.today'].replace('{done}', 0).replace('{total}', 2), 'Slovenian count');
+    openForm('activity');
+    eq(modal.querySelector('[data-act-kind="listRoutine"] strong').textContent, I18N.sl.strings['f.actKind.listRoutine'], 'Slovenian kind');
+    modal.close();
+    tickListItem(a.id, 'q', now); tickListItem(a.id, 'r', now);
+    eq($('#toast').textContent, I18N.sl.strings['list.dayDone'].replace('{name}', 'Daily'), 'Slovenian toast');
+    changeLanguage('en');
+    // Each kind has its own icon, hidden from screen readers.
+    openForm('activity');
+    const icons = [...modal.querySelectorAll('[data-act-kind] svg.act-choice-icon')];
+    assert(icons.length === 4 && icons.every(s => s.getAttribute('aria-hidden') === 'true' && s.getBoundingClientRect().width >= 24), 'four visible icons');
+    eq(new Set(icons.map(s => s.innerHTML)).size, 4, 'all different');
+    const r = modal.querySelector('[data-act-kind="once"]'), ic = r.querySelector('svg').getBoundingClientRect(), tx = r.querySelector('strong').getBoundingClientRect();
+    assert(ic.right <= tx.left, 'icon beside the text');
+    assert(getComputedStyle(modal.querySelector('[data-act-kind="routine"] svg')).color !== getComputedStyle(modal.querySelector('[data-act-kind="list"] svg')).color, 'routines and lists in different colours');
+    modal.close();
+    // The sample plan's strength training is a routine list, ticked on the days it was done.
+    for (const lang of ['en', 'sl']) {
+      changeLanguage(lang);
+      loadSample();
+      const st = db.activities.find(x => isListRoutine(x));
+      assert(st && st.list.length === 3 && st.list.every(i => i.text === I18N[lang].sample.activities[24].list[st.list.indexOf(i)]), `${lang}: strength training has its exercises`);
+      assert(Object.keys(st.checkins).every(d => st.list.every(i => itemOn(st, d, i.id))), `${lang}: every ticked day has its items ticked`);
+      deletePlan(plans.current);
     }
     changeLanguage('en');
   });
@@ -2449,6 +2682,171 @@ window.moreTests = async ({ step, assert }) => {
   const arrow = (r, dir) => rcard(r).querySelector(`[data-rt-week][data-dir="${dir}"]`);
   const shownDays = r => days(r).map(b => b.dataset.date);
 
+  // Runs `fn` as if today were `iso` (the app reads the date through today()).
+  const onDay = (iso, fn) => { const real = window.today; window.today = () => iso; try { return fn(); } finally { window.today = real; } };
+  const MON = '2026-11-02', TUE = '2026-11-03', WED = '2026-11-04', THU = '2026-11-05', FRI = '2026-11-06', SAT = '2026-11-07', SUN = '2026-11-08';
+
+  await step('routines: late only until ticked again, however many days were missed; the plan badge follows', () => {
+    fresh('Late rule');
+    const daily = mk('activity', { title: 'Daily', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] }, checkins: {} });
+    const badge = () => { render(); return planHealth(db); };
+    const set = (...days) => { daily.checkins = Object.fromEntries(days.map(d => [d, 1])); };
+    onDay(THU, () => {
+      set(MON, TUE, WED);
+      assert(routineState(daily) === 'doing' && routineToday(daily) === 'due' && badge() === 'today', 'on track, due today');
+      set(MON);
+      assert(routineState(daily) === 'late' && badge() === 'late', 'two days missed, not ticked since: late');
+      set(MON, THU);
+      assert(routineState(daily) === 'doing' && badge() === 'ok', 'ticked today after two missed days: back on track, green');
+      set(THU);
+      assert(routineState(daily) === 'doing' && badge() === 'ok', 'three missed, then ticked: still fine');
+      set(TUE);
+      assert(routineState(daily) === 'late', 'a day missed after the last tick is late again');
+      set(WED);
+      assert(routineState(daily) === 'doing' && badge() === 'today', 'ticked yesterday after missing Mon and Tue: not late, only due today');
+      // A miss in last week does not count this week; a tick on a day it is not due still counts.
+      const monThu = mk('activity', { title: 'Strength', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: { '2026-10-26': 1 } });
+      eq(routineState(monThu), 'late', 'Monday missed: late');
+      monThu.checkins[TUE] = 1;
+      eq(routineState(monThu), 'todo', 'ticked on Tuesday (not due) after it: not late (and the tick does not count toward Monday)');
+      setView('activities');
+      assert(!$(`.card.routine[data-open="${monThu.id}"]`).classList.contains('st-late'), 'card not red');
+      delete monThu.checkins[TUE]; render();
+      assert($(`.card.routine[data-open="${monThu.id}"]`).classList.contains('st-late'), 'red while late');
+    });
+    // Flexible: behind once the days left cannot reach the target; a tick after that clears it.
+    const flex = mk('activity', { title: 'Run', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
+    db.activities = [flex];
+    onDay(SUN, () => {
+      eq(routineState(flex), 'late', 'Sunday, none of three done: late');
+      eq(badge(), 'late', 'red badge');
+      flex.checkins[SUN] = 1;
+      eq(routineState(flex), 'doing', 'ticked on Sunday: not late any more, though the target is out of reach');
+      eq(badge(), 'ok', 'green badge');
+      flex.checkins = { [FRI]: 1 };
+      eq(routineState(flex), 'late', 'ticked on Friday, then behind on Sunday (Saturday skipped) without a tick since: late');
+      flex.checkins = { [MON]: 1 };
+      eq(routineState(flex), 'late', 'one early tick, then behind since Saturday without a tick: late');
+      flex.checkins[SAT] = 1;
+      eq(routineState(flex), 'doing', 'a tick on the day it fell behind clears it');
+    });
+    onDay(WED, () => {
+      flex.checkins = {};
+      eq(routineToday(flex), 'any', 'Wednesday, three to go in five days: any day');
+    });
+    onDay(FRI, () => {
+      flex.checkins = {};
+      eq(routineToday(flex), 'due', 'Friday, three to go in three days: due today');
+      flex.checkins = { [MON]: 1, [TUE]: 1, [WED]: 1 };
+      eq(routineToday(flex), 'met', 'target met');
+      flex.checkins[FRI] = 1;
+      eq(routineToday(flex), 'done', 'ticked today');
+    });
+    // Not running today: nothing asked.
+    const later = mk('activity', { startDate: '2026-12-01', repeat: { every: 1, unit: 'week', times: 2 } });
+    onDay(THU, () => eq(routineToday(later), null, 'not started: no tag'));
+    deletePlan(plans.current);
+  });
+
+  await step('routines: the week strip shows due, missed, not-due and today’s days; the card says what today asks', () => {
+    fresh('Strip days');
+    const r = mk('activity', { title: 'Strength', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: {} });
+    const flex = mk('activity', { title: 'Run', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', times: 3 }, checkins: { [TUE]: 1 } });
+    save();
+    const card = a => $(`.card.routine[data-open="${a.id}"]`);
+    const day = (a, iso) => card(a).querySelector(`[data-checkin][data-date="${iso}"]`);
+    const has = (a, iso, ...cls) => cls.every(c => day(a, iso).classList.contains(c));
+    onDay(THU, () => {
+      setView('activities');
+      assert(has(r, MON, 'due', 'missed') && !has(r, MON, 'on'), 'Monday: due and missed');
+      assert(has(r, TUE, 'rest') && has(r, WED, 'rest') && !has(r, TUE, 'due'), 'Tue and Wed: not due');
+      assert(has(r, THU, 'due', 'today') && !has(r, THU, 'missed'), 'Thursday: due today, not missed yet');
+      assert(has(r, FRI, 'rest') && day(r, FRI).getAttribute('aria-disabled') === 'true', 'Friday: not due, to come');
+      eq(day(r, MON).title, t('rt.dayMissed', { date: longDate(MON) }), 'missed day says so');
+      eq(day(r, TUE).title, t('rt.dayRest', { date: longDate(TUE) }), 'not-due day says so');
+      eq(day(r, THU).title, t('rt.dayToday', { label: t('rt.dayDue', { date: longDate(THU) }) }), 'today: due, not done, today');
+      eq(card(r).querySelector('[data-today]').dataset.today, 'due', 'tag: due today');
+      eq(card(r).querySelector('[data-today]').textContent, t('rt.today.due'), 'reads Due today');
+      assert(card(r).querySelector('[data-today]').classList.contains('warn'), 'due today stands out');
+      // Looks: missed is hatched and dashed, in greys, not red; today is ringed; due today is filled.
+      const cs = getComputedStyle(day(r, MON)), bad = getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();
+      assert(cs.borderTopStyle === 'dashed' && cs.backgroundImage.includes('repeating-linear-gradient') && cs.textDecorationLine.includes('line-through'), 'missed: dashed, hatched, crossed out');
+      const toRgb = c => { const x = document.createElement('i'); x.style.color = c; document.body.append(x); const v = getComputedStyle(x).color; x.remove(); return v; };
+      assert(cs.borderTopColor !== toRgb(bad) && cs.color !== toRgb(bad), 'missed is not red');
+      assert(getComputedStyle(day(r, THU)).outlineStyle === 'solid' && getComputedStyle(day(r, THU)).backgroundColor !== getComputedStyle(day(r, WED)).backgroundColor, 'today ringed and filled while due');
+      assert(getComputedStyle(day(r, TUE)).borderTopStyle === 'dotted' && getComputedStyle(day(r, MON)).borderTopStyle === 'dashed' && getComputedStyle(day(r, THU)).borderTopStyle === 'solid', 'not due dotted, missed dashed, due solid');
+      assert(getComputedStyle(document.querySelector('.rt-legend .rt-swatch.rest')).borderTopStyle === 'dotted', 'legend matches the strip');
+      assert(Number(getComputedStyle(day(r, MON)).opacity) === 1 && Number(getComputedStyle(day(r, FRI)).opacity) < 0.5, 'past days clear, days to come faint');
+      // Tick today: done, ringed, tag says so; ticking Monday later clears the miss.
+      day(r, THU).click();
+      assert(has(r, THU, 'on', 'today') && !has(r, MON, 'on'), 'Thursday done');
+      eq(card(r).querySelector('[data-today]').textContent, t('rt.today.done'), 'tag: done today');
+      assert(!card(r).classList.contains('st-late'), 'not late after a tick');
+      day(r, MON).click();
+      assert(has(r, MON, 'on') && !has(r, MON, 'missed'), 'Monday filled in: no longer missed');
+      // A flexible routine has no due, missed or not-due days, and says any day.
+      assert([MON, WED, THU].every(d => !has(flex, d, 'due') && !has(flex, d, 'missed') && !has(flex, d, 'rest')), 'flexible: days all alike');
+      assert(has(flex, TUE, 'on') && has(flex, THU, 'today'), 'flexible: ticks and today');
+      eq(card(flex).querySelector('[data-today]').dataset.today, 'any', 'flexible tag: any day');
+      // Earlier weeks show their misses too.
+      ui.rtWeek[r.id] = '2026-10-26'; render();
+      assert(has(r, '2026-10-26', 'missed') && has(r, '2026-10-29', 'missed'), 'last week’s misses shown');
+      ui.rtWeek = {}; render();
+      // The legend names the kinds of day, matching the strip.
+      const legend = [...$('.rt-legend').querySelectorAll('span')].map(s => s.textContent);
+      eq(legend, ['on', 'due', 'missed', 'rest', 'today'].map(k => t('rt.legend.' + k)), 'legend');
+      assert([...$('.rt-legend').querySelectorAll('i')].every(i => i.getAttribute('aria-hidden') === 'true'), 'swatches hidden from screen readers');
+    });
+    onDay(WED, () => {
+      render();
+      eq(card(r).querySelector('[data-today]').textContent, t('rt.today.restNext', { date: fmtDay(THU, { weekday: 'short', day: 'numeric', month: 'short' }) }), 'not due today: says when next');
+      assert(!card(r).querySelector('[data-today]').classList.contains('warn'), 'quietly');
+    });
+    // Its last due day passed: not due today, nothing next.
+    const ending = mk('activity', { title: 'Ending', startDate: '2026-10-01', dueDate: SAT, repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: { [THU]: 1 } });
+    onDay(FRI, () => { render(); eq(card(ending).querySelector('[data-today]').textContent, t('rt.today.rest'), 'no next due day: just not today'); });
+    // With only flexible routines, the legend leaves out the days they do not have.
+    db.activities = [flex]; save();
+    onDay(THU, () => { render(); eq([...$('.rt-legend').querySelectorAll('span')].map(s => s.textContent), [t('rt.legend.on'), t('rt.legend.today')], 'flexible only: done and today'); });
+    // Slovenian.
+    db.activities = [r]; r.checkins = {}; save();
+    changeLanguage('sl');
+    onDay(THU, () => {
+      render();
+      eq(card(r).querySelector('[data-today]').textContent, I18N.sl.strings['rt.today.due'], 'Slovenian tag');
+      eq($('.rt-legend span:nth-child(3)').textContent, I18N.sl.strings['rt.legend.missed'], 'Slovenian legend');
+      assert(day(r, MON).title.endsWith(I18N.sl.strings['rt.dayMissed'].split('}')[1]), 'Slovenian missed label');
+    });
+    changeLanguage('en');
+    // Help explains the days.
+    onDay(THU, () => { setHelp(true); render(); });
+    $('[data-help-tip="routines"]').click();
+    assert($('#helpTip').textContent.includes('hatched') && $('#helpTip').textContent.includes('late only until'), 'help tip explains the days and the late rule');
+    setHelp(false);
+    deletePlan(plans.current);
+  });
+
+  await step('routines: the strip fits a phone, with the today ring inside the card', async () => {
+    const r = { id: 'p1', title: 'Strength', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: { [MON]: 1 } };
+    fresh('Strip phone');
+    db.activities.push(r);
+    const html = onDay(THU, () => routineCard(r));
+    for (const theme of ['light', 'dark']) {
+      const frame = document.createElement('iframe');
+      Object.assign(frame.style, { width: '390px', height: '500px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+      frame.srcdoc = `<!doctype html><html data-theme="${theme}"><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px">${html}</body></html>`;
+      await new Promise(res => { frame.onload = res; document.body.append(frame); });
+      const doc = frame.contentDocument, c = doc.querySelector('.card').getBoundingClientRect();
+      const ds = [...doc.querySelectorAll('.rt-day')].map(b => b.getBoundingClientRect());
+      assert(ds.length === 7 && ds.every(b => b.width >= 28 && b.height >= 32), `${theme}: seven days, big enough to tap`);
+      const t4 = doc.querySelector('.rt-day.today').getBoundingClientRect();
+      assert(t4.left - 4 >= c.left && t4.right + 4 <= c.right, `${theme}: the ring stays inside the card`);
+      assert(doc.documentElement.scrollWidth <= 390, `${theme}: no sideways scroll`);
+      frame.remove();
+    }
+    deletePlan(plans.current);
+  });
+
   await step('routine week strip: every day shows its date on hover; days that cannot be ticked say so too', () => {
     fresh('Week strip');
     const now = today(), mon = mondayAt(now);
@@ -2457,7 +2855,8 @@ window.moreTests = async ({ step, assert }) => {
     eq(shownDays(r), daysBetween(mon, addDays(mon, 6)), 'this week shown at first');
     days(r).forEach(b => {
       const d = b.dataset.date;
-      eq(b.title, t(checkedOn(r, d) ? 'rt.dayOn' : 'rt.dayOff', { date: longDate(d) }), `title of ${d}`);
+      const said = t(checkedOn(r, d) ? 'rt.dayOn' : 'rt.dayOff', { date: longDate(d) });
+      eq(b.title, d === now ? t('rt.dayToday', { label: said }) : said, `title of ${d}`);
       assert(b.title.includes(d.slice(0, 4)), 'with the year');
       assert(!b.disabled, 'not disabled, so the tooltip shows');
       eq(b.getAttribute('aria-disabled'), d > now ? 'true' : null, `${d} can${d > now ? 'not' : ''} be ticked`);
@@ -2469,7 +2868,7 @@ window.moreTests = async ({ step, assert }) => {
     }
     days(r).find(b => b.dataset.date === now).click();
     const todayBtn = days(r).find(b => b.dataset.date === now);
-    eq(todayBtn.title, t('rt.dayOn', { date: longDate(now) }), 'ticked day says done');
+    eq(todayBtn.title, t('rt.dayToday', { label: t('rt.dayOn', { date: longDate(now) }) }), 'ticked day says done');
     assert(document.activeElement === todayBtn, 'focus stays on the day');
     return todayBtn.title;
   });
@@ -3512,8 +3911,11 @@ window.moreTests = async ({ step, assert }) => {
     const r = mk('activity', { startDate: d(-3), repeat: { every: 1, unit: 'day' }, checkins: { [d(-3)]: 1, [d(-2)]: 1, [d(-1)]: 1 } });
     eq(badge(), ['🟡'], 'daily routine not ticked today');
     r.checkins[d(0)] = 1; eq(badge(), ['🟢'], 'ticked today');
-    // A daily routine is late for a day missed this week; on a Monday yesterday was last week.
-    delete r.checkins[d(-1)]; eq(badge(), [weekday(today()) === 0 ? '🟢' : '🔴'], 'a missed day');
+    // A daily routine is late for a day missed this week until it is ticked again; on a Monday
+    // yesterday was last week.
+    delete r.checkins[d(-1)]; eq(badge(), ['🟢'], 'a missed day, then ticked today: back on track');
+    delete r.checkins[d(0)]; eq(badge(), [weekday(today()) === 0 ? '🟡' : '🔴'], 'a missed day, not ticked since');
+    r.checkins[d(0)] = 1;
     r.checkins[d(-1)] = 1;
     // Another plan's badge comes from its saved data.
     save(); const busy = plans.current;
@@ -5428,7 +5830,7 @@ window.moreTests = async ({ step, assert }) => {
     const r = btn.getBoundingClientRect(), m = ctxMenu.getBoundingClientRect();
     assert(Math.abs(m.right - r.right) < 2 && m.top >= r.bottom, 'opens below the button, lined up with it');
     ctxMenu.querySelector('[data-ctx="new:activity"]').click();
-    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'activity' && !formCtx.id && modal.querySelectorAll('[data-act-kind]').length === 3, 'Activity asks which kind');
+    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'activity' && !formCtx.id && modal.querySelectorAll('[data-act-kind]').length === 4, 'Activity asks which kind');
     modal.close();
     for (const k of ['goal', 'state']) {
       btn.click(); ctxMenu.querySelector(`[data-ctx="new:${k}"]`).click();

@@ -411,11 +411,24 @@ textarea { resize: vertical; min-height: 68px; }
   height: 34px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--surface);
   color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; display: grid; place-items: center;
 }
-.rt-day.due { border-color: var(--goal); color: var(--ink); }
-.rt-day.today { box-shadow: inset 0 -3px 0 var(--goal); }
+/* Done: filled green. Due: outlined blue (filled pale blue while it is today's to do). Missed: hatched,
+   in quiet greys – a miss is shown, not alarmed. Not due: a faint dotted outline. Today: ringed. */
+.rt-day.due { border: 2px solid var(--goal); color: var(--ink); }
+.rt-day.rest { border: 1px dotted var(--line-strong); background: transparent; color: var(--ink-3); font-weight: 600; }
+.rt-day.missed { border: 2px dashed var(--ink-3); color: var(--ink-3); text-decoration: line-through; background: repeating-linear-gradient(135deg, var(--sunken) 0 3px, transparent 3px 7px); }
 .rt-day.on { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.rt-day.due.today:not(.on) { background: var(--goal-soft); color: var(--goal); }
+.rt-day.today { outline: 2px solid var(--ink); outline-offset: 2px; }
 .rt-day:hover:not([aria-disabled="true"]) { border-color: var(--ink-2); }
+.rt-day.on:hover:not([aria-disabled="true"]) { filter: brightness(1.08); border-color: var(--ok); }
 .rt-day[aria-disabled="true"] { opacity: .35; cursor: default; }
+/* Days still to come stay readable when they are due, so the week ahead shows. */
+.rt-day.due[aria-disabled="true"] { opacity: .75; }
+.rt-week { padding: 3px 0; }
+.rt-legend { margin: -2px 0 12px; font-size: 13px; gap: 6px 14px; }
+.rt-swatch { display: inline-block; width: 18px; height: 14px; box-sizing: border-box; border-radius: 4px; cursor: default; }
+.rt-swatch.today { outline-offset: 1px; border-color: var(--line-strong); background: var(--surface); }
+.rt-today.warn { font-weight: 700; }
 .routine-row .meta { font-size: 12.5px; margin-left: 6px; }
 .rep-nth { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
 .repeat-box { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; border: 1px dashed var(--line-strong); border-radius: var(--r-md); }
@@ -1013,11 +1026,14 @@ textarea { resize: vertical; min-height: 68px; }
 .tpl-inside ul { margin: 0; padding-left: 20px; color: var(--ink-2); line-height: 1.45; }
 .tpl-card .btn { align-self: flex-start; }
 .act-choice { display: flex; flex-direction: column; gap: 10px; }
-.act-choice-btn { display: flex; flex-direction: column; gap: 4px; padding: 14px 18px; text-align: left; font: inherit; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
+.act-choice-btn { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 14px; padding: 14px 18px; text-align: left; font: inherit; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }
 .act-choice-btn:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .act-choice-btn:focus-visible { outline: none; box-shadow: var(--focus); }
 .act-choice-btn strong { font-size: 16px; }
-.act-choice-btn span { font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+.act-choice-btn span { grid-column: 2; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+.act-choice-icon { grid-row: 1 / 3; align-self: start; width: 30px; height: 30px; padding: 5px; box-sizing: content-box; border-radius: var(--r-sm); fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; color: var(--activity); background: var(--surface-2); }
+.kind-list .act-choice-icon { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, var(--surface)); }
+.kind-routine .act-choice-icon, .kind-listRoutine .act-choice-icon { color: var(--contrib); background: color-mix(in srgb, var(--contrib) 13%, var(--surface)); }
 .li-ticks { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 4px; }
 .li-tick { display: flex; align-items: flex-start; gap: 8px; padding: 4px 2px; text-align: left; font: inherit; font-size: 14px; line-height: 1.35; color: var(--ink); background: none; border: 0; border-radius: 6px; cursor: pointer; }
 .li-tick:hover { background: var(--surface-2); }
@@ -1031,6 +1047,9 @@ textarea { resize: vertical; min-height: 68px; }
 .li-row .li-check { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--ok); }
 .li-row .li-input { flex: 1; min-width: 0; }
 .li-add { align-self: flex-start; margin-top: 8px; }
+.li-rows.no-ticks .li-check { display: none; }
+.rt-items { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.rt-items > .label { font-size: 13px; color: var(--ink-2); }
 .empty-alt { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 8px; }
 
 /* Export and import of a single plan */

@@ -198,6 +198,7 @@ function normalize(data) {
     if (Array.isArray(a.list)) a.list = a.list.filter(i => i && safeId(i.id) && typeof i.text === 'string');
     else delete a.list;
     if (!a.list || !a.droppedItems || typeof a.droppedItems !== 'object' || Array.isArray(a.droppedItems)) delete a.droppedItems;
+    if (!a.list || !a.listDays || typeof a.listDays !== 'object' || Array.isArray(a.listDays)) delete a.listDays;
   });
   migrateCumulative(d);
   return d;
@@ -613,8 +614,10 @@ function followList(a) {
   else if (a.status === 'done' || (n && a.status === 'todo')) a.status = 'doing';
 }
 
-function tickListItem(id, itemId) {
-  const a = db.activities.find(x => x.id === id), it = a && isList(a) && a.list.find(i => i.id === itemId);
+function tickListItem(id, itemId, iso = today()) {
+  const a = db.activities.find(x => x.id === id);
+  if (a && isListRoutine(a)) return tickRoutineItem(a, itemId, iso);
+  const it = a && isList(a) && a.list.find(i => i.id === itemId);
   if (!it) return;
   Object.assign(it, { done: !it.done, at: new Date().toISOString() });
   const was = a.status;
@@ -625,6 +628,32 @@ function tickListItem(id, itemId) {
   render();
   // The card is drawn anew (perhaps in another column): keep the keyboard on the item.
   $(`[data-li-tick="${id}"][data-li="${itemId}"]`)?.focus();
+}
+
+/* A list routine is a routine with a `list`: each day it is done, its items are ticked off anew.
+   `listDays` maps a date to { itemId: 1 | 0 } (0 kept so sync can merge an untick). Ticking the last
+   item ticks the day off; unticking one unticks it again. Ticking the day itself ticks every item. */
+const isListRoutine = a => isRoutine(a) && Array.isArray(a?.list);
+const itemOn = (a, iso, itemId) => a.listDays?.[iso]?.[itemId] === 1;
+const dayItemsDone = (a, iso) => a.list.filter(i => itemOn(a, iso, i.id)).length;
+const setDayItems = (a, iso, ticks) => { a.listDays = { ...a.listDays, [iso]: { ...a.listDays?.[iso], ...ticks } }; };
+
+function tickRoutineItem(a, itemId, iso) {
+  if (!tickable(a, iso) || !a.list.some(i => i.id === itemId)) return;
+  const on = !itemOn(a, iso, itemId);
+  const all = on && dayItemsDone(a, iso) === a.list.length - 1;
+  const item = () => $(`[data-li-tick="${a.id}"][data-li="${itemId}"]`);
+  // The last item ticks the day, asking how much first as the strip does; until then it stays unticked.
+  if (all && !checkedOn(a, iso) && improvedStates(a).length) return openTickAmount(a, iso, item());
+  setDayItems(a, iso, { [itemId]: on ? 1 : 0 });
+  if (all !== checkedOn(a, iso) && (all || !on)) {
+    // A met week (or month) says so; otherwise the day's list does.
+    if (!setRoutineDay(a, iso, all) && all) toast(t('list.dayDone', { name: a.title }));
+  } else {
+    save();
+    render();
+  }
+  item()?.focus();
 }
 // Monday = 0 (day 0 of the epoch, 1 January 1970, was a Thursday).
 const weekday = iso => (dayNum(iso) + 3) % 7;
@@ -726,14 +755,46 @@ function routineState(a) {
   if (blockers(a).length) return 'blocked';
   const p = periodProgress(a, now);
   if (p.met) return 'done';
-  if (!isFlexible(a)) {
-    if (daysBetween(p.from, addDays(now, -1)).some(d => runsOn(a, d) && isDueDay(a, d) && !checkedOn(a, d))) return 'late';
-  } else {
-    // Days left to tick in this period, today included unless it is ticked already.
-    const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
-    if (p.target - p.done > left) return 'late';
-  }
+  // Late from the day it fell behind until it is ticked again: a tick after missed days puts it
+  // back on track, however many were missed.
+  const behind = behindSince(a, p, now);
+  if (behind && !daysBetween(behind, now).some(d => checkedOn(a, d))) return 'late';
   return p.done ? 'doing' : 'todo';
+}
+
+// The day in this period from which a routine is behind, or '': a fixed routine's last missed due
+// day before today (ticks after it count), a flexible one's first day on which the days left could
+// no longer reach the target.
+function behindSince(a, p, now) {
+  if (!isFlexible(a)) return missedDays(a, p.from, addDays(now, -1)).at(-1) || '';
+  return daysBetween(p.from, now).find(d => {
+    const before = daysBetween(p.from, addDays(d, -1)).filter(x => checkedOn(a, x)).length;
+    return p.target - before > daysBetween(d, p.to).filter(x => runsOn(a, x)).length;
+  }) || '';
+}
+// Due days of a fixed routine between two dates that were not ticked.
+const missedDays = (a, from, to) => (isFlexible(a) ? [] : daysBetween(from, to).filter(d => runsOn(a, d) && isDueDay(a, d) && !checkedOn(a, d)));
+
+// What today asks of a running routine: 'done' (ticked), 'due' (a set day, or a flexible routine that
+// needs every day left), 'any' (a flexible one that can wait), 'met' (the period is done) or 'rest'
+// (not one of its days); null when it does not run today.
+function routineToday(a) {
+  const now = today();
+  if (!runsOn(a, now)) return null;
+  if (checkedOn(a, now)) return 'done';
+  const p = periodProgress(a, now);
+  if (!isFlexible(a)) return isDueDay(a, now) ? 'due' : 'rest';
+  if (p.met) return 'met';
+  const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
+  return p.target - p.done >= left ? 'due' : 'any';
+}
+const TODAY_TAG = { done: 'ok', due: 'warn', any: '', met: 'ok', rest: '' };
+function todayTag(a) {
+  const k = routineToday(a);
+  if (!k) return '';
+  const next = k === 'rest' && nextDueDay(a, addDays(today(), 1));
+  const text = next ? t('rt.today.restNext', { date: fmtDay(next, { weekday: 'short', day: 'numeric', month: 'short' }) }) : t('rt.today.' + k);
+  return `<span class="tag rt-today ${TODAY_TAG[k]}" data-today="${k}">${esc(text)}</span>`;
 }
 
 // Periods met in a row (flexible) or due days ticked in a row (fixed); the current period or today
@@ -837,14 +898,18 @@ function setRoutineDay(a, iso, on, amounts = []) {
   const id = a.id;
   const wasMet = periodProgress(a, iso).met;
   setCheckin(a, iso, on);
+  // Ticking a list routine's day ticks its items; unticking the day (not one item) unticks them all.
+  if (isListRoutine(a) && (on || dayItemsDone(a, iso) === a.list.length)) setDayItems(a, iso, Object.fromEntries(a.list.map(i => [i.id, on ? 1 : 0])));
   if (!on) dropRoutineEntries(a, iso);
   amounts.forEach(([s, n]) => addEntry(s, iso, n, a));
   save();
   render();
   // Only the period running now is "this week done"; filling in an earlier one says nothing.
   const current = periodOf(a, today()).from === periodOf(a, iso).from;
-  if (current && !wasMet && periodProgress(a, iso).met) toast(t({ month: 'rt.metMonth', year: 'rt.metYear' }[periodUnit(a)] || 'rt.metWeek'));
+  const met = current && !wasMet && periodProgress(a, iso).met;
+  if (met) toast(t({ month: 'rt.metMonth', year: 'rt.metYear' }[periodUnit(a)] || 'rt.metWeek'));
   $(`[data-checkin="${id}"][data-date="${iso}"]`)?.focus();
+  return met;
 }
 
 const mondayOf = iso => addDays(iso, -weekday(iso));
@@ -881,10 +946,15 @@ function routineWeek(a, from = shownWeek(a)) {
   const now = today(), { first, last } = routineWeeks(a);
   const fmt = iso => fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const arrow = (dir, off, tip = esc(t(dir < 0 ? 'rt.prevWeek' : 'rt.nextWeek'))) => `<button type="button" class="icon-btn rt-arrow" data-rt-week="${a.id}" data-dir="${dir}" title="${tip}" aria-label="${tip}" ${off ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${dir < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg></button>`;
+  // Each day is one of: done, due (outlined), missed (hatched), not due (fixed routines' other days)
+  // or any day (flexible routines); today is ringed.
   const strip = daysBetween(from, addDays(from, 6)).map(d => {
-    const on = checkedOn(a, d), off = d > now || !runsOn(a, d);
-    const cls = ['rt-day', !isFlexible(a) && isDueDay(a, d) ? 'due' : '', on ? 'on' : '', d === now ? 'today' : ''].filter(Boolean).join(' ');
-    const label = esc(t(on ? 'rt.dayOn' : 'rt.dayOff', { date: fmt(d) }));
+    const on = checkedOn(a, d), off = d > now || !runsOn(a, d), fixed = !isFlexible(a), due = fixed && isDueDay(a, d);
+    const missed = due && !on && !off && d < now;
+    const kind = on ? 'on' : missed ? 'missed' : due ? 'due' : fixed ? 'rest' : '';
+    const cls = ['rt-day', due ? 'due' : '', kind, d === now ? 'today' : ''].filter(Boolean).join(' ');
+    const said = t({ on: 'rt.dayOn', missed: 'rt.dayMissed', due: 'rt.dayDue', rest: 'rt.dayRest' }[kind] || 'rt.dayOff', { date: fmt(d) });
+    const label = esc(d === now ? t('rt.dayToday', { label: said }) : said);
     return `<button type="button" class="${cls}" data-checkin="${a.id}" data-date="${d}" aria-pressed="${on}" ${off ? 'aria-disabled="true"' : ''} title="${label}" aria-label="${label}"><span aria-hidden="true">${esc(weekdayName(weekday(d), 'narrow'))}</span></button>`;
   }).join('');
   return `<div class="rt-nav">${arrow(-1, from <= first)}<div class="rt-week" role="group" aria-label="${esc(from === mondayOf(now) ? t('rt.weekLabel') : fmtRange(from, addDays(from, 6)))}">${strip}</div>${arrow(1, from >= last)}</div>`;
@@ -905,6 +975,8 @@ function routineCard(a) {
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
     ${progressBar(p.target ? clamp(p.done / p.target * 100, 0, 100) : 0, `<span class="rt-progress">${esc(label)}</span>`)}
     ${routineWeek(a, week)}
+    ${todayTag(a) ? `<div class="meta rt-now">${todayTag(a)}</div>` : ''}
+    ${isListRoutine(a) && tickable(a, now) ? routineItems(a, now) : ''}
     <div class="meta">
       ${streak.n ? `<span class="tag ok">${esc(streakText(streak))}</span>` : ''}
       ${when}
@@ -914,12 +986,30 @@ function routineCard(a) {
   </article>`;
 }
 
+// A list routine's items for a day, ticked off one by one under how many are done.
+function routineItems(a, iso) {
+  const n = dayItemsDone(a, iso);
+  return `<div class="rt-items"><span class="label">${esc(t('list.today', { done: n, total: a.list.length }))}</span>
+    <div class="li-ticks" role="group" aria-label="${esc(t('list.todayLabel'))}">${a.list.map(i => {
+      const on = itemOn(a, iso, i.id);
+      return `<button type="button" class="li-tick${on ? ' done' : ''}" role="checkbox" aria-checked="${on}" data-li-tick="${a.id}" data-li="${i.id}" data-date="${iso}"><span class="li-box" aria-hidden="true">${on ? '✓' : ''}</span><span class="li-text">${esc(i.text)}</span></button>`;
+    }).join('')}</div></div>`;
+}
+
+// What the week strip's days mean; due, missed and not-due days only when some routine falls on set days.
+function routineLegend(routines) {
+  const fixed = routines.some(a => !isFlexible(a));
+  const keys = ['on', ...(fixed ? ['due', 'missed', 'rest'] : []), 'today'];
+  return `<div class="map-legend rt-legend">${keys.map(k => `<span><i class="rt-day rt-swatch ${k === 'today' ? 'rest today' : k === 'missed' ? 'due missed' : k}" aria-hidden="true"></i>${esc(t('rt.legend.' + k))}</span>`).join('')}</div>`;
+}
+
 // A routine on the overview: tick today off and see this period at a glance.
 function routineRow(a) {
   const now = today(), on = checkedOn(a, now), p = periodProgress(a), streak = routineStreak(a);
   return `<div class="row routine-row" data-open="${a.id}" data-ctx-item="${a.id}">
     <button type="button" class="check ${on ? 'done' : ''}" data-checkin="${a.id}" data-date="${now}" aria-pressed="${on}" aria-label="${esc(t('rt.doneToday', { name: a.title }))}" title="${esc(t('rt.doneToday', { name: a.title }))}">${on ? '✓' : ''}</button>
     <span class="grow">${esc(a.title)} <span class="meta">${esc(scheduleText(a))}</span></span>
+    ${isListRoutine(a) && a.list.length && !on ? `<span class="tag">${t('list.count', { done: dayItemsDone(a, now), total: a.list.length })}</span>` : ''}
     <span class="tag ${p.met ? 'ok' : ''}">${esc(periodText(a, p))}</span>
     ${streak.n ? `<span class="tag">${esc(streakText(streak))}</span>` : ''}
   </div>`;
@@ -1374,6 +1464,7 @@ function renderActivities() {
       ${searchBox()}
     </div>
     ${routines.length ? `<section class="routines" aria-labelledby="routinesTitle"><h3 class="routines-title" id="routinesTitle">${t('rt.title')}<span>${routines.length}</span></h3>
+      ${routineLegend(routines)}
       <div class="routine-grid">${routines.map(routineCard).join('')}</div></section>` : ''}
     <div class="board" style="--cols:${statuses.length}">${cols}</div>`;
 }
@@ -2891,8 +2982,8 @@ function activityForm(a) {
   const parents = { '': t('f.none') };
   others.filter(x => !below.includes(x.id)).forEach(x => (parents[x.id] = x.title));
   const children = a.id ? relsTo(a.id, 'subactivity').map(r => r.from) : [];
-  // A list's status follows its items, and a list does not repeat.
-  const list = a.id ? isList(a) && a.list : a.links?.repeat === 'list' && [];
+  // A list's status follows its items; a list that repeats is a list routine.
+  const list = a.id ? Array.isArray(a.list) && a.list : ['list', 'listRoutine'].includes(a.links?.repeat) && [];
   return `
     ${field('title', t('f.activity'), text('title', a.title, t(list ? 'f.listPh' : 'f.activityPh')))}
     ${field('description', t('f.details'), area('description', a.description, t('f.detailsPh')))}
@@ -2902,7 +2993,7 @@ function activityForm(a) {
       ${field('startDate', t('f.startDate'), date('startDate', isRoutine(a) ? routineStart(a) : a.id ? a.startDate : a.startDate || today()))}
       ${field('dueDate', t('f.dueDate'), date('dueDate', a.dueDate))}
     </div>
-    ${list ? '' : repeatFields(a)}
+    ${repeatFields(a)}
     ${field('parent', t('f.parentActivity'), select('parent', parents, pick('subactivity')[0] || ''), t('f.parentActivityHint'))}
     ${children.length ? `<div class="field"><span class="label">${t('f.subActivities')}</span><div class="links">${children.map(linkTag).join('')}</div></div>` : ''}
     ${checklist('goals', t('f.contributes'), 'goal', db.goals, pick('contributes'))}
@@ -2928,9 +3019,16 @@ function addListRow(after = null) {
   (after ? after.nextElementSibling : rows.lastElementChild).querySelector('.li-input').focus();
 }
 
-// The first step of a new activity: one done once, a list to tick off, or a routine.
-const activityChoice = () => `<div class="act-choice" role="group" aria-label="${esc(t('f.actKind'))}">${['once', 'list', 'routine'].map(k =>
-  `<button type="button" class="act-choice-btn" data-act-kind="${k}"><strong>${esc(t('f.actKind.' + k))}</strong><span>${esc(t('f.actKind.' + k + 'Hint'))}</span></button>`).join('')}</div>`;
+// The first step of a new activity: one done once, a list to tick off, a routine, or a list ticked off each time.
+// Each kind has an icon: a tick, ticked lines, arrows going round, or ticked lines going round.
+const ACT_KIND_ICONS = {
+  once: '<circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.4l2.6 2.6 5-5.4"/>',
+  list: '<path d="M3.5 6.5l1.5 1.5 2.5-3M3.5 12.5l1.5 1.5 2.5-3M3.5 18.5l1.5 1.5 2.5-3M11 6.5h9.5M11 12.5h9.5M11 18.5h9.5"/>',
+  routine: '<path d="M19.5 9.5A8 8 0 0 0 5 7.5M4.5 14.5A8 8 0 0 0 19 16.5"/><path d="M5 3.5v4h4M19 20.5v-4h-4"/>',
+  listRoutine: '<path d="M3 5.5l1.5 1.5 2.5-3M3 11.5l1.5 1.5 2.5-3M10 5.5h10M10 11.5h4M3 17.5h7"/><path d="M21.5 17.5a4 4 0 1 1-1.4-3.1"/><path d="M20.6 11.6v2.9h-2.9"/>',
+};
+const activityChoice = () => `<div class="act-choice" role="group" aria-label="${esc(t('f.actKind'))}">${['once', 'list', 'routine', 'listRoutine'].map(k =>
+  `<button type="button" class="act-choice-btn kind-${k}" data-act-kind="${k}"><svg class="act-choice-icon" viewBox="0 0 24 24" aria-hidden="true">${ACT_KIND_ICONS[k]}</svg><strong>${esc(t('f.actKind.' + k))}</strong><span>${esc(t('f.actKind.' + k + 'Hint'))}</span></button>`).join('')}</div>`;
 
 // Whether and how an activity repeats; a repeating activity is a routine. The common kinds – a number
 // of times a week or month, or specific weekdays – or a custom recurrence, and when it ends.
@@ -2959,7 +3057,7 @@ function repeatFields(a) {
   const r = isRoutine(a) ? sched(a) : null;
   const start = a.startDate || today();
   // A new routine starts as a number of times a week.
-  const mode = a.links?.repeat === 'routine' ? 'week' : repeatPreset(r);
+  const mode = ['routine', 'listRoutine'].includes(a.links?.repeat) ? 'week' : repeatPreset(r);
   const unit = r?.unit || 'week';
   const on = r?.times ? 'times' : unit === 'week' ? 'days' : r?.on || 'day';
   // A monthly day or n-th weekday, the start's until chosen (updateRepeatFields follows the start date).
@@ -3054,7 +3152,10 @@ function updateRepeatFields(e) {
   $('#timesHint').textContent = t('f.timesHint', { every: tp('rt.every.' + unit, every) });
   $('#countUnit').textContent = tp('f.endsCount', Math.max(1, parseInt($('#f-count').value, 10) || 1));
   $('#repeatEnds').hidden = mode === 'none';
-  modal.querySelector('[data-field="status"]').hidden = mode !== 'none';
+  const status = modal.querySelector('[data-field="status"]');
+  if (status) status.hidden = mode !== 'none';
+  // A list routine's items are ticked off each day on its card, not in the form.
+  $('#listRows')?.classList.toggle('no-ticks', mode !== 'none');
   modal.querySelector('[data-field="dueDate"]').hidden = mode !== 'none';
 }
 
@@ -3242,7 +3343,7 @@ function submitForm() {
     const list = rows && [...rows.querySelectorAll('.li-row')].map(r => ({ id: r.dataset.liRow || uid(), text: r.querySelector('.li-input').value.trim(), done: r.querySelector('.li-check').checked })).filter(i => i.text);
     if (list && !list.length) return showErrors({ list: t('err.listEmpty') });
     if (!startDate) return showErrors({ startDate: t('err.startRequired') });
-    const { repeat, dueDate = v.dueDate, errors } = list ? {} : readRepeat(v, startDate);
+    const { repeat, dueDate = v.dueDate, errors } = readRepeat(v, startDate);
     if (errors) return showErrors(errors);
     if (!repeat && !dueDate) return showErrors({ dueDate: t('err.dueRequired') });
     if (!repeat && startDate > dueDate) return showErrors({ dueDate: t('err.startAfterDue') });
@@ -3254,7 +3355,9 @@ function submitForm() {
     if (repeat) Object.assign(a, { repeat, status: 'todo', checkins: a.checkins || {} });
     else delete a.repeat;
     if (list) {
-      // Only items that changed get a new time; removed ones are remembered for sync.
+      // Only items that changed get a new time; removed ones are remembered for sync. A list
+      // routine's items are ticked per day instead (listDays).
+      if (repeat) list.forEach(i => (i.done = false));
       const now = new Date().toISOString(), before = new Map((existing?.list || []).map(i => [i.id, i]));
       a.list = list.map(i => {
         const was = before.get(i.id);
@@ -3262,7 +3365,7 @@ function submitForm() {
       });
       const kept = new Set(a.list.map(i => i.id));
       before.forEach((_, id) => { if (!kept.has(id)) (a.droppedItems ||= {})[id] = 1; });
-      followList(a);
+      if (!repeat) followList(a);
     }
     if (!existing) db.activities.push(a);
     setLinks(a.id, 'subactivity', v.parent ? [v.parent] : []);
@@ -3581,7 +3684,7 @@ viewEl.addEventListener('click', e => {
   }
   if (el.dataset.rtWeek) return el.disabled || shiftRoutineWeek(el.dataset.rtWeek, Number(el.dataset.dir));
   if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date, el);
-  if (el.dataset.liTick) return tickListItem(el.dataset.liTick, el.dataset.li);
+  if (el.dataset.liTick) return tickListItem(el.dataset.liTick, el.dataset.li, el.dataset.date);
   if (el.dataset.addAmount) return openStateAmount(el.dataset.addAmount, el);
   if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
   if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry);
@@ -3944,7 +4047,7 @@ function resetProgress(data, { shift = false } = {}) {
   for (const x of dated) for (const k of [...PLAN_DATES, 'createdAt']) if (by && x[k]) x[k] = addDays(x[k], by);
   d.goals.forEach(g => { g.current = ''; if (g.status === 'achieved') g.status = 'active'; delete g.offeredAt; });
   d.states.forEach(s => { Object.assign(s, { value: '', date: '', history: [] }); delete s.dropped; if (s.entries) s.entries = []; delete s.droppedEntries; });
-  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; a.list?.forEach(i => { i.done = false; delete i.at; }); delete a.droppedItems; });
+  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; a.list?.forEach(i => { i.done = false; delete i.at; }); delete a.droppedItems; delete a.listDays; });
   return d;
 }
 
@@ -4145,11 +4248,15 @@ function sampleData() {
       { id: a[23], status: 'todo', startDate: d(-35), repeat: { every: 1, unit: 'week', times: 3 },   // run 3 times a week (routine)
         checkins: ticks(-35, (n, wd) => (n > -22 && n <= -15 ? wd === 2 : [1, 3, 5].includes(wd))) },   // one lean week
       { id: a[24], status: 'todo', startDate: d(-28), repeat: { every: 1, unit: 'week', days: [0, 3] },   // strength training (routine)
-        checkins: ticks(-28, (n, wd) => [0, 3].includes(wd) && n !== missed) },
+        checkins: ticks(-28, (n, wd) => [0, 3].includes(wd) && n !== missed) },   // a routine list
     ], txt.activities),
     relations: [],
   };
   data.activities[13].list = txt.activities[13].list.map((text, i) => ({ id: uid(), text, done: i === 0 }));
+  // Strength training is a routine list: every ticked day has all its exercises ticked.
+  const strength = data.activities[24];
+  strength.list = txt.activities[24].list.map(text => ({ id: uid(), text, done: false }));
+  strength.listDays = Object.fromEntries(Object.keys(strength.checkins).map(day => [day, Object.fromEntries(strength.list.map(i => [i.id, 1]))]));
   // Each run adds its kilometres to the weekly distance, a little longer as the weeks go by.
   const runs = data.activities.find(x => x.id === a[23]), km = data.states.find(x => x.id === distance);
   km.entries = Object.keys(runs.checkins).sort().map((date, i) => ({ id: uid(), date, amount: String(Math.round((4.5 + (dayNum(date) - dayNum(d(-35))) * 0.08 + (i % 3 === 2 ? 2 : 0)) * 2) / 2), routine: a[23] }));
@@ -5094,10 +5201,7 @@ function planHealth(data) {
       if (!runsOn(a, now)) return;
       if (routineState(a) === 'late') flag('late');
       // Due today: a set day not ticked yet, or a flexible routine that needs every day left, today included.
-      const p = periodProgress(a, now);
-      const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
-      const dueToday = !checkedOn(a, now) && !p.met && (isFlexible(a) ? p.target - p.done >= left : isDueDay(a, now));
-      if (dueToday) flag('today');
+      if (routineToday(a) === 'due') flag('today');
     });
     return health;
   } finally { db = keep; }
