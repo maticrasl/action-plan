@@ -196,6 +196,7 @@ const HELP_TIPS = [
   { sel: '.card.state .tag.state:not(.cu-total)', key: 'stateValue' },
   { sel: '.cu-add', key: 'addAmount' },
   { sel: '.check', key: 'check' },
+  { sel: '.li-ticks', key: 'list', where: 'beforebegin' },
   { sel: '.board .col h3', key: 'board', where: 'beforeend' },
   { sel: '.routines-title', key: 'routines', where: 'beforeend' },
   { sel: '.routine-list', key: 'routineToday', where: 'beforebegin' },

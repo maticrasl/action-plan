@@ -423,6 +423,203 @@ window.moreTests = async ({ step, assert }) => {
     assert(!('droppedItems' in normalize({ activities: [{ id: 'z', title: 'Z', droppedItems: { x: 1 } }] }).activities[0]), 'removals without a list dropped on import');
   });
 
+  await step('activity kind: every way in asks first, and the answer carries what was preset', () => {
+    fresh('Kind paths');
+    const g = mk('goal', { title: 'Fit', category: 'Health' }), parent = mk('activity', { title: 'Big job', startDate: today(), dueDate: addDays(today(), 9) });
+    const s = mk('state', { title: 'Weight' });
+    save();
+    const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
+    // Each context-menu "add activity" asks, then keeps its link.
+    const cases = [['subactivity', parent, () => $('#f-parent').value === parent.id], ['contributes', g, () => !!modal.querySelector('[data-picker="goal"] [data-picked-id]')], ['improves', s, () => !!modal.querySelector('[data-picker="state"] [data-picked-id]')]];
+    for (const [type, item, picked] of cases) {
+      for (const kind of ['once', 'list', 'routine']) {
+        runCtxAction(`add:activity:${type}`, item.id);
+        assert(modal.open && btns().length === 3 && formCtx.choose, `${type}: asks first`);
+        btns().find(b => b.dataset.actKind === kind).click();
+        assert(!formCtx.choose && !$('#saveBtn').hidden, `${type}/${kind}: the form, with Save`);
+        assert(picked(), `${type}/${kind}: link kept`);
+        assert(!!$('#listRows') === (kind === 'list') && !!$('#f-repeat') === (kind !== 'list'), `${type}/${kind}: the right fields`);
+        if (kind === 'routine') eq($('#f-repeat').value, 'week', `${type}: routine preset`);
+        if (kind === 'once') eq($('#f-repeat').value, 'none', `${type}: one-time preset`);
+        modal.close();
+      }
+    }
+    // A list made from a parent's menu is saved under it.
+    runCtxAction('add:activity:subactivity', parent.id);
+    btns()[1].click();
+    $('#f-title').value = 'Pack'; $('#f-dueDate').value = dateInput(addDays(today(), 3));
+    $('#listRows .li-input').value = 'Shoes';
+    submitForm();
+    const pack = db.activities.find(a => a.title === 'Pack');
+    eq(relsFrom(pack.id, 'subactivity').map(r => r.to), [parent.id], 'list saved as a sub-activity');
+    // The empty board's button and the view's Add button ask too.
+    setView('activities');
+    $('#addBtn').click();
+    assert(modal.open && btns().length === 3, 'Add button asks');
+    modal.close();
+    // Clicking around the choices (not on one) changes nothing.
+    openForm('activity');
+    modal.querySelector('.act-choice').click();
+    assert(modal.open && btns().length === 3 && formCtx.choose, 'a click between the choices does nothing');
+    modal.close();
+    // Every choice is a button with its own name; the group has a label, in both languages.
+    for (const lang of ['en', 'sl']) {
+      changeLanguage(lang);
+      openForm('activity');
+      eq($('#modalTitle').textContent, I18N[lang].strings['new.activity'], `${lang}: title`);
+      eq(modal.querySelector('.act-choice').getAttribute('aria-label'), I18N[lang].strings['f.actKind'], `${lang}: group label`);
+      assert(btns().every(b => b.type === 'button' && b.querySelector('strong').textContent && b.querySelector('span').textContent), `${lang}: named and described`);
+      modal.close();
+    }
+    changeLanguage('en');
+  });
+
+  await step('activity kind: the choices fit a phone', async () => {
+    for (const lang of ['en', 'sl']) {
+      changeLanguage(lang);
+      const frame = document.createElement('iframe');
+      Object.assign(frame.style, { width: '390px', height: '700px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+      frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px"><div class="modal-body">${activityChoice()}</div></body>`;
+      await new Promise(res => { frame.onload = res; document.body.append(frame); });
+      const doc = frame.contentDocument, rs = [...doc.querySelectorAll('.act-choice-btn')].map(b => b.getBoundingClientRect());
+      assert(rs.length === 3 && rs.every(r => r.left >= 15 && r.right <= 375), `${lang}: inside the gutters`);
+      assert(rs[0].bottom <= rs[1].top && rs[1].bottom <= rs[2].top, `${lang}: one under another`);
+      assert(doc.documentElement.scrollWidth <= 390, `${lang}: no sideways scroll`);
+      frame.remove();
+    }
+    changeLanguage('en');
+  });
+
+  await step('lists: around the app', async () => {
+    fresh('Lists around');
+    const g = mk('goal', { title: 'Race day', progress: 'activities', startDate: today(), deadline: addDays(today(), 20) });
+    const evil = '<img src=x onerror="window.__xss=1">';
+    const a = mk('activity', { title: 'Pack', status: 'todo', startDate: addDays(today(), 1), dueDate: addDays(today(), 4), list: [{ id: 'p', text: 'Pins' }, { id: 'q', text: evil }, { id: 'r', text: 'Saltsticks' + 'x'.repeat(80) }] });
+    rel(a, g, 'contributes');
+    save();
+    // Every view draws it, without errors.
+    const before = __errors.length;
+    for (const v of ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs']) { setView(v); render(); }
+    eq(__errors.length, before, 'no errors in any view');
+    setView('activities');
+    // Item text is shown as text.
+    assert(!window.__xss && !document.querySelector('.li-ticks img'), 'card: markup in an item is not run');
+    assert([...document.querySelectorAll('.li-text')].some(e => e.textContent === evil), 'card: shown as typed');
+    openForm('activity', a.id);
+    eq($('#listRows').children[1].querySelector('.li-input').value, evil, 'form: shown as typed');
+    assert(!modal.querySelector('.li-rows img'), 'form: markup not run');
+    modal.close();
+    assert(!activityRow(a).includes('<img'), 'row: nothing unescaped');
+    // Search finds a list by its items.
+    ui.search = 'saltstick'; render();
+    assert(document.querySelector(`.card.activity[data-open="${a.id}"]`), 'search matches an item');
+    ui.search = 'nothing like it'; render();
+    assert(!document.querySelector(`.card.activity[data-open="${a.id}"]`), 'search hides it otherwise');
+    ui.search = ''; render();
+    // The keyboard stays on the item ticked, even as the card moves column.
+    const tick = id => document.querySelector(`[data-li-tick="${a.id}"][data-li="${id}"]`);
+    tick('p').focus(); tick('p').click();
+    eq(document.activeElement, tick('p'), 'focus kept on the ticked item');
+    assert(tick('p').closest('.col[data-status="doing"]'), 'card moved to In progress');
+    eq(tick('p').getAttribute('aria-checked'), 'true', 'checked state announced');
+    // Help mode explains the items.
+    setHelp(true);
+    const dot = document.querySelector('[data-help-tip="list"]');
+    assert(dot && dot.nextElementSibling?.matches('.li-ticks'), 'help dot before the items');
+    dot.click();
+    eq(document.querySelector('.help-pop, .help-tip, [role="tooltip"]')?.textContent, t('help.tip.list'), 'help text shown');
+    setHelp(false);
+    // Done lists hide with "Hide done"; the circle still moves a list by hand.
+    tick('q').click(); tick('r').click();
+    eq(a.status, 'done', 'all ticked: done');
+    eq(goalProgress(g), 100, 'goal progress counts it');
+    ui.hideDone = true; render();
+    assert(!document.querySelector(`.card.activity[data-open="${a.id}"]`), 'hidden with Hide done');
+    ui.hideDone = false; render();
+    cycleStatus(a.id);
+    eq(a.status, 'todo', 'the circle moves it on by hand');
+    tick('p').click();
+    assert(!a.list[0].done && a.status === 'doing', 'unticking one of three on a list moved back to To do: the two ticked put it in progress');
+    tick('p').click();
+    eq(a.status, 'done', 'ticking the last one completes it again');
+    // Whitespace items are left out; a list of only whitespace is not saved.
+    openForm('activity', a.id);
+    [...$('#listRows').querySelectorAll('.li-input')].forEach(i => (i.value = '   '));
+    submitForm();
+    assert(modal.open && modal.querySelector('[data-field="list"].invalid') && a.list.length === 3, 'whitespace-only list refused, nothing changed');
+    eq(modal.querySelector('[data-field="list"] .err').textContent, t('err.listEmpty'), 'says why');
+    // Title is still required first.
+    $('#f-title').value = ' ';
+    submitForm();
+    assert(modal.querySelector('[data-field="title"].invalid'), 'empty title refused');
+    modal.close();
+    // Removing every row leaves one empty row to type in; Enter in the middle adds right below.
+    openForm('activity', a.id);
+    const rows = () => [...$('#listRows').children];
+    while (rows().length > 1) rows()[0].querySelector('[data-li-del]').click();
+    rows()[0].querySelector('[data-li-del]').click();
+    assert(rows().length === 1 && rows()[0].querySelector('.li-input').value === '' && document.activeElement === rows()[0].querySelector('.li-input'), 'last row removed: a fresh empty one, focused');
+    modal.close();
+    openForm('activity', a.id);
+    rows()[0].querySelector('.li-input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    rows()[1].querySelector('.li-input').value = 'Between';
+    submitForm();
+    eq(a.list.map(i => i.text.slice(0, 10)), ['Pins', 'Between', evil.slice(0, 10), 'Saltsticks'], 'Enter adds below the item');
+    eq(a.status, 'doing', 'an unticked item added: back in progress');
+    // Saving the form keeps a status set by hand when the ticks do not decide it.
+    a.list.forEach(i => (i.done = false)); a.status = 'doing'; save();
+    openForm('activity', a.id); $('#f-description').value = 'Bag by the door'; submitForm();
+    assert(a.status === 'doing' && a.description === 'Bag by the door', 'status kept on save');
+    // Export and import keep the list as it is.
+    const back = normalize(JSON.parse(JSON.stringify(db))).activities.find(x => x.id === a.id);
+    eq(back.list, a.list, 'list survives a round trip');
+    // Deleting the list removes it and its links.
+    openForm('activity', a.id);
+    $('#deleteBtn').click();
+    assert(!db.activities.some(x => x.id === a.id) && !db.relations.some(r => r.from === a.id), 'deleted with its links');
+  });
+
+  await step('lists: two devices, through the real save path', () => {
+    fresh('Two devices');
+    const a = mk('activity', { title: 'Pack', status: 'todo', startDate: addDays(today(), 1), dueDate: addDays(today(), 4), list: [{ id: 'p', text: 'Pins' }, { id: 'q', text: 'Cap' }, { id: 'r', text: 'Bib' }] });
+    save();
+    const other = JSON.parse(JSON.stringify(db));
+    // This device: ticks Pins on the card, removes Bib in the form.
+    setView('activities');
+    document.querySelector(`[data-li-tick="${a.id}"][data-li="p"]`).click();
+    openForm('activity', a.id);
+    $('#listRows').children[2].querySelector('[data-li-del]').click();
+    submitForm();
+    // The other device, offline: ticks Cap and adds Gels, a little later.
+    const later = new Date(Date.now() + 60000).toISOString();
+    const o = other.activities[0];
+    o.list[1] = { ...o.list[1], done: true, at: later };
+    o.list.push({ id: 'n', text: 'Gels', done: false, at: later });
+    o.updatedAt = later;
+    const m = mergePlans(db, other).activities.find(x => x.id === a.id);
+    eq(m.list.map(i => `${i.text}:${i.done ? 'x' : '-'}`), ['Pins:x', 'Cap:x', 'Gels:-'], 'both ticks kept, Bib stays removed, Gels added');
+    eq(m.status, 'doing', 'in progress');
+    // Ticking Gels on the merged copy finishes it.
+    const m2 = mergePlans({ ...emptyDb(), activities: [m] }, { ...emptyDb(), activities: [{ ...m, updatedAt: new Date(Date.now() + 120000).toISOString(), list: m.list.map(i => (i.id === 'n' ? { ...i, done: true, at: new Date(Date.now() + 120000).toISOString() } : i)) }] }).activities[0];
+    eq(m2.status, 'done', 'done once the merged list is all ticked');
+  });
+
+  await step('lists: a card with long items fits a phone', async () => {
+    const a = { id: 'ph', title: 'Pack', status: 'doing', dueDate: addDays(today(), 3), list: [{ id: 'a', text: 'Short', done: true }, { id: 'b', text: 'A'.repeat(120) }, { id: 'c', text: 'A rather long item that has to wrap over a few lines on a phone screen' }] };
+    db.activities.push(a);
+    const frame = document.createElement('iframe');
+    Object.assign(frame.style, { width: '390px', height: '700px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px">${activityCard(a)}</body>`;
+    await new Promise(res => { frame.onload = res; document.body.append(frame); });
+    const doc = frame.contentDocument, card = doc.querySelector('.card').getBoundingClientRect();
+    const items = [...doc.querySelectorAll('.li-tick')].map(b => b.getBoundingClientRect());
+    assert(items.length === 3 && items.every(r => r.left >= card.left && r.right <= card.right + 0.5), 'items inside the card');
+    assert(doc.documentElement.scrollWidth <= 390, `no sideways scroll (${doc.documentElement.scrollWidth})`);
+    assert(items[1].height > items[0].height * 2, 'a long item wraps');
+    frame.remove();
+    db.activities = db.activities.filter(x => x.id !== 'ph');
+  });
+
   await step('map: drag from one box to another to link them; touch picks by tapping', async () => {
     fresh('Linking');
     const g = mk('goal', { title: 'Big goal' }), g2 = mk('goal', { title: 'Other goal' });
@@ -5228,7 +5425,7 @@ window.moreTests = async ({ step, assert }) => {
     const r = btn.getBoundingClientRect(), m = ctxMenu.getBoundingClientRect();
     assert(Math.abs(m.right - r.right) < 2 && m.top >= r.bottom, 'opens below the button, lined up with it');
     ctxMenu.querySelector('[data-ctx="new:activity"]').click();
-    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'activity' && !formCtx.id, 'Activity opens a new activity');
+    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'activity' && !formCtx.id && modal.querySelectorAll('[data-act-kind]').length === 3, 'Activity asks which kind');
     modal.close();
     for (const k of ['goal', 'state']) {
       btn.click(); ctxMenu.querySelector(`[data-ctx="new:${k}"]`).click();

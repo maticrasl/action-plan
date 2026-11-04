@@ -623,6 +623,8 @@ function tickListItem(id, itemId) {
   if (a.status === 'done' && was !== 'done') toast(waits.length ? t('acts.notDone', { name: waits[0].title }) : t('list.complete', { name: a.title }));
   save();
   render();
+  // The card is drawn anew (perhaps in another column): keep the keyboard on the item.
+  $(`[data-li-tick="${id}"][data-li="${itemId}"]`)?.focus();
 }
 // Monday = 0 (day 0 of the epoch, 1 January 1970, was a Thursday).
 const weekday = iso => (dayNum(iso) + 3) % 7;
@@ -1154,7 +1156,7 @@ function emptyState(title, text, kind) {
 const byDueDate = (a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
 // Goals everywhere: the nearest deadline first, those without one last.
 const byDeadline = (a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999');
-const matchesSearch = item => !ui.search || (item.title + ' ' + (item.description || item.specific || '')).toLowerCase().includes(ui.search.toLowerCase());
+const matchesSearch = item => !ui.search || [item.title, item.description || item.specific || '', ...(item.list || []).map(i => i.text)].join(' ').toLowerCase().includes(ui.search.toLowerCase());
 
 /* =========================================================
    Views
@@ -3245,13 +3247,13 @@ function submitForm() {
     if (!repeat && !dueDate) return showErrors({ dueDate: t('err.dueRequired') });
     if (!repeat && startDate > dueDate) return showErrors({ dueDate: t('err.startAfterDue') });
     const a = Object.assign(existing || { id: uid(), createdAt: today() }, {
-      title: v.title.trim(), description: v.description.trim(), status: v.status, startDate, dueDate,
+      // A list has no status field: it keeps its own (followList moves it on below).
+      title: v.title.trim(), description: v.description.trim(), status: list ? existing?.status || 'todo' : v.status, startDate, dueDate,
     });
     // A routine keeps its check-ins even when it stops repeating, in case it is switched back.
     if (repeat) Object.assign(a, { repeat, status: 'todo', checkins: a.checkins || {} });
     else delete a.repeat;
     if (list) {
-      if (!existing) a.status = 'todo';
       // Only items that changed get a new time; removed ones are remembered for sync.
       const now = new Date().toISOString(), before = new Map((existing?.list || []).map(i => [i.id, i]));
       a.list = list.map(i => {
@@ -4128,7 +4130,7 @@ function sampleData() {
       { id: a[10], status: 'done', startDate: d(-14), dueDate: d(-10) },  // review statements
       { id: a[11], status: 'todo', startDate: d(-9), dueDate: d(-1) },   // cancel streaming (late)
       { id: a[12], status: 'doing', startDate: d(-25), dueDate: d(60) },  // cut evening snacks
-      { id: a[13], status: 'doing', startDate: d(-15), dueDate: d(10) },  // list items for sale
+      { id: a[13], status: 'doing', startDate: d(-15), dueDate: d(10) },  // list items for sale (a list, the first one done)
       { id: a[14], status: 'done', startDate: d(-90), dueDate: d(-12) },  // finish course modules
       { id: a[15], status: 'todo', startDate: d(30), dueDate: d(35) },   // choose a language app
       { id: a[16], status: 'done', startDate: d(-25), dueDate: d(-15) },  // contractor quotes
@@ -4145,6 +4147,7 @@ function sampleData() {
     ], txt.activities),
     relations: [],
   };
+  data.activities[13].list = txt.activities[13].list.map((text, i) => ({ id: uid(), text, done: i === 0 }));
   // Each run adds its kilometres to the weekly distance, a little longer as the weeks go by.
   const runs = data.activities.find(x => x.id === a[23]), km = data.states.find(x => x.id === distance);
   km.entries = Object.keys(runs.checkins).sort().map((date, i) => ({ id: uid(), date, amount: String(Math.round((4.5 + (dayNum(date) - dayNum(d(-35))) * 0.08 + (i % 3 === 2 ? 2 : 0)) * 2) / 2), routine: a[23] }));

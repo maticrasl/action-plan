@@ -1024,6 +1024,7 @@ textarea { resize: vertical; min-height: 68px; }
 .li-tick:focus-visible { outline: none; box-shadow: var(--focus); }
 .li-box { flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border: 1.5px solid var(--line-strong); border-radius: 4px; font-size: 12px; font-weight: 800; color: var(--surface); }
 .li-tick.done .li-box { background: var(--ok); border-color: var(--ok); }
+.li-text { min-width: 0; overflow-wrap: anywhere; }
 .li-tick.done .li-text { color: var(--ink-3); text-decoration: line-through; }
 .li-rows { display: flex; flex-direction: column; gap: 6px; }
 .li-row { display: flex; align-items: center; gap: 8px; }
