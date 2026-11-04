@@ -367,6 +367,62 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('en');
   });
 
+  await step('lists: sync merges items one by one', () => {
+    const it = (id, text, done, at) => ({ id, text, done, at });
+    const base = { id: 'L', title: 'Pack', status: 'doing', startDate: today(), dueDate: addDays(today(), 3) };
+    // Phone (older save) ticked shoes and added a towel; laptop (newer save) ticked gels and removed the hat.
+    const phone = { ...base, updatedAt: '2099-01-02', list: [it('s', 'Shoes', true, '2099-01-02'), it('g', 'Gels', false, '2099-01-01'), it('h', 'Hat', false, '2099-01-01'), it('t', 'Towel', false, '2099-01-02')] };
+    const laptop = { ...base, updatedAt: '2099-01-03', list: [it('g', 'Energy gels', true, '2099-01-03'), it('s', 'Shoes', false, '2099-01-01')], droppedItems: { h: 1 } };
+    const m = mergeActivity(phone, laptop);
+    eq(m.list.map(i => `${i.id}:${i.text}:${i.done ? 'x' : '-'}`), ['g:Energy gels:x', 's:Shoes:x', 't:Towel:-'], 'both ticks kept, newer order, added item kept, removed item gone');
+    eq(m.droppedItems, { h: 1 }, 'removal remembered');
+    eq(m.status, 'doing', 'not all ticked: still in progress');
+    eq(mergeActivity(laptop, phone), m, 'symmetric');
+    assert(phone.list.length === 4 && laptop.list.length === 2 && !phone.droppedItems, 'the copies are left as they were');
+    // A removal on one side wins over the other side still having (and even ticking) the item.
+    const ticked = { ...phone, updatedAt: '2099-01-05', list: phone.list.map(i => (i.id === 'h' ? it('h', 'Hat', true, '2099-01-05') : i)) };
+    assert(!mergeActivity(ticked, laptop).list.some(i => i.id === 'h'), 'removed stays removed');
+    // Ticks that finish the list on merge mark it done; a new item on the other side reopens a done list.
+    const a1 = { ...base, status: 'doing', updatedAt: '2099-01-02', list: [it('a', 'A', true, '2099-01-02'), it('b', 'B', false, '2099-01-01')] };
+    const a2 = { ...base, status: 'doing', updatedAt: '2099-01-03', list: [it('a', 'A', false, '2099-01-01'), it('b', 'B', true, '2099-01-03')] };
+    eq(mergeActivity(a1, a2).status, 'done', 'merged ticks complete it');
+    const done = { ...base, status: 'done', updatedAt: '2099-01-04', list: [it('a', 'A', true, '2099-01-04')] };
+    const more = { ...base, status: 'doing', updatedAt: '2099-01-02', list: [it('a', 'A', true, '2099-01-02'), it('n', 'New', false, '2099-01-02')] };
+    eq(mergeActivity(done, more).status, 'doing', 'an item added elsewhere reopens it');
+    // Items from before item times existed count as oldest; plain activities and routines merge as before.
+    const legacy = { ...base, updatedAt: '2099-01-09', list: [{ id: 'a', text: 'A', done: false }] };
+    eq(mergeActivity(legacy, a1).list.find(i => i.id === 'a').done, true, 'an item with a time beats one without');
+    const plain = { ...base, updatedAt: '2099-01-02' }, plain2 = { ...base, title: 'Later', updatedAt: '2099-01-03' };
+    eq(mergeActivity(plain, plain2), plain2, 'plain activity: newer copy');
+    assert(!('list' in mergeActivity({ ...plain, updatedAt: '2099-01-05' }, phone)), 'turned into a plain activity on the newer side: no list');
+    // Through whole plans.
+    eq(mergePlans({ ...emptyDb(), activities: [phone] }, { ...emptyDb(), activities: [laptop] }).activities[0].list.length, 3, 'mergePlans');
+  });
+
+  await step('lists: ticks and edits stamp only the items they change', async () => {
+    fresh('List times');
+    const a = mk('activity', { title: 'Pack', status: 'todo', startDate: addDays(today(), 1), dueDate: addDays(today(), 4), list: [{ id: 'p', text: 'Pins', done: false, at: '2000-01-01' }, { id: 'q', text: 'Cap', done: false, at: '2000-01-01' }, { id: 'r', text: 'Bib', done: false, at: '2000-01-01' }] });
+    save(); setView('activities');
+    document.querySelector(`[data-li-tick="${a.id}"][data-li="p"]`).click();
+    assert(a.list[0].at > '2000-01-01' && a.list[1].at === '2000-01-01', 'a tick stamps that item only');
+    openForm('activity', a.id);
+    const rows = () => $('#listRows').children;
+    rows()[1].querySelector('.li-input').value = 'Cap and gloves';
+    rows()[2].querySelector('[data-li-del]').click();
+    modal.querySelector('[data-li-add]').click();
+    rows()[2].querySelector('.li-input').value = 'Socks';
+    submitForm();
+    eq(a.list.map(i => i.text), ['Pins', 'Cap and gloves', 'Socks'], 'saved');
+    assert(a.list[1].at > '2000-01-01' && a.list[2].at && safeId(a.list[2].id), 'renamed and new items stamped');
+    eq(a.droppedItems, { r: 1 }, 'removed item remembered');
+    const pinsAt = a.list[0].at;
+    openForm('activity', a.id); submitForm();
+    eq(a.list[0].at, pinsAt, 'saving unchanged keeps the times');
+    const r = resetProgress(db).activities.find(x => x.id === a.id);
+    assert(r.list.every(i => !i.done && !i.at) && !r.droppedItems, 'reset clears ticks, times and removals');
+    assert(!('droppedItems' in normalize({ activities: [{ id: 'z', title: 'Z', droppedItems: { x: 1 } }] }).activities[0]), 'removals without a list dropped on import');
+  });
+
   await step('map: drag from one box to another to link them; touch picks by tapping', async () => {
     fresh('Linking');
     const g = mk('goal', { title: 'Big goal' }), g2 = mk('goal', { title: 'Other goal' });

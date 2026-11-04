@@ -123,11 +123,26 @@ function mergeEntries(merged, newer, older) {
 }
 
 // Routines: check-ins from both versions are kept per date (the newer version wins on a clash,
-// so un-ticking a day carries over too).
+// so un-ticking a day carries over too). Lists: items are merged by id (see mergeList).
 function mergeActivity(x, y) {
   const newer = newerOf(x, y), older = newer === x ? y : x;
-  if (!newer.checkins && !older.checkins) return newer;
-  return { ...newer, checkins: { ...older.checkins, ...newer.checkins } };
+  const merged = newer.checkins || older.checkins ? { ...newer, checkins: { ...older.checkins, ...newer.checkins } } : newer;
+  return Array.isArray(newer.list) && Array.isArray(older.list) ? mergeList({ ...merged }, newer, older) : merged;
+}
+
+// A list keeps the items of both copies: on a clash the one ticked or renamed later wins, an item
+// removed on either side stays removed, and the newer copy's order comes first. Its status then
+// follows the merged ticks.
+function mergeList(merged, newer, older) {
+  const dropped = { ...older.droppedItems, ...newer.droppedItems };
+  const theirs = new Map(older.list.map(i => [i.id, i]));
+  const list = newer.list.map(i => ((theirs.get(i.id)?.at || '') > (i.at || '') ? theirs.get(i.id) : i));
+  const mine = new Set(list.map(i => i.id));
+  merged.list = [...list, ...older.list.filter(i => !mine.has(i.id))].filter(i => !dropped[i.id]);
+  if (Object.keys(dropped).length) merged.droppedItems = dropped;
+  else delete merged.droppedItems;
+  followList(merged);
+  return merged;
 }
 
 const MERGE_ITEM = { states: mergeState, activities: mergeActivity };

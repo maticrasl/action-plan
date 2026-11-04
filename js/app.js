@@ -197,6 +197,7 @@ function normalize(data) {
   d.activities.forEach(a => {
     if (Array.isArray(a.list)) a.list = a.list.filter(i => i && safeId(i.id) && typeof i.text === 'string');
     else delete a.list;
+    if (!a.list || !a.droppedItems || typeof a.droppedItems !== 'object' || Array.isArray(a.droppedItems)) delete a.droppedItems;
   });
   migrateCumulative(d);
   return d;
@@ -600,8 +601,10 @@ function goalScope(goalId) {
 
 const isRoutine = a => !!a?.repeat;
 
-/* A list is a one-off activity with `list`: items ({ id, text, done }) to tick off. It is done once
-   every item is ticked; unticking one puts a done list back in progress. */
+/* A list is a one-off activity with `list`: items ({ id, text, done, at }) to tick off. It is done once
+   every item is ticked; unticking one puts a done list back in progress. `at` is when the item was
+   last ticked or renamed, and `droppedItems` keeps the ids of removed items, so sync can merge two
+   copies item by item. */
 const isList = a => !isRoutine(a) && Array.isArray(a?.list);
 const listDone = a => a.list.filter(i => i.done).length;
 function followList(a) {
@@ -613,7 +616,7 @@ function followList(a) {
 function tickListItem(id, itemId) {
   const a = db.activities.find(x => x.id === id), it = a && isList(a) && a.list.find(i => i.id === itemId);
   if (!it) return;
-  it.done = !it.done;
+  Object.assign(it, { done: !it.done, at: new Date().toISOString() });
   const was = a.status;
   followList(a);
   const waits = blockers(a);
@@ -3249,7 +3252,14 @@ function submitForm() {
     else delete a.repeat;
     if (list) {
       if (!existing) a.status = 'todo';
-      a.list = list;
+      // Only items that changed get a new time; removed ones are remembered for sync.
+      const now = new Date().toISOString(), before = new Map((existing?.list || []).map(i => [i.id, i]));
+      a.list = list.map(i => {
+        const was = before.get(i.id);
+        return was && was.text === i.text && !!was.done === i.done ? { ...i, at: was.at } : { ...i, at: now };
+      });
+      const kept = new Set(a.list.map(i => i.id));
+      before.forEach((_, id) => { if (!kept.has(id)) (a.droppedItems ||= {})[id] = 1; });
       followList(a);
     }
     if (!existing) db.activities.push(a);
@@ -3930,7 +3940,7 @@ function resetProgress(data, { shift = false } = {}) {
   for (const x of dated) for (const k of [...PLAN_DATES, 'createdAt']) if (by && x[k]) x[k] = addDays(x[k], by);
   d.goals.forEach(g => { g.current = ''; if (g.status === 'achieved') g.status = 'active'; delete g.offeredAt; });
   d.states.forEach(s => { Object.assign(s, { value: '', date: '', history: [] }); delete s.dropped; if (s.entries) s.entries = []; delete s.droppedEntries; });
-  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; a.list?.forEach(i => (i.done = false)); });
+  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; a.list?.forEach(i => { i.done = false; delete i.at; }); delete a.droppedItems; });
   return d;
 }
 
