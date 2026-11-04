@@ -302,6 +302,9 @@ window.moreTests = async ({ step, assert }) => {
     input(0).value = 'Shoes';
     input(0).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     assert(modal.open && $('#listRows').children.length === 2 && document.activeElement === input(1), 'Enter adds the next item and focuses it');
+    assert([...$('#listRows').querySelectorAll('.li-input')].every(i => i.getAttribute('enterkeyhint') === 'enter'), 'a phone keyboard shows Enter, not Next, on items');
+    input(1).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }));
+    eq($('#listRows').children.length, 2, 'Enter that finishes typing in an input method adds nothing');
     input(1).value = 'Gels';
     modal.querySelector('[data-li-add]').click();
     input(2).value = 'Watch';

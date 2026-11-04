@@ -2913,7 +2913,7 @@ function activityForm(a) {
 // A list's items in its form: tick, rename or remove each; Enter in one adds the next below it.
 const listRow = (i = { id: '', text: '', done: false }) => `<div class="li-row" data-li-row="${i.id}">
   <input type="checkbox" class="li-check" ${i.done ? 'checked' : ''} aria-label="${esc(t('list.tick'))}">
-  <input type="text" class="li-input" value="${esc(i.text)}" placeholder="${esc(t('list.itemPh'))}" aria-label="${esc(t('list.item'))}">
+  <input type="text" class="li-input" enterkeyhint="enter" value="${esc(i.text)}" placeholder="${esc(t('list.itemPh'))}" aria-label="${esc(t('list.item'))}">
   <button type="button" class="icon-btn li-del" data-li-del aria-label="${esc(t('list.remove'))}" title="${esc(t('list.remove'))}">×</button></div>`;
 function listEditor(list) {
   return `<div class="field" data-field="list"><span class="label">${t('list.items')}</span>
@@ -3682,7 +3682,9 @@ function bindDragDrop() {
 }
 
 $('#modalForm').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && e.target.matches('.li-input')) { e.preventDefault(); addListRow(e.target.closest('.li-row')); }
+  // A phone keyboard sends Enter only for `enterkeyhint="enter"` (its Next key would jump to the next
+  // field instead); Enter that finishes typing in an input method is left to it.
+  if (e.key === 'Enter' && !e.isComposing && e.target.matches('.li-input')) { e.preventDefault(); addListRow(e.target.closest('.li-row')); }
 });
 $('#modalForm').addEventListener('submit', e => { e.preventDefault(); if (!formCtx?.choose) submitForm(); });
 $('#modalBody').addEventListener('click', e => {
