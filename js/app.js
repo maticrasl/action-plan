@@ -4626,8 +4626,10 @@ function ctxOptions(kind, item) {
 const SHOW_IN = { goal: ['goals', 'map', 'timeline'], activity: ['activities', 'map', 'timeline', 'graphs'], state: ['states', 'map', 'graphs'] };
 
 // Switches to another view with the item selected there (map, timeline) or its card brought into
-// view. Filters stay as they are, so the item may not be shown.
+// view, first changing the filters there that would hide it (setView clears the search).
 function showIn(view, id) {
+  const { kind, item } = findEntity(id);
+  revealIn(view, kind, item);
   if (view === 'map' || view === 'timeline') Object.assign(ui, { mapSelected: id, mapRel: null });
   setView(view);
   const el = view === 'map' ? $(`[data-map-node="${id}"]`)
@@ -4639,6 +4641,34 @@ function showIn(view, id) {
   if (el.tabIndex >= 0) return el.focus({ preventScroll: true });
   el.classList.add('flash');
   el.addEventListener('animationend', () => el.classList.remove('flash'), { once: true });
+}
+
+// Changes only the filters that hide the item in a view: the goal status shown (to all), the done
+// items hidden (shown again), the goal picked (to all), the category (to one the item belongs to –
+// a goal's own, then those of the goals it is linked to – or else to all) and, in the timeline,
+// the folded goals it is under.
+function revealIn(view, kind, item) {
+  if (view === 'goals') {
+    if (ui.goalFilter !== 'all' && item.status !== ui.goalFilter) ui.goalFilter = 'all';
+    if (!inCategory(item)) ui.category = item.category || '';
+    return;
+  }
+  const field = GOAL_FILTERS[view === 'activities' ? 'activity' : view];
+  if (!field) return;
+  const done = kind === 'goal' || view === 'activities' ? isComplete(kind, item) : item.status === 'done';
+  if (ui.hideDone && view !== 'graphs' && kind !== 'state' && done) { ui.hideDone = false; prefs.set('hideDone', false); }
+  const shows = () => { const s = scopeFor(ui[field]); return !s || s[kind].has(item.id); };
+  if (!shows()) ui[field] = '';
+  if (!shows()) {
+    const own = kind === 'goal' ? [item.category] : relsFrom(item.id).map(r => findEntity(r.to)?.item.category);
+    const holds = c => db.goals.some(g => g.category === c && goalScope(g.id)[kind].has(item.id));
+    ui.category = [...own, ...categories()].find(c => c && holds(c)) || '';
+  }
+  if (view !== 'timeline') return;
+  // Unfold only what hides it: every fold is kept that still leaves it shown.
+  const scope = scopeFor(ui.timelineGoal), folded = tlCollapsed();
+  const shown = set => timelineRows(scope, set).some(r => r.item?.id === item.id);
+  if (!shown(folded) && shown(new Set())) setTlCollapsed([...folded].reduce((keep, k) => (shown(new Set([...keep, k])) ? keep.add(k) : keep), new Set()));
 }
 
 function openCtxMenu(id, x, y, byKey = false) {
