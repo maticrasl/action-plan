@@ -202,6 +202,32 @@ window.moreTests = async ({ step, assert }) => {
     return Object.entries(counts).map(([k, v]) => `${v / 2} ${k}`).join(', ');
   });
 
+  await step('templates: Exodus 90 is 90 days of prayer, asceticism and fraternity after a week of preparation', () => {
+    const tpl = TEMPLATES.find(x => x.id === 'exodus-90');
+    assert(tpl && tpl.area === 'faith', 'in the Faith area');
+    const made = [];
+    for (const code of TPL_LANGS) {
+      changeLanguage(code);
+      useTemplate(tpl);
+      made.push(plans.current);
+      const [g] = db.goals;
+      const by = en => db.activities.find(a => a.title === tplText(tpl.activities.find(x => x.title[0] === en).title));
+      eq([g.category, byRoutines(g), g.deadline], [t('tpl.area.faith'), true, addDays(today(), 96)], `${code}: goal kept by its routines, day 90 on day 96`);
+      const routines = db.activities.filter(isRoutine);
+      eq(routines.length, 6, `${code}: six routines`);
+      assert(routines.every(a => a.startDate === addDays(today(), 7) && a.dueDate === g.deadline && addDays(a.startDate, 89) === a.dueDate), `${code}: routines run the 90 days`);
+      eq(by('Daily prayer').list.length, 4, `${code}: prayer list`);
+      eq(by('Daily disciplines').list.length, 9, `${code}: disciplines list`);
+      eq([by('Fast and abstain on Wednesday and Friday').repeat.days, !!by('Fast and abstain on Wednesday and Friday').repeat.makeUp], [[2, 4], false], `${code}: strict Wednesday and Friday fast`);
+      assert(by('Weekly fraternity meeting').repeat.makeUp && by('Intense exercise 3 times a week').repeat.times === 3, `${code}: meeting can move, exercise 3 a week`);
+      assert(goalRoutines(g).length === 6, `${code}: the goal counts every routine`);
+    }
+    changeLanguage('en');
+    made.forEach(deletePlan);
+    setView('dashboard');
+    return 'Faith area, 6 routines over days 7–96, strict fast, movable meeting';
+  });
+
   await step('templates: picker from the empty plan and settings, filtered by area, opens a template as a new plan', () => {
     fresh('Template picker');
     setView('goals');

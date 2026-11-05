@@ -20,7 +20,7 @@
    ========================================================= */
 
 const TPL_LANGS = ['en', 'sl'];
-const TPL_AREAS = ['health', 'money', 'learning', 'career', 'home', 'wellbeing'];
+const TPL_AREAS = ['health', 'money', 'learning', 'career', 'home', 'wellbeing', 'faith'];
 
 const WEEKDAYS = [0, 1, 2, 3, 4];
 const DAILY = { every: 1, unit: 'day' };
@@ -1537,6 +1537,74 @@ const TEMPLATES = [
         description: ['Sunday counts too if Saturday is busy.', 'Če je sobota zasedena, šteje tudi nedelja.'] },
       { k: 'plan', start: 0, end: 84, repeat: onDays(6), goals: ['dishes'],
         title: ['Plan the week’s meals on Sunday', 'V nedeljo načrtovati obroke za teden'] },
+    ],
+  },
+  /* ---------- Faith ---------- */
+
+  {
+    id: 'exodus-90', area: 'faith', level: 'ambitious',
+    name: ['Exodus 90', 'Exodus 90'],
+    about: ['Ninety days of prayer, asceticism and fraternity for men, as the Exodus 90 exercise lays them out: a daily holy hour, cold showers and simple living, fasting on Wednesdays and Fridays, a daily anchor check-in and a weekly fraternity meeting. A week of preparation first; set the dates so day 90 is Easter Sunday.',
+      'Devetdeset dni molitve, askeze in bratstva za moške, kot jih predvideva duhovna vaja Exodus 90: vsakodnevna sveta ura, mrzle prhe in preprosto življenje, post ob sredah in petkih, vsakodnevni pogovor s sidrom in tedensko srečanje bratstva. Najprej teden priprave; datume nastavite tako, da bo 90. dan velikonočna nedelja.'],
+    goals: [
+      { k: 'exodus', end: 96, progress: 'routines',
+        title: ['Complete Exodus 90', 'Opraviti Exodus 90'],
+        specific: ['Keep the prayer, asceticism and fraternity of Exodus 90 for 90 days with a small group of men.', '90 dni z majhno skupino moških živeti molitev, askezo in bratstvo duhovne vaje Exodus 90.'],
+        achievable: ['No one does it alone: the anchor and the fraternity carry each man through the hard days, and Sundays bring rest.', 'Nihče ne gre skozi to sam: sidro in bratstvo vsakogar poneseta skozi težke dni, nedelje pa prinesejo počitek.'],
+        relevant: ['Freedom from attachments, to love God and the people entrusted to you more fully.', 'Svoboda od navezanosti, da bi bolj ljubili Boga in ljudi, ki so vam zaupani.'] },
+    ],
+    states: [
+      { k: 'freedom',
+        title: ['Sense of freedom (1–10)', 'Občutek svobode (1–10)'],
+        description: ['How free you feel from the attachments you gave up, 1 = bound, 10 = free. Rate it each Sunday.', 'Kako svobodnega se počutite od navezanosti, ki ste se jim odpovedali, 1 = vezan, 10 = svoboden. Ocenite ga vsako nedeljo.'] },
+    ],
+    activities: [
+      { k: 'date', start: 0, end: 1, goals: ['exodus'],
+        title: ['Pick the start date', 'Izbrati datum začetka'],
+        description: ['Ninety days before Easter Sunday so it ends on Easter, or when your group starts; change the dates to match.', 'Devetdeset dni pred velikonočno nedeljo, da se konča na veliko noč, ali ko začne vaša skupina; datume prilagodite.'] },
+      { k: 'why', start: 0, end: 2, goals: ['exodus'],
+        title: ['Write down your why', 'Zapisati svoj zakaj'],
+        description: ['Why you are doing this and for whom you offer the sacrifices.', 'Zakaj se podajate na pot in za koga darujete svoje odpovedi.'] },
+      { k: 'fraternity', start: 0, end: 3, goals: ['exodus'],
+        title: ['Form a fraternity', 'Oblikovati bratstvo'],
+        description: ['A small group of men who start together and meet weekly: a parish group or a few friends.', 'Majhna skupina moških, ki začnejo skupaj in se srečujejo vsak teden: župnijska skupina ali nekaj prijateljev.'] },
+      { k: 'anchor', start: 4, end: 5, goals: ['exodus'], deps: ['fraternity'],
+        title: ['Choose an anchor', 'Izbrati sidro'],
+        description: ['Pair up within the fraternity (a three if the number is odd) to keep each other accountable.', 'V bratstvu se povežite po dva (ob lihem številu po trije) in drug drugega spremljajte pri zvestobi.'] },
+      { k: 'readings', start: 0, end: 6, goals: ['exodus'],
+        title: ['Get the daily readings', 'Pripraviti dnevna branja'],
+        description: ['The readings from Exodus and a reflection for each day, from the Exodus 90 app or guide.', 'Branja iz Druge Mojzesove knjige in razmišljanje za vsak dan, iz aplikacije ali priročnika Exodus 90.'] },
+      { k: 'clear', start: 4, end: 6, goals: ['exodus'],
+        list: [['Alcohol', 'Alkohol'], ['Sweets and snacks', 'Sladkarije in prigrizki'], ['Soda and sweet drinks', 'Gazirane in sladke pijače'],
+          ['Video games and streaming apps', 'Videoigre in aplikacije za pretakanje'], ['Phone apps you don’t need', 'Nepotrebne aplikacije na telefonu']],
+        title: ['Clear the home of temptations', 'Odstraniti skušnjave iz doma'],
+        description: ['Out of sight is easier to give up; agree with your family on what stays.', 'Česar ne vidite, se laže odpoveste; z družino se dogovorite, kaj ostane.'] },
+      { k: 'prayer', start: 7, end: 96, repeat: DAILY, goals: ['exodus'], improves: ['freedom'],
+        list: [['Morning offering', 'Jutranje darovanje'], ['Holy hour', 'Sveta ura'], ['Exodus reading and reflection', 'Branje iz Druge Mojzesove knjige in razmišljanje'], ['Nightly examen', 'Večerno izpraševanje vesti']],
+        title: ['Daily prayer', 'Vsakodnevna molitev'],
+        description: ['An hour of personal prayer before the Lord, or at least 20 minutes in silence if an hour isn’t possible; offer the day on waking and look back on it at night.', 'Ura osebne molitve pred Gospodom ali vsaj 20 minut v tišini, če ura ni mogoča; ob prebujenju darujte dan, zvečer ga preglejte.'] },
+      { k: 'ascetic', start: 7, end: 96, repeat: DAILY, goals: ['exodus'], improves: ['freedom'],
+        list: [['Cold shower', 'Mrzla prha'], ['No alcohol', 'Brez alkohola'], ['No sweets, desserts or sweet drinks', 'Brez sladkarij, sladic in sladkih pijač'],
+          ['Nothing between meals', 'Nič med obroki'], ['No TV, films, sports or video games', 'Brez televizije, filmov, športnih prenosov in videoiger'],
+          ['Phone and computer only when needed', 'Telefon in računalnik le, ko je nujno'], ['Only music that lifts the mind to God', 'Le glasba, ki dviga misli k Bogu'],
+          ['No unnecessary purchases', 'Brez nepotrebnih nakupov'], ['At least 7 hours of sleep', 'Vsaj 7 ur spanja']],
+        title: ['Daily disciplines', 'Vsakodnevna askeza'],
+        description: ['Sunday is a little Easter: rest, celebrate and relax one discipline. Family duties come first.', 'Nedelja je mala velika noč: počivajte, praznujte in si olajšajte eno od odpovedi. Družinske dolžnosti so na prvem mestu.'] },
+      { k: 'exercise', start: 7, end: 96, repeat: perWeek(3), goals: ['exodus'],
+        title: ['Intense exercise 3 times a week', 'Trikrat na teden intenzivna vadba'],
+        description: ['Enough to get your heart rate up; with a health condition, follow your doctor’s advice.', 'Dovolj, da srce hitreje bije; ob zdravstvenih težavah upoštevajte zdravnikov nasvet.'] },
+      { k: 'fast', start: 7, end: 96, repeat: onDays(2, 4), goals: ['exodus'], improves: ['freedom'],
+        title: ['Fast and abstain on Wednesday and Friday', 'Post in zdržek od mesa ob sredah in petkih'],
+        description: ['One full meal and two small ones that together are less than a full meal; no meat (fish, eggs and dairy are fine).', 'En polni obrok in dva manjša, ki skupaj ne presežeta polnega; brez mesa (ribe, jajca in mlečni izdelki so dovoljeni).'] },
+      { k: 'checkin', start: 7, end: 96, repeat: DAILY, goals: ['exodus'],
+        title: ['Check in with your anchor', 'Pogovor s sidrom'],
+        description: ['A short meeting or call; on busy days a message will do.', 'Kratko srečanje ali klic; ob napornih dneh zadošča sporočilo.'] },
+      { k: 'meeting', start: 7, end: 96, repeat: { ...onDays(5), makeUp: true }, goals: ['exodus'],
+        title: ['Weekly fraternity meeting', 'Tedensko srečanje bratstva'],
+        description: ['Pray together and share how the week went. Set the day your group meets; if it moves, another day that week counts.', 'Skupna molitev in pogovor o tem, kako je minil teden. Nastavite dan, ko se dobiva vaša skupina; če se srečanje prestavi, šteje drug dan v tednu.'] },
+      { k: 'review', start: 96, end: 96, goals: ['exodus'],
+        title: ['Look back on day 90', 'Pogled nazaj na 90. dan'],
+        description: ['With the fraternity: what changed, and what will you keep after Easter?', 'Z bratstvom: kaj se je spremenilo in kaj boste ohranili po veliki noči?'] },
     ],
   },
 ];
