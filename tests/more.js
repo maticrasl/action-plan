@@ -58,6 +58,10 @@ window.moreTests = async ({ step, assert }) => {
           kinds[x.k] = kind;
           assert(x.title, `${tpl.id}.${x.k}: title`);
           TEXT.forEach(f => x[f] !== undefined && pairOk(x[f], `${tpl.id}.${x.k}.${f}`));
+          if (x.list !== undefined) {
+            assert(kind === 'activity' && Array.isArray(x.list) && x.list.length, `${tpl.id}.${x.k}: list`);
+            x.list.forEach((v, i) => pairOk(v, `${tpl.id}.${x.k}.list.${i}`));
+          }
         }
       }
       pairOk(tpl.name, tpl.id + '.name'); pairOk(tpl.about, tpl.id + '.about');
@@ -130,6 +134,74 @@ window.moreTests = async ({ step, assert }) => {
     return `${made.length} plans, ${items} items`;
   });
 
+  await step('templates: every template fits the current data model (normalize keeps it, routines, lists, states that add up)', () => {
+    // Every key the picker and templateData use exists in both languages.
+    const keys = ['tpl.title', 'tpl.lead', 'tpl.areas', 'tpl.area.all', 'tpl.use', 'tpl.inside', 'tpl.goalList', 'tpl.stepList', 'tpl.routineList',
+      'tpl.goals', 'tpl.states', 'tpl.activities', 'tpl.routines', 'tpl.weeks', 'tpl.months', 'tpl.years',
+      ...TPL_AREAS.map(a => 'tpl.area.' + a), 'tpl.level.starter', 'tpl.level.ambitious'];
+    TPL_LANGS.forEach(code => keys.forEach(k => assert(I18N[code].strings[k], `${code}: ${k}`)));
+    const made = [];
+    const counts = { routines: 0, makeUp: 0, lists: 0, routineLists: 0, cumulative: 0, periods: 0 };
+    for (const code of TPL_LANGS) {
+      changeLanguage(code);
+      for (const tpl of TEMPLATES) {
+        const where = `${code} ${tpl.id}`;
+        let data;
+        try { data = templateData(tpl); } catch (e) { assert(false, `${where}: templateData threw ${e.message}`); }
+        // normalize (what a load or a sync does) changes nothing: no link or field is dropped.
+        eq(JSON.stringify(normalize(JSON.parse(JSON.stringify(data)))), JSON.stringify(data), `${where}: normalize keeps it`);
+        useTemplate(tpl);
+        made.push(plans.current);
+        // Every link passes canRelate against the rest, and none waits for a routine.
+        const all = [...db.relations];
+        all.forEach(r => {
+          db.relations = all.filter(x => x !== r);
+          const err = canRelate(r.from, r.to, r.type);
+          assert(!err, `${where}: ${r.type} ${findEntity(r.from)?.item.title} → ${findEntity(r.to)?.item.title}: ${err}`);
+          assert(REL_TYPES[r.type], `${where}: link type ${r.type}`);
+        });
+        db.relations = all;
+        assert(!db.relations.some(r => r.type === 'depends' && isRoutine(findEntity(r.to).item)), `${where}: something depends on a routine`);
+        db.activities.forEach((a, i) => {
+          const src = tpl.activities[i];
+          eq(a.title, tplText(src.title), `${where}: activities in template order`);
+          if (isRoutine(a)) {
+            counts.routines++;
+            const now = routineToday(a);
+            assert(scheduleText(a) && shortSchedule(a) && (now === null || (now in TODAY_TAG && now !== 'done' && now !== 'makeUp')), `${where}: routine ${a.title} today ${now}`);
+            assert(periodProgress(a).target >= 0 && routineStreak(a).n === 0 && activityState(a) !== 'late', `${where}: routine ${a.title} starts fresh`);
+            if (a.repeat.makeUp) { counts.makeUp++; assert(!isFlexible(a) && makesUp(a), `${where}: ${a.title} makes up only set days`); }
+          }
+          if (a.list) {
+            counts[isRoutine(a) ? 'routineLists' : 'lists']++;
+            eq(a.list.map(i => i.text), src.list.map(tplText), `${where}: ${a.title} items`);
+            assert(a.list.every(i => safeId(i.id) && !i.done) && new Set(a.list.map(i => i.id)).size === a.list.length, `${where}: ${a.title} item ids`);
+            assert(isRoutine(a) ? isListRoutine(a) && dayItemsDone(a, today()) === 0 : isList(a) && listDone(a) === 0 && a.status !== 'done', `${where}: ${a.title} list kind`);
+          }
+          relsFrom(a.id, 'improves').forEach(r => assert(findEntity(r.to)?.kind === 'state', `${where}: ${a.title} improves a state`));
+        });
+        db.states.forEach(s => {
+          if (isCumulative(s)) {
+            counts.cumulative++;
+            assert(SCALES.includes(s.scale) && Array.isArray(s.entries) && !s.entries.length && stateTotal(s) === 0, `${where}: ${s.title} adds up from nothing`);
+          } else assert(!('scale' in s) && !('entries' in s), `${where}: ${s.title} plain`);
+        });
+        db.goals.forEach(g => {
+          if (!g.period) return;
+          counts.periods++;
+          const st = relsTo(g.id, 'measures').map(r => findEntity(r.from).item);
+          assert(PERIODS.includes(g.period) && st.length && st.every(isCumulative), `${where}: ${g.title} counts a period of a state that adds up`);
+          assert(goalCurrent(g) === Number(g.baseline) && !goalReached(g), `${where}: ${g.title} starts at its baseline`);
+        });
+      }
+    }
+    changeLanguage('en');
+    made.forEach(deletePlan);
+    setView('dashboard');
+    assert(counts.makeUp && counts.lists && counts.routineLists && counts.cumulative && counts.periods, `uses the newer features: ${JSON.stringify(counts)}`);
+    return Object.entries(counts).map(([k, v]) => `${v / 2} ${k}`).join(', ');
+  });
+
   await step('templates: picker from the empty plan and settings, filtered by area, opens a template as a new plan', () => {
     fresh('Template picker');
     setView('goals');
@@ -147,7 +219,7 @@ window.moreTests = async ({ step, assert }) => {
     tplDialog.querySelector('[data-tpl-area=""]').click();
     eq(cards().length, TEMPLATES.length, 'all again');
     const run = tplDialog.querySelector('[data-template="run-5k"]').closest('.tpl-card');
-    eq([...run.querySelectorAll('.tpl-meta span')].map(x => x.textContent), ['10 weeks', '1 goal', '1 state', '6 activities', '2 routines'], 'summary line');
+    eq([...run.querySelectorAll('.tpl-meta span')].map(x => x.textContent), ['10 weeks', '1 goal', '2 states', '6 activities', '2 routines'], 'summary line');
     const inside = run.querySelector('.tpl-inside').textContent;
     assert(inside.includes('Buy running shoes') && inside.includes('Run 3 times a week') && !inside.includes('Weeks 1–3'), 'inside: main steps and routines, not sub-steps');
     const before = plans.list.length, from = plans.current;
@@ -169,7 +241,7 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('sl');
     openTemplates();
     const sl = tplDialog.textContent;
-    assert(sl.includes('Za začetek') && sl.includes('Ambiciozno') && sl.includes('10 tednov1 cilj1 stanje6 aktivnosti2 rutini') && sl.includes('Preteči 5 km'), 'Slovene wording');
+    assert(sl.includes('Za začetek') && sl.includes('Ambiciozno') && sl.includes('10 tednov1 cilj2 stanji6 aktivnosti2 rutini') && sl.includes('Preteči 5 km'), 'Slovene wording');
     assert(sl.includes('2 leti') && sl.includes('3 leta'), 'years in Slovene');
     tplDialog.close();
     changeLanguage('en');

@@ -4468,7 +4468,7 @@ function templateData(tpl) {
   for (const g of tpl.goals) {
     const measure = g.progress ? { progress: g.progress } : { baseline: String(g.baseline), current: '', target: String(g.target) };
     data.goals.push({ id: id(g.k), category, ...texts(g, ['title', 'specific', 'metric', 'unit', 'achievable', 'relevant']),
-      ...measure, startDate: day(g.start || 0), deadline: day(g.end), status: 'active' });
+      ...measure, ...(g.period && { period: g.period }), startDate: day(g.start || 0), deadline: day(g.end), status: 'active' });
     if (g.sub) rel(g.k, 'subgoal', g.sub);
     (g.deps || []).forEach(x => rel(g.k, 'depends', x));
   }
@@ -4478,7 +4478,8 @@ function templateData(tpl) {
   }
   for (const a of tpl.activities) {
     data.activities.push({ id: id(a.k), ...texts(a, ['title', 'description']), status: 'todo', startDate: day(a.start),
-      ...(a.end !== undefined && { dueDate: day(a.end) }), ...(a.repeat && { repeat: { ...a.repeat } }) });
+      ...(a.end !== undefined && { dueDate: day(a.end) }), ...(a.repeat && { repeat: { ...a.repeat } }),
+      ...(a.list && { list: a.list.map(x => ({ id: uid(), text: tplText(x), done: false })) }) });
     if (a.parent) rel(a.k, 'subactivity', a.parent);
     (a.goals || []).forEach(x => rel(a.k, 'contributes', x));
     (a.improves || []).forEach(x => rel(a.k, 'improves', x));
