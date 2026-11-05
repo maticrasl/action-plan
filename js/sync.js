@@ -174,11 +174,12 @@ function mergePlans(a, b) {
 }
 
 // Relationships can break when two edits meet: an end was deleted, the same link was made
-// twice, an item got two parents, or two new dependencies form a loop. Newer links win.
+// twice, an item got two parents, two new dependencies form a loop, or an activity something
+// depends on became a routine on another device. Newer links win.
 function repairRelations(data) {
   const ids = new Set(['goals', 'states', 'activities'].flatMap(c => data[c].map(x => x.id)));
   const key = r => `${r.from}|${r.type}|${r.to}`;
-  const rels = data.relations
+  const rels = dropRoutineDeps(data.relations, data.activities)
     .filter(r => ids.has(r.from) && ids.has(r.to))
     .sort(newestFirst);
   const kept = [], seen = new Set(), hasParent = new Set();

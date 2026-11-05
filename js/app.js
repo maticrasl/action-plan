@@ -187,11 +187,18 @@ function mergePlanInto(fromId, toId, remove = false) {
 // hide markup in one); relationships need plain ids at both ends too.
 const safeId = id => typeof id === 'string' && /^[\w-]{1,64}$/.test(id);
 
+// Nothing may depend on a routine; older plans, and edits meeting in sync, can hold such links.
+const dropRoutineDeps = (rels, activities) => {
+  const routines = new Set(activities.filter(isRoutine).map(a => a.id));
+  return rels.filter(r => !(r.type === 'depends' && routines.has(r.to)));
+};
+
 function normalize(data) {
   const d = emptyDb();
   for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k].filter(x => x && typeof x === 'object' && safeId(x.id));
   // "Is related to" links were dropped from the app; old plans and synced copies lose theirs here.
   d.relations = d.relations.filter(r => safeId(r.from) && safeId(r.to) && r.type !== 'related');
+  d.relations = dropRoutineDeps(d.relations, d.activities);
   if (data?.deleted && typeof data.deleted === 'object' && !Array.isArray(data.deleted)) d.deleted = data.deleted;
   d.activities.forEach(a => {
     if (Array.isArray(a.list)) a.list = a.list.filter(i => i && safeId(i.id) && typeof i.text === 'string');
@@ -332,6 +339,7 @@ function canRelate(from, to, type) {
   if (!def.from.includes(a.kind)) return t('err.relFrom', { rel: relLabel(type), kind: kindList(def.from) });
   if (def.to === 'same' && b.kind !== a.kind) return t('err.relTo', { rel: relLabel(type), kind: kindList([a.kind]) });
   if (Array.isArray(def.to) && !def.to.includes(b.kind)) return t('err.relTo', { rel: relLabel(type), kind: kindList(def.to) });
+  if (type === 'depends' && isRoutine(b.item)) return t('err.dependsRoutine');
   if (db.relations.some(r => r.from === from && r.to === to && r.type === type)) return t('err.relExists');
   if (Object.values(PARENT_REL).includes(type) && relsFrom(from, type).length) return t('err.oneParent');
   if (ACYCLIC.has(type) && reaches(to, from, type)) return t('err.cycle');
@@ -514,7 +522,7 @@ const byRoutines = g => g.progress === 'routines';
 const ownMetric = g => !g.progress || g.progress === 'measure';
 const goalRoutines = g => treeActivities(g).filter(isRoutine);
 
-// A routine is complete (for whatever waits for it) once it has ended.
+// A routine is complete once it has ended.
 const isComplete = (kind, item) => (kind === 'goal' ? item.status === 'achieved'
   : isRoutine(item) ? !!item.dueDate && item.dueDate < today() : item.status === 'done');
 
@@ -3044,7 +3052,7 @@ function activityForm(a) {
     ${children.length ? `<div class="field"><span class="label">${t('f.subActivities')}</span><div class="links">${children.map(linkTag).join('')}</div></div>` : ''}
     ${checklist('goals', t('f.contributes'), 'goal', db.goals, pick('contributes'))}
     ${checklist('states', t('f.improves'), 'state', db.states, pick('improves'))}
-    ${checklist('depends', t('f.depends'), 'activity', others, pick('depends'))}`;
+    ${checklist('depends', t('f.depends'), 'activity', others.filter(x => !isRoutine(x)), pick('depends'))}`;
 }
 
 // A list's items in its form: tick, rename or remove each; Enter in one adds the next below it.
@@ -3443,6 +3451,10 @@ function submitForm() {
     setLinks(a.id, 'contributes', arr('goals'));
     setLinks(a.id, 'improves', arr('states'));
     setLinks(a.id, 'depends', arr('depends'));
+    // Nothing may depend on a routine, so an activity that becomes one lets go of what waited for it.
+    const waited = db.relations.length;
+    if (repeat) db.relations = dropRoutineDeps(db.relations, [a]);
+    if (db.relations.length < waited) return finish(tp('toast.routineDepsDropped', waited - db.relations.length));
     return finish(t(existing ? 'toast.activityUpdated' : 'toast.activityAdded'));
   }
 }

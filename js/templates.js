@@ -1473,7 +1473,7 @@ const TEMPLATES = [
         title: ['Pick an app or a method', 'Izbrati aplikacijo ali metodo'] },
       { k: 'short', start: 3, end: 9, repeat: DAILY, goals: ['habit'], improves: ['stress'], deps: ['app'],
         title: ['Meditate 5 minutes after waking', '5 minut meditacije po prebujanju'] },
-      { k: 'long', start: 10, end: 33, repeat: DAILY, goals: ['habit'], improves: ['stress'], deps: ['short'],
+      { k: 'long', start: 10, end: 33, repeat: DAILY, goals: ['habit'], improves: ['stress'],
         title: ['Meditate 10 minutes after waking', '10 minut meditacije po prebujanju'] },
       { k: 'reflect', start: 3, end: 33, repeat: onDays(6), goals: ['habit'], improves: ['stress'],
         title: ['Sunday reflection: what changed?', 'Nedeljski razmislek: kaj se je spremenilo?'] },

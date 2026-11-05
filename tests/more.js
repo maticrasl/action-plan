@@ -1314,15 +1314,12 @@ window.moreTests = async ({ step, assert }) => {
     tick(monThu, addDays(w(1), 1), addDays(w(1), 2));
     eq(consistency(monThu, '', ), 0, 'ticks on other days do not count');
 
-    // Not started, ended, and what waits for it.
+    // Not started and ended (nothing can wait for a routine: see the dependency step).
     assert(routineState(r({ times: 1, per: 'week' }, { startDate: addDays(now, 3) })) === 'todo', 'not started');
-    fresh('Routine deps');
+    fresh('Routine ends');
     const ended = mk('activity', { repeat: { times: 1, per: 'week' }, checkins: {}, startDate: addDays(now, -30), dueDate: addDays(now, -1) });
     const going = mk('activity', { repeat: { times: 1, per: 'week' }, checkins: {}, startDate: addDays(now, -30) });
-    const after = mk('activity');
-    rel(after, ended, 'depends'); rel(after, going, 'depends');
     assert(routineState(ended) === 'done' && isComplete('activity', ended) && !isComplete('activity', going), 'ended routine is complete');
-    eq(blockers(after).map(x => x.id), [going.id], 'waits only for the running routine');
     return `streak ${routineStreak(run).n}, consistency ${Math.round(consistency(run) * 100)} %`;
   });
 
@@ -1954,6 +1951,62 @@ window.moreTests = async ({ step, assert }) => {
     eq(remote.data[id].relations.map(r => r.id), ['r1'], 'sync file');
     eq(mergeStores(localStore(), remote).data[id].relations.map(r => r.id), ['r1'], 'merged');
     deletePlan(id);
+    return 'ok';
+  });
+
+  await step('nothing depends on a routine: rules, forms, an activity turned routine, old plans and sync', async () => {
+    fresh('Routine deps');
+    const routine = (p = {}) => mk('activity', { repeat: { every: 1, unit: 'week', times: 2 }, checkins: {}, startDate: d(-7), ...p });
+    const a = mk('activity', { title: 'One-off' }), b = mk('activity', { title: 'Other one-off' }), r = routine({ title: 'Routine' }), r2 = routine();
+    const g = mk('goal'), g2 = mk('goal');
+    const err = t('err.dependsRoutine');
+    eq([canRelate(a.id, r.id, 'depends'), canRelate(r2.id, r.id, 'depends')], [err, err], 'activity or routine → routine refused');
+    assert(!canRelate(r.id, a.id, 'depends') && !canRelate(a.id, b.id, 'depends') && !canRelate(g.id, g2.id, 'depends'), 'routine → activity, activity → activity, goal → goal still fine');
+    assert(!canRelate(a.id, r.id, 'subactivity') && !canRelate(r.id, a.id, 'subactivity'), 'other links to a routine unaffected');
+    assert(addRelation(a.id, r.id, 'depends') === err && !db.relations.length, 'addRelation refuses it');
+    // The relationship form (also what a drag on the map opens) offers only the routine depending on the activity.
+    openForm('relation', null, { from: a.id, to: r.id });
+    eq([...$('#f-type').options].map(o => o.value), ['subactivity', 'rev:subactivity', 'rev:depends'], 'relationship form');
+    $('#f-type').value = 'rev:depends';
+    submitForm();
+    assert(relsFrom(r.id, 'depends').some(x => x.to === a.id), 'routine → activity saved');
+    assert(canLink(a.id, r2.id) && canLink(r.id, r2.id), 'map still lets them link (as sub-activities)');
+    // The activity form lists one-offs, not routines, under "Depends on".
+    openForm('activity', a.id);
+    const opts = [...modal.querySelectorAll('[data-name="depends"] [data-pick]')].map(x => x.dataset.pick);
+    assert(opts.includes(b.id) && !opts.includes(r.id) && !opts.includes(r2.id), 'depends picker: ' + opts.length);
+    modal.close();
+    // An activity something waits for becomes a routine: those links go, its own stay, and the toast says so.
+    const c = mk('activity', { title: 'Becomes routine', startDate: d(0), dueDate: d(10) }), x = mk('activity');
+    rel(a, c, 'depends'); rel(x, c, 'depends'); rel(c, b, 'depends');
+    assert(activityState(a) === 'blocked', 'blocked before');
+    openForm('activity', c.id);
+    $('#f-repeat').value = 'week';
+    $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
+    submitForm();
+    assert(isRoutine(c) && !modal.open, 'saved as a routine');
+    assert(!relsTo(c.id, 'depends').length && relsFrom(c.id, 'depends').length === 1, 'incoming dependencies dropped, its own kept');
+    eq($('#toast').textContent, tp('toast.routineDepsDropped', 2), 'toast says so');
+    assert(activityState(a) !== 'blocked', 'no longer blocked');
+    // Saved again without such links: the usual message.
+    openForm('activity', c.id);
+    submitForm();
+    eq($('#toast').textContent, t('toast.activityUpdated'), 'plain update');
+    assert(I18N.sl.strings['toast.routineDepsDropped'].two && I18N.sl.strings['err.dependsRoutine'], 'Slovenian texts');
+    // Old plans, plan files and synced copies drop links onto a routine; a routine depending on an activity stays.
+    const old = { goals: [], states: [], activities: [{ id: 'a1', title: 'A' }, { id: 'r1', title: 'R', repeat: { every: 1, unit: 'day' } }],
+      relations: [{ id: 'bad', from: 'a1', to: 'r1', type: 'depends' }, { id: 'ok', from: 'r1', to: 'a1', type: 'depends' }, { id: 'sub', from: 'a1', to: 'r1', type: 'subactivity' }] };
+    eq(normalize(old).relations.map(x => x.id), ['ok', 'sub'], 'normalize');
+    eq(parsePlanFile(JSON.stringify({ name: 'F', ...old }), 'f.json').data.relations.map(x => x.id), ['ok', 'sub'], 'plan file');
+    // Sync: one device links a1 → r1 while the other makes r1 a routine; the merge drops the link.
+    eq(repairRelations(old).map(x => x.id), ['ok', 'sub'], 'merge repair');
+    const id = plans.current;
+    const mine = { goals: [], states: [], deleted: {}, activities: [{ id: 'a1', title: 'A', updatedAt: '2099-01-01' }, { id: 'r1', title: 'R', updatedAt: '2099-01-01' }],
+      relations: [{ id: 'bad', from: 'a1', to: 'r1', type: 'depends', updatedAt: '2099-01-02' }] };
+    const theirs = { ...mine, relations: [], activities: [mine.activities[0], { id: 'r1', title: 'R', repeat: { every: 1, unit: 'day' }, updatedAt: '2099-01-03' }] };
+    const store = data => ({ plans: { list: [{ id, name: 'Routine deps' }], deleted: {} }, data: { [id]: data } });
+    const merged = mergeStores(store(mine), store(theirs)).data[id];
+    assert(isRoutine(merged.activities.find(x => x.id === 'r1')) && !merged.relations.length, 'merged: routine kept, link dropped');
     return 'ok';
   });
 
