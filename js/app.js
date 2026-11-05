@@ -3426,7 +3426,12 @@ function submitForm() {
         return was && was.text === i.text && !!was.done === i.done ? { ...i, at: was.at } : { ...i, at: now };
       });
       const kept = new Set(a.list.map(i => i.id));
-      before.forEach((_, id) => { if (!kept.has(id)) (a.droppedItems ||= {})[id] = 1; });
+      const removed = [...before.keys()].filter(id => !kept.has(id));
+      removed.forEach(id => ((a.droppedItems ||= {})[id] = 1));
+      // A day left with only ticked items once one is removed is done (any amounts are not asked for).
+      if (repeat && removed.length) Object.keys(a.listDays || {}).forEach(iso => {
+        if (tickable(a, iso) && !checkedOn(a, iso) && dayItemsDone(a, iso) === a.list.length) setCheckin(a, iso, true);
+      });
       if (!repeat) followList(a);
     }
     if (!existing) db.activities.push(a);

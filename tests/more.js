@@ -683,6 +683,35 @@ window.moreTests = async ({ step, assert }) => {
     assert(!('listDays' in mergeActivity({ ...base, updatedAt: '1' }, { ...base, updatedAt: '2' })), 'no day ticks: none added');
   });
 
+  await step('routine lists: removing the only unticked item in the form ticks the day', () => {
+    fresh('Routine list removal');
+    const now = today(), y = addDays(now, -1), y2 = addDays(now, -2), tom = addDays(now, 1);
+    const a = mk('activity', { title: 'Gym', startDate: addDays(now, -5), dueDate: addDays(now, 20), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {}, list: [{ id: 'p', text: 'Push' }, { id: 'q', text: 'Pull' }, { id: 'r', text: 'Run' }] });
+    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [] });
+    rel(a, km, 'improves');
+    a.listDays = { [now]: { p: 1, q: 1, r: 0 }, [y]: { p: 1, r: 0 }, [y2]: { p: 0, q: 0, r: 0 }, [tom]: { p: 1, q: 1 } };
+    save();
+    setView('activities');
+    // Renaming alone ticks nothing.
+    openForm('activity', a.id);
+    $('#listRows').children[0].querySelector('.li-input').value = 'Push-ups';
+    submitForm();
+    assert(!checkedOn(a, now), 'no item removed: the day stays unticked');
+    openForm('activity', a.id);
+    $('#listRows').children[2].querySelector('[data-li-del]').click();
+    submitForm();
+    eq(a.list.map(i => i.id), ['p', 'q'], 'item removed');
+    assert(checkedOn(a, now), 'today had every other item ticked: ticked');
+    assert(!checkedOn(a, y) && !checkedOn(a, y2), 'days with other items unticked stay unticked');
+    assert(!checkedOn(a, tom), 'a day still to come is not ticked');
+    assert(!km.entries.length && !$('.amount-pop'), 'no amount asked or added');
+    render();
+    assert($(`[data-checkin="${a.id}"][data-date="${now}"]`).getAttribute('aria-pressed') === 'true', 'the strip shows it');
+    // A day ticked already stays ticked; unticking an item still unticks it.
+    tickListItem(a.id, 'q', now);
+    assert(!checkedOn(a, now), 'unticking an item unticks the day again');
+  });
+
   await step('routine lists: escaping, help, Slovenian, the sample plan, kind icons', async () => {
     fresh('Routine list around');
     const now = today(), evil = '<img src=x onerror="window.__xss=1">';
