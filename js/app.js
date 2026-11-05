@@ -4667,6 +4667,7 @@ const SHOW_IN = { goal: ['goals', 'map', 'timeline'], activity: ['activities', '
 function showIn(view, id) {
   const { kind, item } = findEntity(id);
   revealIn(view, kind, item);
+  prefs.set('category', ui.category);
   if (view === 'map' || view === 'timeline') Object.assign(ui, { mapSelected: id, mapRel: null });
   setView(view);
   const el = view === 'map' ? $(`[data-map-node="${id}"]`)

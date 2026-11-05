@@ -5469,6 +5469,7 @@ window.moreTests = async ({ step, assert }) => {
     setView('map'); reset({ category: 'Home' });
     show(won.id, 'goals');
     eq(filters(), ['Work', 'all', false, '', '', '', ''], 'own category, all statuses');
+    eq(prefs.get('category'), 'Work', 'the category is remembered, like a chip tap');
     assert($(`.card[data-open="${won.id}"]`).classList.contains('flash'), 'goal card shown and flashing');
     // Filters that do not hide it stay: Work and active for an active Work goal.
     setView('map'); reset({ category: 'Work' });
