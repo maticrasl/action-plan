@@ -921,7 +921,10 @@ function shortBase(a) {
     if (days.length === 7 && s.every === 1) return t('rt.daily');
     // Three or more days in a row read as a range.
     const runs = [];
-    days.forEach(d => (runs.length && runs[runs.length - 1].at(-1) === d - 1 ? runs[runs.length - 1].push(d) : runs.push([d])));
+    for (const d of days) {
+      if (runs.at(-1)?.at(-1) === d - 1) runs.at(-1).push(d);
+      else runs.push([d]);
+    }
     const what = runs.flatMap(r => (r.length > 2 ? [`${weekdayName(r[0])}–${weekdayName(r.at(-1))}`] : r.map(d => weekdayName(d)))).join(', ');
     return s.every === 1 ? what : on(what);
   }
@@ -1903,6 +1906,10 @@ function fitText(text, font, max) {
 // The map can be drawn before the web font is in; it is drawn again then, to fit the font's widths.
 document.fonts?.addEventListener('loadingdone', () => { if (ui.view === 'map' && ctxMenu.hidden && !modal.open) render(); });
 
+// A rounded rectangle from x0, y0 to x1, y1 as a path.
+const roundedRect = (x0, y0, x1, y1, r) =>
+  `M${x0 + r},${y0} H${x1 - r} A${r},${r} 0 0 1 ${x1},${y0 + r} V${y1 - r} A${r},${r} 0 0 1 ${x1 - r},${y1} H${x0 + r} A${r},${r} 0 0 1 ${x0},${y1 - r} V${y0 + r} A${r},${r} 0 0 1 ${x0 + r},${y0} Z`;
+
 function renderMap() {
   if (!itemCount()) return emptyState(t('map.emptyTitle'), t('map.emptyText'), 'goal');
 
@@ -1935,9 +1942,9 @@ function renderMap() {
   }).join('');
 
   // A soft shadow under each box (a path, so the box's rect rules don't reach it); a halo when selected.
-  const R = 10, lift = `M${R},2 H${NW - R} A${R},${R} 0 0 1 ${NW},${R + 2} V${NH + 2 - R} A${R},${R} 0 0 1 ${NW - R},${NH + 2} H${R} A${R},${R} 0 0 1 0,${NH + 2 - R} V${R + 2} A${R},${R} 0 0 1 ${R},2 Z`;
+  const R = 10, lift = roundedRect(0, 2, NW, NH + 2, R);
   // Over the fill, a sheen and a fine lit top edge (gradients defined once below), inset inside the border.
-  const I = 1.5, r = R - I, sheen = `M${R},${I} H${NW - R} A${r},${r} 0 0 1 ${NW - I},${R} V${NH - R} A${r},${r} 0 0 1 ${NW - R},${NH - I} H${R} A${r},${r} 0 0 1 ${I},${NH - R} V${R} A${r},${r} 0 0 1 ${R},${I} Z`;
+  const I = 1.5, sheen = roundedRect(I, I, NW - I, NH - I, R - I);
   const font = getComputedStyle(document.documentElement).getPropertyValue('--font'), textW = NW - 18;
   const nodes = Object.values(node).map(n => {
     const { item } = findEntity(n.id);
@@ -2428,7 +2435,7 @@ function graphCard(s, width) {
   const py = v => GR.T + (1 - (v - y0) / (y1 - y0)) * (GR.H - GR.T - GR.B);
   grCharts[s.id] = { s, points, targets, change, px, py, unit, zoom };
 
-  const grid = ticks.map((v, i) => `<line class="gr-grid${i ? '' : ' base'}" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`).join('') + yLabels(ticks, py);
+  const grid = gridLines(ticks, py, W);
   const todayN = dayNum(today());
   const xAxis = dateAxis(px, x0, x1, W > width, true);
   const todayMark = todayCol(px, todayN - 0.5, x0, x1, W);
@@ -2441,7 +2448,7 @@ function graphCard(s, width) {
   }).join('');
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${px(p.day).toFixed(1)},${py(p.value).toFixed(1)}`).join(' ');
   const area = areaFill(s.id, `${path} L${px(last.day).toFixed(1)},${py(y0)} L${px(x0).toFixed(1)},${py(y0)} Z`);
-  const dots = points.map(p => `<circle class="gr-dot${p === last ? ' last' : ''}" cx="${px(p.day)}" cy="${py(p.value)}" r="${p === last ? 5 : 3.5}"/>`).join('');
+  const dots = points.map(p => grDot(px(p.day), py(p.value), p === last)).join('');
 
   // Direct labels: each target at the start of its line, the latest value next to its dot – in the first
   // spot (above, below, right, left) that stays inside the plot and clear of the target labels.
@@ -2528,6 +2535,10 @@ function todayCol(px, from, x0, x1, W, over = false) {
     <line class="gr-today-line" x1="${x + w / 2}" x2="${x + w / 2}" y1="${GR.T}" y2="${GR.H - GR.B}"/>`, box: [x, GR.T, x + w, GR.H - GR.B] };
 }
 
+// The value grid, its bottom line a little stronger, with the values beside it.
+const gridLines = (ticks, py, W) => ticks.map((v, i) => `<line class="gr-grid${i ? '' : ' base'}" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`).join('') + yLabels(ticks, py);
+// A point's dot on a line; the latest is larger.
+const grDot = (x, y, last) => `<circle class="gr-dot${last ? ' last' : ''}" cx="${x}" cy="${y}" r="${last ? 5 : 3.5}"/>`;
 const yLabels = (ticks, py) => ticks.map(v => `<text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`).join('');
 // A graph wider than the card scrolls under its values, which stay at the left like the timeline's labels.
 const yAxisPinned = (ticks, py) => `<svg class="gr-yaxis" width="${GR.L}" height="${GR.H}" style="margin-top:-${GR.H}px" aria-hidden="true">${yLabels(ticks, py)}</svg>`;
@@ -2624,7 +2635,7 @@ function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, ti
   const px = d => GR.L + (d - x0) / (x1 - x0) * (W - GR.L - GR.R);
   const py = v => GR.T + (1 - (v - y0) / (y1 - y0)) * (GR.H - GR.T - GR.B);
   grCharts[id] = { points, targets, px, py, unit, tip, zoom };
-  const grid = ticks.map((v, i) => `<line class="gr-grid${i ? '' : ' base'}" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`).join('') + yLabels(ticks, py);
+  const grid = gridLines(ticks, py, W);
   const xAxis = dateAxis(px, x0, x1, W > width, !bars);
   // Over the bars, so today shows inside the period under way; behind a line.
   const todayLine = todayCol(px, bars ? todayN : todayN - 0.5, x0, x1, W, bars)?.svg || '';
@@ -2728,7 +2739,7 @@ function totalGraphCard(s, width) {
     marks: (px, py) => {
       const path = points.map((p, i) => (i ? `H${px(p.day).toFixed(1)}V${py(p.value).toFixed(1)}` : `M${px(p.day).toFixed(1)},${py(p.value).toFixed(1)}`)).join('') + `H${px(end).toFixed(1)}`;
       const area = areaFill(s.id, `${path}V${py(0).toFixed(1)}H${px(points[0].day).toFixed(1)}Z`);
-      return `${area}<path class="gr-line" d="${path}"/>${points.map((p, i) => `<circle class="gr-dot${i === points.length - 1 ? ' last' : ''}" cx="${px(p.day)}" cy="${py(p.value)}" r="${i === points.length - 1 ? 5 : 3.5}"/>`).join('')}`;
+      return `${area}<path class="gr-line" d="${path}"/>${points.map((p, i) => grDot(px(p.day), py(p.value), i === points.length - 1)).join('')}`;
     },
   }, width);
   const recent = sumOf(entries.filter(e => e.date > dayStr(todayN - 30) && e.date <= today()));

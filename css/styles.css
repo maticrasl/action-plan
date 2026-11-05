@@ -97,15 +97,12 @@
     --sheen-top: .09;
     --sheen-low: .16;
     --rim-top: .22;
-  /* By night, on a warm dark instead of the teal surface, so they read amber and red, not olive and maroon. */
-  --map-doing: color-mix(in srgb, var(--warn) 30%, #191510);
-  --map-late: color-mix(in srgb, var(--bad) 24%, #1C1719);
     /* By night, on a warm dark instead of the teal surface, so they read amber and red, not olive and maroon. */
     --map-doing: color-mix(in srgb, var(--warn) 30%, #191510);
     --map-late: color-mix(in srgb, var(--bad) 24%, #1C1719);
-  --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
-  --chip-on-ink: var(--ink);
-  --chip-on-line: var(--ink-2);
+    --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
+    --chip-on-ink: var(--ink);
+    --chip-on-line: var(--ink-2);
     color-scheme: dark;
   }
 }
