@@ -1475,7 +1475,7 @@ function renderGoals() {
   return `
     ${categoryChips()}
     <div class="toolbar">
-      <div class="chips">${Object.entries(filters).map(([k, v]) => `<button class="chip ${ui.goalFilter === k ? 'active' : ''}" data-goal-filter="${k}">${v} <span style="opacity:.6">${k === 'all' ? inCat.length : inCat.filter(g => g.status === k).length}</span></button>`).join('')}</div>
+      <div class="chips">${Object.entries(filters).map(([k, v]) => `<button class="chip ${ui.goalFilter === k ? 'active' : ''}" data-goal-filter="${k}">${v} <span class="count">${k === 'all' ? inCat.length : inCat.filter(g => g.status === k).length}</span></button>`).join('')}</div>
       ${searchBox()}
     </div>
     ${list.length ? `<div class="grid">${list.map(goalCard).join('')}</div>` : `<div class="empty">${t('goals.noMatch')}</div>`}`;
@@ -1555,7 +1555,7 @@ function categoryChips() {
   const cats = categories();
   if (!cats.length) return '';
   const chip = (value, label, count) =>
-    `<button class="chip ${ui.category === value ? 'active' : ''}" data-category="${esc(value)}">${esc(label)}${count === undefined ? '' : ` <span class="count">${count}</span>`}</button>`;
+    `<button class="chip ${ui.category === value ? 'active' : ''}" data-category="${esc(value)}" aria-pressed="${ui.category === value}">${esc(label)}${count === undefined ? '' : ` <span class="count">${count}</span>`}</button>`;
   return `<div class="chips cat-chips" role="group" aria-label="${esc(t('f.category'))}">${chip('', t('cat.all'))}${cats.map(c => chip(c, c, db.goals.filter(g => g.category === c).length)).join('')}</div>`;
 }
 

@@ -46,6 +46,10 @@
   --nav-ink: #E9EEED;
   --focus: 0 0 0 3px color-mix(in srgb, var(--goal) 35%, transparent);
   --shadow-pop: 0 18px 48px rgba(20, 32, 36, .22);
+  /* The chosen chip: solid ink by day; by night a lit tint, so it doesn't outshine the page. */
+  --chip-on: var(--ink);
+  --chip-on-ink: var(--bg);
+  --chip-on-line: var(--ink);
 
   --font: "Overpass", "Segoe UI", system-ui, -apple-system, sans-serif;
   --r-lg: 14px;
@@ -80,6 +84,9 @@
     --nav-bg: #0E1416;
     --nav-ink: #DCE4E2;
     --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
+  --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
+  --chip-on-ink: var(--ink);
+  --chip-on-line: var(--ink-2);
     color-scheme: dark;
   }
 }
@@ -108,6 +115,9 @@
   --nav-bg: #0E1416;
   --nav-ink: #DCE4E2;
   --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
+  --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
+  --chip-on-ink: var(--ink);
+  --chip-on-line: var(--ink-2);
   color-scheme: dark;
 }
 
@@ -230,9 +240,12 @@ svg { flex: none; }
 .chip {
   border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px;
   padding: 5px 13px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--ink-2);
+  transition: background-color .12s, border-color .12s, color .12s;
 }
-.chip:hover { color: var(--ink); }
-.chip.active, .chip[data-hide-done][aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip:hover { color: var(--ink); border-color: var(--ink-3); }
+.chip:active { background: var(--surface-2); }
+.chip:focus-visible { border-radius: 999px; }
+.chip.active, .chip[data-hide-done][aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-ink); border-color: var(--chip-on-line); }
 .search { flex: 1; min-width: 160px; max-width: 320px; }
 
 input[type=text], input[type=date], input[type=search], select, textarea {
@@ -539,7 +552,12 @@ textarea { resize: vertical; min-height: 68px; }
 
 /* ---------- Timeline ---------- */
 .cat-chips { margin-bottom: 12px; }
-.chip .count { font-size: 11.5px; opacity: .6; margin-left: 2px; }
+/* A count is a small tinted pill in the chip's own text colour, so it reads on any chip. */
+.chip .count {
+  display: inline-block; min-width: 15px; padding: 1px 4px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; line-height: 1.35; text-align: center; font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
 .chip[data-tl-deps][aria-pressed="true"] { background: var(--surface-2); color: var(--ink); border-color: var(--ink-3); }
 .tag.cat { border: 0; cursor: pointer; background: transparent; color: var(--ink-2); padding: 0; font-weight: 700; }
 .tag.cat::before { content: "#"; color: var(--ink-3); margin-right: 1px; }
@@ -767,6 +785,8 @@ textarea { resize: vertical; min-height: 68px; }
   }
   .brand, .nav-footer, .nav .plan-switch { display: none; }
   .title-block { flex: 1; }
+  /* A little narrower, so more chips share a row. */
+  .chips .chip { padding-left: 10px; padding-right: 10px; }
   .plan-name { display: inline-block; }
   .nav-item { flex-direction: column; gap: 3px; padding: 6px 2px; font-size: 11px; flex: 1; align-items: center; text-align: center; }
   .nav-item.active { box-shadow: inset 0 3px 0 var(--blaze); border-radius: 0 0 var(--r-md) var(--r-md); }

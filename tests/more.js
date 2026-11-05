@@ -30,7 +30,10 @@ window.moreTests = async ({ step, assert }) => {
       setView('goals');
       $(`[data-category="${cat}"]`).click();
       const cards = viewEl.querySelectorAll('.card.goal').length;
+      const pressed = () => [...viewEl.querySelectorAll('.cat-chips .chip[aria-pressed="true"]')].map(c => c.dataset.category);
+      eq(pressed().join('|'), cat, `${cat}: only its chip pressed`);
       $(`[data-category="${cat}"]`).click();
+      eq(pressed().join('|'), '', `${cat}: tapped again, only "all" pressed`);
       assert(cards === 2, `${cat}: ${cards} goals`);
     }
     changeLanguage('en');
