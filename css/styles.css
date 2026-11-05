@@ -716,6 +716,13 @@ textarea { resize: vertical; min-height: 68px; }
 .ctx-menu button.danger { color: var(--bad); }
 .ctx-menu button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 @media (pointer: coarse) { .ctx-menu button { padding-top: 11px; padding-bottom: 11px; } }
+/* "Show in…": a chevron that turns down when its views open in place, indented under a guide line. */
+.ctx-menu .ctx-chev { margin-left: auto; width: 16px; height: 16px; color: var(--ink-2); transition: transform .15s ease; }
+.ctx-menu [aria-expanded="true"] .ctx-chev { transform: rotate(90deg); }
+.ctx-sub { display: flex; flex-direction: column; margin: 0 0 2px 30px; padding-left: 4px; border-left: 2px solid var(--line); }
+.ctx-sub[hidden] { display: none; }
+.ctx-sub button { padding-left: 10px; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .ctx-menu .ctx-chev { transition: none; } }
 
 /* ---------- Dialogs ---------- */
 .modal {

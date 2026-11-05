@@ -5300,8 +5300,9 @@ window.moreTests = async ({ step, assert }) => {
     setView('goals');
     eq(rightClick($(`.card[data-open="${g.id}"]`)), ['map', 'timeline'], 'goal card');
     const showMap = ctxMenu.querySelector('[data-ctx="show:map"]');
-    assert(showMap.textContent === t('ctx.showIn') && showMap.querySelector('svg').outerHTML === $('.nav-item[data-view="map"] svg').outerHTML, '"Show in" and the map icon');
+    assert(showMap.textContent === t('nav.map') && showMap.querySelector('svg').outerHTML === $('.nav-item[data-view="map"] svg').outerHTML, 'the map icon and name');
     assert(showMap.getAttribute('aria-label') === t('ctx.showInView', { view: t('nav.map') }) && showMap.title === 'Show in Map view', 'named in full');
+    ctxMenu.querySelector('[data-ctx-sub]').click();
     const box = showMap.querySelector('svg').getBoundingClientRect();
     assert(box.width === 18 && box.height === 18 && getComputedStyle(showMap.querySelector('svg')).fill === 'none', 'icon drawn like in the navigation');
     const all = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
@@ -5358,8 +5359,92 @@ window.moreTests = async ({ step, assert }) => {
     setToggle('hideDone', false);
     changeLanguage('sl');
     setView('goals'); rightClick($(`.card[data-open="${g.id}"]`));
-    assert(ctxMenu.querySelector('[data-ctx="show:map"]').textContent === 'Prikaži v' && ctxMenu.querySelector('[data-ctx="show:map"]').getAttribute('aria-label') === 'Prikaži v pogledu Zemljevid', 'Slovenian');
+    assert(ctxMenu.querySelector('[data-ctx-sub]').textContent === 'Prikaži v …' && ctxMenu.querySelector('[data-ctx="show:map"]').textContent === 'Zemljevid' && ctxMenu.querySelector('[data-ctx="show:map"]').getAttribute('aria-label') === 'Prikaži v pogledu Zemljevid', 'Slovenian');
     closeCtxMenu(); changeLanguage('en');
+    deletePlan(plans.current);
+  });
+
+  await step('item menu: "Show in…" opens its views in place', async () => {
+    fresh('Show in place'); changeLanguage('en');
+    const g = mk('goal', { startDate: d(-5), deadline: d(30) });
+    const bare = mk('state');
+    save();
+    const style = document.head.appendChild(document.createElement('style'));
+    style.textContent = '.ctx-menu { animation: none }';
+    const wait = ms => new Promise(res => setTimeout(res, ms));
+    const touch = (type, el) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 12, clientX: 60, clientY: 60 }));
+    const tap = el => { touch('pointerdown', el); touch('pointerup', el); el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })); };
+    const key = k => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+    const parent = () => ctxMenu.querySelector('[data-ctx-sub]'), sub = () => $('#ctxSub');
+    const seen = () => [...ctxMenu.querySelectorAll('button')].filter(b => b.offsetHeight).map(b => b.dataset.ctx || 'parent');
+    const inView = () => { const r = ctxMenu.getBoundingClientRect(); return r.top >= 8 && r.bottom <= innerHeight - 8; };
+    setView('goals');
+    // Closed: one "Show in…" entry with a chevron, its views hidden.
+    openCtxMenu(g.id, 60, 60);
+    eq(seen(), ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'parent', 'link', 'delete'], 'one entry for the views');
+    assert(parent().textContent === 'Show in…' && parent().querySelector('.ctx-chev') && parent().getAttribute('aria-expanded') === 'false' && parent().getAttribute('aria-controls') === 'ctxSub' && sub().hidden, 'closed, with a chevron');
+    // A tap opens it in place and keeps the menu open (also after the scroll guard has run out).
+    tap(parent());
+    assert(!ctxMenu.hidden && parent().getAttribute('aria-expanded') === 'true' && !sub().hidden, 'opened by a tap');
+    eq(seen(), ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'parent', 'show:map', 'show:timeline', 'link', 'delete'], 'views below it');
+    eq([...sub().querySelectorAll('button')].map(b => b.textContent), ['Map', 'Timeline'], 'named like the navigation');
+    assert(sub().querySelector('button').getBoundingClientRect().left > parent().getBoundingClientRect().left + 20 && getComputedStyle(parent().querySelector('.ctx-chev')).transform !== 'none', 'indented; the chevron turned');
+    await wait(450);
+    ctxMenu.dispatchEvent(new Event('scroll'));
+    assert(!ctxMenu.hidden, 'still open');
+    tap(parent());
+    assert(!ctxMenu.hidden && sub().hidden && parent().getAttribute('aria-expanded') === 'false', 'a second tap closes it, not the menu');
+    // A sub-item picked: the view, with the item shown there.
+    tap(parent()); tap(ctxMenu.querySelector('[data-ctx="show:map"]'));
+    assert(ctxMenu.hidden && ui.view === 'map' && ui.mapSelected === g.id && document.activeElement === $(`[data-map-node="${g.id}"]`), 'shown in the map');
+    // Keyboard: hidden views are skipped; Right opens onto the first, Left and Escape go back.
+    setView('goals');
+    openCtxMenu(g.id, 60, 60, true);
+    while (document.activeElement !== parent()) key('ArrowDown');
+    key('ArrowDown');
+    eq(document.activeElement.dataset.ctx, 'link', 'Down skips the closed views');
+    key('ArrowUp'); key('ArrowRight');
+    assert(parent().getAttribute('aria-expanded') === 'true' && document.activeElement.dataset.ctx === 'show:map', 'Right opens onto the first view');
+    key('ArrowDown'); eq(document.activeElement.dataset.ctx, 'show:timeline', 'Down moves through them');
+    key('ArrowDown'); eq(document.activeElement.dataset.ctx, 'link', 'and on past them');
+    key('ArrowUp'); key('ArrowLeft');
+    assert(sub().hidden && document.activeElement === parent() && !ctxMenu.hidden, 'Left closes back onto the parent');
+    key('ArrowRight'); key('Escape');
+    assert(sub().hidden && document.activeElement === parent() && !ctxMenu.hidden, 'Escape on a view closes them, not the menu');
+    parent().click();
+    assert(!sub().hidden && document.activeElement === parent(), 'Enter or Space (a click) opens it, focus stays');
+    key('ArrowLeft');
+    assert(sub().hidden && document.activeElement === parent(), 'Left on the open parent closes it');
+    key('Escape');
+    assert(ctxMenu.hidden, 'Escape on the parent closes the menu');
+    // Near the bottom of the screen, opening it moves the menu up to stay on screen.
+    openCtxMenu(g.id, 60, innerHeight - 4);
+    const top = ctxMenu.getBoundingClientRect().top;
+    assert(inView(), 'on screen');
+    tap(parent());
+    assert(inView() && ctxMenu.getBoundingClientRect().top < top, `moved up: ${top} → ${ctxMenu.getBoundingClientRect().top}`);
+    closeCtxMenu();
+    // Taller than the screen: the menu scrolls to show the opened views, and stays open.
+    openCtxMenu(g.id, 60, 60);
+    ctxMenu.style.maxHeight = '200px';
+    tap(parent());
+    ctxMenu.dispatchEvent(new Event('scroll'));
+    const last = sub().lastElementChild.getBoundingClientRect(), box = ctxMenu.getBoundingClientRect();
+    assert(!ctxMenu.hidden && ctxMenu.scrollTop > 0 && last.bottom <= box.bottom && last.top >= box.top, 'scrolled to the views');
+    ctxMenu.style.maxHeight = '';
+    closeCtxMenu();
+    // Only one other view: offered directly.
+    setView('states');
+    openCtxMenu(bare.id, 60, 60);
+    const one = ctxMenu.querySelector('[data-ctx="show:map"]');
+    assert(!parent() && one.offsetHeight && one.textContent === 'Show in Map view' && one.querySelector('svg'), 'one view: a direct item');
+    tap(one);
+    assert(ui.view === 'map' && ui.mapSelected === bare.id, 'and it shows the item there');
+    // Slovenian.
+    changeLanguage('sl'); setView('goals'); openCtxMenu(g.id, 60, 60);
+    assert(parent().textContent === 'Prikaži v …' && $('#ctxSub').getAttribute('aria-label') === 'Prikaži v …', 'Slovenian');
+    closeCtxMenu(); changeLanguage('en');
+    style.remove();
     deletePlan(plans.current);
   });
 
