@@ -578,7 +578,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(row().textContent.includes(t('list.count', { done: 1, total: 2 })), 'overview: 1/2');
     row().querySelector('[data-checkin]').click();
     assert(checkedOn(a, now) && a.list.every(i => itemOn(a, now, i.id)), 'overview circle ticks the list');
-    assert(!row().textContent.includes('/2'), 'no count once the day is ticked');
+    assert(!row(), 'off the overview once the day is ticked');
     // The context menu's "done today" too.
     runCtxAction('checkin', a.id);
     assert(!checkedOn(a, now) && a.list.every(i => !itemOn(a, now, i.id)), 'menu untick unticks the list');
@@ -1479,6 +1479,48 @@ window.moreTests = async ({ step, assert }) => {
     const m = mergePlans({ ...emptyDb(), activities: [older] }, { ...emptyDb(), activities: [newer] }).activities[0];
     eq(m.checkins, { '2099-01-01': 1, '2099-01-02': 0, '2099-01-03': 1 }, 'merged check-ins');
     eq(mergePlans({ ...emptyDb(), activities: [newer] }, { ...emptyDb(), activities: [older] }).activities[0].checkins, m.checkins, 'symmetric');
+  });
+
+  await step('routines: the overview lists only the routines today still asks for', () => {
+    fresh('Overview routines');
+    const MON = '2026-11-02', TUE = '2026-11-03', WED = '2026-11-04', THU = '2026-11-05';
+    const onDay = (iso, fn) => { const real = window.today; window.today = () => iso; try { return fn(); } finally { window.today = real; } };
+    const r = (title, repeat, more = {}) => mk('activity', { title, startDate: '2026-10-01', repeat: { every: 1, unit: 'week', ...repeat }, checkins: {}, ...more });
+    const setDay = r('Set Thu', { days: [3] });
+    const offDay = r('Set Mon', { days: [0] });
+    const ticked = r('Ticked', { days: [3] }, { checkins: { [THU]: 1 } });
+    const flex = r('Flex', { times: 2 }, { checkins: { [MON]: 1 } });
+    const flexMet = r('Flex met', { times: 2 }, { checkins: { [MON]: 1, [TUE]: 1 } });
+    const makeUp = r('Make up', { days: [0], makeUp: true });
+    const madeUp = r('Made up', { days: [0], makeUp: true }, { checkins: { [TUE]: 1 } });
+    const metEarly = r('Met early', { days: [3], makeUp: true }, { checkins: { [WED]: 1 } });
+    const ended = r('Ended', { days: [3] }, { dueDate: WED });
+    const later = r('Later', { days: [3] }, { startDate: '2026-11-06' });
+    const listOne = r('List half', { days: [3] }, { list: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }], listDays: { [THU]: { a: 1 } } });
+    const listAll = r('List done', { days: [3] }, { list: [{ id: 'a', text: 'A' }], listDays: { [THU]: { a: 1 } }, checkins: { [THU]: 1 } });
+    const monthly = r('Monthly', { unit: 'month', times: 1 });
+    const oneOff = mk('activity', { title: 'One-off', status: 'todo' });
+    save();
+    const rows = () => [...$('#view').querySelectorAll('.routine-list .routine-row')].map(x => x.dataset.open);
+    onDay(THU, () => {
+      setView('dashboard'); render();
+      eq(rows(), [setDay, flex, makeUp, listOne, monthly].map(a => a.id), 'set day, flexible not met, make-up, half-ticked list, monthly');
+      assert(![offDay, ticked, flexMet, madeUp, metEarly, ended, later, listAll, oneOff].some(a => rows().includes(a.id)), 'off-day, ticked, met, made up, ended, not started, ticked list, one-off hidden');
+      // Ticking from the overview takes the row off; the list's last item does too.
+      $(`.routine-row[data-open="${setDay.id}"] [data-checkin]`).click();
+      assert(checkedOn(setDay, THU) && !rows().includes(setDay.id), 'ticked: off the overview');
+      tickRoutineItem(listOne, 'b', THU);
+      assert(checkedOn(listOne, THU) && !rows().includes(listOne.id), 'last item ticked: off the overview');
+      // Unticking elsewhere brings it back.
+      setRoutineDay(setDay, THU, false); setView('dashboard'); render();
+      assert(rows().includes(setDay.id), 'unticked: back on the overview');
+    });
+    // A flexible routine that needs every day left still shows; once met it goes.
+    onDay(WED, () => { setView('dashboard'); render(); assert(rows().includes(flex.id) && rows().includes(flexMet.id) === false, 'Wednesday: flex shown, met hidden'); });
+    // Nothing asked for today: no routines section at all.
+    db.activities.filter(isRoutine).forEach(a => { a.checkins = { ...a.checkins, [THU]: 1 }; });
+    onDay(THU, () => { setView('dashboard'); render(); assert(!$('.routine-list'), 'all ticked: no routines section'); });
+    deletePlan(plans.current);
   });
 
   await step('routines: the due date typed before turning an activity into a routine becomes its end, and back', () => {
@@ -3245,10 +3287,14 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     eq(shownDays(r)[0], mon, 'back on this week after switching plans');
 
+    // Nothing ticked this week, so the overview lists it whatever earlier steps ticked.
+    const live = db.activities.find(a => a.id === r.id), kept = live.checkins;
+    live.checkins = {};
     setView('dashboard');
     const row = $(`.routine-row[data-open="${r.id}"]`);
     assert(row && !row.querySelector('[data-rt-week]'), 'overview rows have no arrows');
     assert(row.querySelector('[data-checkin]').dataset.date === now, 'overview still ticks today');
+    live.checkins = kept;
 
     changeLanguage('sl');
     setView('activities');
@@ -5541,10 +5587,13 @@ window.moreTests = async ({ step, assert }) => {
     rel(bike, km, 'improves');
     const both = addEntry(km, now, 10);
     assert(checkedOn(run, now) && checkedOn(bike, now) && !both.routine, 'two routines: both ticked, untagged');
-    // Overview rows ask the same.
+    // Overview rows ask the same (a routine ticked today is not on the overview).
     setView('dashboard');
-    $(`.routine-row[data-open="${bike.id}"] [data-checkin]`).click();
-    assert(!checkedOn(bike, now) && !$('.amount-pop'), 'unticking from the overview');
+    assert(!$(`.routine-row[data-open="${bike.id}"]`), 'ticked today: not on the overview');
+    setView('activities');
+    $(`.card.routine[data-open="${bike.id}"] [data-checkin][data-date="${now}"]`).click();
+    assert(!checkedOn(bike, now) && !$('.amount-pop'), 'unticking asks nothing');
+    setView('dashboard');
     $(`.routine-row[data-open="${bike.id}"] [data-checkin]`).click();
     assert($('.amount-pop'), 'ticking from the overview asks');
     $('.amount-pop [data-amount-skip]').click();

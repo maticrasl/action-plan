@@ -1056,8 +1056,6 @@ function routineRow(a) {
   </div>`;
 }
 
-const activeRoutine = a => isRoutine(a) && runsOn(a, today());
-
 /* ---------- Cumulative states: amounts that add up ----------
    A state with `cumulative: true` keeps `entries` ({ id, date, amount, routine? }) that add up,
    several a day if need be, instead of one value per date. `routine` is the routine whose tick the
@@ -1355,10 +1353,10 @@ function renderDashboard() {
   const avg = active.length ? active.reduce((s, g) => s + goalProgress(g), 0) / active.length : 0;
   // Routines have no status of their own: they get their own list, and the counts leave them out.
   const oneOff = db.activities.filter(a => !isRoutine(a));
-  // Not yet ticked today first, then those whose week or month is not met yet.
+  // Only the routines today still asks for: a set day (or a missed one to make up), or a flexible
+  // routine whose week or month is not met yet; not those ticked today, resting or not running.
   const now = today();
-  const routines = db.activities.filter(activeRoutine).map(a => ({ a, on: checkedOn(a, now), met: periodProgress(a).met }))
-    .sort((x, y) => x.on - y.on || x.met - y.met).map(x => x.a);
+  const routines = db.activities.filter(a => isRoutine(a) && ['due', 'makeUp', 'any'].includes(routineToday(a)));
   const doneActs = oneOff.filter(a => a.status === 'done').length;
   const todo = oneOff.filter(a => a.status !== 'done').sort(byDueDate);
   const overdue = todo.filter(a => a.dueDate && daysUntil(a.dueDate) < 0).length;
