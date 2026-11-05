@@ -1038,22 +1038,47 @@ textarea { resize: vertical; min-height: 68px; }
 .act-choice-icon { grid-row: 1 / 3; align-self: start; width: 30px; height: 30px; padding: 5px; box-sizing: content-box; border-radius: var(--r-sm); fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; color: var(--activity); background: var(--surface-2); }
 .kind-list .act-choice-icon { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, var(--surface)); }
 .kind-routine .act-choice-icon, .kind-listRoutine .act-choice-icon { color: var(--contrib); background: color-mix(in srgb, var(--contrib) 13%, var(--surface)); }
-.li-ticks { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 4px; }
-.li-tick { display: flex; align-items: flex-start; gap: 8px; padding: 4px 2px; text-align: left; font: inherit; font-size: 14px; line-height: 1.35; color: var(--ink); background: none; border: 0; border-radius: 6px; cursor: pointer; }
+/* A list's items sit on a slip of their own inside the card; round ticks keep them apart from the
+   card's square status check. Lines between items start where the text does. */
+.li-ticks { display: flex; flex-direction: column; margin: 4px 0 6px; padding: 2px; background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); border: 1px solid var(--line); border-radius: var(--r-md); }
+.li-tick { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 7px 8px; text-align: left; font: inherit; font-size: 14px; line-height: 1.35; color: var(--ink); background: none; border: 0; border-radius: var(--r-sm); cursor: pointer; }
+.li-tick + .li-tick::before { content: ""; position: absolute; top: 0; left: 36px; right: 8px; height: 1px; background: var(--line); }
 .li-tick:hover { background: var(--surface-2); }
+.li-tick:hover::before, .li-tick:hover + .li-tick::before { opacity: 0; }
 .li-tick:focus-visible { outline: none; box-shadow: var(--focus); }
-.li-box { flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; border: 1.5px solid var(--line-strong); border-radius: 4px; font-size: 12px; font-weight: 800; color: var(--surface); }
+.li-box { flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin-top: 0; border: 1.5px solid var(--line-strong); border-radius: 50%; background: var(--surface); font-size: 11px; font-weight: 800; line-height: 1; color: var(--surface); transition: border-color .15s; }
+.li-tick:hover .li-box { border-color: var(--ok); }
 .li-tick.done .li-box { background: var(--ok); border-color: var(--ok); }
 .li-text { min-width: 0; overflow-wrap: anywhere; }
-.li-tick.done .li-text { color: var(--ink-3); text-decoration: line-through; }
-.li-rows { display: flex; flex-direction: column; gap: 6px; }
-.li-row { display: flex; align-items: center; gap: 8px; }
-.li-row .li-check { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--ok); }
-.li-row .li-input { flex: 1; min-width: 0; }
+.li-tick.done .li-text { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+/* The item just ticked answers with a small pop. */
+.li-tick.just .li-box { animation: li-pop .3s ease-out; }
+@keyframes li-pop { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+/* In the form the items are one slip too: borderless rows with the same round tick, the slip
+   showing focus for the row being typed in. */
+.li-rows { display: flex; flex-direction: column; border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface); }
+.li-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 0 2px 0 12px; border-radius: var(--r-md); }
+.li-row + .li-row::before { content: ""; position: absolute; top: 0; left: 40px; right: 40px; height: 1px; background: var(--line); }
+.li-rows.no-ticks .li-row + .li-row::before { left: 12px; }
+.li-row:focus-within { box-shadow: var(--focus); z-index: 1; }
+.li-row .li-check { flex: none; appearance: none; width: 18px; height: 18px; margin: 0; border: 1.5px solid var(--line-strong); border-radius: 50%; background: var(--surface) center / 12px no-repeat; cursor: pointer; }
+.li-row .li-check:checked { background-color: var(--ok); border-color: var(--ok); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.li-row .li-check:focus-visible { box-shadow: none; border-color: var(--goal); }
+.li-row .li-input { flex: 1; min-width: 0; border: 0; background: transparent; padding-left: 0; padding-right: 0; }
+.li-row .li-input:focus { box-shadow: none; }
+.li-row:has(.li-check:checked) .li-input { color: var(--ink-3); }
+.li-row .li-del { flex: none; width: 32px; height: 32px; color: var(--ink-3); }
+.li-row .li-del:hover { color: var(--bad); }
+.field.invalid .li-rows { border-color: var(--bad); }
 .li-add { align-self: flex-start; margin-top: 8px; }
 .li-rows.no-ticks .li-check { display: none; }
-.rt-items { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
-.rt-items > .label { font-size: 13px; color: var(--ink-2); }
+.rt-items { display: flex; flex-direction: column; margin-top: 6px; }
+.rt-items-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px; }
+.rt-items-head .label { font-size: 13px; color: var(--ink-2); }
+/* One pip per item: today's list at a glance, apart from the week's bar above it. */
+.li-pips { display: flex; gap: 3px; }
+.li-pips i { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.li-pips i.on { background: var(--ok); box-shadow: none; }
 .empty-alt { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 8px; }
 
 /* Export and import of a single plan */

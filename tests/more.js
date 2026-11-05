@@ -531,6 +531,10 @@ window.moreTests = async ({ step, assert }) => {
     eq(item(0).dataset.date, now, 'items are today’s');
     item(0).focus(); item(0).click();
     assert(itemOn(a, now, a.list[0].id) && !checkedOn(a, now) && !modal.open, 'one item: ticked, the day not yet');
+    eq([...card().querySelectorAll('.li-pips i')].map(i => i.classList.contains('on')), [true, false], 'a pip per item, the ticked one filled');
+    assert(card().querySelector('.li-tick.done').classList.contains('just'), 'the item just ticked pops');
+    render();
+    assert(!card().querySelector('.li-tick.just'), 'a later render does not pop it again');
     eq(document.activeElement, item(0), 'focus kept on the item');
     eq(item(0).getAttribute('aria-checked'), 'true', 'announced as checked');
     item(1).click();
@@ -724,7 +728,7 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     setHelp(true);
     const dot = $('[data-help-tip="routineList"]');
-    assert(dot && dot.parentElement.matches('.rt-items > .label'), 'help dot by the label');
+    assert(dot && dot.parentElement.matches('.rt-items-head .label'), 'help dot by the label');
     dot.click();
     eq($('#helpTip')?.textContent, t('help.tip.routineList'), 'help text shown');
     assert(!$('.rt-items [data-help-tip="list"]'), 'the one-off list tip is not put on it');

@@ -627,7 +627,7 @@ function tickListItem(id, itemId, iso = today()) {
   save();
   render();
   // The card is drawn anew (perhaps in another column): keep the keyboard on the item.
-  $(`[data-li-tick="${id}"][data-li="${itemId}"]`)?.focus();
+  justTicked($(`[data-li-tick="${id}"][data-li="${itemId}"]`))?.focus();
 }
 
 /* A list routine is a routine with a `list`: each day it is done, its items are ticked off anew.
@@ -653,8 +653,10 @@ function tickRoutineItem(a, itemId, iso) {
     save();
     render();
   }
-  item()?.focus();
+  justTicked(item())?.focus();
 }
+// A ticked item's box pops once; the class is only added here, so a later render does not replay it.
+const justTicked = el => { if (el?.matches('.done')) el.classList.add('just'); return el; };
 // Monday = 0 (day 0 of the epoch, 1 January 1970, was a Thursday).
 const weekday = iso => (dayNum(iso) + 3) % 7;
 const addDays = (iso, n) => dayStr(dayNum(iso) + n);
@@ -1026,7 +1028,8 @@ function routineCard(a) {
 // A list routine's items for a day, ticked off one by one under how many are done.
 function routineItems(a, iso) {
   const n = dayItemsDone(a, iso);
-  return `<div class="rt-items"><span class="label">${esc(t('list.today', { done: n, total: a.list.length }))}</span>
+  const pips = a.list.map((_, k) => `<i${k < n ? ' class="on"' : ''}></i>`).join('');
+  return `<div class="rt-items"><div class="rt-items-head"><span class="label">${esc(t('list.today', { done: n, total: a.list.length }))}</span><span class="li-pips" aria-hidden="true">${pips}</span></div>
     <div class="li-ticks" role="group" aria-label="${esc(t('list.todayLabel'))}">${doneLast(a.list, i => itemOn(a, iso, i.id)).map(i => {
       const on = itemOn(a, iso, i.id);
       return `<button type="button" class="li-tick${on ? ' done' : ''}" role="checkbox" aria-checked="${on}" data-li-tick="${a.id}" data-li="${i.id}" data-date="${iso}"><span class="li-box" aria-hidden="true">${on ? '✓' : ''}</span><span class="li-text">${esc(i.text)}</span></button>`;
