@@ -335,7 +335,6 @@ const I18N = {
       'rel.improves': 'improves',
       'rel.depends': 'depends on',
       'rel.subgoal': 'is a sub-goal of',
-      'rel.related': 'is related to',
       'rel.subactivity': 'is a sub-activity of',
 
       'nodeState.todo': 'Not started',
@@ -1154,7 +1153,6 @@ const I18N = {
       'rel.improves': 'izboljšuje',
       'rel.depends': 'je odvisno od',
       'rel.subgoal': 'je podcilj cilja',
-      'rel.related': 'je povezano z',
       'rel.subactivity': 'je podaktivnost aktivnosti',
 
       'nodeState.todo': 'Ni začeto',

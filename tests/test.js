@@ -158,9 +158,11 @@
     assert(types().includes('rev:contributes') && !types().includes('contributes'), 'reverse group: ' + types());
     modal.close();
     openForm('relation', r.id);
-    $('#f-type').value = 'related';
+    const s = db.states[0];
+    pick('#f-to', s.id);
+    $('#f-type').value = 'improves';
     submitForm();
-    assert(r.type === 'related', 'edited');
+    assert(r.type === 'improves' && r.to === s.id, 'edited');
     openForm('relation', r.id);
     $('#deleteBtn').click();
     assert(!db.relations.includes(r), 'deleted');
@@ -169,7 +171,7 @@
 
   await step('canRelate rules', () => {
     const [g1, g2] = db.goals, [a1] = db.activities, [s1] = db.states;
-    return [canRelate(g1.id, g1.id, 'related'), canRelate(s1.id, g1.id, 'contributes'), canRelate(a1.id, s1.id, 'depends'), canRelate(a1.id, g1.id, 'nope'), canRelate(g2.id, g1.id, 'related')].map(x => x || 'ok').join(' | ');
+    return [canRelate(g1.id, g1.id, 'subgoal'), canRelate(s1.id, g1.id, 'contributes'), canRelate(a1.id, s1.id, 'depends'), canRelate(a1.id, g1.id, 'nope'), canRelate(g2.id, g1.id, 'depends')].map(x => x || 'ok').join(' | ');
   });
 
   await step('cycle status + drag-free status changes', () => {
@@ -195,7 +197,7 @@
     $('[data-category="Health"]').click(); assert(ui.category === 'Health'); const n = $('#view').querySelectorAll('.card.goal').length;
     $('[data-category=""]').click();
     setView('map');
-    $('[data-rel-toggle="related"]').click(); assert(ui.mapHidden.has('related')); $('[data-rel-toggle="related"]').click();
+    $('[data-rel-toggle="depends"]').click(); assert(ui.mapHidden.has('depends')); $('[data-rel-toggle="depends"]').click();
     $('[data-map-zoom="in"]').click(); const z = ui.mapScale; $('[data-map-zoom="reset"]').click();
     const node = $('[data-map-node]'); node.dispatchEvent(new MouseEvent('click', { bubbles: true })); assert(ui.mapSelected, 'selected');
     const mapSel = fp();

@@ -22,10 +22,8 @@ const REL_TYPES = {
   depends:     { from: ['activity', 'goal'], to: 'same',       color: 'var(--bad)', dash: true },
   measures:    { from: ['state'],            to: ['goal'],     color: 'var(--rel-state)' },
   improves:    { from: ['activity'],         to: ['state'],    color: 'var(--rel-state)', dash: true },
-  related:     { from: '*',                  to: '*',          color: 'var(--ink-2)', dash: true },
 };
 const ACYCLIC = new Set(['depends', 'subgoal', 'subactivity']);
-const SYMMETRIC = new Set(['related']);
 const PARENT_REL = { goal: 'subgoal', activity: 'subactivity' };
 
 const ACTIVITY_STATUS = ['todo', 'doing', 'done'];
@@ -192,7 +190,8 @@ const safeId = id => typeof id === 'string' && /^[\w-]{1,64}$/.test(id);
 function normalize(data) {
   const d = emptyDb();
   for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k].filter(x => x && typeof x === 'object' && safeId(x.id));
-  d.relations = d.relations.filter(r => safeId(r.from) && safeId(r.to));
+  // "Is related to" links were dropped from the app; old plans and synced copies lose theirs here.
+  d.relations = d.relations.filter(r => safeId(r.from) && safeId(r.to) && r.type !== 'related');
   if (data?.deleted && typeof data.deleted === 'object' && !Array.isArray(data.deleted)) d.deleted = data.deleted;
   d.activities.forEach(a => {
     if (Array.isArray(a.list)) a.list = a.list.filter(i => i && safeId(i.id) && typeof i.text === 'string');
@@ -322,7 +321,6 @@ const kindList = kinds => kinds.map(k => t('kindLower.' + k)).join(' / ');
 // Human-readable allowed direction, e.g. "activity → activity, goal → goal".
 function relSignature(type) {
   const d = REL_TYPES[type];
-  if (d.from === '*') return '';
   return d.from.map(f => `${kindList([f])} → ${kindList(d.to === 'same' ? [f] : d.to)}`).join(', ');
 }
 
@@ -331,7 +329,7 @@ function canRelate(from, to, type) {
   const a = findEntity(from), b = findEntity(to);
   if (!def || !a || !b) return t('err.unknown');
   if (from === to) return t('err.self');
-  if (def.from !== '*' && !def.from.includes(a.kind)) return t('err.relFrom', { rel: relLabel(type), kind: kindList(def.from) });
+  if (!def.from.includes(a.kind)) return t('err.relFrom', { rel: relLabel(type), kind: kindList(def.from) });
   if (def.to === 'same' && b.kind !== a.kind) return t('err.relTo', { rel: relLabel(type), kind: kindList([a.kind]) });
   if (Array.isArray(def.to) && !def.to.includes(b.kind)) return t('err.relTo', { rel: relLabel(type), kind: kindList(def.to) });
   if (db.relations.some(r => r.from === from && r.to === to && r.type === type)) return t('err.relExists');
@@ -388,9 +386,7 @@ function addRelation(from, to, type) {
 function possibleTypes(from, to, ignoreId) {
   const all = db.relations;
   db.relations = all.filter(r => r.id !== ignoreId);
-  // "Related" goes both ways, so it already exists when it links the two items the other way round.
-  const twoWay = k => SYMMETRIC.has(k) && db.relations.some(r => r.type === k && r.from === to && r.to === from);
-  try { return Object.keys(REL_TYPES).filter(k => !canRelate(from, to, k) && !twoWay(k)); } finally { db.relations = all; }
+  try { return Object.keys(REL_TYPES).filter(k => !canRelate(from, to, k)); } finally { db.relations = all; }
 }
 
 // Replace all outgoing links of one type from an entity.
@@ -1667,7 +1663,7 @@ function layoutMap(items, rels) {
     if (i) { link(up, n, c.chain[i - 1]); link(down, c.chain[i - 1], n); }
   }));
 
-  // Goals linked to each other (sub-goals, dependencies, related goals) stay together; unrelated goals and
+  // Goals linked to each other (sub-goals, dependencies) stay together; unrelated goals and
   // such groups run left to right by their nearest deadline (none last). Inside a group, fewer crossings
   // decide. Whenever a row is reordered, its goals are put back in group order in the slots they hold, so
   // activities, states and line slots arrange themselves around them.
@@ -3286,7 +3282,7 @@ function fillRelTypes(keep = $('#f-type').value) {
   const title = id => findEntity(id)?.item.title || '';
   const group = (a, b, types, pre) => types.length
     ? `<optgroup label="${esc(`${title(a)} → ${title(b)}`)}">${types.map(k => `<option value="${pre}${k}">${esc(relLabel(k))}</option>`).join('')}</optgroup>` : '';
-  const fwd = possibleTypes(from, to, formCtx.id), rev = possibleTypes(to, from, formCtx.id).filter(k => !(SYMMETRIC.has(k) && fwd.includes(k)));
+  const fwd = possibleTypes(from, to, formCtx.id), rev = possibleTypes(to, from, formCtx.id);
   const box = $('#f-type');
   box.innerHTML = fwd.length || rev.length ? group(from, to, fwd, '') + group(to, from, rev, 'rev:') : `<option value="">${esc(t('rel.nonePossible'))}</option>`;
   if ([...box.options].some(o => o.value === keep)) box.value = keep;
@@ -4353,11 +4349,9 @@ function sampleData() {
   // and a trip that waits for two other goals.
   rel(tenK, 'subgoal', halfMarathon); rel(weight, 'subgoal', halfMarathon); rel(sell, 'subgoal', fund);
   rel(fund, 'depends', course); rel(trip, 'depends', spanish); rel(trip, 'depends', fund);
-  rel(heating, 'related', bathroom);
   // Current states
   rel(fitness, 'measures', halfMarathon); rel(fitness, 'measures', tenK); rel(savings, 'measures', fund);
   rel(bodyWeight, 'measures', weight); rel(itemsSold, 'measures', sell);
-  rel(spending, 'related', savings);
   rel(heatingBill, 'measures', heating);
   rel(distance, 'measures', weeklyKm); rel(weeklyKm, 'subgoal', halfMarathon); rel(a[23], 'improves', distance);
   // Activities → goals
@@ -4367,7 +4361,7 @@ function sampleData() {
   rel(a[13], 'contributes', sell); rel(a[14], 'contributes', course); rel(a[15], 'contributes', spanish);
   rel(a[16], 'contributes', bathroom); rel(a[17], 'contributes', bathroom); rel(a[18], 'contributes', bathroom);
   rel(a[22], 'contributes', heating);
-  rel(a[23], 'contributes', exercise); rel(a[24], 'contributes', exercise); rel(exercise, 'related', halfMarathon);
+  rel(a[23], 'contributes', exercise); rel(a[24], 'contributes', exercise);
   rel(a[23], 'improves', fitness);
   // Activities → current states
   rel(a[1], 'improves', fitness); rel(a[5], 'improves', spending); rel(a[6], 'improves', spending);

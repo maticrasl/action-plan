@@ -1119,7 +1119,7 @@ window.moreTests = async ({ step, assert }) => {
     fresh('Linking');
     const g = mk('goal', { title: 'Big goal' }), g2 = mk('goal', { title: 'Other goal' });
     const a = mk('activity', { title: 'Do it' }), s = mk('state', { title: 'Now' });
-    rel(a, g, 'related'); rel(s, g, 'measures'); rel(g2, g, 'related');
+    rel(s, g, 'measures');
     save();
     setView('map');
     const node = id => $(`[data-map-node="${id}"]`);
@@ -1133,7 +1133,7 @@ window.moreTests = async ({ step, assert }) => {
       ev('pointerup', document, end);
     };
     node(a.id).scrollIntoView({ block: 'center' });
-    // Drag activity → goal: the form offers only what fits (contributes; related already exists).
+    // Drag activity → goal: the form offers only what fits (contributes).
     const p0 = mid(a.id), pg = mid(g.id);
     ev('pointerdown', node(a.id), p0);
     ev('pointermove', document, { x: p0.x + 30, y: p0.y - 30 });
@@ -1153,7 +1153,7 @@ window.moreTests = async ({ step, assert }) => {
     const before = db.relations.length;
     drag(g2.id, mid(a.id));
     await tick();
-    eq([...$('#f-type').options].map(o => o.value), ['related', 'rev:contributes'], 'both directions listed');
+    eq([...$('#f-type').options].map(o => o.value), ['rev:contributes'], 'offered the other way round');
     $('#f-type').value = 'rev:contributes';
     submitForm();
     assert(db.relations.length === before + 1 && relsFrom(a.id, 'contributes').some(r => r.to === g2.id), 'reverse type saved activity → goal');
@@ -1181,8 +1181,7 @@ window.moreTests = async ({ step, assert }) => {
     ev('pointerup', document, mid(g.id));
     await tick();
     assert(!modal.open, 'released after Escape: no form');
-    // Nothing fits (state → goal "measures" exists, "related" too): a message instead of the form.
-    rel(s, g, 'related');
+    // Nothing fits (state → goal "measures" exists): a message instead of the form.
     render();
     drag(s.id, mid(g.id));
     await tick();
@@ -1194,7 +1193,7 @@ window.moreTests = async ({ step, assert }) => {
     assert(ui.mapLinkFrom === g2.id && $('.link-bar') && node(g2.id).classList.contains('link-source'), 'pick mode with a banner');
     node(g.id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
     assert(!ui.mapLinkFrom && modal.open && $('#f-from').value === g2.id && $('#f-to').value === g.id, 'tap on the other box opens the form');
-    eq([...$('#f-type').options].map(o => o.value), ['subgoal', 'depends', 'rev:subgoal', 'rev:depends'], 'goal ↔ goal types (related exists)');
+    eq([...$('#f-type').options].map(o => o.value), ['subgoal', 'depends', 'rev:subgoal', 'rev:depends'], 'goal ↔ goal types');
     modal.close();
     startMapLink(g2.id);
     $('.map-legend').dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -1709,11 +1708,9 @@ window.moreTests = async ({ step, assert }) => {
     assert(canRelate(g1.id, g3.id, 'subgoal') === t('err.cycle'), 'subgoal cycle');
     eq(ancestors(g3.id, 'subgoal'), [g2.id, g1.id], 'ancestors');
     eq(descendants(g1.id, 'subgoal'), [g2.id, g3.id], 'descendants');
-    rel(a1, s1, 'improves'); rel(s1, g1, 'measures'); rel(s1, a3, 'related');
+    rel(a1, s1, 'improves'); rel(s1, g1, 'measures');
     assert(canRelate(s1.id, a1.id, 'improves') === t('err.relFrom', { rel: relLabel('improves'), kind: kindList(['activity']) }), 'improves direction');
     assert(canRelate(g1.id, s1.id, 'measures'), 'measures direction');
-    // A cycle through other types is fine: depends a3 → a1 is blocked, but related is not acyclic.
-    assert(canRelate(a3.id, a1.id, 'related') === null, 'related may loop');
     return `${db.relations.length} relations, all rule errors as expected`;
   });
 
@@ -1921,11 +1918,43 @@ window.moreTests = async ({ step, assert }) => {
       r('parentNew', 'n3', 'subgoal', 'n2', '2099-03-01'),
       r('loopOld', 'a1', 'depends', 'a2', '2099-01-01'),
       r('loopNew', 'a2', 'depends', 'a1', '2099-05-01'),
-      r('relatedLoop', 'a2', 'related', 'a1', '2099-01-01'),
     ];
     const kept = repairRelations(data).map(x => x.id);
-    eq(kept, ['dupNew', 'parentNew', 'loopNew', 'relatedLoop'], 'kept relations');
+    eq(kept, ['dupNew', 'parentNew', 'loopNew'], 'kept relations');
     return kept.join(',');
+  });
+
+  await step('"is related to" links are gone: dropped from saved plans, files and synced copies', () => {
+    assert(!REL_TYPES.related && !('rel.related' in I18N.en.strings) && !('rel.related' in I18N.sl.strings), 'no such type or label');
+    const old = { goals: [{ id: 'g1', title: 'G' }, { id: 'g2', title: 'H' }], states: [], activities: [{ id: 'a1', title: 'A' }],
+      relations: [{ id: 'r1', from: 'a1', to: 'g1', type: 'contributes' }, { id: 'r2', from: 'g1', to: 'g2', type: 'related' }, { id: 'r3', from: 'a1', to: 'g2', type: 'related' }] };
+    eq(normalize(old).relations.map(r => r.id), ['r1'], 'normalize keeps the rest');
+    // A saved plan from before: opened, it has no such links and the map draws and counts none.
+    fresh('Old related');
+    const id = plans.current;
+    localStorage.setItem(planKey(id), JSON.stringify(old));
+    eq(readPlan(id).relations.map(r => r.id), ['r1'], 'saved plan');
+    openPlan(id);
+    eq(db.relations.map(r => r.id), ['r1'], 'opened plan');
+    ui.mapHidden = new Set(['related']);
+    setView('map');
+    assert(!$('[data-rel-toggle="related"]') && document.querySelectorAll('[data-rel-edit]').length === 1, 'no toggle or line on the map');
+    ui.mapHidden = new Set();
+    // Goal → goal and activity → goal: only the remaining types are offered.
+    openForm('relation', null, { from: 'g1' });
+    const pick = (f, v) => { $(f).value = v; $(f).dispatchEvent(new Event('change', { bubbles: true })); };
+    pick('#f-to', 'g2');
+    const types = [...$('#f-type').options].map(o => o.value);
+    assert(types.length && !types.some(k => k.endsWith('related')), 'form: ' + types);
+    modal.close();
+    assert(canRelate('a1', 'g2', 'related') === t('err.unknown'), 'canRelate refuses it');
+    // A plan file and an older synced copy carrying them: dropped, and the merge does not bring them back.
+    eq(parsePlanFile(JSON.stringify({ name: 'F', ...old }), 'f.json').data.relations.map(r => r.id), ['r1'], 'plan file');
+    const remote = parseStore(JSON.stringify({ format: SYNC_FORMAT, version: 1, plans: { list: [{ id, name: 'Old related' }], deleted: {} }, data: { [id]: old } }));
+    eq(remote.data[id].relations.map(r => r.id), ['r1'], 'sync file');
+    eq(mergeStores(localStore(), remote).data[id].relations.map(r => r.id), ['r1'], 'merged');
+    deletePlan(id);
+    return 'ok';
   });
 
   await step('merge: state histories, deletions vs edits, symmetry', () => {
@@ -2533,7 +2562,7 @@ window.moreTests = async ({ step, assert }) => {
     const bad = parsePlanFile(JSON.stringify({ name: 'Bad', goals: [{ id: 'g1', title: 'Fine' }, { id: evil, title: 'Evil' }, null, 7, { title: 'No id' }],
       activities: [{ id: 'a1', title: 'Act' }],
       relations: [{ id: 'r1', from: 'a1', to: 'g1', type: 'contributes' }, { id: 'r2', from: 'a1', to: evil, type: 'contributes' },
-        { id: evil, from: 'a1', to: 'g1', type: 'related' }, null] }), 'b.json');
+        { id: evil, from: 'a1', to: 'g1', type: 'contributes' }, null] }), 'b.json');
     eq([bad.data.goals.map(g => g.id), bad.data.relations.map(r => r.id)], [['g1'], ['r1']], 'unsafe and broken items dropped');
     addImported(bad.name, bad.data);
     ['dashboard', 'goals', 'activities', 'map', 'timeline'].forEach(v => setView(v));
