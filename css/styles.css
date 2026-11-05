@@ -41,6 +41,14 @@
   /* Today on the timeline and the graphs: a column in the red of the Today flag, light enough to read the bars over. */
   --today: color-mix(in srgb, var(--blaze) 11%, transparent);
   --today-edge: color-mix(in srgb, var(--blaze) 35%, transparent);
+  /* Map boxes: their shadow, and the sheen and lit top edge over their fill. */
+  --node-shade: rgba(20, 32, 36, .10);
+  --node-shade-soft: rgba(20, 32, 36, .05);
+  --sheen-top: .55;
+  --sheen-low: .05;
+  --rim-top: .9;
+  --map-doing: var(--fill-doing);
+  --map-late: var(--fill-late);
 
   --nav-bg: #1E2A2E;
   --nav-ink: #E9EEED;
@@ -84,6 +92,17 @@
     --nav-bg: #0E1416;
     --nav-ink: #DCE4E2;
     --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
+    --node-shade: rgba(0, 0, 0, .34);
+    --node-shade-soft: rgba(0, 0, 0, .16);
+    --sheen-top: .09;
+    --sheen-low: .16;
+    --rim-top: .22;
+  /* By night, on a warm dark instead of the teal surface, so they read amber and red, not olive and maroon. */
+  --map-doing: color-mix(in srgb, var(--warn) 30%, #191510);
+  --map-late: color-mix(in srgb, var(--bad) 24%, #1C1719);
+    /* By night, on a warm dark instead of the teal surface, so they read amber and red, not olive and maroon. */
+    --map-doing: color-mix(in srgb, var(--warn) 30%, #191510);
+    --map-late: color-mix(in srgb, var(--bad) 24%, #1C1719);
   --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
   --chip-on-ink: var(--ink);
   --chip-on-line: var(--ink-2);
@@ -115,6 +134,14 @@
   --nav-bg: #0E1416;
   --nav-ink: #DCE4E2;
   --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
+  --node-shade: rgba(0, 0, 0, .34);
+  --node-shade-soft: rgba(0, 0, 0, .16);
+  --sheen-top: .09;
+  --sheen-low: .16;
+  --rim-top: .22;
+  /* By night, on a warm dark instead of the teal surface, so they read amber and red, not olive and maroon. */
+  --map-doing: color-mix(in srgb, var(--warn) 30%, #191510);
+  --map-late: color-mix(in srgb, var(--bad) 24%, #1C1719);
   --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
   --chip-on-ink: var(--ink);
   --chip-on-line: var(--ink-2);
@@ -484,6 +511,8 @@ textarea { resize: vertical; min-height: 68px; }
 .swatch.st-doing { background: var(--fill-doing) !important; }
 .swatch.st-late { background: var(--fill-late) !important; }
 .swatch.st-blocked { background: var(--fill-blocked) !important; }
+#view[data-view="map"] .swatch.st-doing { background: var(--map-doing) !important; }
+#view[data-view="map"] .swatch.st-late { background: var(--map-late) !important; }
 .map-legend i.swatch.tl-day { position: static; width: 14px; height: 4px; border: 0; border-radius: 1px; }
 .map-legend i.swatch.tl-day.done { background: var(--ok); }
 .map-legend i.swatch.tl-day.missed { background: var(--bad); }
@@ -505,11 +534,18 @@ textarea { resize: vertical; min-height: 68px; }
 .map-wrap, .tl-scroll { cursor: grab; }
 .map-wrap.panning, .tl-scroll.panning, .panning * { cursor: grabbing; -webkit-user-select: none; user-select: none; }
 .node rect { fill: var(--surface); stroke-width: 1.5; }
-.node-lift { fill: color-mix(in srgb, var(--ink) 9%, transparent); transform: translateY(1px); }
+.node-lift { fill: var(--node-shade); stroke: var(--node-shade-soft); stroke-width: 4; transform: translateY(1.5px); }
+/* A light sheen over the fill, darker toward the bottom, with a fine lit edge along the top. */
+.node-sheen { fill: url(#node-sheen); stroke: url(#node-rim); stroke-width: 1; pointer-events: none; }
+.sheen-top { stop-color: #fff; stop-opacity: var(--sheen-top); }
+.sheen-mid { stop-color: #fff; stop-opacity: 0; }
+.sheen-low { stop-color: #000; stop-opacity: var(--sheen-low); }
+.rim-top { stop-color: #fff; stop-opacity: var(--rim-top); }
+.rim-low { stop-color: #fff; stop-opacity: 0; }
 .node.sel .node-lift { fill: none; stroke: color-mix(in srgb, var(--goal) 30%, transparent); stroke-width: 9; transform: translateY(-2px); }
 .node text { fill: var(--ink); font-size: 13px; font-weight: 600; }
 .node.goal text:not(.sub) { font-weight: 700; }
-.node .sub { fill: var(--ink-2); font-size: 11.5px; font-weight: 400; }
+.node .sub { fill: color-mix(in srgb, var(--ink-2) 70%, var(--ink)); font-size: 11.5px; font-weight: 400; }
 .node.goal rect { stroke: var(--goal); stroke-width: 2; }
 .node-track, .node-progress { stroke-width: 4; stroke-linecap: round; }
 .node-track { stroke: color-mix(in srgb, var(--ink) 12%, transparent); }
@@ -518,8 +554,8 @@ textarea { resize: vertical; min-height: 68px; }
 .node.activity rect { stroke: var(--line-strong); }
 .node:hover rect { stroke-width: 3; }
 .node.st-done rect { fill: var(--fill-done); }
-.node.st-doing rect { fill: var(--fill-doing); }
-.node.st-late rect { fill: var(--fill-late); }
+.node.st-doing rect { fill: var(--map-doing); }
+.node.st-late rect { fill: var(--map-late); }
 .node.st-blocked rect { fill: var(--fill-blocked); }
 .node.dim { opacity: .15; }
 /* Linking two boxes: a dashed line follows the pointer; the box under it shows whether a link fits. */

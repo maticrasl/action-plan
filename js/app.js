@@ -1618,7 +1618,7 @@ function activityCard(a) {
    3. Ordering   – alternating barycenter sweeps plus adjacent swaps minimise edge crossings.
    4. Placement  – every box is pulled toward the median of its neighbours while keeping the order
                    and spacing (weighted isotonic regression), which keeps edges short and straight. */
-const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 40, MIN_SCALE: 0.25, MAX_SCALE: 3 };
+const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, MIN_SCALE: 0.25, MAX_SCALE: 3 };
 
 function layoutMap(items, rels) {
   const { NW, NH, HG, DG, DW, VG, PAD, HEAD, BAND_GAP } = MAP;
@@ -1888,6 +1888,21 @@ function layoutMap(items, rels) {
   return { node, layers, bands, chains, W, H };
 }
 
+// Box text is cut to fit its box, ending in "…": measured on a canvas in the fonts the map's CSS sets,
+// with 4 % to spare, as SVG text can come out a little wider than the canvas measures it.
+let fitCtx;
+function fitText(text, font, max) {
+  fitCtx ||= document.createElement('canvas').getContext('2d');
+  fitCtx.font = font;
+  const fits = s => fitCtx.measureText(s).width * 1.04 <= max;
+  if (fits(text)) return text;
+  let s = text;
+  while (s && !fits(s + '…')) s = s.slice(0, -1);
+  return s.trimEnd() + '…';
+}
+// The map can be drawn before the web font is in; it is drawn again then, to fit the font's widths.
+document.fonts?.addEventListener('loadingdone', () => { if (ui.view === 'map' && ctxMenu.hidden && !modal.open) render(); });
+
 function renderMap() {
   if (!itemCount()) return emptyState(t('map.emptyTitle'), t('map.emptyText'), 'goal');
 
@@ -1921,9 +1936,12 @@ function renderMap() {
 
   // A soft shadow under each box (a path, so the box's rect rules don't reach it); a halo when selected.
   const R = 10, lift = `M${R},2 H${NW - R} A${R},${R} 0 0 1 ${NW},${R + 2} V${NH + 2 - R} A${R},${R} 0 0 1 ${NW - R},${NH + 2} H${R} A${R},${R} 0 0 1 0,${NH + 2 - R} V${R + 2} A${R},${R} 0 0 1 ${R},2 Z`;
+  // Over the fill, a sheen and a fine lit top edge (gradients defined once below), inset inside the border.
+  const I = 1.5, r = R - I, sheen = `M${R},${I} H${NW - R} A${r},${r} 0 0 1 ${NW - I},${R} V${NH - R} A${r},${r} 0 0 1 ${NW - R},${NH - I} H${R} A${r},${r} 0 0 1 ${I},${NH - R} V${R} A${r},${r} 0 0 1 ${R},${I} Z`;
+  const font = getComputedStyle(document.documentElement).getPropertyValue('--font'), textW = NW - 18;
   const nodes = Object.values(node).map(n => {
     const { item } = findEntity(n.id);
-    let st = '', sub, bar = '', pct = '';
+    let st = '', sub, full, bar = '', pct = '';
     if (n.kind === 'goal') {
       st = goalState(item);
       sub = st === 'blocked' ? t('acts.waitsFor', { n: blockers(item, 'goal').length }) : item.deadline ? fmtRel(item.deadline, true) : t('map.noDeadline');
@@ -1934,23 +1952,28 @@ function renderMap() {
       bar = `<line class="node-track" x1="14" x2="${NW - 14}" y1="${y}" y2="${y}"></line>${p > 0 ? `<line class="node-progress" x1="14" x2="${end.toFixed(1)}" y1="${y}" y2="${y}"></line>` : ''}`;
     } else if (isRoutine(item)) {
       st = activityState(item);
-      const streak = routineStreak(item);
-      sub = periodText(item) + (streak.n ? ', ' + streakText(streak) : '');
+      const streak = routineStreak(item), p = periodProgress(item);
+      // Short on the box, in full in its tooltip.
+      full = periodText(item, p) + (streak.n ? ', ' + streakText(streak) : '');
+      sub = (p.target ? t('map.rt.' + periodUnit(item), { done: p.done, target: p.target }) : periodText(item, p)) + (streak.n ? ', ' + t('map.rt.streak', { n: streak.n }) : '');
     } else if (n.kind === 'activity') {
       st = activityState(item);
       sub = (st === 'blocked' ? t('acts.waitsFor', { n: blockers(item).length }) : t('activity.' + item.status)) + (item.dueDate ? ', ' + fmtRel(item.dueDate) : '');
     } else {
       sub = isNum(item.value) ? `${fmtNum(item.value)} ${item.unit || ''}, ${fmtRel(item.date)}` : fmtRel(item.date, true);
     }
-    const title = item.title.length > 22 ? item.title.slice(0, 21) + '…' : item.title;
+    // Sizes and weights as in the CSS for .node text and .node .sub.
+    const title = fitText(item.title, `${n.kind === 'goal' ? 700 : 600} 13px ${font}`, textW);
+    const subFit = fitText(sub, `400 11.5px ${font}`, textW);
     const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
     return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking}${n.id === sel ? ' sel' : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
       <path class="node-lift" d="${lift}"></path>
       <rect width="${NW}" height="${NH}" rx="${R}" style="${n.id === sel ? 'stroke-width:3' : ''}"></rect>
+      <path class="node-sheen" d="${sheen}"></path>
       <text x="12" y="23">${esc(title)}</text>
-      <text class="sub" x="12" y="${bar ? 38 : 41}">${esc(sub)}</text>${bar}
-      <title>${esc(item.title)}${pct}${st ? ' – ' + esc(t('nodeState.' + st)) : ''}</title>
+      <text class="sub" x="12" y="${bar ? 38 : 41}">${esc(subFit)}</text>${bar}
+      <title>${esc(item.title)}${pct}${st ? ' – ' + esc(t('nodeState.' + st)) : ''}\n${esc(full || sub)}</title>
     </g>`;
   }).join('');
 
@@ -1984,7 +2007,7 @@ function renderMap() {
       </div>
     </div>
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}</defs>${bandSvg}${edges}${bandLabels}${nodes}
+      <defs>${markers}<linearGradient id="node-sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sheen-top"/><stop offset=".5" class="sheen-mid"/><stop offset="1" class="sheen-low"/></linearGradient><linearGradient id="node-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="rim-top"/><stop offset=".3" class="rim-low"/></linearGradient></defs>${bandSvg}${edges}${bandLabels}${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}

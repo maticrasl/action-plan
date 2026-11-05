@@ -1464,7 +1464,7 @@ window.moreTests = async ({ step, assert }) => {
     item.click();
     assert(checkedOn(st, now), 'ticked from the menu');
     setView('map');
-    assert($(`[data-map-node="${run.id}"] .sub`).textContent.includes(t('rt.week', { done: periodProgress(run).done, target: 3 })), 'map shows this week');
+    assert($(`[data-map-node="${run.id}"] .sub`).textContent.includes(t('map.rt.week', { done: periodProgress(run).done, target: 3 })), 'map shows this week');
     // Switching repeat off keeps the check-ins.
     openForm('activity', run.id);
     $('#f-repeat').value = 'none'; $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
@@ -6492,5 +6492,54 @@ window.moreTests = async ({ step, assert }) => {
     eq(sl, 'Dodaj', 'Slovenian label');
     deletePlan(plans.current);
     return acts();
+  });
+
+  await step('map: box text stays inside its box, bands sit close, the sheen is defined once', () => {
+    const { NW } = MAP;
+    // Text that ends within 4 px of the box's right edge (inside its border), with its box's title.
+    const overflow = () => [...document.querySelectorAll('.map-wrap .node')].flatMap(n => [...n.querySelectorAll('text')]
+      .filter(x => +x.getAttribute('x') + x.getComputedTextLength() > NW - 4).map(x => `${n.getAttribute('aria-label')}: ${x.textContent} (${Math.round(x.getComputedTextLength())})`));
+    for (const code of ['en', 'sl']) {
+      changeLanguage(code); loadSample(); setView('map');
+      eq(overflow(), [], `${code} sample plan: nothing overflows`);
+      // Bands: one gap between them, smaller than the gap between rows inside a band.
+      const bands = [...document.querySelectorAll('.map-wrap .band')].map(b => [+b.getAttribute('y'), +b.getAttribute('y') + +b.getAttribute('height')]);
+      assert(bands.length === 3 && bands.slice(1).every(([top], i) => top - bands[i][1] === MAP.BAND_GAP) && MAP.BAND_GAP <= 16 && MAP.BAND_GAP < MAP.VG, `${code}: bands ${MAP.BAND_GAP} px apart`);
+      // Each band's label sits below the boxes of the band above, inside its own band.
+      const labels = [...document.querySelectorAll('.map-wrap .col-label')].map(l => l.getBBox());
+      assert(labels.every((l, i) => l.y >= bands[i][0] && l.y + l.height <= bands[i][0] + MAP.HEAD), `${code}: labels in their band's head`);
+      // The sheen: two gradients, defined once, used by every box.
+      const svg = $('.map-wrap svg');
+      assert(svg.querySelectorAll('linearGradient').length === 2 && svg.querySelectorAll('#node-sheen').length === 1 && svg.querySelectorAll('#node-rim').length === 1, `${code}: gradients defined once`);
+      assert([...svg.querySelectorAll('.node')].every(n => n.querySelectorAll('.node-sheen').length === 1 && n.querySelector('rect + .node-sheen')), `${code}: every box has its sheen, right over its fill`);
+      const sheen = getComputedStyle(svg.querySelector('.node-sheen'));
+      assert(sheen.fill.includes('#node-sheen') && sheen.stroke.includes('#node-rim') && sheen.pointerEvents === 'none', `${code}: sheen fill ${sheen.fill}, rim ${sheen.stroke}`);
+      deletePlan(plans.current);
+    }
+
+    // Long routine text: short on the box, cut with "…" if still too wide, in full in the tooltip.
+    changeLanguage('sl');
+    fresh('Long text');
+    const monthly = mk('activity', { title: 'Mesečni pregled financ', startDate: '2026-01-01', repeat: { every: 1, unit: 'month', times: 1 }, checkins: { '2026-09-10': 1, '2026-10-10': 1 } });
+    const weekly = mk('activity', { title: 'Tek trikrat na teden', startDate: '2026-01-01', repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
+    const long = mk('activity', { title: 'Zelo dolg naslov aktivnosti, ki gotovo ne gre v okvir', dueDate: d(400), status: 'doing' });
+    const wide = mk('goal', { title: 'WWWWWWWWWWWWWWWWWWWWWWWWWWWW', deadline: d(30) });
+    const state = mk('state', { title: 'Prihranki', value: '1234567890', unit: 'kilometrov in še nekaj', date: d(-1), history: [] });
+    save(); setView('map');
+    eq(overflow(), [], 'sl long texts: nothing overflows');
+    const node = x => $(`[data-map-node="${x.id}"]`);
+    const sub = x => node(x).querySelector('.sub').textContent, tip = x => node(x).querySelector('title').textContent;
+    const p = periodProgress(monthly), s = routineStreak(monthly);
+    assert(s.n > 0, `the monthly routine has a streak (${s.n})`);
+    eq(sub(monthly), `${t('map.rt.month', { done: p.done, target: 1 })}, ${t('map.rt.streak', { n: s.n })}`, 'monthly: the short form');
+    assert(tip(monthly).includes(`${periodText(monthly)}, ${streakText(s)}`), `monthly: in full in the tooltip: ${tip(monthly)}`);
+    eq(sub(weekly), t('map.rt.week', { done: 0, target: 3 }), 'weekly without a streak: just this week');
+    assert(node(long).querySelector('text').textContent.endsWith('…') && tip(long).startsWith(long.title), 'long title: cut with … and whole in the tooltip');
+    assert(node(wide).querySelector('text').textContent.endsWith('…'), 'wide letters: cut by width, not by count');
+    assert(sub(state).endsWith('…') && tip(state).includes('kilometrov in še nekaj'), `long amount: cut, whole in the tooltip: ${sub(state)}`);
+    changeLanguage('en'); render();
+    eq(overflow(), [], 'en long texts: nothing overflows');
+    eq(sub(monthly), `${p.done}/1 this month, ${s.n}× in a row`, 'English short form');
+    deletePlan(plans.current);
   });
 };
