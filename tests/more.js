@@ -5829,9 +5829,9 @@ window.moreTests = async ({ step, assert }) => {
     assert(!card().querySelector('[data-del-entry]') && card().querySelectorAll('.gr-table tbody tr').length === 16, 'its table lists the days, with nothing to delete');
     card().querySelector('[data-gr-scale="week"]').click();
     assert(card().querySelector('.gr-goal'), 'its own period again: what each week asks for');
-    // The bars fill their periods and touch; today's strip is drawn inside the week under way.
+    // The bars fill their periods, a thin gap apart; today's strip is drawn inside the week under way.
     const box = el => ['x', 'width'].map(k => Number(el.getAttribute(k))), wk = bars().map(box);
-    assert(wk.slice(1).every(([x], i) => Math.abs(x - (wk[i][0] + wk[i][1])) <= 1.01), `bars touch: ${JSON.stringify(wk)}`);
+    assert(wk.slice(1).every(([x], i) => Math.abs(x - (wk[i][0] + wk[i][1])) <= 2.01), `bars side by side: ${JSON.stringify(wk)}`);
     const [tx, tw] = box(card().querySelector('.gr-today.over')), [nx, nw] = box(card().querySelector('.gr-bar.now'));
     assert(tx >= nx - 0.01 && tx + tw <= nx + nw + 0.01 && card().querySelector('.gr-bar.now').compareDocumentPosition(card().querySelector('.gr-today')) & Node.DOCUMENT_POSITION_FOLLOWING, 'today inside this week’s bar, over it');
     card().querySelector('[data-gr-scale="month"]').click();
