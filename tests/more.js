@@ -5264,6 +5264,9 @@ window.moreTests = async ({ step, assert }) => {
     const node = $(`[data-map-node="${g.id}"]`);
     assert(ui.view === 'map' && ui.mapSelected === g.id && ctxMenu.hidden, 'map, goal selected');
     assert(node.querySelector('rect').style.strokeWidth === '3' && document.activeElement === node, 'box drawn selected and focused');
+    assert(node.classList.contains('sel') && [...document.querySelectorAll('.map-wrap .node.sel')].length === 1 && getComputedStyle(node.querySelector('.node-lift')).strokeWidth === '9px', 'only the selected box has its halo');
+    assert([...document.querySelectorAll('.map-wrap .node')].every(n => n.querySelector('.node-lift')) && [...document.querySelectorAll('.map-wrap marker')].every(m => m.getAttribute('markerUnits') === 'userSpaceOnUse'), 'every box has its shadow; arrowheads keep one size whatever the line width');
+    assert([...document.querySelectorAll('.map-wrap .col-label')].every(l => l.compareDocumentPosition($('.map-wrap .edge-g')) & Node.DOCUMENT_POSITION_PRECEDING), 'band labels drawn over the lines');
     assert(!$(`[data-map-node="${a.id}"]`).classList.contains('dim'), 'neighbours not dimmed');
     // Map → timeline: the same item stays selected; a different one replaces the selection.
     rightClick(node);

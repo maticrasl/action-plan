@@ -479,14 +479,22 @@ textarea { resize: vertical; min-height: 68px; }
 .zoom-ctl .icon-btn { width: auto; min-width: 32px; height: 30px; padding: 0 4px; font-size: 18px; font-weight: 700; line-height: 1; }
 .zoom-ctl .zoom-pct { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 42px; display: inline-block; }
 .band { fill: var(--bg); }
-.col-label { fill: var(--ink-2); font-size: 13px; font-weight: 700; }
+/* Each band takes a breath of its kind's colour, so goals, activities and states read as strata. */
+.band.goal { fill: color-mix(in srgb, var(--goal-soft) 55%, var(--bg)); }
+.band.state { fill: color-mix(in srgb, var(--state-soft) 55%, var(--bg)); }
+.col-label { fill: var(--ink-2); font-size: 13.5px; font-weight: 800; letter-spacing: .01em; paint-order: stroke; stroke: var(--bg); stroke-width: 5px; stroke-linejoin: round; pointer-events: none; }
+.col-label.goal { fill: var(--goal); stroke: color-mix(in srgb, var(--goal-soft) 55%, var(--bg)); }
+.col-label.state { fill: var(--state); stroke: color-mix(in srgb, var(--state-soft) 55%, var(--bg)); }
 .node { cursor: pointer; }
 .map-wrap, .tl-scroll { cursor: grab; }
 .map-wrap.panning, .tl-scroll.panning, .panning * { cursor: grabbing; -webkit-user-select: none; user-select: none; }
 .node rect { fill: var(--surface); stroke-width: 1.5; }
+.node-lift { fill: color-mix(in srgb, var(--ink) 9%, transparent); transform: translateY(1px); }
+.node.sel .node-lift { fill: none; stroke: color-mix(in srgb, var(--goal) 30%, transparent); stroke-width: 9; transform: translateY(-2px); }
 .node text { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.node.goal text:not(.sub) { font-weight: 700; }
 .node .sub { fill: var(--ink-2); font-size: 11.5px; font-weight: 400; }
-.node.goal rect { stroke: var(--goal); stroke-width: 2.5; }
+.node.goal rect { stroke: var(--goal); stroke-width: 2; }
 .node-track, .node-progress { stroke-width: 4; stroke-linecap: round; }
 .node-track { stroke: color-mix(in srgb, var(--ink) 12%, transparent); }
 .node-progress { stroke: var(--ok); }
@@ -511,7 +519,7 @@ textarea { resize: vertical; min-height: 68px; }
   background: var(--ink); color: var(--bg); font-size: 14.5px; font-weight: 600; box-shadow: var(--shadow-pop);
 }
 .link-bar .btn { color: var(--bg); }
-.edge { fill: none; }
+.edge { fill: none; stroke-linecap: round; }
 /* Lines are clickable through a wide invisible twin; hover or focus thickens the visible line. */
 .edge-g { cursor: pointer; outline: none; }
 .edge-g.dim { opacity: .15; }

@@ -1900,6 +1900,8 @@ function renderMap() {
       <path class="edge-hit" d="${c.d}"></path><title>${esc(label)}</title></g>`;
   }).join('');
 
+  // A soft shadow under each box (a path, so the box's rect rules don't reach it); a halo when selected.
+  const R = 10, lift = `M${R},2 H${NW - R} A${R},${R} 0 0 1 ${NW},${R + 2} V${NH + 2 - R} A${R},${R} 0 0 1 ${NW - R},${NH + 2} H${R} A${R},${R} 0 0 1 0,${NH + 2 - R} V${R + 2} A${R},${R} 0 0 1 ${R},2 Z`;
   const nodes = Object.values(node).map(n => {
     const { item } = findEntity(n.id);
     let st = '', sub, bar = '', pct = '';
@@ -1924,22 +1926,24 @@ function renderMap() {
     const title = item.title.length > 22 ? item.title.slice(0, 21) + '…' : item.title;
     const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
-    return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
-      <rect width="${NW}" height="${NH}" rx="10" style="${n.id === sel ? 'stroke-width:3' : ''}"></rect>
+    return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking}${n.id === sel ? ' sel' : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
+      <path class="node-lift" d="${lift}"></path>
+      <rect width="${NW}" height="${NH}" rx="${R}" style="${n.id === sel ? 'stroke-width:3' : ''}"></rect>
       <text x="12" y="23">${esc(title)}</text>
       <text class="sub" x="12" y="${bar ? 38 : 41}">${esc(sub)}</text>${bar}
       <title>${esc(item.title)}${pct}${st ? ' – ' + esc(t('nodeState.' + st)) : ''}</title>
     </g>`;
   }).join('');
 
-  const bandSvg = bands.map(b => {
+  // Band labels go over the lines, so a line passing by never cuts through one.
+  const bandSvg = bands.map(b => `<rect class="band ${b.kind}" x="6" y="${b.top}" width="${W - 12}" height="${b.bottom - b.top}" rx="14"></rect>`).join('');
+  const bandLabels = bands.map(b => {
     const levels = b.last - b.first + 1;
-    return `<rect class="band" x="6" y="${b.top}" width="${W - 12}" height="${b.bottom - b.top}" rx="14"></rect>
-    <text class="col-label" x="${PAD}" y="${b.top + 22}">${esc(t('kinds.' + b.kind))}${levels > 1 ? ` (${esc(tp('map.levels', levels))})` : ''}</text>`;
+    return `<text class="col-label ${b.kind}" x="${PAD}" y="${b.top + 22}">${esc(t('kinds.' + b.kind))}${levels > 1 ? ` (${esc(tp('map.levels', levels))})` : ''}</text>`;
   }).join('');
 
   const markers = Object.entries(REL_TYPES).map(([k, d]) =>
-    `<marker id="arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:${d.color}"/></marker>`).join('');
+    `<marker id="arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${d.color}"/></marker>`).join('');
 
   const toggles = Object.entries(REL_TYPES).map(([k, d]) => {
     const count = db.relations.filter(r => r.type === k).length;
@@ -1961,7 +1965,7 @@ function renderMap() {
       </div>
     </div>
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}</defs>${bandSvg}${edges}${nodes}
+      <defs>${markers}</defs>${bandSvg}${edges}${bandLabels}${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
