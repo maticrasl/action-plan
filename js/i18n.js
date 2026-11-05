@@ -90,6 +90,7 @@ const I18N = {
       'view.map': 'Relationship map',
 
       'btn.save': 'Save',
+      'btn.saveKey': 'Save (Ctrl+Enter)',
       'btn.cancel': 'Cancel',
       'btn.delete': 'Delete',
       'btn.close': 'Close',
@@ -908,6 +909,7 @@ const I18N = {
       'view.map': 'Zemljevid povezav',
 
       'btn.save': 'Shrani',
+      'btn.saveKey': 'Shrani (Ctrl+Enter)',
       'btn.cancel': 'Prekliči',
       'btn.delete': 'Izbriši',
       'btn.close': 'Zapri',

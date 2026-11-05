@@ -3855,6 +3855,13 @@ function bindDragDrop() {
 }
 
 $('#modalForm').addEventListener('keydown', e => {
+  // Ctrl+Enter (⌘+Enter on a Mac) saves from any field; the pickers and lists below never see it.
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.isComposing) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (!$('#saveBtn').hidden) $('#modalForm').requestSubmit($('#saveBtn'));
+    return;
+  }
   // A phone keyboard sends Enter only for `enterkeyhint="enter"` (its Next key would jump to the next
   // field instead); Enter that finishes typing in an input method is left to it.
   if (e.key === 'Enter' && !e.isComposing && e.target.matches('.li-input')) { e.preventDefault(); addListRow(e.target.closest('.li-row')); }

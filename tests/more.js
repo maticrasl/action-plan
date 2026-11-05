@@ -687,6 +687,52 @@ window.moreTests = async ({ step, assert }) => {
     assert(!('listDays' in mergeActivity({ ...base, updatedAt: '1' }, { ...base, updatedAt: '2' })), 'no day ticks: none added');
   });
 
+  await step('forms: Ctrl+Enter (or ⌘+Enter) saves from any field', () => {
+    fresh('Ctrl Enter');
+    const now = today();
+    const g = mk('goal', { title: 'Fit' });
+    save();
+    setView('activities');
+    const press = (el, mods) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...mods }));
+    // A new list: Ctrl+Enter in an item saves instead of adding the next one.
+    openForm('activity');
+    modal.querySelector('[data-act-kind="list"]').click();
+    $('#f-title').value = 'Pack';
+    $('#listRows .li-input').value = 'Tent';
+    $('#f-dueDate').value = dateInput(addDays(now, 3));
+    press($('#listRows .li-input'), { ctrlKey: true });
+    const a = db.activities.find(x => x.title === 'Pack');
+    assert(a && !modal.open && a.list.length === 1, 'saved from a list item, no row added');
+    eq($('#toast').textContent, t('toast.activityAdded'), 'says it was added');
+    // ⌘+Enter in the details; the edit is kept.
+    openForm('activity', a.id);
+    $('#f-description').value = 'For the weekend';
+    press($('#f-description'), { metaKey: true });
+    assert(!modal.open && a.description === 'For the weekend', '⌘+Enter in a text area saves');
+    // In a link picker's search it saves rather than linking the first match.
+    openForm('activity', a.id);
+    const search = modal.querySelector('.picker[data-picker="goal"] .picker-search');
+    search.value = 'Fi'; search.dispatchEvent(new Event('input', { bubbles: true }));
+    press(search, { ctrlKey: true });
+    assert(!modal.open && !relsFrom(a.id, 'contributes').some(r => r.to === g.id), 'picker: saved, nothing linked');
+    // An invalid form stays open with its errors.
+    openForm('goal');
+    press($('#f-title'), { ctrlKey: true });
+    assert(modal.open && modal.querySelector('.field.invalid'), 'invalid: stays open');
+    modal.close();
+    // The kind choice has nothing to save.
+    openForm('activity');
+    press(modal.querySelector('[data-act-kind]'), { ctrlKey: true });
+    assert(modal.open && formCtx.choose && db.activities.length === 1, 'kind choice: nothing saved');
+    modal.close();
+    // Plain Enter in a list item still adds the next one.
+    openForm('activity', a.id);
+    press($('#listRows .li-input'), {});
+    assert(modal.open && $('#listRows').children.length === 2, 'plain Enter adds an item');
+    modal.close();
+    eq($('#saveBtn').title, t('btn.saveKey'), 'Save says its shortcut');
+  });
+
   await step('routine lists: removing the only unticked item in the form ticks the day', () => {
     fresh('Routine list removal');
     const now = today(), y = addDays(now, -1), y2 = addDays(now, -2), tom = addDays(now, 1);
