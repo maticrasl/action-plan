@@ -3468,6 +3468,49 @@ window.moreTests = async ({ step, assert }) => {
     return 'ok';
   });
 
+  await step('routine cards: a short schedule tag that fits, the full one as its tooltip', async () => {
+    const at = (repeat, title = 'R') => ({ id: 'sc' + Math.random().toString(36).slice(2), title, repeat, startDate: '2027-01-07' });
+    const kinds = [
+      at({ every: 1, unit: 'week', days: [0, 2, 5], makeUp: true }), at({ every: 1, unit: 'week', days: [0, 1, 2, 3, 4] }), at({ every: 1, unit: 'week', days: [5, 6] }),
+      at({ every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] }), at({ every: 1, unit: 'week', days: [0, 1, 3, 4, 5] }), at({ every: 1, unit: 'week', times: 3 }),
+      at({ every: 1, unit: 'month', on: 'lastDay' }), at({ every: 1, unit: 'month', on: 'day', day: 15 }), at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
+      at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 5 }), at({ every: 2, unit: 'week', days: [0, 4] }), at({ every: 1, unit: 'year' }), at({ every: 3, unit: 'day' }),
+    ];
+    eq(kinds.map(shortSchedule), ['Mon, Wed, Sat ↻', 'Mon–Fri', 'Sat, Sun', 'every day', 'Mon, Tue, Thu–Sat', '3× a week', 'monthly: last day', 'monthly: day 15',
+      'every 2 months: second Fri', 'monthly: last Sat', 'every 2 weeks: Mon, Fri', 'yearly: 7 Jan', 'every 3 days']);
+    changeLanguage('sl');
+    eq(kinds.map(shortSchedule), ['pon., sre., sob. ↻', 'pon.–pet.', 'sob., ned.', 'vsak dan', 'pon., tor., čet.–sob.', '3-krat na teden', 'mesečno: zadnji dan', 'mesečno: 15. dan',
+      'vsaka 2 meseca: drugi pet.', 'mesečno: zadnja sob.', 'vsaka 2 tedna: pon., pet.', 'letno: 7. jan.', 'vsake 3 dni'], 'Slovenian');
+    assert(kinds.every(a => shortSchedule(a).length <= scheduleText(a).length), 'never longer than the full text');
+    fresh('Short tags');
+    kinds[0].title = '3 zmenki'; kinds[6].title = 'Mesečni pregled';
+    // A tag too long to fit even when short: every 3 weeks on four scattered days.
+    const long = at({ every: 3, unit: 'week', days: [0, 2, 4, 6], makeUp: true }, 'V službi najkasneje');
+    db.activities.push(...kinds, long);
+    save(); setView('activities');
+    const tag = a => $(`.card.routine[data-open="${a.id}"] .rt-sched`);
+    eq(tag(kinds[0]).textContent, 'pon., sre., sob. ↻', 'the card shows the short text');
+    eq(tag(kinds[0]).title, 'vsak pon., sre., sob. ali drug dan', 'the full text as its tooltip');
+    // In a narrow card the title keeps most of the row and the tag ends in an ellipsis inside the card.
+    const wordy = at({ every: 1, unit: 'week', days: [1, 3] }, 'A routine with a title long enough to wrap');
+    const html = [kinds[0], kinds[6], long, wordy].map(routineCard).join('');
+    const frame = document.createElement('iframe');
+    Object.assign(frame.style, { width: '260px', height: '900px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    frame.srcdoc = `<!doctype html><html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0">${html}</body></html>`;
+    await new Promise(res => { frame.onload = res; document.body.append(frame); });
+    [...frame.contentDocument.querySelectorAll('.card')].forEach(c => {
+      const card = c.getBoundingClientRect(), h = c.querySelector('h3').getBoundingClientRect(), g = c.querySelector('.rt-sched').getBoundingClientRect();
+      assert(g.right <= card.right + 0.5 && g.left >= h.right, `${c.querySelector('h3').textContent}: the tag stays inside the card, beside the title`);
+      const oneLine = h.height < parseFloat(getComputedStyle(c.querySelector('h3')).lineHeight) * 1.5;
+      assert(c.querySelector('h3').textContent === wordy.title ? h.width >= (card.width - 40) * 0.6 : oneLine, `${c.querySelector('h3').textContent}: a short title stays on one line, a long one keeps most of the row`);
+    });
+    const longTag = frame.contentDocument.querySelectorAll('.rt-sched')[2];
+    assert(longTag.scrollWidth > longTag.clientWidth, 'the long tag is cut with an ellipsis');
+    frame.remove();
+    changeLanguage('en');
+    deletePlan(plans.current);
+  });
+
   await step('monthly routines: the form shows the right fields and saves each option', () => {
     fresh('Monthly');
     const shown = sel => !$(sel).closest('[hidden]');
@@ -3573,7 +3616,7 @@ window.moreTests = async ({ step, assert }) => {
     eq(nextDueDay(r), lastDay, 'next due is this month’s last day');
     setView('activities');
     const card = $(`.card.routine[data-open="${r.id}"]`);
-    assert(card.textContent.includes('every month on the last day'), 'card summary');
+    assert(card.textContent.includes('monthly: last day') && card.querySelector('.rt-sched').title === 'every month on the last day', 'card summary');
     const strip = [...card.querySelectorAll('[data-checkin]')].map(b => b.dataset.date);
     if (strip.includes(lastDay)) assert(card.querySelector(`[data-date="${lastDay}"]`).classList.contains('due'), 'the last day is outlined');
     // Browse back to a past month end and see it ticked.

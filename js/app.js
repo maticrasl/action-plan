@@ -909,6 +909,25 @@ function baseSchedule(a) {
   if (s.unit === 'year') return t('rt.on', { every, what: fmtDay(start, { day: 'numeric', month: 'long' }) });
   return every;
 }
+// The same, compact for a routine card's tag (the full text is its tooltip): Mon–Fri, Mon, Wed, Sat,
+// monthly: last day; days that can be made up add a mark.
+const shortSchedule = a => (makesUp(a) ? t('rt.short.makeUp', { text: shortBase(a) }) : shortBase(a));
+function shortBase(a) {
+  const s = sched(a), start = routineStart(a);
+  if (s.times || s.unit === 'day') return baseSchedule(a);
+  const on = what => t('rt.short.on', { every: s.every === 1 ? t('rt.short.' + s.unit) : tp('rt.every.' + s.unit, s.every), what });
+  if (s.unit === 'week') {
+    const days = [...(s.days || [weekday(start)])].sort();
+    if (days.length === 7 && s.every === 1) return t('rt.daily');
+    // Three or more days in a row read as a range.
+    const runs = [];
+    days.forEach(d => (runs.length && runs[runs.length - 1].at(-1) === d - 1 ? runs[runs.length - 1].push(d) : runs.push([d])));
+    const what = runs.flatMap(r => (r.length > 2 ? [`${weekdayName(r[0])}–${weekdayName(r.at(-1))}`] : r.map(d => weekdayName(d)))).join(', ');
+    return s.every === 1 ? what : on(what);
+  }
+  if (s.unit === 'month') return on(s.on === 'lastDay' ? t('rt.short.monthLast') : s.on === 'nth' ? `${nthWord(s.nth, s.weekday)} ${weekdayName(s.weekday)}` : t('rt.monthDay', { d: s.day }));
+  return on(fmtDay(start, { day: 'numeric', month: 'short' }));
+}
 // The first day from `from` on which a fixed routine is due, or '' when it is not due again.
 function nextDueDay(a, from = today()) {
   const start = routineStart(a) > from ? routineStart(a) : from;
@@ -1014,7 +1033,7 @@ function routineCard(a) {
   const when = a.dueDate && a.dueDate < now ? `<span class="tag">${t('rt.ended')}</span>`
     : routineStart(a) > now ? `<span class="tag">${t('rt.starts', { date: fmtRel(routineStart(a)) })}</span>` : '';
   return `<article class="card activity routine st-${st}" data-open="${a.id}" data-ctx-item="${a.id}">
-    <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched">${esc(scheduleText(a))}</span></div>
+    <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched" title="${esc(scheduleText(a))}">${esc(shortSchedule(a))}</span></div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
     ${progressBar(p.target ? clamp(p.done / p.target * 100, 0, 100) : 0, `<span class="rt-progress">${esc(label)}</span>`)}
     ${routineWeek(a, week)}

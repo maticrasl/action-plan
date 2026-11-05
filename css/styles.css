@@ -400,7 +400,10 @@ textarea { resize: vertical; min-height: 68px; }
 .card.routine.st-done { border-left-color: var(--ok); }
 .card.routine.st-late { border-left-color: var(--bad); }
 .card.routine.st-blocked { border-left-color: var(--ink-3); }
-.rt-sched { flex: none; }
+/* The title keeps the width it needs, up to 65%; the schedule tag gets the rest and ends in an
+   ellipsis when it is still too long (the full text is its tooltip). */
+.rt-sched { flex: 0 1 auto; min-width: 0; }
+.routine > .card-head h3 { flex: none; max-width: 65%; }
 .rt-nav { display: flex; align-items: center; gap: 2px; }
 .rt-nav .rt-week { flex: 1; min-width: 0; }
 .rt-arrow { width: 28px; height: 34px; flex: none; border-radius: var(--r-sm); }
