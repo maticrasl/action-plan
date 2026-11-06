@@ -1941,10 +1941,17 @@ function renderMap() {
       <path class="edge-hit" d="${c.d}"></path><title>${esc(label)}</title></g>`;
   }).join('');
 
-  // A soft shadow under each box (a path, so the box's rect rules don't reach it); a halo when selected.
-  const R = 10, lift = roundedRect(0, 2, NW, NH + 2, R);
-  // Over the fill, a sheen and a fine lit top edge (gradients defined once below), inset inside the border.
-  const I = 1.5, sheen = roundedRect(I, I, NW - I, NH - I, R - I);
+  // Boxes are tinted glass with a halo when selected (a path, so the box's rect rules don't reach it).
+  const R = 6, lift = roundedRect(0, 0, NW, NH, R);
+  // Over the fill, a diagonal shine and a fine lit rim (gradients defined once below), inset inside the edge.
+  const I = 1, shine = roundedRect(I, I, NW - I, NH - I, R - I);
+  // Each box casts a shadow in its colour, down and to the right; all are blurred together, under every box.
+  const shadows = Object.values(node).map(n => {
+    const { item } = findEntity(n.id);
+    const st = n.kind === 'goal' ? goalState(item) : n.kind === 'activity' ? activityState(item) : '';
+    const dim = (sel || relSel) && !near.has(n.id) ? ' dim' : '';
+    return `<rect class="node-shadow ${n.kind}${st ? ' st-' + st : ''}${dim}" x="${n.x - NW / 2 + 8}" y="${layers[n.layer].y + 10}" width="${NW}" height="${NH}" rx="${R}"></rect>`;
+  }).join('');
   const font = getComputedStyle(document.documentElement).getPropertyValue('--font'), textW = NW - 18;
   const nodes = Object.values(node).map(n => {
     const { item } = findEntity(n.id);
@@ -1976,8 +1983,8 @@ function renderMap() {
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
     return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking}${n.id === sel ? ' sel' : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
       <path class="node-lift" d="${lift}"></path>
-      <rect width="${NW}" height="${NH}" rx="${R}" style="${n.id === sel ? 'stroke-width:3' : ''}"></rect>
-      <path class="node-sheen" d="${sheen}"></path>
+      <rect width="${NW}" height="${NH}" rx="${R}"></rect>
+      <path class="node-shine" d="${shine}"></path>
       <text x="12" y="23">${esc(title)}</text>
       <text class="sub" x="12" y="${bar ? 38 : 41}">${esc(subFit)}</text>${bar}
       <title>${esc(item.title)}${pct}${st ? ' – ' + esc(t('nodeState.' + st)) : ''}\n${esc(full || sub)}</title>
@@ -1990,6 +1997,12 @@ function renderMap() {
     const levels = b.last - b.first + 1;
     return `<text class="col-label ${b.kind}" x="${PAD}" y="${b.top + 22}">${esc(t('kinds.' + b.kind))}${levels > 1 ? ` (${esc(tp('map.levels', levels))})` : ''}</text>`;
   }).join('');
+
+  // The shine runs at 45° across each box (in the box's own units): a wide band, then a narrower one, both well inside it.
+  const D = (NW + NH) / 2, stop = (o, c) => `<stop offset="${o}" class="${c}"/>`;
+  const glassDefs = `<linearGradient id="node-shine" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${D}" y2="${D}">${stop(.2, 'shine-off')}${stop(.23, 'shine-on')}${stop(.32, 'shine-on')}${stop(.35, 'shine-off')}${stop(.4, 'shine-off')}${stop(.42, 'shine-streak')}${stop(.46, 'shine-streak')}${stop(.48, 'shine-off')}</linearGradient>`
+    + `<linearGradient id="node-rim" x1="0" y1="0" x2="0" y2="1">${stop(0, 'rim-top')}${stop(.4, 'rim-low')}</linearGradient>`
+    + '<filter id="node-blur" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="1.5"/></filter>';
 
   const markers = Object.entries(REL_TYPES).map(([k, d]) =>
     `<marker id="arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${d.color}"/></marker>`).join('');
@@ -2014,7 +2027,7 @@ function renderMap() {
       </div>
     </div>
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}<linearGradient id="node-sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sheen-top"/><stop offset=".5" class="sheen-mid"/><stop offset="1" class="sheen-low"/></linearGradient><linearGradient id="node-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="rim-top"/><stop offset=".3" class="rim-low"/></linearGradient></defs>${bandSvg}${edges}${bandLabels}${nodes}
+      <defs>${markers}${glassDefs}</defs>${bandSvg}${edges}${bandLabels}<g class="node-shadows" filter="url(#node-blur)">${shadows}</g>${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}

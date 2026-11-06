@@ -41,14 +41,14 @@
   /* Today on the timeline and the graphs: a column in the red of the Today flag, light enough to read the bars over. */
   --today: color-mix(in srgb, var(--blaze) 11%, transparent);
   --today-edge: color-mix(in srgb, var(--blaze) 35%, transparent);
-  /* Map boxes: their shadow, and the sheen and lit top edge over their fill. */
-  --node-shade: rgba(20, 32, 36, .10);
-  --node-shade-soft: rgba(20, 32, 36, .05);
-  --sheen-top: .55;
-  --sheen-low: .05;
-  --rim-top: .9;
-  --map-doing: var(--fill-doing);
-  --map-late: var(--fill-late);
+  /* Map boxes are tinted glass: the tint over this base, the shine across it and its coloured shadow. */
+  --glass-base: var(--surface);
+  --glass-tint: 36%;
+  --glass-alpha: .88;
+  --shine: .18;
+  --shine-streak: .12;
+  --rim: .95;
+  --glass-shadow: .16;
 
   --nav-bg: #1E2A2E;
   --nav-ink: #E9EEED;
@@ -92,14 +92,14 @@
     --nav-bg: #0E1416;
     --nav-ink: #DCE4E2;
     --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
-    --node-shade: rgba(0, 0, 0, .34);
-    --node-shade-soft: rgba(0, 0, 0, .16);
-    --sheen-top: .09;
-    --sheen-low: .16;
-    --rim-top: .22;
-    /* By night, on a warm dark instead of the teal surface, so they read amber and red, not olive and maroon. */
-    --map-doing: color-mix(in srgb, var(--warn) 30%, #191510);
-    --map-late: color-mix(in srgb, var(--bad) 24%, #1C1719);
+    /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
+    --glass-base: #17191B;
+    --glass-tint: 30%;
+    --glass-alpha: .82;
+    --shine: .028;
+    --shine-streak: .018;
+    --rim: .3;
+    --glass-shadow: .13;
     --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
     --chip-on-ink: var(--ink);
     --chip-on-line: var(--ink-2);
@@ -131,14 +131,14 @@
   --nav-bg: #0E1416;
   --nav-ink: #DCE4E2;
   --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
-  --node-shade: rgba(0, 0, 0, .34);
-  --node-shade-soft: rgba(0, 0, 0, .16);
-  --sheen-top: .09;
-  --sheen-low: .16;
-  --rim-top: .22;
-  /* By night, on a warm dark instead of the teal surface, so they read amber and red, not olive and maroon. */
-  --map-doing: color-mix(in srgb, var(--warn) 30%, #191510);
-  --map-late: color-mix(in srgb, var(--bad) 24%, #1C1719);
+  /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
+  --glass-base: #17191B;
+  --glass-tint: 30%;
+  --glass-alpha: .82;
+  --shine: .028;
+  --shine-streak: .018;
+  --rim: .3;
+  --glass-shadow: .13;
   --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
   --chip-on-ink: var(--ink);
   --chip-on-line: var(--ink-2);
@@ -224,9 +224,9 @@ svg { flex: none; }
 /* The map and the timeline use the whole width of the screen. */
 .view[data-view="map"], .view[data-view="timeline"] { max-width: none; }
 
-.lang-switch { display: flex; padding: 3px; border-radius: 999px; background: var(--surface-2); }
+.lang-switch { display: flex; padding: 3px; border-radius: calc(var(--r-sm) + 3px); background: var(--surface-2); }
 .lang-switch button {
-  border: 0; background: none; padding: 4px 10px; border-radius: 999px;
+  border: 0; background: none; padding: 4px 10px; border-radius: var(--r-sm);
   font-size: 12.5px; font-weight: 700; letter-spacing: .03em; cursor: pointer; color: var(--ink-2);
 }
 .lang-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
@@ -235,7 +235,7 @@ svg { flex: none; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   border: 1px solid var(--line-strong); background: var(--surface); padding: 8px 16px;
-  border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 14.5px; white-space: nowrap;
+  border-radius: var(--r-md); cursor: pointer; font-weight: 700; font-size: 14.5px; white-space: nowrap;
   transition: background .15s, transform .08s;
 }
 .btn:hover { background: var(--surface-2); }
@@ -249,7 +249,7 @@ svg { flex: none; }
 .btn.danger.solid { background: var(--bad); border-color: var(--bad); color: #fff; }
 .btn.danger.solid:hover { background: color-mix(in srgb, var(--bad) 88%, var(--ink)); }
 .btn:disabled, .btn.danger.solid:disabled { opacity: .45; cursor: not-allowed; background: var(--surface-2); border-color: var(--line-strong); color: var(--ink-3); }
-.btn.small { padding: 4px 12px; font-size: 13px; }
+.btn.small { padding: 4px 12px; font-size: 13px; border-radius: var(--r-sm); }
 .add-btn .plus { font-size: 18px; line-height: 1; margin-top: -2px; }
 .icon-btn {
   border: 0; background: transparent; width: 36px; height: 36px; border-radius: 999px; cursor: pointer;
@@ -262,13 +262,13 @@ svg { flex: none; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 20px; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .chip {
-  border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r-sm);
   padding: 5px 13px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--ink-2);
   transition: background-color .12s, border-color .12s, color .12s;
 }
 .chip:hover { color: var(--ink); border-color: var(--ink-3); }
 .chip:active { background: var(--surface-2); }
-.chip:focus-visible { border-radius: 999px; }
+.chip:focus-visible { border-radius: var(--r-sm); }
 .chip.active, .chip[data-hide-done][aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-ink); border-color: var(--chip-on-line); }
 .search { flex: 1; min-width: 160px; max-width: 320px; }
 
@@ -508,8 +508,7 @@ textarea { resize: vertical; min-height: 68px; }
 .swatch.st-doing { background: var(--fill-doing) !important; }
 .swatch.st-late { background: var(--fill-late) !important; }
 .swatch.st-blocked { background: var(--fill-blocked) !important; }
-#view[data-view="map"] .swatch.st-doing { background: var(--map-doing) !important; }
-#view[data-view="map"] .swatch.st-late { background: var(--map-late) !important; }
+#view[data-view="map"] .map-legend i.swatch { background: color-mix(in srgb, var(--tint) var(--glass-tint), var(--glass-base)) !important; border-color: transparent; box-shadow: 2px 2px 0 color-mix(in srgb, var(--tint) 45%, transparent); }
 .map-legend i.swatch.tl-day { position: static; width: 14px; height: 4px; border: 0; border-radius: 1px; }
 .map-legend i.swatch.tl-day.done { background: var(--ok); }
 .map-legend i.swatch.tl-day.missed { background: var(--bad); }
@@ -517,8 +516,8 @@ textarea { resize: vertical; min-height: 68px; }
 
 .map-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: auto; max-height: calc(100vh - 200px); min-height: 280px; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
 .map-wrap svg { display: block; margin: 0 auto; font-family: var(--font); }
-.zoom-ctl { margin-left: auto; display: flex; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 1px; }
-.zoom-ctl .icon-btn { width: auto; min-width: 32px; height: 30px; padding: 0 4px; font-size: 18px; font-weight: 700; line-height: 1; }
+.zoom-ctl { margin-left: auto; display: flex; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: calc(var(--r-sm) + 1px); padding: 1px; }
+.zoom-ctl .icon-btn { border-radius: var(--r-sm); width: auto; min-width: 32px; height: 30px; padding: 0 4px; font-size: 18px; font-weight: 700; line-height: 1; }
 .zoom-ctl .zoom-pct { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 42px; display: inline-block; }
 .band { fill: var(--bg); }
 /* Each band takes a breath of its kind's colour, so goals, activities and states read as strata. */
@@ -530,41 +529,47 @@ textarea { resize: vertical; min-height: 68px; }
 .node { cursor: pointer; }
 .map-wrap, .tl-scroll { cursor: grab; }
 .map-wrap.panning, .tl-scroll.panning, .panning * { cursor: grabbing; -webkit-user-select: none; user-select: none; }
-.node rect { fill: var(--surface); stroke-width: 1.5; }
-.node-lift { fill: var(--node-shade); stroke: var(--node-shade-soft); stroke-width: 4; transform: translateY(1.5px); }
-/* A light sheen over the fill, darker toward the bottom, with a fine lit edge along the top. */
-.node-sheen { fill: url(#node-sheen); stroke: url(#node-rim); stroke-width: 1; pointer-events: none; }
-.sheen-top { stop-color: #fff; stop-opacity: var(--sheen-top); }
-.sheen-mid { stop-color: #fff; stop-opacity: 0; }
-.sheen-low { stop-color: #000; stop-opacity: var(--sheen-low); }
-.rim-top { stop-color: #fff; stop-opacity: var(--rim-top); }
+/* Each box takes the colour of its status, or else of its kind; its glass, edge and shadow are tinted by it. */
+:is(.node, .node-shadow, .swatch) { --tint: var(--activity); }
+:is(.node, .node-shadow).goal { --tint: var(--goal); }
+:is(.node, .node-shadow).state { --tint: var(--state); }
+:is(.node, .node-shadow, .swatch).st-done { --tint: var(--ok); }
+:is(.node, .node-shadow, .swatch).st-doing { --tint: var(--warn); }
+:is(.node, .node-shadow, .swatch).st-late { --tint: var(--bad); }
+:is(.node, .node-shadow, .swatch).st-blocked { --tint: var(--grey); }
+/* No edge: the tint, the shine's lit rim and the shadow set each box off. */
+.node rect { fill: color-mix(in srgb, var(--tint) var(--glass-tint), var(--glass-base)); fill-opacity: var(--glass-alpha); stroke: none; }
+/* The shadows are drawn together under all boxes and blurred once (#node-blur). */
+.node-shadow { fill: var(--tint); opacity: var(--glass-shadow); }
+.node-shadow.dim { opacity: calc(var(--glass-shadow) * .15); }
+.node-lift { fill: none; stroke: none; }
+/* Shine across the glass: a bright top-left corner and a thin streak, with a fine lit rim. */
+.node-shine { fill: url(#node-shine); stroke: url(#node-rim); stroke-width: 1; pointer-events: none; }
+.shine-on { stop-color: #fff; stop-opacity: var(--shine); }
+.shine-streak { stop-color: #fff; stop-opacity: var(--shine-streak); }
+.shine-off { stop-color: #fff; stop-opacity: 0; }
+.rim-top { stop-color: #fff; stop-opacity: var(--rim); }
 .rim-low { stop-color: #fff; stop-opacity: 0; }
-.node.sel .node-lift { fill: none; stroke: color-mix(in srgb, var(--goal) 30%, transparent); stroke-width: 9; transform: translateY(-2px); }
+.node.sel .node-lift { stroke: color-mix(in srgb, var(--goal) 30%, transparent); stroke-width: 9; }
 .node text { fill: var(--ink); font-size: 13px; font-weight: 600; }
 .node.goal text:not(.sub) { font-weight: 700; }
 .node .sub { fill: color-mix(in srgb, var(--ink-2) 70%, var(--ink)); font-size: 11.5px; font-weight: 400; }
-.node.goal rect { stroke: var(--goal); stroke-width: 2; }
 .node-track, .node-progress { stroke-width: 4; stroke-linecap: round; }
 .node-track { stroke: color-mix(in srgb, var(--ink) 12%, transparent); }
 .node-progress { stroke: var(--ok); }
-.node.state rect { stroke: var(--state); stroke-dasharray: 0; }
-.node.activity rect { stroke: var(--line-strong); }
-.node:hover rect { stroke-width: 3; }
-.node.st-done rect { fill: var(--fill-done); }
-.node.st-doing rect { fill: var(--map-doing); }
-.node.st-late rect { fill: var(--map-late); }
-.node.st-blocked rect { fill: var(--fill-blocked); }
+.node:hover rect { fill-opacity: 1; }
 .node.dim { opacity: .15; }
 /* Linking two boxes: a dashed line follows the pointer; the box under it shows whether a link fits. */
 .map-wrap.linking, .map-wrap.linking * { cursor: crosshair; -webkit-user-select: none; user-select: none; }
 .link-line { stroke: var(--goal); stroke-width: 2.5; stroke-dasharray: 6 4; pointer-events: none; }
-.node.link-source rect { stroke: var(--goal); stroke-width: 3.5; }
-.node.link-target rect { stroke: var(--ok); stroke-width: 4; }
+/* Edges stay thin: a halo around the box shows the link's ends. */
+.node.link-source .node-lift { stroke: color-mix(in srgb, var(--goal) 45%, transparent); stroke-width: 9; }
+.node.link-target .node-lift { stroke: color-mix(in srgb, var(--ok) 50%, transparent); stroke-width: 9; }
 .map-wrap.linking .node.link-bad, .map-wrap.linking .node.link-bad * { cursor: not-allowed; }
-.node.link-bad rect { stroke: var(--bad); stroke-width: 3; stroke-dasharray: 5 4; }
+.node.link-bad rect { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .link-bar {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 22; width: max-content; max-width: calc(100vw - 32px);
-  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px;
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: var(--r-lg);
   background: var(--ink); color: var(--bg); font-size: 14.5px; font-weight: 600; box-shadow: var(--shadow-pop);
 }
 .link-bar .btn { color: var(--bg); }
@@ -581,7 +586,7 @@ textarea { resize: vertical; min-height: 68px; }
    Selection is shown by the line or box itself. */
 .map-wrap, .tl-scroll { -webkit-tap-highlight-color: transparent; }
 .node:focus { outline: none; box-shadow: none; }
-.node:focus-visible rect { stroke-width: 3.5; stroke: var(--goal); }
+.node:focus-visible .node-lift { stroke: color-mix(in srgb, var(--goal) 55%, transparent); stroke-width: 9; }
 
 /* ---------- Timeline ---------- */
 .cat-chips { margin-bottom: 12px; }
@@ -810,8 +815,8 @@ textarea { resize: vertical; min-height: 68px; }
   font-size: 14.5px; font-weight: 600; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-.toast.has-action { pointer-events: auto; display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px); border-radius: 18px; padding: 8px 8px 8px 18px; }
-.toast-action { border: 0; border-radius: 999px; background: var(--bg); color: var(--ink); font: inherit; font-weight: 700; padding: 6px 14px; cursor: pointer; white-space: nowrap; }
+.toast.has-action { pointer-events: auto; display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 32px); border-radius: var(--r-lg); padding: 8px 8px 8px 18px; }
+.toast-action { border: 0; border-radius: var(--r-sm); background: var(--bg); color: var(--ink); font: inherit; font-weight: 700; padding: 6px 14px; cursor: pointer; white-space: nowrap; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 960px) {
@@ -1184,10 +1189,10 @@ textarea { resize: vertical; min-height: 68px; }
 .set-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .set-actions label.btn { cursor: pointer; }
 .set-group .hint { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
-.seg { display: flex; padding: 3px; border-radius: 999px; background: var(--surface-2); }
+.seg { display: flex; padding: 3px; border-radius: calc(var(--r-sm) + 3px); background: var(--surface-2); }
 .seg button {
   display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 5px 12px;
-  border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--ink-2);
+  border-radius: var(--r-sm); font-size: 13px; font-weight: 700; cursor: pointer; color: var(--ink-2);
 }
 .seg button svg { width: 15px; height: 15px; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
