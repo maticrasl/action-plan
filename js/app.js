@@ -17,8 +17,8 @@ const KINDS = ['goal', 'state', 'activity'];
 // `from` lists the allowed source kinds; `to: 'same'` means the target must be the same kind as the source.
 const REL_TYPES = {
   contributes: { from: ['activity'],         to: ['goal'],     color: 'var(--contrib)' },
-  subgoal:     { from: ['goal'],             to: ['goal'],     color: 'var(--goal)', width: 2.4 },
-  subactivity: { from: ['activity'],         to: ['activity'], color: 'var(--activity)', width: 2.4 },
+  subgoal:     { from: ['goal'],             to: ['goal'],     color: 'var(--goal)', width: 1.6 },
+  subactivity: { from: ['activity'],         to: ['activity'], color: 'var(--activity)', width: 1.6 },
   depends:     { from: ['activity', 'goal'], to: 'same',       color: 'var(--bad)', dash: true },
   measures:    { from: ['state'],            to: ['goal'],     color: 'var(--rel-state)' },
   improves:    { from: ['activity'],         to: ['state'],    color: 'var(--rel-state)', dash: true },
@@ -1621,7 +1621,11 @@ function activityCard(a) {
    3. Ordering   – alternating barycenter sweeps plus adjacent swaps minimise edge crossings.
    4. Placement  – every box is pulled toward the median of its neighbours while keeping the order
                    and spacing (weighted isotonic regression), which keeps edges short and straight. */
-const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, MIN_SCALE: 0.25, MAX_SCALE: 3 };
+// On the map, lines are fine and their colours muted toward grey, so they stay quieter than the glass boxes.
+const mapLineColour = color => `color-mix(in srgb, ${color} 72%, var(--ink-3))`;
+// LEAD: the straight stretch each line ends with, a little longer than its arrowhead (10). TIP: how far short
+// of where it points a line stops; its arrowhead covers the rest, so even a thick line ends inside the head's wide back.
+const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, LEAD: 14, TIP: 8, MIN_SCALE: 0.25, MAX_SCALE: 3 };
 
 // Map boxes are slabs of tinted glass, lit by a broad light (a panel, like a window) to the left of and a little
 // above the map. Their side, along the bottom and the right and round the corners, is cut into slivers, each
@@ -1721,7 +1725,7 @@ const glassKey = key => key.replace('--', '').replace('|', '-');
 const glassTint = (kind, st) => ({ done: '--ok', doing: '--warn', late: '--bad', blocked: '--grey' })[st] || '--' + kind;
 
 function layoutMap(items, rels) {
-  const { NW, NH, HG, DG, DW, VG, PAD, HEAD, BAND_GAP } = MAP;
+  const { NW, NH, HG, DG, DW, VG, PAD, HEAD, BAND_GAP, LEAD, TIP } = MAP;
   const kindOf = {};
   Object.entries(items).forEach(([k, list]) => list.forEach(x => (kindOf[x.id] = k)));
 
@@ -1966,8 +1970,12 @@ function layoutMap(items, rels) {
       const dir = c.b.x > c.a.x ? 1 : -1, cy = layers[c.a.layer].y + NH / 2;
       // A box's right side ends beyond its glass thickness.
       const sx = c.a.x + (dir * NW) / 2 + (dir > 0 ? glassDepth(c.a) : 0), tx = c.b.x - (dir * NW) / 2 + (dir < 0 ? glassDepth(c.b) : 0);
-      if (Math.abs(c.a.i - c.b.i) === 1) c.d = `M${sx},${cy} L${tx},${cy}`;
-      else c.d = `M${sx},${cy - 10} C${sx + dir * 50},${cy - 70} ${tx - dir * 50},${cy - 70} ${tx},${cy - 10}`;
+      if (Math.abs(c.a.i - c.b.i) === 1) c.d = `M${sx},${cy} L${tx - dir * TIP},${cy}`;
+      else {
+        // The arc ends straight, along the way it comes in, so the arrowhead sits in line with it.
+        const k = 1 / Math.hypot(50, 60), lx = dir * 50 * k, ly = 60 * k;
+        c.d = `M${sx},${cy - 10} C${sx + dir * 50},${cy - 70} ${tx - (dir * 50 + lx * LEAD)},${cy - 70 - ly * LEAD} ${tx - lx * LEAD},${cy - 10 - ly * LEAD} L${tx - lx * TIP},${cy - 10 - ly * TIP}`;
+      }
       return;
     }
     // Top to bottom: straight down through each column of slots, a curve in between.
@@ -1979,6 +1987,10 @@ function layoutMap(items, rels) {
     pts.push(c.pts[c.pts.length - 1]);
     c.line = pts;
     if (c.reversed) pts = [...pts].reverse();
+    // The last stretch into the arrowhead is straight, so the head sits in line with the line however steep its curve.
+    const [ex, ey] = pts[pts.length - 1], py = pts[pts.length - 2][1];
+    const back = Math.sign(py - ey), lead = Math.min(LEAD, Math.abs(py - ey) / 2);
+    pts = [...pts.slice(0, -1), [ex, ey + back * lead], [ex, ey + back * Math.min(TIP, lead / 2)]];
     c.d = `M${pts[0][0]},${pts[0][1]}` + pts.slice(1).map((q, i) => {
       const p = pts[i];
       if (p[0] === q[0]) return ` L${q[0]},${q[1]}`;
@@ -2036,7 +2048,7 @@ function renderMap() {
     const dim = (sel && !(c.r.from === sel || c.r.to === sel)) || (relSel && c.r.id !== relSel.id) ? 'dim' : '';
     const label = relText(c.r);
     return `<g class="edge-g ${dim} ${c.r.id === relSel?.id ? 'sel' : ''}" data-rel-edit="${c.r.id}" tabindex="0" role="button" aria-pressed="${c.r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: label }))}">
-      <path class="edge" d="${c.d}" style="stroke:${def.color};stroke-width:${def.width || 1.6}" ${def.dash ? 'stroke-dasharray="5 4"' : ''} marker-end="url(#arrow-${c.r.type})"></path>
+      <path class="edge" d="${c.d}" style="stroke:${mapLineColour(def.color)};stroke-width:${def.width || 1.1}" ${def.dash ? 'stroke-dasharray="4 3"' : ''} marker-end="url(#arrow-${c.r.type})"></path>
       <path class="edge-hit" d="${c.d}"></path><title>${esc(label)}</title></g>`;
   }).join('');
 
@@ -2093,11 +2105,11 @@ function renderMap() {
   }).join('');
 
   const markers = Object.entries(REL_TYPES).map(([k, d]) =>
-    `<marker id="arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${d.color}"/></marker>`).join('');
+    `<marker id="arrow-${k}" viewBox="0 0 10 10" refX="${10 - MAP.TIP}" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${mapLineColour(d.color)}"/></marker>`).join('');
 
   const toggles = Object.entries(REL_TYPES).map(([k, d]) => {
     const count = db.relations.filter(r => r.type === k).length;
-    return `<button class="chip rel-toggle" data-rel-toggle="${k}" aria-pressed="${!ui.mapHidden.has(k)}" title="${esc(relSignature(k))}"><i class="${d.dash ? 'dash' : ''}" style="border-color:${d.color}"></i>${esc(relLabel(k))}<span class="count">${count}</span></button>`;
+    return `<button class="chip rel-toggle" data-rel-toggle="${k}" aria-pressed="${!ui.mapHidden.has(k)}" title="${esc(relSignature(k))}"><i class="${d.dash ? 'dash' : ''}" style="border-color:${mapLineColour(d.color)}"></i>${esc(relLabel(k))}<span class="count">${count}</span></button>`;
   }).join('');
   const goalNodes = items.goal.length ? items.goal : Object.values(items).flat();
   const focusX = Math.round(goalNodes.reduce((s, x) => s + node[x.id].x, 0) / goalNodes.length * ui.mapScale);

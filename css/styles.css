@@ -565,9 +565,9 @@ textarea { resize: vertical; min-height: 68px; }
 /* Lines are clickable through a wide invisible twin; hover or focus thickens the visible line. */
 .edge-g { cursor: pointer; outline: none; }
 .edge-g.dim { opacity: .15; }
-.edge-g.sel .edge { stroke-width: 4.5 !important; }
+.edge-g.sel .edge { stroke-width: 2.8 !important; }
 .edge-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
-.edge-g:hover .edge, .edge-g:focus-visible .edge { stroke-width: 3.5 !important; }
+.edge-g:hover .edge, .edge-g:focus-visible .edge { stroke-width: 2.2 !important; }
 /* Long-press must not select text or open the iOS callout. */
 .map-wrap svg { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 /* Nor flash the phone's tap highlight: around a line it is a box as big as the line is long and high.

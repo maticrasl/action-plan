@@ -5432,6 +5432,17 @@ window.moreTests = async ({ step, assert }) => {
     const hidden = ends.filter(([x, y]) => boxes.some(b => { const [bx, by] = at(b), d = b.classList.contains('goal') ? GLASS.DEPTH.goal : GLASS.DEPTH.other;
       return x > bx && x < bx + MAP.NW && y > by + MAP.NH - .5 && y < by + MAP.NH + d - .5; }));
     eq(hidden, [], 'no line ends under a slab');
+    // Every line ends with a straight stretch, so its arrowhead sits in line with it; the line stops inside the
+    // arrowhead's wide back (TIP short of where it points), so even a thick line never shows past the head's tip.
+    const bent = [...document.querySelectorAll('.map-wrap .edge')].map(e => e.getAttribute('d')).filter(d => {
+      const v = d.match(/[-\d.]+/g).map(Number), [x1, y1, x2, y2] = v.slice(-4);
+      return !/L[-\d.]+,[-\d.]+$/.test(d) || Math.hypot(x2 - x1, y2 - y1) < MAP.LEAD - MAP.TIP - .5;
+    });
+    eq(bent, [], 'lines end straight into their arrowheads');
+    assert([...document.querySelectorAll('.map-wrap marker')].every(m => +m.getAttribute('refX') === 10 - MAP.TIP), 'arrowheads reach the rest of the way');
+    // Lines are fine and their colours muted toward grey, arrowheads and the legend's keys alike.
+    const lines = [...document.querySelectorAll('.map-wrap .edge')];
+    assert(lines.every(e => parseFloat(e.style.strokeWidth) <= 1.6 && e.style.stroke.includes('color-mix')) && [...document.querySelectorAll('.map-wrap marker path, .rel-toggle i')].every(x => x.getAttribute('style').includes('color-mix')), 'fine, muted lines');
     assert([...document.querySelectorAll('.map-wrap .col-label')].every(l => l.compareDocumentPosition($('.map-wrap .edge-g')) & Node.DOCUMENT_POSITION_PRECEDING), 'band labels drawn over the lines');
     assert(!$(`[data-map-node="${a.id}"]`).classList.contains('dim'), 'neighbours not dimmed');
     // Map → timeline: the same item stays selected; a different one replaces the selection.
