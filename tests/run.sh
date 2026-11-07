@@ -4,6 +4,7 @@
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SRC="${1:-$HERE/..}"
 D="$(mktemp -d)"
+trap 'rm -rf "$D"' EXIT
 cp -r "$SRC/index.html" "$SRC/css" "$SRC/js" "$D/"
 cp "$HERE/pre.js" "$HERE/more.js" "$HERE/test.js" "$HERE/perf.js" "$D/js/"
 cp "$D/index.html" "$D/perf.html"

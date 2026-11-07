@@ -42,7 +42,8 @@
   --today: color-mix(in srgb, var(--blaze) 11%, transparent);
   --today-edge: color-mix(in srgb, var(--blaze) 35%, transparent);
   /* Items are milk glass: an opal face that takes a light wash of their colour over this base, and how solid it is.
-     On the map their slab and light are drawn by the map (GLASS in app.js). */
+     On the map their slab and light are drawn by the map (GLASS in app.js), which reads this base and the item
+     and status colours (--goal, --ok, …) as #RRGGBB: keep those six-digit hex in every theme. */
   --glass-base: #FFFFFF;
   --glass-tint: 12%;
   --glass-tint-state: 14%;
@@ -349,7 +350,7 @@ textarea { resize: vertical; min-height: 68px; }
     color-mix(in srgb, color-mix(in srgb, var(--tint) calc(var(--glass-tint) + var(--wash, 0%)), var(--glass-base)) calc(var(--glass-alpha) * 100%), transparent);
 }
 .glass.goal { --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side), 4px 4px 0 var(--side), 5px 5px 0 var(--side); --depth: 5px; }
-.glass.state { --glass-tint: var(--glass-tint-state); }
+:is(.glass, .node).state { --glass-tint: var(--glass-tint-state); }
 :is(.glass, .node).st-todo:not(.goal, .state), :is(.glass, .node).st-blocked { --glass-tint: var(--glass-tint-quiet); --glass-side-tint: var(--glass-side-quiet); }
 .glass:hover { --wash: 6%; }
 .card h3 { font-size: 18px; }
@@ -594,7 +595,6 @@ textarea { resize: vertical; min-height: 68px; }
 :is(.node, .swatch, .glass).st-blocked { --tint: var(--grey); }
 /* The face: see-through tinted glass with no edge, over its slab. */
 .node rect { fill: color-mix(in srgb, var(--tint) calc(var(--glass-tint) + var(--wash, 0%)), var(--glass-base)); fill-opacity: var(--glass-alpha); stroke: none; }
-.node.state rect { fill: color-mix(in srgb, var(--tint) calc(var(--glass-tint-state) + var(--wash, 0%)), var(--glass-base)); }
 .node-lift { fill: none; stroke: none; }
 /* The light on the face: its soft reflection from the top left, and the face dimming away from the light. */
 .glass-spec { fill: url(#glass-spec); pointer-events: none; }
@@ -686,7 +686,6 @@ textarea { resize: vertical; min-height: 68px; }
 .tl-dep-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; }
 .tl-dep-g:hover .tl-dep, .tl-dep-g:focus-visible .tl-dep { stroke-width: 2.2 !important; }
 .tl-dep-g.sel .tl-dep { stroke-width: 2.8 !important; filter: url(#line-glow); }
-#tl-arrow path { fill: var(--bad); }
 
 .tl-row { display: flex; height: var(--row); position: relative; cursor: pointer; }
 .tl-row:hover .tl-label, .tl-row:focus-visible .tl-label { background: var(--surface-2); }

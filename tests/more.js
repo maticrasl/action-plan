@@ -13,6 +13,8 @@ window.moreTests = async ({ step, assert }) => {
   };
   const rel = (a, b, type) => { const e = addRelation(a.id, b.id, type); assert(!e, `${type}: ${e}`); };
   const plansBefore = plans.list.map(p => p.id);
+  // By Sunday every sample routine has met its week: unticking "cook at home" keeps one on the overview any day.
+  const untickCook = () => (db.activities.find(a => a.repeat?.times === 5).checkins = {});
 
   await step('sample plan: every relation follows the rules; house renovation category', () => {
     for (const code of ['en', 'sl']) {
@@ -1671,6 +1673,7 @@ window.moreTests = async ({ step, assert }) => {
       assert(routines.every(a => routineStreak(a).n >= 0 && consistency(a) !== null), `${code}: routines have history`);
       setView('activities');
       assert($('.routines .card.routine') && !$('.routines').textContent.includes('rt.'), `${code}: strip rendered`);
+      untickCook();
       setView('dashboard');
       assert($('.routine-list') && !$('.routine-list').textContent.includes('rt.'), `${code}: overview list`);
     }
@@ -2529,7 +2532,9 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('overview: the active next actions first, expandable', () => {
     const before = plans.current;
-    loadSample(); changeLanguage('en'); setView('dashboard');
+    loadSample(); changeLanguage('en');
+    untickCook();
+    setView('dashboard');
     const titles = [...$('#view').querySelectorAll('.section-title')].map(h => h.firstChild.textContent.trim());
     assert(titles.join('|') === `${t('dash.next')}|${t('rt.title')}|${t('dash.goalsInProgress')}`, 'next actions, routines, then the goals');
     const todo = db.activities.filter(a => a.status !== 'done' && !isRoutine(a)).sort(byDueDate);
@@ -3496,7 +3501,8 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     eq([arrow(r, -1).title, arrow(r, 1).title], [I18N.sl.strings['rt.prevWeek'], I18N.sl.strings['rt.nextWeek']], 'arrows in Slovenian');
     const d = days(r)[0].dataset.date;
-    eq(days(r)[0].title, fill(I18N.sl.strings[checkedOn(r, d) ? 'rt.dayOn' : 'rt.dayOff'], { date: longDate(d) }), 'day title in Slovenian');
+    const said = fill(I18N.sl.strings[checkedOn(r, d) ? 'rt.dayOn' : 'rt.dayOff'], { date: longDate(d) });
+    eq(days(r)[0].title, d === now ? fill(I18N.sl.strings['rt.dayToday'], { label: said }) : said, 'day title in Slovenian');
     assert(/[a-zčšž]/.test(longDate(d)) && longDate(d) !== new Date(d + 'T00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }), 'Slovenian date');
     shiftRoutineWeek(r.id, -1);
     assert(rcard(r).querySelector('.rt-progress').textContent.includes('/'), 'earlier week label in Slovenian');
@@ -3734,7 +3740,7 @@ window.moreTests = async ({ step, assert }) => {
     const strip = [...card.querySelectorAll('[data-checkin]')].map(b => b.dataset.date);
     if (strip.includes(lastDay)) assert(card.querySelector(`[data-date="${lastDay}"]`).classList.contains('due'), 'the last day is outlined');
     // Browse back to a past month end and see it ticked.
-    shiftRoutineWeek(r.id, -Math.ceil((dayNum(now) - dayNum(done[done.length - 1])) / 7));
+    shiftRoutineWeek(r.id, -(dayNum(mondayAt(now)) - dayNum(mondayAt(done[done.length - 1]))) / 7);
     const b = $(`.card.routine[data-open="${r.id}"] [data-date="${done[done.length - 1]}"]`);
     assert(b && b.classList.contains('due') && b.getAttribute('aria-pressed') === 'true', 'past month end shown ticked');
     deletePlan(plans.current);
@@ -5103,12 +5109,12 @@ window.moreTests = async ({ step, assert }) => {
     assert(W() > wheeled * 0.99, `+ zooms back in: ${W()}`);
     plot().blur();
 
-    // Bars: today's column covers today's day.
+    // Bars: today's column covers today's day, less the bars' 1 px gap at each side.
     const rt = mk('activity', { title: 'Run', repeat: { times: 1, per: 'week' }, checkins: { [d(-8)]: 1, [d(0)]: 1 }, startDate: d(-20) });
     save(); render();
     const bc = grCharts[rt.id], bcol = $(`[data-gr="${rt.id}"] .gr-today`), bw = Number(bcol.getAttribute('width'));
     const bday = bc.px(todayN + 1) - bc.px(todayN);
-    assert(Math.abs(Number(bcol.getAttribute('x')) + bw / 2 - (bc.px(todayN) + bday / 2)) < 0.01 && Math.abs(bw - Math.max(bday, 3)) < 0.01, `bar chart today ${bw.toFixed(1)} px`);
+    assert(Math.abs(Number(bcol.getAttribute('x')) + bw / 2 - (bc.px(todayN) + bday / 2)) < 0.01 && Math.abs(bw - Math.max(bday - 2, 3)) < 0.01, `bar chart today ${bw.toFixed(1)} px`);
 
     // Timeline: the column is a day wide, at least 3 px, behind the bars.
     const g = mk('goal', { startDate: d(-5), deadline: d(30) }); save();
@@ -5458,6 +5464,11 @@ window.moreTests = async ({ step, assert }) => {
     });
     eq(bent, [], 'lines end straight into their arrowheads');
     assert([...document.querySelectorAll('.map-wrap marker')].every(m => +m.getAttribute('refX') === 10 - MAP.TIP), 'arrowheads reach the rest of the way');
+    // Down the layers a line stops exactly TIP short of the box (or slab) it points at, so the head's tip just touches it.
+    const tipGaps = [...document.querySelectorAll('.map-wrap .edge')].map(e => e.getAttribute('d').match(/[-\d.]+/g).map(Number).slice(-4))
+      .filter(([x1, , x2]) => x1 === x2).map(([, , x, y]) => Math.min(...boxes.filter(b => x > at(b)[0] && x < at(b)[0] + MAP.NW)
+        .flatMap(b => { const by = at(b)[1], d = b.classList.contains('goal') ? GLASS.DEPTH.goal : GLASS.DEPTH.other; return [Math.abs(y - by), Math.abs(y - (by + MAP.NH + d))]; })));
+    assert(tipGaps.length && tipGaps.every(g => Math.abs(g - MAP.TIP) < .01), `lines stop TIP short: ${tipGaps}`);
     // Lines are fine and their colours muted toward grey, arrowheads and the legend's keys alike.
     const lines = [...document.querySelectorAll('.map-wrap .edge')];
     assert(lines.every(e => parseFloat(e.style.strokeWidth) <= 1.6 && e.style.stroke.includes('color-mix')) && [...document.querySelectorAll('.map-wrap marker path, .rel-toggle i')].every(x => x.getAttribute('style').includes('color-mix')), 'fine, muted lines');
@@ -5938,6 +5949,14 @@ window.moreTests = async ({ step, assert }) => {
     assert(goalCurrent(h) === 350 && Math.round(goalProgress(h)) === 50, `last month: ${goalCurrent(h)}`);
     sp.entries.push(entry(now, 330));
     assert(goalCurrent(h) === 380, 'this month once it is worse');
+    // Before entries reach back into a complete month, nothing counts: the month under way (or an empty one
+    // before it) is well under target, but says nothing yet.
+    const sq = mk('state', { cumulative: true, entries: [entry(now, 50)] });
+    const q = mk('goal', { title: 'Spend less, just begun', unit: '€', baseline: '400', target: '300', metric: 'Spending', period: 'month' });
+    rel(sq, q, 'measures');
+    assert(goalCurrent(q) === 400 && goalProgress(q) === 0 && !goalReached(q), `first month: ${goalCurrent(q)}, ${goalProgress(q)} %`);
+    sq.entries.push(entry(addDays(calPeriod('month', now).from, -1), 280));
+    assert(goalCurrent(q) === 280 && goalReached(q), 'a full month under target reaches it');
     // The same state counted in total by another goal.
     const k = mk('goal', { title: 'Spend under 1000 in all', unit: '€', baseline: '0', target: '1000', metric: 'Spending' });
     rel(sp, k, 'measures');
@@ -6675,6 +6694,10 @@ window.moreTests = async ({ step, assert }) => {
     const theme = document.documentElement.dataset.theme; document.documentElement.dataset.theme = 'light'; render();
     const todo = $('#view .col .card.activity.st-todo'), rootCss = css(document.documentElement);
     assert(todo && css(todo).getPropertyValue('--glass-tint').trim() === rootCss.getPropertyValue('--glass-tint-quiet').trim() && parseFloat(rootCss.getPropertyValue('--glass-tint-quiet')) > parseFloat(rootCss.getPropertyValue('--glass-tint')), 'to-do activities take more grey by day');
+    // And on the map their slab's side too: drawn without the quiet share, it would come out as pale as the rest.
+    const q = GLASS.day.quiet, quietSide = glassDefs(new Set(['--activity|other']));
+    GLASS.day.quiet = 0; const plainSide = glassDefs(new Set(['--activity|other'])); GLASS.day.quiet = q;
+    assert(quietSide !== plainSide, 'to-do map boxes take more grey on their side');
     if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme; render();
     setView('goals');
     // A status tag on glass of its own colour stays visible.
@@ -6736,6 +6759,12 @@ window.moreTests = async ({ step, assert }) => {
     const acts = [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
     assert(acts.includes('edit') && acts.includes('delete') && !acts.includes('show:graphs'), `graph menu: ${acts}`);
     closeCtxMenu();
+    // A value added from the menu opens by the graph's heading, not round the whole tall card.
+    const sc = [...document.querySelectorAll('#view .gr-card')].find(c => findEntity(c.dataset.gr).kind === 'state');
+    sc.querySelector('.gr-plot').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 200 }));
+    ctxMenu.querySelector('[data-ctx="value"]').click();
+    assert($('.amount-pop') && amountPop.anchor === sc.querySelector('.card-head'), 'value popup by the heading');
+    closeAmountPop();
     assert(t('help.view.graphs').includes('right-click'), 'the help says so');
     // By night a graph is a dark pane cut from the surface, not a light slab of the items' milk.
     const was = theme; $('#themeSeg [data-theme-set="dark"]').click();
@@ -6778,8 +6807,12 @@ window.moreTests = async ({ step, assert }) => {
     // Following the system: a change of the system theme redraws it too.
     pick('system'); document.documentElement.dataset.theme = 'dark'; darkScheme.dispatchEvent(new Event('change'));
     eq(slabColours(), dark, 'system theme change redraws the map');
-    pick(was);
+    // Other views follow the CSS: nothing is redrawn, so an open popup stays.
     setView('dashboard');
+    const first = $('#view').firstElementChild;
+    pick('light'); darkScheme.dispatchEvent(new Event('change'));
+    assert($('#view').firstElementChild === first, 'other views are not redrawn');
+    pick(was);
   });
 
   await step('map: box text stays inside its box, bands sit close, the light on the faces is defined once', () => {

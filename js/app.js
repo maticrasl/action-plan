@@ -454,13 +454,21 @@ function measuringState(g) {
 // What a state says about a goal: its value, or for a state that adds up and a goal counting it per
 // period the higher of this period's total and the last complete one's – so progress does not drop
 // when a period starts, and a period still under way counts once it is past the last one (for
-// better or worse).
-const goalMeasure = (s, period) => (isCumulative(s) && period !== 'total' ? Math.max(stateTotal(s, period), lastPeriodTotal(s, period)) : Number(stateValue(s)));
+// better or worse). When lower is better (spend less), nothing counts before entries reach back into a
+// complete period: the first period under way, or an empty one before it, would look well under target.
+const lowerBetter = g => Number(g.target) < (isNum(g.baseline) ? Number(g.baseline) : 0);
+const lastPeriodLogged = (s, period) => entriesOf(s).some(e => e.date < calPeriod(period, today()).from);
+function goalMeasure(s, g) {
+  const period = goalPeriod(g);
+  if (!isCumulative(s) || period === 'total') return Number(stateValue(s));
+  if (lowerBetter(g) && !lastPeriodLogged(s, period)) return null;
+  return Math.max(stateTotal(s, period), lastPeriodTotal(s, period));
+}
 function goalCurrent(g) {
   if (byRoutines(g)) return Math.round(goalProgress(g));
   if (byActivities(g)) return countedActivities(g).filter(a => a.status === 'done').length;
-  const st = measuringState(g);
-  if (st) return goalMeasure(st, goalPeriod(g));
+  const st = measuringState(g), v = st && goalMeasure(st, g);
+  if (st && v !== null) return v;
   if (isNum(g.current)) return Number(g.current);
   return isNum(g.baseline) ? Number(g.baseline) : 0;
 }
@@ -489,7 +497,7 @@ function metricProgress(g, current) {
 function goalReached(g) {
   if (g.status !== 'active' || byRoutines(g)) return false;
   const st = ownMetric(g) ? measuringState(g) : null;
-  if (isCumulative(st) && goalPeriod(g) !== 'total') return metricProgress(g, lastPeriodTotal(st, goalPeriod(g))) >= 100;
+  if (isCumulative(st) && goalPeriod(g) !== 'total') return (!lowerBetter(g) || lastPeriodLogged(st, goalPeriod(g))) && metricProgress(g, lastPeriodTotal(st, goalPeriod(g))) >= 100;
   return goalProgress(g) >= 100;
 }
 
@@ -1633,11 +1641,13 @@ const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34,
 // Goals are cut from thicker glass. The face's tint and clarity are in the CSS (--glass-tint, --glass-alpha).
 const GLASS = {
   R: 6, DEPTH: { goal: 6, other: 3.5 }, LIGHT: [-77, -11, 60], EYE: [86, 28, 300], GLOSS: 25,
-  day: { sideTint: .26, deepen: 0, ambient: .97, reflect: .55, spec: .75, faceShade: .03 },
+  // quiet: the side of grey boxes still to do or waiting, as --glass-side-quiet does for cards (by night it matches sideTint).
+  day: { sideTint: .26, quiet: .5, deepen: 0, ambient: .97, reflect: .55, spec: .75, faceShade: .03 },
   // By night only the brightness changes (on the dark base more tint would look lighter), and states take more colour.
   night: { sideTint: .38, stateTint: .46, deepen: 0, ambient: .75, reflect: .14, spec: .16, faceShade: .08 },
 };
-const glassDepth = n => GLASS.DEPTH[n.kind === 'goal' ? 'goal' : 'other'];
+const glassThickness = n => n.kind === 'goal' ? 'goal' : 'other';
+const glassDepth = n => GLASS.DEPTH[glassThickness(n)];
 
 // What the light does, worked out once: how lit each sliver of the side is, for each thickness,
 // and the face's reflection and shading in rings round the reflection's brightest point.
@@ -1697,6 +1707,8 @@ function glassLighting() {
 // The soft glow round a selected box, kept outside its face so the see-through glass stays clear, and round a
 // selected line. Lines span the map in its own units: a straight line's box has no height for the filter to grow from.
 const lineGlow = (W, H) => `<filter id="line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+// An arrowhead, its tip TIP past where its line stops, one size whatever the line's width.
+const arrowMarker = (id, color, orient = 'auto-start-reverse') => `<marker id="${id}" viewBox="0 0 10 10" refX="${10 - MAP.TIP}" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="${orient}"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${mapLineColour(color)}"/></marker>`;
 const glowDefs = (W, H) => `<filter id="node-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/></feMerge><feComposite in2="SourceGraphic" operator="out"/></filter>`
   + lineGlow(W, H);
 
@@ -1706,10 +1718,11 @@ function glassDefs(used) {
   const rgb = name => { const h = root.getPropertyValue(name).trim(); return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); };
   const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
   const css = c => `rgb(${c.map(v => Math.round(Math.max(0, Math.min(255, v)))).join(',')})`;
-  const { NW, NH } = MAP, { R } = GLASS, { peak, far, rings, side, strips } = glassLighting(), base = rgb('--glass-base');
+  const { peak, far, rings, side, strips } = glassLighting(), base = rgb('--glass-base');
   const slabs = [...used].map(key => {
-    const [tintVar, kind] = key.split('|'), tint = rgb(tintVar), d = GLASS.DEPTH[kind];
-    const tinted = tintVar === '--state' && g.stateTint || g.sideTint;
+    const [tintVar, kind] = key.split('|'), tint = rgb(tintVar);
+    // A map box with --activity or --grey glass is an activity still to do, or waiting.
+    const tinted = tintVar === '--state' && g.stateTint || /^--(activity|grey)$/.test(tintVar) && g.quiet || g.sideTint;
     // In shade, coloured glass gets deeper in colour rather than grey: less light, more of the tint shows.
     const colour = ({ light, sky }) => {
       const share = Math.min(.95, tinted * (1 - .45 * g.deepen / 1.1 + g.deepen * (1 - light)));
@@ -1996,7 +2009,7 @@ function layoutMap(items, rels) {
     // The last stretch into the arrowhead is straight, so the head sits in line with the line however steep its curve.
     const [ex, ey] = pts[pts.length - 1], py = pts[pts.length - 2][1];
     const back = Math.sign(py - ey), lead = Math.min(LEAD, Math.abs(py - ey) / 2);
-    pts = [...pts.slice(0, -1), [ex, ey + back * lead], [ex, ey + back * Math.min(TIP, lead / 2)]];
+    pts = [...pts.slice(0, -1), [ex, ey + back * lead], [ex, ey + back * (lead > TIP ? TIP : lead / 2)]];
     c.d = `M${pts[0][0]},${pts[0][1]}` + pts.slice(1).map((q, i) => {
       const p = pts[i];
       if (p[0] === q[0]) return ` L${q[0]},${q[1]}`;
@@ -2090,7 +2103,7 @@ function renderMap() {
     const subFit = fitText(sub, `400 11.5px ${font}`, textW);
     const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
-    const slab = `${glassTint(n.kind, st)}|${n.kind === 'goal' ? 'goal' : 'other'}`;
+    const slab = `${glassTint(n.kind, st)}|${glassThickness(n)}`;
     slabs.add(slab);
     return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking}${n.id === sel ? ' sel' : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
       <path class="node-lift" d="${face}"></path>
@@ -2110,8 +2123,7 @@ function renderMap() {
     return `<text class="col-label ${b.kind}" x="${PAD}" y="${b.top + 22}">${esc(t('kinds.' + b.kind))}${levels > 1 ? ` (${esc(tp('map.levels', levels))})` : ''}</text>`;
   }).join('');
 
-  const markers = Object.entries(REL_TYPES).map(([k, d]) =>
-    `<marker id="arrow-${k}" viewBox="0 0 10 10" refX="${10 - MAP.TIP}" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${mapLineColour(d.color)}"/></marker>`).join('');
+  const markers = Object.entries(REL_TYPES).map(([k, d]) => arrowMarker(`arrow-${k}`, d.color)).join('');
 
   const toggles = Object.entries(REL_TYPES).map(([k, d]) => {
     const count = db.relations.filter(r => r.type === k).length;
@@ -2437,7 +2449,7 @@ function renderTimeline() {
         <div class="tl-body">
           <div class="tl-grid">${lines.join('')}<i class="tl-today" style="left:${x(todayN) + px / 2}px;width:${Math.max(px, 3)}px"></i></div>
           <svg class="tl-deps" width="${W}" height="${rows.length * ROW}">
-            <defs><marker id="tl-arrow" viewBox="0 0 10 10" refX="${10 - MAP.TIP}" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${mapLineColour(REL_TYPES.depends.color)}"/></marker>${lineGlow(W, rows.length * ROW)}</defs>${deps}
+            <defs>${arrowMarker('tl-arrow', depLine.color, 'auto')}${lineGlow(W, rows.length * ROW)}</defs>${deps}
           </svg>
           ${body}
         </div>
@@ -2650,7 +2662,9 @@ function zoomedWidth(id, base, width, days) {
 // starts on the axis: a bar's day starts at its number, a measurement sits in the middle of its day.
 function todayCol(px, from, x0, x1, W, over = false) {
   if (from + 1 <= x0 || from >= x1) return null;
-  const a = clamp(px(from), GR.L, W - GR.R), b = clamp(px(from + 1), GR.L, W - GR.R);
+  // Over bars, the day keeps the bars' thin gap, so on a period's first or last day it stays inside the bar.
+  const gap = over ? 1 : 0;
+  const a = clamp(px(from), GR.L, W - GR.R) + gap, b = clamp(px(from + 1), GR.L, W - GR.R) - gap;
   const w = Math.max(b - a, 3), x = (a + b - w) / 2;
   return { svg: `<rect class="gr-today${over ? ' over' : ''}" x="${x}" y="${GR.T}" width="${w}" height="${GR.H - GR.T - GR.B}"/>
     <line class="gr-today-line" x1="${x + w / 2}" x2="${x + w / 2}" y1="${GR.T}" y2="${GR.H - GR.B}"/>`, box: [x, GR.T, x + w, GR.H - GR.B] };
@@ -4915,8 +4929,8 @@ function runCtxAction(act, id) {
   const [verb, arg, type] = act.split(':');
   if (verb === 'edit') return openForm(kind, id);
   if (verb === 'checkin') return toggleCheckin(id, today());
-  // The popup opens by what the menu was opened on: a card, a chart's heading or a box on the map.
-  if (verb === 'value') return openStateValue(id, $(`[data-ctx-item="${id}"], [data-map-node="${id}"]`) || viewEl);
+  // The popup opens by what the menu was opened on: a card, a box on the map, or a graph's heading (not the tall graph).
+  if (verb === 'value') { const at = $(`[data-ctx-item="${id}"], [data-map-node="${id}"]`); return openStateValue(id, at?.querySelector(':scope.gr-card > .card-head') || at || viewEl); }
   if (verb === 'highlight') { ui.mapSelected = id; return render(); }
   if (verb === 'show') return showIn(arg, id);
   if (verb === 'focus') {
@@ -5737,14 +5751,16 @@ const THEME_ICONS = {
 };
 let theme = THEMES.includes(prefs.get('theme')) ? prefs.get('theme') : 'system';
 
-// The map writes its glass in the colours of the theme it was drawn in, so a change of theme redraws the view.
 function applyTheme() {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.dataset.theme = theme;
   renderThemeSetting();
 }
 const darkScheme = matchMedia('(prefers-color-scheme: dark)');
-darkScheme.addEventListener('change', () => { if (theme === 'system') render(); });
+// The map writes its glass in the colours of the theme it was drawn in, so a change of theme redraws it;
+// other views follow the CSS, and keep an open popup.
+const redrawForTheme = () => { if (ui.view === 'map') render(); };
+darkScheme.addEventListener('change', () => { if (theme === 'system') redrawForTheme(); });
 function renderThemeSetting() {
   $('#themeSeg').innerHTML = THEMES.map(k =>
     `<button type="button" data-theme-set="${k}" aria-pressed="${k === theme}">${THEME_ICONS[k]}<span>${t('theme.' + k)}</span></button>`).join('');
@@ -5755,7 +5771,7 @@ $('#themeSeg').addEventListener('click', e => {
   theme = b.dataset.themeSet;
   prefs.set('theme', theme);
   applyTheme();
-  render();
+  redrawForTheme();
 });
 
 /* ---------- Install as an app ----------

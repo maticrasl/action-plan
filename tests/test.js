@@ -38,8 +38,12 @@
 
   await step('help mode decorates views', () => {
     setHelp(true);
+    // By Sunday every sample routine has met its week; untick one so the overview lists a routine any day.
+    const cook = db.activities.find(a => a.repeat?.times === 5), kept = cook.checkins;
+    cook.checkins = {};
     const seen = new Set();
     const per = views.map(v => { setView(v); $('#view').querySelectorAll('[data-help-tip]').forEach(d => seen.add(d.dataset.helpTip)); return `${v}:${$('#view').querySelectorAll('[data-help-tip]').length}`; });
+    cook.checkins = kept;
     const missing = HELP_TIPS.map(h => h.key).filter(k => !seen.has(k));
     assert(!missing.length, 'tips never shown: ' + missing);
     const dot = $('[data-help-tip]'); dot.click(); assert($('#helpTip'), 'tip opens'); dot.click(); assert(!$('#helpTip'), 'tip closes');
