@@ -538,7 +538,8 @@ textarea { resize: vertical; min-height: 68px; }
 /* The light on the face: its soft reflection from the top left, and the face dimming away from the light. */
 .glass-spec { fill: url(#glass-spec); pointer-events: none; }
 .glass-shade { fill: url(#glass-shade); pointer-events: none; }
-.node.sel .node-lift { stroke: color-mix(in srgb, var(--goal) 30%, transparent); stroke-width: 9; }
+/* Selected, focused or being linked, a box glows softly in its own colour; it is drawn over the lines, so they never glow over it. */
+:is(.node.sel, .node.link-source, .node.link-target, .node:focus-visible) .node-lift { fill: var(--glow, var(--tint)); filter: url(#node-glow); }
 .node text { fill: var(--ink); font-size: 13px; font-weight: 600; }
 .node.goal text:not(.sub) { font-weight: 700; }
 .node .sub { fill: color-mix(in srgb, var(--ink-2) 70%, var(--ink)); font-size: 11.5px; font-weight: 400; }
@@ -550,9 +551,8 @@ textarea { resize: vertical; min-height: 68px; }
 /* Linking two boxes: a dashed line follows the pointer; the box under it shows whether a link fits. */
 .map-wrap.linking, .map-wrap.linking * { cursor: crosshair; -webkit-user-select: none; user-select: none; }
 .link-line { stroke: var(--goal); stroke-width: 2.5; stroke-dasharray: 6 4; pointer-events: none; }
-/* Edges stay thin: a halo around the box shows the link's ends. */
-.node.link-source .node-lift { stroke: color-mix(in srgb, var(--goal) 45%, transparent); stroke-width: 9; }
-.node.link-target .node-lift { stroke: color-mix(in srgb, var(--ok) 50%, transparent); stroke-width: 9; }
+/* Linking: the box under the pointer glows green when the link fits. */
+.node.link-target { --glow: var(--ok); }
 .map-wrap.linking .node.link-bad, .map-wrap.linking .node.link-bad * { cursor: not-allowed; }
 .node.link-bad rect { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .link-bar {
@@ -565,7 +565,7 @@ textarea { resize: vertical; min-height: 68px; }
 /* Lines are clickable through a wide invisible twin; hover or focus thickens the visible line. */
 .edge-g { cursor: pointer; outline: none; }
 .edge-g.dim { opacity: .15; }
-.edge-g.sel .edge { stroke-width: 2.8 !important; }
+.edge-g.sel .edge { stroke-width: 2.8 !important; filter: url(#line-glow); }
 .edge-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
 .edge-g:hover .edge, .edge-g:focus-visible .edge { stroke-width: 2.2 !important; }
 /* Long-press must not select text or open the iOS callout. */
@@ -574,7 +574,6 @@ textarea { resize: vertical; min-height: 68px; }
    Selection is shown by the line or box itself. */
 .map-wrap, .tl-scroll { -webkit-tap-highlight-color: transparent; }
 .node:focus { outline: none; box-shadow: none; }
-.node:focus-visible .node-lift { stroke: color-mix(in srgb, var(--goal) 55%, transparent); stroke-width: 9; }
 
 /* ---------- Timeline ---------- */
 .cat-chips { margin-bottom: 12px; }

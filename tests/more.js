@@ -4033,7 +4033,7 @@ window.moreTests = async ({ step, assert }) => {
     clickEl(edge(r.id));
     assert(!modal.open, 'a click does not open the form');
     eq([ui.mapRel, ui.mapSelected], [r.id, null], 'the line is selected');
-    assert(edge(r.id).classList.contains('sel'), 'drawn as selected');
+    assert(edge(r.id).classList.contains('sel') && getComputedStyle(edge(r.id).querySelector('.edge')).filter.includes('line-glow') && $('#line-glow') && [...document.querySelectorAll('.map-wrap .edge-g:not(.sel) .edge')].every(e => getComputedStyle(e).filter === 'none'), 'drawn as selected, glowing, under the boxes');
     assert([...document.querySelectorAll('[data-rel-edit]')].filter(e => e.dataset.relEdit !== r.id).every(e => e.classList.contains('dim')), 'other lines dimmed');
     assert(!nodeEl(a.id).classList.contains('dim') && !nodeEl(g.id).classList.contains('dim'), 'its two items stay lit');
     assert(nodeEl(b.id).classList.contains('dim') && nodeEl(s.id).classList.contains('dim'), 'the rest dims');
@@ -5409,14 +5409,17 @@ window.moreTests = async ({ step, assert }) => {
     const node = $(`[data-map-node="${g.id}"]`);
     assert(ui.view === 'map' && ui.mapSelected === g.id && ctxMenu.hidden, 'map, goal selected');
     assert(node.querySelector('rect').style.strokeWidth === '' && document.activeElement === node, 'box drawn selected and focused');
-    assert(node.classList.contains('sel') && [...document.querySelectorAll('.map-wrap .node.sel')].length === 1 && getComputedStyle(node.querySelector('.node-lift')).strokeWidth === '9px', 'only the selected box has its halo');
-    assert([...document.querySelectorAll('.map-wrap .node')].every(n => n.querySelector('.node-lift')) && [...document.querySelectorAll('.map-wrap marker')].every(m => m.getAttribute('markerUnits') === 'userSpaceOnUse'), 'every box can show its halo; arrowheads keep one size whatever the line width');
+    assert(node.classList.contains('sel') && [...document.querySelectorAll('.map-wrap .node.sel')].length === 1 && (() => {
+      const lift = getComputedStyle(node.querySelector('.node-lift')), other = getComputedStyle($('.map-wrap .node:not(.sel) .node-lift'));
+      return lift.stroke === 'none' && lift.filter.includes('node-glow') && lift.fill === getComputedStyle(node).getPropertyValue('--tint').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(', ')})`) && other.filter === 'none';
+    })() && $('#node-glow feComposite[operator="out"]'), 'only the selected box glows, in its own colour, outside its face, with no outline');
+    assert([...document.querySelectorAll('.map-wrap .node')].every(n => n.querySelector('.node-lift')) && [...document.querySelectorAll('.map-wrap marker')].every(m => m.getAttribute('markerUnits') === 'userSpaceOnUse'), 'every box can glow; arrowheads keep one size whatever the line width');
     // Under each box's face, its glass slab: one drawing per colour and thickness, defined once.
     const boxes = [...document.querySelectorAll('.map-wrap .node')], uses = boxes.map(n => n.querySelector('use'));
     assert(uses.every((u, i) => u && u.nextElementSibling === boxes[i].querySelector('rect') && document.querySelector(u.getAttribute('href'))), 'every box has its slab, right under its face');
     const slabs = [...document.querySelectorAll('.map-wrap defs > g[id^="glass-"]')];
     eq(slabs.length, new Set(uses.map(u => u.getAttribute('href'))).size, 'one slab per colour and thickness used');
-    assert(!$('.map-wrap filter') && getComputedStyle(node.querySelector('rect')).stroke === 'none', 'no edge, no blur');
+    assert([...document.querySelectorAll('.map-wrap filter')].map(f => f.id).join() === 'node-glow,line-glow' && [...document.querySelectorAll('.map-wrap .node:not(.sel) *')].every(x => getComputedStyle(x).filter === 'none') && getComputedStyle(node.querySelector('rect')).stroke === 'none', 'no edge; the only blur is the glow of what is selected');
     // Goals are cut from thicker glass; the slab and its shadow reach down and to the right of the face.
     const reach = n => { const b = n.querySelector('use').getBBox(); return [b.x + b.width, b.y + b.height]; };
     const goalBox = boxes.find(n => n.classList.contains('goal')), actBox = boxes.find(n => n.classList.contains('activity'));
@@ -6641,7 +6644,7 @@ window.moreTests = async ({ step, assert }) => {
       assert(labels.every((l, i) => l.y >= bands[i][0] && l.y + l.height <= bands[i][0] + MAP.HEAD), `${code}: labels in their band's head`);
       // The light on the face: its reflection and its shading, defined once, used by every box, over its glass.
       const svg = $('.map-wrap svg');
-      assert(svg.querySelectorAll('radialGradient').length === 2 && svg.querySelectorAll('#glass-spec').length === 1 && svg.querySelectorAll('#glass-shade').length === 1 && !svg.querySelector('filter'), `${code}: face light defined once`);
+      assert(svg.querySelectorAll('radialGradient').length === 2 && svg.querySelectorAll('#glass-spec').length === 1 && svg.querySelectorAll('#glass-shade').length === 1 && svg.querySelectorAll('filter').length === 2, `${code}: face light defined once`);
       assert([...svg.querySelectorAll('.node')].every(n => n.querySelector('rect + .glass-shade + .glass-spec')), `${code}: every box has its light, right over its glass`);
       const spec = getComputedStyle(svg.querySelector('.glass-spec'));
       assert(spec.fill.includes('#glass-spec') && spec.pointerEvents === 'none', `${code}: light fill ${spec.fill}`);

@@ -1694,6 +1694,11 @@ function glassLighting() {
   return (glassLight = { peak, far, rings, side, strips });
 }
 
+// The soft glow round a selected box, kept outside its face so the see-through glass stays clear, and round a
+// selected line. Lines span the map in its own units: a straight line's box has no height for the filter to grow from.
+const glowDefs = (W, H) => `<filter id="node-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/></feMerge><feComposite in2="SourceGraphic" operator="out"/></filter>`
+  + `<filter id="line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+
 // The slab under each box and the light on its face, defined once per colour and thickness used.
 function glassDefs(used) {
   const root = getComputedStyle(document.documentElement), night = root.colorScheme === 'dark', g = GLASS[night ? 'night' : 'day'];
@@ -2052,7 +2057,7 @@ function renderMap() {
       <path class="edge-hit" d="${c.d}"></path><title>${esc(label)}</title></g>`;
   }).join('');
 
-  // A halo round the box when selected, focused or being linked, and the face's light over its fill, all one
+  // A glow round the box when selected, focused or being linked, and the face's light over its fill, all one
   // rounded path (paths, so the box's rect rules don't reach them). Under the face, its glass slab.
   const { R } = GLASS, face = roundedRect(0, 0, NW, NH, R), slabs = new Set();
   const font = getComputedStyle(document.documentElement).getPropertyValue('--font'), textW = NW - 18;
@@ -2127,7 +2132,7 @@ function renderMap() {
       </div>
     </div>
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}${glassDefs(slabs)}</defs>${bandSvg}${edges}${bandLabels}${nodes}
+      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}</defs>${bandSvg}${edges}${bandLabels}${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
