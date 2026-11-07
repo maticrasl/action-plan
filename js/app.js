@@ -2086,7 +2086,7 @@ function renderMap() {
       sub = isNum(item.value) ? `${fmtNum(item.value)} ${item.unit || ''}, ${fmtRel(item.date)}` : fmtRel(item.date, true);
     }
     // Sizes and weights as in the CSS for .node text and .node .sub.
-    const title = fitText(item.title, `${n.kind === 'goal' ? 600 : 500} 13px ${font}`, textW);
+    const title = fitText(item.title, `${n.kind === 'goal' ? 500 : 400} 13px ${font}`, textW);
     const subFit = fitText(sub, `400 11.5px ${font}`, textW);
     const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';

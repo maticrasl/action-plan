@@ -3260,7 +3260,7 @@ window.moreTests = async ({ step, assert }) => {
       assert(getComputedStyle(day(r, THU)).outlineStyle === 'solid' && getComputedStyle(day(r, THU)).backgroundColor !== getComputedStyle(day(r, WED)).backgroundColor, 'today ringed and filled while due');
       assert(getComputedStyle(day(r, TUE)).borderTopStyle === 'dotted' && getComputedStyle(day(r, MON)).borderTopStyle === 'dashed' && getComputedStyle(day(r, THU)).borderTopStyle === 'solid', 'not due dotted, missed dashed, due solid');
       assert(getComputedStyle(document.querySelector('.rt-legend .rt-swatch.rest')).borderTopStyle === 'dotted', 'legend matches the strip');
-      assert(Number(getComputedStyle(day(r, MON)).opacity) === 1 && Number(getComputedStyle(day(r, FRI)).opacity) < 0.5, 'past days clear, days to come faint');
+      assert(Number(getComputedStyle(day(r, MON)).opacity) === 1 && Number(getComputedStyle(day(r, FRI)).opacity) < 0.7 && Number(getComputedStyle(day(r, FRI)).opacity) >= 0.5, 'past days clear, days to come fainter but readable on the glass');
       // Tick today: done, ringed, tag says so; ticking Monday later clears the miss.
       day(r, THU).click();
       assert(has(r, THU, 'on', 'today') && !has(r, MON, 'on'), 'Thursday done');
@@ -5425,7 +5425,7 @@ window.moreTests = async ({ step, assert }) => {
     const goalBox = boxes.find(n => n.classList.contains('goal')), actBox = boxes.find(n => n.classList.contains('activity'));
     assert(reach(actBox)[0] > MAP.NW && reach(actBox)[1] > MAP.NH && reach(goalBox)[1] > reach(actBox)[1], `goals thicker: ${reach(goalBox)} vs ${reach(actBox)}`);
     assert(slabs.every(g => !g.querySelector('[opacity]')) && reach(goalBox)[1] <= MAP.NH + GLASS.DEPTH.goal + .5 && reach(actBox)[0] <= MAP.NW + GLASS.DEPTH.other + .5, `no cast shadow: ${reach(goalBox)} vs ${reach(actBox)}`);
-    eq([actBox, goalBox].map(n => getComputedStyle(n.querySelector('text')).fontWeight), ['500', '600'], 'box titles in lighter type');
+    eq([actBox, goalBox].map(n => getComputedStyle(n.querySelector('text')).fontWeight), ['400', '500'], 'box titles in lighter type');
     // The side is lit from the left: the bottom (shaded from the corner to its left end) is lighter at its left end,
     // and the right side is darker still. Each is one strip with a gradient; the corners are small pieces.
     const slab = goalBox.querySelector('use').getAttribute('href'), lums = run => [...document.querySelectorAll(`${slab}-${run} stop`)].map(x => x.getAttribute('stop-color').match(/\d+/g).reduce((sum, v) => sum + +v, 0));
@@ -6657,9 +6657,9 @@ window.moreTests = async ({ step, assert }) => {
     // A status tag on glass of its own colour stays visible.
     const late = card('late').querySelector('.tag.bad');
     assert(!late || css(late).backgroundColor !== css(card('late')).backgroundColor, 'late tag shows on a late card');
-    // Lighter type: nothing heavier than 700, and headings 700.
+    // Lighter type: nothing heavier than 600, and headings 600.
     const weights = [...document.querySelectorAll('body *')].map(x => +css(x).fontWeight);
-    assert(Math.max(...weights) <= 700 && css($('.topbar h1')).fontWeight === '700', `heaviest weight ${Math.max(...weights)}`);
+    assert(Math.max(...weights) <= 600 && css($('.topbar h1')).fontWeight === '600', `heaviest weight ${Math.max(...weights)}`);
     setView('dashboard');
   });
 
