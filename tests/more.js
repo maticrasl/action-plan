@@ -5420,10 +5420,12 @@ window.moreTests = async ({ step, assert }) => {
     const slabs = [...document.querySelectorAll('.map-wrap defs > g[id^="glass-"]')];
     eq(slabs.length, new Set(uses.map(u => u.getAttribute('href'))).size, 'one slab per colour and thickness used');
     assert([...document.querySelectorAll('.map-wrap filter')].map(f => f.id).join() === 'node-glow,line-glow' && [...document.querySelectorAll('.map-wrap .node:not(.sel) *')].every(x => getComputedStyle(x).filter === 'none') && getComputedStyle(node.querySelector('rect')).stroke === 'none', 'no edge; the only blur is the glow of what is selected');
-    // Goals are cut from thicker glass; the slab and its shadow reach down and to the right of the face.
+    // Goals are cut from thicker glass; the slab reaches down and to the right of the face, and casts no shadow.
     const reach = n => { const b = n.querySelector('use').getBBox(); return [b.x + b.width, b.y + b.height]; };
     const goalBox = boxes.find(n => n.classList.contains('goal')), actBox = boxes.find(n => n.classList.contains('activity'));
     assert(reach(actBox)[0] > MAP.NW && reach(actBox)[1] > MAP.NH && reach(goalBox)[1] > reach(actBox)[1], `goals thicker: ${reach(goalBox)} vs ${reach(actBox)}`);
+    assert(slabs.every(g => !g.querySelector('[opacity]')) && reach(goalBox)[1] <= MAP.NH + GLASS.DEPTH.goal + .5 && reach(actBox)[0] <= MAP.NW + GLASS.DEPTH.other + .5, `no cast shadow: ${reach(goalBox)} vs ${reach(actBox)}`);
+    eq([actBox, goalBox].map(n => getComputedStyle(n.querySelector('text')).fontWeight), ['500', '600'], 'box titles in lighter type');
     // The side is lit from the left: the bottom (shaded from the corner to its left end) is lighter at its left end,
     // and the right side is darker still. Each is one strip with a gradient; the corners are small pieces.
     const slab = goalBox.querySelector('use').getAttribute('href'), lums = run => [...document.querySelectorAll(`${slab}-${run} stop`)].map(x => x.getAttribute('stop-color').match(/\d+/g).reduce((sum, v) => sum + +v, 0));
@@ -6626,6 +6628,39 @@ window.moreTests = async ({ step, assert }) => {
     eq(sl, 'Dodaj', 'Slovenian label');
     deletePlan(plans.current);
     return acts();
+  });
+
+  await step('every view: items are tinted glass like the map boxes, in lighter type', () => {
+    loadSample();
+    const css = el => getComputedStyle(el);
+    const views = { dashboard: '.card, .list .row', goals: '.card', activities: '.card', states: '.card', timeline: '.tl-bar, .tl-milestone', graphs: '.card' };
+    for (const [view, sel] of Object.entries(views)) {
+      setView(view);
+      const items = [...document.querySelectorAll(`#view ${sel}`)];
+      assert(items.length && items.every(x => x.classList.contains('glass')), `${view}: ${items.length} items, all glass`);
+      // No edge and no grey shadow: the box-shadow is the slab's side, solid steps in its tint, down and to the right.
+      const odd = items.filter(x => { const c = css(x), steps = c.boxShadow.match(/\d+(\.\d+)?px \d+(\.\d+)?px 0px/g) || [];
+        return c.borderTopWidth !== '0px' || c.borderLeftWidth !== '0px' || !steps.length || !c.backgroundImage.includes('radial-gradient'); });
+      eq(odd.map(x => x.className), [], `${view}: no edge, a side and the light on the face`);
+    }
+    // Tinted by status, else by kind: a late goal red, a goal in progress amber, a state violet; goals cut thicker.
+    setView('goals');
+    const card = st => $(`#view .card.goal.st-${st}`), side = el => css(el).boxShadow.match(/(\d+)px \d+px 0px/g).length;
+    assert(card('late') && card('doing') && css(card('late')).backgroundColor !== css(card('doing')).backgroundColor, 'goal cards tinted by status');
+    setView('activities');
+    const act = $('#view .col .card.activity');
+    assert(side(act) === 3, 'activities 3 px of glass');
+    setView('goals'); assert(side(card('doing')) === 5, 'goals 5 px of glass');
+    // Hovered, the glass turns solid: its face is no longer see-through.
+    const face = el => css(el).backgroundColor.match(/[\d.]+/g).map(Number);
+    assert(face(card('doing')).length === 4 && face(card('doing'))[3] < 1, 'see-through face');
+    // A status tag on glass of its own colour stays visible.
+    const late = card('late').querySelector('.tag.bad');
+    assert(!late || css(late).backgroundColor !== css(card('late')).backgroundColor, 'late tag shows on a late card');
+    // Lighter type: nothing heavier than 700, and headings 700.
+    const weights = [...document.querySelectorAll('body *')].map(x => +css(x).fontWeight);
+    assert(Math.max(...weights) <= 700 && css($('.topbar h1')).fontWeight === '700', `heaviest weight ${Math.max(...weights)}`);
+    setView('dashboard');
   });
 
   await step('map: box text stays inside its box, bands sit close, the light on the faces is defined once', () => {

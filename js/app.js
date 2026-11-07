@@ -1035,7 +1035,7 @@ function routineCard(a) {
   const blocked = blockers(a), now = today();
   const when = a.dueDate && a.dueDate < now ? `<span class="tag">${t('rt.ended')}</span>`
     : routineStart(a) > now ? `<span class="tag">${t('rt.starts', { date: fmtRel(routineStart(a)) })}</span>` : '';
-  return `<article class="card activity routine st-${st}" data-open="${a.id}" data-ctx-item="${a.id}">
+  return `<article class="card glass activity routine st-${st}" data-open="${a.id}" data-ctx-item="${a.id}">
     <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched" title="${esc(scheduleText(a))}">${esc(shortSchedule(a))}</span></div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
     ${progressBar(p.target ? clamp(p.done / p.target * 100, 0, 100) : 0, `<span class="rt-progress">${esc(label)}</span>`)}
@@ -1073,7 +1073,7 @@ function routineLegend(routines) {
 // A routine on the overview: tick today off and see this period at a glance.
 function routineRow(a) {
   const now = today(), on = checkedOn(a, now), p = periodProgress(a), streak = routineStreak(a);
-  return `<div class="row routine-row" data-open="${a.id}" data-ctx-item="${a.id}">
+  return `<div class="row glass routine-row st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
     <button type="button" class="check ${on ? 'done' : ''}" data-checkin="${a.id}" data-date="${now}" aria-pressed="${on}" aria-label="${esc(t('rt.doneToday', { name: a.title }))}" title="${esc(t('rt.doneToday', { name: a.title }))}">${on ? '✓' : ''}</button>
     <span class="grow">${esc(a.title)} <span class="meta">${esc(scheduleText(a))}</span></span>
     ${isListRoutine(a) && a.list.length && !on ? `<span class="tag">${t('list.count', { done: dayItemsDone(a, now), total: a.list.length })}</span>` : ''}
@@ -1421,7 +1421,7 @@ function renderDashboard() {
 function activityRow(a) {
   const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
   const blocked = blockers(a).length;
-  return `<div class="row" data-open="${a.id}" data-ctx-item="${a.id}">
+  return `<div class="row glass st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
     ${statusCheck(a)}
     <span class="grow ${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</span>
     ${isList(a) && a.list.length ? `<span class="tag">${t('list.count', { done: listDone(a), total: a.list.length })}</span>` : ''}
@@ -1442,7 +1442,7 @@ function goalCard(g) {
   const parent = relsFrom(g.id, 'subgoal')[0];
   const waits = g.status === 'achieved' ? [] : blockers(g, 'goal');
   const measured = byActivities(g), counted = measured ? countedActivities(g).length : 0;
-  return `<article class="card goal" data-open="${g.id}" data-ctx-item="${g.id}">
+  return `<article class="card glass goal st-${goalState(g)}" data-open="${g.id}" data-ctx-item="${g.id}">
     <div class="card-head"><h3>${esc(g.title)}</h3>${smartBadge(g)}</div>
     ${g.category ? `<div><button type="button" class="tag cat" data-category="${esc(g.category)}">${esc(g.category)}</button></div>` : ''}
     <p class="desc">${esc(g.specific)}</p>
@@ -1502,7 +1502,7 @@ function renderStates() {
         : isNum(s.value) ? `<span class="tag state">${fmtNum(s.value)}${s.unit ? ' ' + esc(s.unit) : ''}</span>` : '';
       const count = isCumulative(s) ? (entriesOf(s).length ? tp('cu.entries', entriesOf(s).length) : '') : (s.history?.length || 0) > 1 ? tp('states.measurements', s.history.length) : '';
       const when = isCumulative(s) ? (stateDate(s) ? t('cu.lastEntry', { date: fmtRel(stateDate(s)) }) : t('cu.noEntries')) : t('states.asOf', { date: fmtRel(s.date) || '—' });
-      return `<article class="card state" data-open="${s.id}" data-ctx-item="${s.id}">
+      return `<article class="card glass state" data-open="${s.id}" data-ctx-item="${s.id}">
         <div class="card-head"><h3>${esc(s.title)}</h3>${head}</div>
         ${s.description ? `<p class="desc">${esc(s.description)}</p>` : ''}
         <div class="meta"><span>${when}</span>${improvers ? `<span>${tp('states.improvers', improvers)}</span>` : ''}${count ? `<span>${count}</span>` : ''}</div>
@@ -1596,7 +1596,7 @@ function activityCard(a) {
   const parent = relsFrom(a.id, 'subactivity')[0];
   const children = descendants(a.id, 'subactivity').map(id => db.activities.find(x => x.id === id)).filter(Boolean);
   const childrenDone = children.filter(c => c.status === 'done').length;
-  return `<article class="card activity" data-open="${a.id}" data-ctx-item="${a.id}" draggable="true" data-drag="${a.id}">
+  return `<article class="card glass activity st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}" draggable="true" data-drag="${a.id}">
     <div class="card-head"><h3 class="${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</h3>${statusCheck(a)}</div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
     ${children.length ? progressBar(childrenDone / children.length * 100, t('acts.subDone', { done: childrenDone, total: children.length })) : ''}
@@ -1633,9 +1633,9 @@ const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34,
 // Goals are cut from thicker glass. The face's tint and clarity are in the CSS (--glass-tint, --glass-alpha).
 const GLASS = {
   R: 6, DEPTH: { goal: 6, other: 3.5 }, LIGHT: [-77, -11, 60], EYE: [86, 28, 300], GLOSS: 25,
-  day: { sideTint: .5, deepen: 1.1, ambient: .78, reflect: .32, spec: .9, faceShade: .12, shadow: .08 },
+  day: { sideTint: .5, deepen: 1.1, ambient: .78, reflect: .32, spec: .9, faceShade: .12 },
   // By night only the brightness changes (on the dark base more tint would look lighter), and states take more colour.
-  night: { sideTint: .58, stateTint: .7, deepen: 0, ambient: .45, reflect: .1, spec: .22, faceShade: .2, shadow: .05 },
+  night: { sideTint: .58, stateTint: .7, deepen: 0, ambient: .45, reflect: .1, spec: .22, faceShade: .2 },
 };
 const glassDepth = n => GLASS.DEPTH[n.kind === 'goal' ? 'goal' : 'other'];
 
@@ -1720,7 +1720,7 @@ function glassDefs(used) {
       const stops = side[kind].filter(x => x.run === run).map(x => `<stop offset="${+x.t.toFixed(3)}" stop-color="${colour(x)}"/>`).join('');
       return `<linearGradient id="${id}-${run}" gradientUnits="userSpaceOnUse" ${along}>${stops}</linearGradient>${paint(path, `url(#${id}-${run})`)}`;
     }).join('');
-    return `<g id="${id}"><path d="${roundedRect(d + 2, d + 3, NW + d + 2, NH + d + 3, R)}" fill="${css(tint)}" opacity="${g.shadow}"/>${runs}${corners}</g>`;
+    return `<g id="${id}">${runs}${corners}</g>`;
   }).join('');
   const ring = (id, color, of) => `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${peak[0]}" cy="${peak[1]}" r="${+far.toFixed(1)}">${rings.map((x, k) => `<stop offset="${+(k / 24).toFixed(3)}" stop-color="${color}" stop-opacity="${+of(x).toFixed(3)}"/>`).join('')}</radialGradient>`;
   return slabs + ring('glass-spec', '#fff', x => g.spec * x.spec) + ring('glass-shade', '#000', x => g.faceShade * x.shade);
@@ -2085,7 +2085,7 @@ function renderMap() {
       sub = isNum(item.value) ? `${fmtNum(item.value)} ${item.unit || ''}, ${fmtRel(item.date)}` : fmtRel(item.date, true);
     }
     // Sizes and weights as in the CSS for .node text and .node .sub.
-    const title = fitText(item.title, `${n.kind === 'goal' ? 700 : 600} 13px ${font}`, textW);
+    const title = fitText(item.title, `${n.kind === 'goal' ? 600 : 500} 13px ${font}`, textW);
     const subFit = fitText(sub, `400 11.5px ${font}`, textW);
     const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
@@ -2373,12 +2373,12 @@ function renderTimeline() {
       (geo[item.id] ||= []).push({ ...spot, y: i * ROW + ROW / 2, goal: r.goal });
       if (!s || !e) {
         const cx = left + px / 2;
-        bar = `${lateHtml}<i class="tl-milestone ${kind} st-${st}${drag}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
+        bar = `${lateHtml}<i class="tl-milestone glass ${kind} st-${st}${drag}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
       } else {
         const inside = width > item.title.length * 7.2 + 26;
         const pct = kind === 'goal' ? goalProgress(item) : null;
         const grips = drag && !fixedEnd(item) ? ['start', 'end'].map(edge => `<i class="tl-grip" data-tl-drag="${item.id}" data-tl-edge="${edge}" style="${tlGrip(edge, left, width)}"></i>`).join('') : '';
-        bar = `${lateHtml}${grips}<div class="tl-bar ${kind} st-${st}${drag}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
+        bar = `${lateHtml}${grips}<div class="tl-bar glass ${kind} st-${st}${drag}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
       }
     }
     if (s || e) bar += tlRoutineDays(item, from, to, x, px);
@@ -2611,7 +2611,7 @@ function graphCard(s, width) {
     return `<tr><td>${fmtRel(p.date, true)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td>${p === points[0] ? '—' : esc(withUnit(signed(p.value - points[0].value), unit))}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
   }).join('');
 
-  return `<article class="card gr-card" data-gr="${s.id}">
+  return `<article class="card glass gr-card" data-gr="${s.id}">
     <div class="card-head" data-ctx-item="${s.id}"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats"><strong class="gr-value">${esc(withUnit(fmtNum(last.value), unit))}</strong>${changeTag(s, change)}</div>
     ${legend}
@@ -2779,7 +2779,7 @@ const grLegend = items => `<div class="gr-legend">${items.map(([cls, text]) => `
 const targetKey = targets => ['key-target', targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title })];
 
 function grCardHtml(item, stats, legend, plot, table, scales = '') {
-  return `<article class="card gr-card" data-gr="${item.id}">
+  return `<article class="card glass gr-card" data-gr="${item.id}">
     <div class="card-head" data-ctx-item="${item.id}"><h3>${esc(item.title)}</h3><button class="btn small ghost" data-open="${item.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats">${stats}</div>
     ${scales}
