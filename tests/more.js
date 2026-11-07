@@ -6640,20 +6640,29 @@ window.moreTests = async ({ step, assert }) => {
       assert(items.length && items.every(x => x.classList.contains('glass')), `${view}: ${items.length} items, all glass`);
       // No edge and no grey shadow: the box-shadow is the slab's side, solid steps in its tint, down and to the right.
       const odd = items.filter(x => { const c = css(x), steps = c.boxShadow.match(/\d+(\.\d+)?px \d+(\.\d+)?px 0px/g) || [];
-        return c.borderTopWidth !== '0px' || c.borderLeftWidth !== '0px' || !steps.length || !c.backgroundImage.includes('radial-gradient'); });
+        return c.borderTopWidth !== '0px' || c.borderLeftWidth !== '0px' || !steps.length || !c.backgroundImage.includes('linear-gradient') || !c.boxShadow.includes('inset'); });
       eq(odd.map(x => x.className), [], `${view}: no edge, a side and the light on the face`);
     }
     // Tinted by status, else by kind: a late goal red, a goal in progress amber, a state violet; goals cut thicker.
     setView('goals');
-    const card = st => $(`#view .card.goal.st-${st}`), side = el => css(el).boxShadow.match(/(\d+)px \d+px 0px/g).length;
+    const card = st => $(`#view .card.goal.st-${st}`), side = el => (css(el).boxShadow.match(/[1-9]\d*px [1-9]\d*px 0px/g) || []).length;
     assert(card('late') && card('doing') && css(card('late')).backgroundColor !== css(card('doing')).backgroundColor, 'goal cards tinted by status');
     setView('activities');
     const act = $('#view .col .card.activity');
     assert(side(act) === 3, 'activities 3 px of glass');
     setView('goals'); assert(side(card('doing')) === 5, 'goals 5 px of glass');
-    // Hovered, the glass turns solid: its face is no longer see-through.
+    // Milk glass: a solid face that glows from within; hovered, it takes more of its colour.
     const face = el => css(el).backgroundColor.match(/[\d.]+/g).map(Number);
-    assert(face(card('doing')).length === 4 && face(card('doing'))[3] < 1, 'see-through face');
+    assert((face(card('doing'))[3] ?? 1) === 1 && css(card('doing')).boxShadow.includes('inset'), 'solid milky face, lit inside');
+    const before = css(card('doing')).backgroundColor; card('doing').style.setProperty('--wash', '6%');
+    assert(css(card('doing')).backgroundColor !== before, 'hover takes more colour'); card('doing').style.removeProperty('--wash');
+    // Grey items still to do take more grey, so they stand out from the page.
+    setView('activities');
+    const theme = document.documentElement.dataset.theme; document.documentElement.dataset.theme = 'light'; render();
+    const todo = $('#view .col .card.activity.st-todo'), rootCss = css(document.documentElement);
+    assert(todo && css(todo).getPropertyValue('--glass-tint').trim() === rootCss.getPropertyValue('--glass-tint-quiet').trim() && parseFloat(rootCss.getPropertyValue('--glass-tint-quiet')) > parseFloat(rootCss.getPropertyValue('--glass-tint')), 'to-do activities take more grey by day');
+    if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme; render();
+    setView('goals');
     // A status tag on glass of its own colour stays visible.
     const late = card('late').querySelector('.tag.bad');
     assert(!late || css(late).backgroundColor !== css(card('late')).backgroundColor, 'late tag shows on a late card');
@@ -6716,9 +6725,10 @@ window.moreTests = async ({ step, assert }) => {
       assert([...svg.querySelectorAll('.node')].every(n => n.querySelector('rect + .glass-shade + .glass-spec')), `${code}: every box has its light, right over its glass`);
       const spec = getComputedStyle(svg.querySelector('.glass-spec'));
       assert(spec.fill.includes('#glass-spec') && spec.pointerEvents === 'none', `${code}: light fill ${spec.fill}`);
-      // The glass is see-through and tinted by status: a done box green, a late one red.
+      // Milk glass, solid and tinted by status: a done box green, a late one red; to-do boxes take more grey.
       const rectOf = st => getComputedStyle(svg.querySelector(`.node.activity.st-${st} rect`));
-      assert(+rectOf('done').fillOpacity < 1 && rectOf('done').fill !== rectOf('late').fill, `${code}: glass tinted by status`);
+      assert(+rectOf('done').fillOpacity === 1 && rectOf('done').fill !== rectOf('late').fill, `${code}: glass tinted by status`);
+      assert(getComputedStyle(svg.querySelector('.node.activity.st-todo')).getPropertyValue('--glass-tint').trim() === getComputedStyle(document.documentElement).getPropertyValue('--glass-tint-quiet').trim(), `${code}: to-do boxes take more grey`);
       // By night the glass is drawn on a dark base, and states take more colour than the rest.
       const theme = document.documentElement.dataset.theme;
       document.documentElement.dataset.theme = 'dark'; render();

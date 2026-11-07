@@ -41,17 +41,21 @@
   /* Today on the timeline and the graphs: a column in the red of the Today flag, light enough to read the bars over. */
   --today: color-mix(in srgb, var(--blaze) 11%, transparent);
   --today-edge: color-mix(in srgb, var(--blaze) 35%, transparent);
-  /* Map boxes are tinted glass: how much of their colour the face takes over this base, and how solid it is.
-     Their slab and light are drawn by the map (GLASS in app.js). */
-  --glass-base: var(--surface);
-  --glass-tint: 26%;
-  --glass-tint-state: 26%;
-  --glass-alpha: .78;
-  /* Outside the map, items are the same glass in CSS: their side is cut from their tint and shaded by --glass-dim,
-     and the light from the top left leaves --glass-spec on the face. */
-  --glass-side-tint: 50%;
-  --glass-dim: 12%;
-  --glass-spec: rgb(255 255 255 / .55);
+  /* Items are milk glass: an opal face that takes a light wash of their colour over this base, and how solid it is.
+     On the map their slab and light are drawn by the map (GLASS in app.js). */
+  --glass-base: #FFFFFF;
+  --glass-tint: 12%;
+  --glass-tint-state: 14%;
+  --glass-alpha: 1;
+  /* Outside the map, items are the same glass in CSS: their side is milky, a little of their tint, shaded by
+     --glass-dim; the light from above leaves --glass-spec on the face, and --glass-rim is its lit top edge. */
+  --glass-side-tint: 28%;
+  --glass-dim: 0%;
+  --glass-spec: rgb(255 255 255 / .9);
+  --glass-rim: rgb(255 255 255 / .9);
+  /* Grey items (still to do, waiting) take more of their grey, so they don't fade into the page. */
+  --glass-tint-quiet: 24%;
+  --glass-side-quiet: 50%;
   /* Menus, dialogs and fields are clear glass: what is behind them shows faintly through. */
   --pane: color-mix(in srgb, var(--surface) 88%, transparent);
   --field: color-mix(in srgb, var(--surface) 62%, transparent);
@@ -99,14 +103,17 @@
     --nav-ink: #DCE4E2;
     --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
     /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
-    --glass-base: #17191B;
-    --glass-tint: 31%;
+    --glass-base: #343B3E;
+    --glass-tint: 20%;
     /* By night states take more colour, so they stand out from their band. */
-    --glass-tint-state: 42%;
-    --glass-alpha: .8;
-    --glass-side-tint: 58%;
-    --glass-dim: 50%;
-    --glass-spec: rgb(255 255 255 / .06);
+    --glass-tint-state: 26%;
+    --glass-alpha: 1;
+    --glass-side-tint: 36%;
+    --glass-dim: 10%;
+    --glass-spec: rgb(255 255 255 / .1);
+    --glass-rim: rgb(255 255 255 / .1);
+    --glass-tint-quiet: 20%;
+    --glass-side-quiet: 36%;
     --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
     --chip-on-ink: var(--ink);
     --chip-on-line: var(--ink-2);
@@ -139,14 +146,17 @@
   --nav-ink: #DCE4E2;
   --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
   /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
-  --glass-base: #17191B;
-  --glass-tint: 31%;
+  --glass-base: #343B3E;
+  --glass-tint: 20%;
   /* By night states take more colour, so they stand out from their band. */
-  --glass-tint-state: 42%;
-  --glass-alpha: .8;
-  --glass-side-tint: 58%;
-  --glass-dim: 50%;
-  --glass-spec: rgb(255 255 255 / .06);
+  --glass-tint-state: 26%;
+  --glass-alpha: 1;
+  --glass-side-tint: 36%;
+  --glass-dim: 10%;
+  --glass-spec: rgb(255 255 255 / .1);
+  --glass-rim: rgb(255 255 255 / .1);
+  --glass-tint-quiet: 20%;
+  --glass-side-quiet: 36%;
   --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
   --chip-on-ink: var(--ink);
   --chip-on-line: var(--ink-2);
@@ -323,19 +333,22 @@ textarea { resize: vertical; min-height: 68px; }
   border-radius: var(--r-md);
   padding: 18px 18px 16px; cursor: pointer; display: flex; flex-direction: column; gap: 10px;
 }
-/* Every item, as on the map: see-through glass in its status colour (or its kind's), no edge, lit from the top
-   left, its side cut along the bottom and right; goals are cut thicker. Hovered, the glass turns solid. */
+/* Every item, as on the map: milk glass washed in its status colour (or its kind's), no edge, glowing from within –
+   brighter at the top, a soft band of its colour low inside – its side cut along the bottom and right; goals are
+   cut thicker. Hovered, it takes a little more of its colour. */
 .glass {
   --side: color-mix(in srgb, color-mix(in srgb, var(--tint) var(--glass-side-tint), var(--glass-base)) calc(100% - var(--glass-dim)), #000);
   --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side);
   --glow: 0 0 14px 3px color-mix(in srgb, var(--tint) 60%, transparent);
-  border: 0; box-shadow: var(--slab);
-  background: radial-gradient(140% 180% at 0 0, var(--glass-spec), transparent 55%),
-    color-mix(in srgb, color-mix(in srgb, var(--tint) var(--glass-tint), var(--glass-base)) calc(var(--glass-alpha) * 100%), transparent);
+  border: 0;
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -14px 22px -14px color-mix(in srgb, var(--tint) 40%, transparent), var(--slab);
+  background: linear-gradient(to bottom, var(--glass-spec), transparent 65%),
+    color-mix(in srgb, color-mix(in srgb, var(--tint) calc(var(--glass-tint) + var(--wash, 0%)), var(--glass-base)) calc(var(--glass-alpha) * 100%), transparent);
 }
 .glass.goal { --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side), 4px 4px 0 var(--side), 5px 5px 0 var(--side); }
 .glass.state { --glass-tint: var(--glass-tint-state); }
-.glass:hover { --glass-alpha: 1; }
+:is(.glass, .node).st-todo:not(.goal, .state), :is(.glass, .node).st-blocked { --glass-tint: var(--glass-tint-quiet); --glass-side-tint: var(--glass-side-quiet); }
+.glass:hover { --wash: 6%; }
 .card h3 { font-size: 18px; }
 .card .desc { color: var(--ink-2); font-size: 14.5px; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
@@ -349,7 +362,7 @@ textarea { resize: vertical; min-height: 68px; }
 @media (pointer: coarse) { [data-ctx-item] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }
 /* "Show in …" from another view: the card glows briefly. */
 .card.flash { animation: flash 1.6s ease-out; }
-@keyframes flash { from { box-shadow: var(--slab), var(--glow); } }
+@keyframes flash { from { box-shadow: inset 0 1px 0 var(--glass-rim), var(--slab), var(--glow); } }
 
 .tag {
   display: inline-block; vertical-align: middle; padding: 2px 9px; border-radius: 999px;
@@ -372,16 +385,14 @@ textarea { resize: vertical; min-height: 68px; }
 .progress-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
 .progress-row .progress { flex: 1; }
 
-/* Trail progress: walked part solid, the rest dashed, blaze where you are now */
+/* Goal progress, as on the map's boxes: a fine rounded track in a see-through ink, the part walked in green,
+   a small light knob where you are now. */
 .trail { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
-.trail-line {
-  position: relative; height: 4px; margin: 0 8px;
-  background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 11px);
-}
-.trail-line > i { position: absolute; inset: 0 auto 0 0; background: var(--goal); border-radius: 4px; }
+.trail-line { position: relative; height: 4px; margin: 0 6px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.trail-line > i { position: absolute; inset: 0 auto 0 0; background: var(--ok); border-radius: 4px; }
 .trail-line .blaze {
-  position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
-  background: #fff; border: 4.5px solid var(--blaze); box-shadow: 0 0 0 2px var(--surface);
+  position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%;
+  background: var(--glass-base); border: 3px solid var(--ok); box-sizing: border-box;
 }
 .trail-ends { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink-3); }
 .trail-ends strong { color: var(--ink); font-size: 13px; }
@@ -558,8 +569,8 @@ textarea { resize: vertical; min-height: 68px; }
 :is(.node, .swatch, .glass).st-late { --tint: var(--bad); }
 :is(.node, .swatch, .glass).st-blocked { --tint: var(--grey); }
 /* The face: see-through tinted glass with no edge, over its slab. */
-.node rect { fill: color-mix(in srgb, var(--tint) var(--glass-tint), var(--glass-base)); fill-opacity: var(--glass-alpha); stroke: none; }
-.node.state rect { fill: color-mix(in srgb, var(--tint) var(--glass-tint-state), var(--glass-base)); }
+.node rect { fill: color-mix(in srgb, var(--tint) calc(var(--glass-tint) + var(--wash, 0%)), var(--glass-base)); fill-opacity: var(--glass-alpha); stroke: none; }
+.node.state rect { fill: color-mix(in srgb, var(--tint) calc(var(--glass-tint-state) + var(--wash, 0%)), var(--glass-base)); }
 .node-lift { fill: none; stroke: none; }
 /* The light on the face: its soft reflection from the top left, and the face dimming away from the light. */
 .glass-spec { fill: url(#glass-spec); pointer-events: none; }
@@ -572,7 +583,7 @@ textarea { resize: vertical; min-height: 68px; }
 .node-track, .node-progress { stroke-width: 4; stroke-linecap: round; }
 .node-track { stroke: color-mix(in srgb, var(--ink) 12%, transparent); }
 .node-progress { stroke: var(--ok); }
-.node:hover rect { fill-opacity: 1; }
+.node:hover { --wash: 6%; }
 .node.dim { opacity: .15; }
 /* Linking two boxes: a dashed line follows the pointer; the box under it shows whether a link fits. */
 .map-wrap.linking, .map-wrap.linking * { cursor: crosshair; -webkit-user-select: none; user-select: none; }
@@ -699,7 +710,7 @@ textarea { resize: vertical; min-height: 68px; }
   border-radius: 2px; z-index: 1;
 }
 /* The selected bar can be dragged to new dates; its grips change one end only. */
-.tl-drag { cursor: grab; box-shadow: var(--slab), var(--glow); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.tl-drag { cursor: grab; box-shadow: inset 0 1px 0 var(--glass-rim), var(--slab), var(--glow); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .tl-grip { position: absolute; top: 4px; height: 32px; z-index: 2; cursor: ew-resize; -webkit-touch-callout: none; }
 /* Red [ ] trim handles cap the ends of the selected bar: a solid spine with grip lines,
    thin arms hugging the bar's corners. */

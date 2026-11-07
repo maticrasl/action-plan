@@ -1627,15 +1627,15 @@ const mapLineColour = color => `color-mix(in srgb, ${color} 72%, var(--ink-3))`;
 // of where it points a line stops; its arrowhead covers the rest, so even a thick line ends inside the head's wide back.
 const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, LEAD: 14, TIP: 8, MIN_SCALE: 0.25, MAX_SCALE: 3 };
 
-// Map boxes are slabs of tinted glass, lit by a broad light (a panel, like a window) to the left of and a little
+// Map boxes are slabs of milk glass, lit by a broad light (a panel, like a window) to the left of and a little
 // above the map. Their side, along the bottom and the right and round the corners, is cut into slivers, each
 // shaded by the way it faces the light and how far it is from it; the face shows the light's soft reflection.
 // Goals are cut from thicker glass. The face's tint and clarity are in the CSS (--glass-tint, --glass-alpha).
 const GLASS = {
   R: 6, DEPTH: { goal: 6, other: 3.5 }, LIGHT: [-77, -11, 60], EYE: [86, 28, 300], GLOSS: 25,
-  day: { sideTint: .5, deepen: 1.1, ambient: .78, reflect: .32, spec: .9, faceShade: .12 },
+  day: { sideTint: .26, deepen: 0, ambient: .97, reflect: .55, spec: .75, faceShade: .03 },
   // By night only the brightness changes (on the dark base more tint would look lighter), and states take more colour.
-  night: { sideTint: .58, stateTint: .7, deepen: 0, ambient: .45, reflect: .1, spec: .22, faceShade: .2 },
+  night: { sideTint: .38, stateTint: .46, deepen: 0, ambient: .75, reflect: .14, spec: .16, faceShade: .08 },
 };
 const glassDepth = n => GLASS.DEPTH[n.kind === 'goal' ? 'goal' : 'other'];
 
