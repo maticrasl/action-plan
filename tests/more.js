@@ -5411,14 +5411,27 @@ window.moreTests = async ({ step, assert }) => {
     assert(node.querySelector('rect').style.strokeWidth === '' && document.activeElement === node, 'box drawn selected and focused');
     assert(node.classList.contains('sel') && [...document.querySelectorAll('.map-wrap .node.sel')].length === 1 && getComputedStyle(node.querySelector('.node-lift')).strokeWidth === '9px', 'only the selected box has its halo');
     assert([...document.querySelectorAll('.map-wrap .node')].every(n => n.querySelector('.node-lift')) && [...document.querySelectorAll('.map-wrap marker')].every(m => m.getAttribute('markerUnits') === 'userSpaceOnUse'), 'every box can show its halo; arrowheads keep one size whatever the line width');
-    // Each box casts one shadow in its own colour, down and to the right, in one blurred layer under all boxes.
-    const shadows = [...document.querySelectorAll('.map-wrap .node-shadows > .node-shadow')], boxes = [...document.querySelectorAll('.map-wrap .node')];
-    assert(shadows.length === boxes.length && $('.map-wrap .node-shadows').getAttribute('filter') === 'url(#node-blur)' && $('.map-wrap .node-shadows').compareDocumentPosition(boxes[0]) & Node.DOCUMENT_POSITION_FOLLOWING, `one blurred shadow per box, under the boxes: ${shadows.length}/${boxes.length}`);
-    const nb = node.getBoundingClientRect(), sb = shadows[boxes.indexOf(node)].getBoundingClientRect();
-    assert(sb.left > nb.left && sb.top > nb.top, 'the shadow falls down and to the right');
-    assert(new Set(shadows.map(s => getComputedStyle(s).fill)).size > 1 && getComputedStyle(node.querySelector('rect')).stroke === 'none', 'boxes have no edge; each casts a shadow in its own colour');
-    const other = shadows.find((s, i) => boxes[i].classList.contains('dim'));
-    assert(other && +getComputedStyle(other).opacity < +getComputedStyle(shadows[boxes.indexOf(node)]).opacity, 'a dimmed box casts a fainter shadow');
+    // Under each box's face, its glass slab: one drawing per colour and thickness, defined once.
+    const boxes = [...document.querySelectorAll('.map-wrap .node')], uses = boxes.map(n => n.querySelector('use'));
+    assert(uses.every((u, i) => u && u.nextElementSibling === boxes[i].querySelector('rect') && document.querySelector(u.getAttribute('href'))), 'every box has its slab, right under its face');
+    const slabs = [...document.querySelectorAll('.map-wrap defs > g[id^="glass-"]')];
+    eq(slabs.length, new Set(uses.map(u => u.getAttribute('href'))).size, 'one slab per colour and thickness used');
+    assert(!$('.map-wrap filter') && getComputedStyle(node.querySelector('rect')).stroke === 'none', 'no edge, no blur');
+    // Goals are cut from thicker glass; the slab and its shadow reach down and to the right of the face.
+    const reach = n => { const b = n.querySelector('use').getBBox(); return [b.x + b.width, b.y + b.height]; };
+    const goalBox = boxes.find(n => n.classList.contains('goal')), actBox = boxes.find(n => n.classList.contains('activity'));
+    assert(reach(actBox)[0] > MAP.NW && reach(actBox)[1] > MAP.NH && reach(goalBox)[1] > reach(actBox)[1], `goals thicker: ${reach(goalBox)} vs ${reach(actBox)}`);
+    // The side is lit from the left: the bottom (shaded from the corner to its left end) is lighter at its left end,
+    // and the right side is darker still. Each is one strip with a gradient; the corners are small pieces.
+    const slab = goalBox.querySelector('use').getAttribute('href'), lums = run => [...document.querySelectorAll(`${slab}-${run} stop`)].map(x => x.getAttribute('stop-color').match(/\d+/g).reduce((sum, v) => sum + +v, 0));
+    const bottom = lums('b'), right = lums('r');
+    assert(bottom.length > 10 && right.length > 5 && bottom.at(-1) > bottom[0] && Math.max(...right) < bottom.at(-1) && $(slab).querySelectorAll('path').length < 20, `side shaded by the light: bottom ${bottom[0]} → ${bottom.at(-1)}, right ${Math.max(...right)}`);
+    // Lines meet a box's bottom below its glass, so no arrowhead hides under the slab.
+    const at = b => b.getAttribute('transform').match(/[-\d.]+/g).map(Number);
+    const ends = [...document.querySelectorAll('.map-wrap .edge')].flatMap(e => { const v = e.getAttribute('d').match(/[-\d.]+/g).map(Number); return [v.slice(0, 2), v.slice(-2)]; });
+    const hidden = ends.filter(([x, y]) => boxes.some(b => { const [bx, by] = at(b), d = b.classList.contains('goal') ? GLASS.DEPTH.goal : GLASS.DEPTH.other;
+      return x > bx && x < bx + MAP.NW && y > by + MAP.NH - .5 && y < by + MAP.NH + d - .5; }));
+    eq(hidden, [], 'no line ends under a slab');
     assert([...document.querySelectorAll('.map-wrap .col-label')].every(l => l.compareDocumentPosition($('.map-wrap .edge-g')) & Node.DOCUMENT_POSITION_PRECEDING), 'band labels drawn over the lines');
     assert(!$(`[data-map-node="${a.id}"]`).classList.contains('dim'), 'neighbours not dimmed');
     // Map → timeline: the same item stays selected; a different one replaces the selection.
@@ -6601,7 +6614,7 @@ window.moreTests = async ({ step, assert }) => {
     return acts();
   });
 
-  await step('map: box text stays inside its box, bands sit close, the glass is defined once', () => {
+  await step('map: box text stays inside its box, bands sit close, the light on the faces is defined once', () => {
     const { NW } = MAP;
     // Text that ends within 4 px of the box's right edge (inside its border), with its box's title.
     const overflow = () => [...document.querySelectorAll('.map-wrap .node')].flatMap(n => [...n.querySelectorAll('text')]
@@ -6615,15 +6628,22 @@ window.moreTests = async ({ step, assert }) => {
       // Each band's label sits below the boxes of the band above, inside its own band.
       const labels = [...document.querySelectorAll('.map-wrap .col-label')].map(l => l.getBBox());
       assert(labels.every((l, i) => l.y >= bands[i][0] && l.y + l.height <= bands[i][0] + MAP.HEAD), `${code}: labels in their band's head`);
-      // The glass: two gradients and the shadows' blur, defined once, used by every box.
+      // The light on the face: its reflection and its shading, defined once, used by every box, over its glass.
       const svg = $('.map-wrap svg');
-      assert(svg.querySelectorAll('linearGradient').length === 2 && svg.querySelectorAll('#node-shine').length === 1 && svg.querySelectorAll('#node-rim').length === 1 && svg.querySelectorAll('filter').length === 1, `${code}: gradients and blur defined once`);
-      assert([...svg.querySelectorAll('.node')].every(n => n.querySelectorAll('.node-shine').length === 1 && n.querySelector('rect + .node-shine')), `${code}: every box has its shine, right over its glass`);
-      const shine = getComputedStyle(svg.querySelector('.node-shine'));
-      assert(shine.fill.includes('#node-shine') && shine.stroke.includes('#node-rim') && shine.pointerEvents === 'none', `${code}: shine fill ${shine.fill}, rim ${shine.stroke}`);
+      assert(svg.querySelectorAll('radialGradient').length === 2 && svg.querySelectorAll('#glass-spec').length === 1 && svg.querySelectorAll('#glass-shade').length === 1 && !svg.querySelector('filter'), `${code}: face light defined once`);
+      assert([...svg.querySelectorAll('.node')].every(n => n.querySelector('rect + .glass-shade + .glass-spec')), `${code}: every box has its light, right over its glass`);
+      const spec = getComputedStyle(svg.querySelector('.glass-spec'));
+      assert(spec.fill.includes('#glass-spec') && spec.pointerEvents === 'none', `${code}: light fill ${spec.fill}`);
       // The glass is see-through and tinted by status: a done box green, a late one red.
       const rectOf = st => getComputedStyle(svg.querySelector(`.node.activity.st-${st} rect`));
       assert(+rectOf('done').fillOpacity < 1 && rectOf('done').fill !== rectOf('late').fill, `${code}: glass tinted by status`);
+      // By night the glass is drawn on a dark base, and states take more colour than the rest.
+      const theme = document.documentElement.dataset.theme;
+      document.documentElement.dataset.theme = 'dark'; render();
+      const rootCss = getComputedStyle(document.documentElement);
+      assert(parseFloat(rootCss.getPropertyValue('--glass-tint-state')) > parseFloat(rootCss.getPropertyValue('--glass-tint')) && $('.map-wrap defs > g[id="glass-state-other"]'), `${code}: states take more colour by night`);
+      if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+      render();
       deletePlan(plans.current);
     }
 

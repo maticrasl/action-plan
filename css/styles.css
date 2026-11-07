@@ -41,14 +41,12 @@
   /* Today on the timeline and the graphs: a column in the red of the Today flag, light enough to read the bars over. */
   --today: color-mix(in srgb, var(--blaze) 11%, transparent);
   --today-edge: color-mix(in srgb, var(--blaze) 35%, transparent);
-  /* Map boxes are tinted glass: the tint over this base, the shine across it and its coloured shadow. */
+  /* Map boxes are tinted glass: how much of their colour the face takes over this base, and how solid it is.
+     Their slab, shadow and light are drawn by the map (GLASS in app.js). */
   --glass-base: var(--surface);
-  --glass-tint: 36%;
-  --glass-alpha: .88;
-  --shine: .18;
-  --shine-streak: .12;
-  --rim: .95;
-  --glass-shadow: .16;
+  --glass-tint: 26%;
+  --glass-tint-state: 26%;
+  --glass-alpha: .78;
 
   --nav-bg: #1E2A2E;
   --nav-ink: #E9EEED;
@@ -94,12 +92,10 @@
     --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
     /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
     --glass-base: #17191B;
-    --glass-tint: 30%;
-    --glass-alpha: .82;
-    --shine: .028;
-    --shine-streak: .018;
-    --rim: .3;
-    --glass-shadow: .13;
+    --glass-tint: 31%;
+    /* By night states take more colour, so they stand out from their band. */
+    --glass-tint-state: 42%;
+    --glass-alpha: .8;
     --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
     --chip-on-ink: var(--ink);
     --chip-on-line: var(--ink-2);
@@ -133,12 +129,10 @@
   --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
   /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
   --glass-base: #17191B;
-  --glass-tint: 30%;
-  --glass-alpha: .82;
-  --shine: .028;
-  --shine-streak: .018;
-  --rim: .3;
-  --glass-shadow: .13;
+  --glass-tint: 31%;
+  /* By night states take more colour, so they stand out from their band. */
+  --glass-tint-state: 42%;
+  --glass-alpha: .8;
   --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
   --chip-on-ink: var(--ink);
   --chip-on-line: var(--ink-2);
@@ -529,27 +523,21 @@ textarea { resize: vertical; min-height: 68px; }
 .node { cursor: pointer; }
 .map-wrap, .tl-scroll { cursor: grab; }
 .map-wrap.panning, .tl-scroll.panning, .panning * { cursor: grabbing; -webkit-user-select: none; user-select: none; }
-/* Each box takes the colour of its status, or else of its kind; its glass, edge and shadow are tinted by it. */
-:is(.node, .node-shadow, .swatch) { --tint: var(--activity); }
-:is(.node, .node-shadow).goal { --tint: var(--goal); }
-:is(.node, .node-shadow).state { --tint: var(--state); }
-:is(.node, .node-shadow, .swatch).st-done { --tint: var(--ok); }
-:is(.node, .node-shadow, .swatch).st-doing { --tint: var(--warn); }
-:is(.node, .node-shadow, .swatch).st-late { --tint: var(--bad); }
-:is(.node, .node-shadow, .swatch).st-blocked { --tint: var(--grey); }
-/* No edge: the tint, the shine's lit rim and the shadow set each box off. */
+/* Each box takes the colour of its status, or else of its kind (glassTint in app.js picks its slab's the same way). */
+:is(.node, .swatch) { --tint: var(--activity); }
+.node.goal { --tint: var(--goal); }
+.node.state { --tint: var(--state); }
+:is(.node, .swatch).st-done { --tint: var(--ok); }
+:is(.node, .swatch).st-doing { --tint: var(--warn); }
+:is(.node, .swatch).st-late { --tint: var(--bad); }
+:is(.node, .swatch).st-blocked { --tint: var(--grey); }
+/* The face: see-through tinted glass with no edge, over its slab and shadow. */
 .node rect { fill: color-mix(in srgb, var(--tint) var(--glass-tint), var(--glass-base)); fill-opacity: var(--glass-alpha); stroke: none; }
-/* The shadows are drawn together under all boxes and blurred once (#node-blur). */
-.node-shadow { fill: var(--tint); opacity: var(--glass-shadow); }
-.node-shadow.dim { opacity: calc(var(--glass-shadow) * .15); }
+.node.state rect { fill: color-mix(in srgb, var(--tint) var(--glass-tint-state), var(--glass-base)); }
 .node-lift { fill: none; stroke: none; }
-/* Shine across the glass: a bright top-left corner and a thin streak, with a fine lit rim. */
-.node-shine { fill: url(#node-shine); stroke: url(#node-rim); stroke-width: 1; pointer-events: none; }
-.shine-on { stop-color: #fff; stop-opacity: var(--shine); }
-.shine-streak { stop-color: #fff; stop-opacity: var(--shine-streak); }
-.shine-off { stop-color: #fff; stop-opacity: 0; }
-.rim-top { stop-color: #fff; stop-opacity: var(--rim); }
-.rim-low { stop-color: #fff; stop-opacity: 0; }
+/* The light on the face: its soft reflection from the top left, and the face dimming away from the light. */
+.glass-spec { fill: url(#glass-spec); pointer-events: none; }
+.glass-shade { fill: url(#glass-shade); pointer-events: none; }
 .node.sel .node-lift { stroke: color-mix(in srgb, var(--goal) 30%, transparent); stroke-width: 9; }
 .node text { fill: var(--ink); font-size: 13px; font-weight: 600; }
 .node.goal text:not(.sub) { font-weight: 700; }

@@ -1623,6 +1623,103 @@ function activityCard(a) {
                    and spacing (weighted isotonic regression), which keeps edges short and straight. */
 const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, MIN_SCALE: 0.25, MAX_SCALE: 3 };
 
+// Map boxes are slabs of tinted glass, lit by a broad light (a panel, like a window) to the left of and a little
+// above the map. Their side, along the bottom and the right and round the corners, is cut into slivers, each
+// shaded by the way it faces the light and how far it is from it; the face shows the light's soft reflection.
+// Goals are cut from thicker glass. The face's tint and clarity are in the CSS (--glass-tint, --glass-alpha).
+const GLASS = {
+  R: 6, DEPTH: { goal: 6, other: 3.5 }, LIGHT: [-77, -11, 60], EYE: [86, 28, 300], GLOSS: 25,
+  day: { sideTint: .5, deepen: 1.1, ambient: .78, reflect: .32, spec: .9, faceShade: .12, shadow: .08 },
+  // By night only the brightness changes (on the dark base more tint would look lighter), and states take more colour.
+  night: { sideTint: .58, stateTint: .7, deepen: 0, ambient: .45, reflect: .1, spec: .22, faceShade: .2, shadow: .05 },
+};
+const glassDepth = n => GLASS.DEPTH[n.kind === 'goal' ? 'goal' : 'other'];
+
+// What the light does, worked out once: how lit each sliver of the side is, for each thickness,
+// and the face's reflection and shading in rings round the reflection's brightest point.
+let glassLight;
+function glassLighting() {
+  if (glassLight) return glassLight;
+  const { NW, NH } = MAP, { R, LIGHT, EYE, GLOSS } = GLASS;
+  const unit = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
+  const toward = (p, q) => unit(p.map((v, i) => v - q[i]));
+  // The panel as 7 × 4 × 2 small lights, 180 wide and 80 tall round LIGHT.
+  const panel = [];
+  for (let i = 0; i < 7; i++) for (let j = 0; j < 4; j++) for (let k = 0; k < 2; k++)
+    panel.push([LIGHT[0] + (i / 6 - .5) * 180, LIGHT[1] + (j / 3 - .5) * 80, LIGHT[2] + (k - .5) * 30]);
+  const avg = fn => panel.reduce((sum, p) => sum + fn(p), 0) / panel.length;
+  // On the face at (x, y): the light's reflection (Blinn-Phong), and how directly the light falls.
+  const spec = (x, y) => { const V = toward(EYE, [x, y, 0]); return avg(p => { const L = toward(p, [x, y, 0]); return unit([L[0] + V[0], L[1] + V[1], L[2] + V[2]])[2] ** GLOSS; }); };
+  const lit = (x, y) => avg(p => toward(p, [x, y, 0])[2]);
+  // Where the reflection is brightest (it can lie off the box): a coarse search, then a fine one round the best.
+  let peak = [0, 0], best = -1;
+  const search = (x0, x1, y0, y1, step) => { for (let x = x0; x <= x1; x += step) for (let y = y0; y <= y1; y += step) { const v = spec(x, y); if (v > best) { best = v; peak = [x, y]; } } };
+  search(-250, 250, -125, 150, 25);
+  search(peak[0] - 25, peak[0] + 25, peak[1] - 25, peak[1] + 25, 5);
+  const far = Math.max(...[[0, 0], [NW, 0], [0, NH], [NW, NH]].map(([x, y]) => Math.hypot(x - peak[0], y - peak[1])));
+  const dir = unit([NW / 2 - peak[0], NH / 2 - peak[1]]), litMax = Math.max(lit(0, 0), lit(0, NH));
+  const rings = [...Array(25).keys()].map(k => {
+    const x = peak[0] + dir[0] * far * k / 24, y = peak[1] + dir[1] * far * k / 24;
+    return { spec: spec(x, y), shade: Math.max(0, 1 - lit(x, y) / litMax) };
+  });
+  // The visible side: the outline from the top-right corner (facing up and right, -45°) round to the
+  // bottom-left one (facing down and left, 135°), in pieces that each face one way. The right side and
+  // the bottom are each drawn as one strip, shaded along its length by a gradient through their pieces.
+  const pieces = [];
+  const arc = (cx, cy, a0, a1, n) => { for (let i = 0; i < n; i++) {
+    const pts = [...Array(5).keys()].map(k => { const a = (a0 + (a1 - a0) * (i + k / 4) / n) * Math.PI / 180; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
+    pieces.push({ pts, a: a0 + (a1 - a0) * (i + .5) / n });
+  } };
+  const line = (x0, y0, x1, y1, a, n, run) => { for (let i = 0; i < n; i++)
+    pieces.push({ pts: [[x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n], [x0 + (x1 - x0) * (i + 1) / n, y0 + (y1 - y0) * (i + 1) / n]], a, run, t: (i + .5) / n }); };
+  arc(NW - R, R, -45, 0, 2); line(NW, R, NW, NH - R, 0, 10, 'r'); arc(NW - R, NH - R, 0, 90, 6); line(NW - R, NH, R, NH, 90, 24, 'b'); arc(R, NH - R, 90, 135, 2);
+  const centre = p => Math.hypot(p[0] - NW / 2, p[1] - NH / 2, p[2]);
+  const pt = pts => `M${pts.map(([x, y]) => `${+x.toFixed(2)},${+y.toFixed(2)}`).join(' L')} Z`;
+  const side = Object.fromEntries(Object.entries(GLASS.DEPTH).map(([kind, d]) => [kind, pieces.map(({ pts, a, run, t }) => {
+    const n = [Math.cos(a * Math.PI / 180), Math.sin(a * Math.PI / 180), 0], mid = pts[pts.length >> 1], P = [mid[0], mid[1], -d / 2];
+    // Facing the light (half-Lambert), fading with distance: 1 is about as lit as the side gets.
+    const light = avg(p => { const L = toward(p, P); return Math.max(0, Math.min(1, (.5 + .5 * (n[0] * L[0] + n[1] * L[1])) * (centre(p) / Math.hypot(...p.map((v, i) => v - P[i]))) ** 1.5 * 1.6)); });
+    // Glass reflects its surroundings, which are brighter above than below.
+    return { path: run ? '' : pt([...pts, ...pts.map(([x, y]) => [x + d, y + d]).reverse()]), light, sky: .5 - .5 * n[1], run, t };
+  })]));
+  // The two strips, and the line along each that its gradient follows.
+  const strips = Object.fromEntries(Object.entries(GLASS.DEPTH).map(([kind, d]) => [kind, {
+    r: { path: pt([[NW, R], [NW, NH - R], [NW + d, NH - R + d], [NW + d, R + d]]), along: `x1="0" y1="${R}" x2="0" y2="${NH - R}"` },
+    b: { path: pt([[NW - R, NH], [R, NH], [R + d, NH + d], [NW - R + d, NH + d]]), along: `x1="${NW - R}" y1="0" x2="${R}" y2="0"` },
+  }]));
+  return (glassLight = { peak, far, rings, side, strips });
+}
+
+// The slab under each box and the light on its face, defined once per colour and thickness used.
+function glassDefs(used) {
+  const root = getComputedStyle(document.documentElement), night = root.colorScheme === 'dark', g = GLASS[night ? 'night' : 'day'];
+  const rgb = name => { const h = root.getPropertyValue(name).trim(); return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); };
+  const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+  const css = c => `rgb(${c.map(v => Math.round(Math.max(0, Math.min(255, v)))).join(',')})`;
+  const { NW, NH } = MAP, { R } = GLASS, { peak, far, rings, side, strips } = glassLighting(), base = rgb('--glass-base');
+  const slabs = [...used].map(key => {
+    const [tintVar, kind] = key.split('|'), tint = rgb(tintVar), d = GLASS.DEPTH[kind];
+    const tinted = tintVar === '--state' && g.stateTint || g.sideTint;
+    // In shade, coloured glass gets deeper in colour rather than grey: less light, more of the tint shows.
+    const colour = ({ light, sky }) => {
+      const share = Math.min(.95, tinted * (1 - .45 * g.deepen / 1.1 + g.deepen * (1 - light)));
+      return css(mix(mix(base, tint, share).map(v => v * (g.ambient + (1 - g.ambient) * light)), [255, 255, 255], g.reflect * sky));
+    };
+    const id = `glass-${glassKey(key)}`, paint = (d, c) => `<path d="${d}" fill="${c}" stroke="${c}" stroke-width=".35" stroke-linejoin="round"/>`;
+    const corners = side[kind].filter(x => !x.run).map(x => paint(x.path, colour(x))).join('');
+    const runs = Object.entries(strips[kind]).map(([run, { path, along }]) => {
+      const stops = side[kind].filter(x => x.run === run).map(x => `<stop offset="${+x.t.toFixed(3)}" stop-color="${colour(x)}"/>`).join('');
+      return `<linearGradient id="${id}-${run}" gradientUnits="userSpaceOnUse" ${along}>${stops}</linearGradient>${paint(path, `url(#${id}-${run})`)}`;
+    }).join('');
+    return `<g id="${id}"><path d="${roundedRect(d + 2, d + 3, NW + d + 2, NH + d + 3, R)}" fill="${css(tint)}" opacity="${g.shadow}"/>${runs}${corners}</g>`;
+  }).join('');
+  const ring = (id, color, of) => `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${peak[0]}" cy="${peak[1]}" r="${+far.toFixed(1)}">${rings.map((x, k) => `<stop offset="${+(k / 24).toFixed(3)}" stop-color="${color}" stop-opacity="${+of(x).toFixed(3)}"/>`).join('')}</radialGradient>`;
+  return slabs + ring('glass-spec', '#fff', x => g.spec * x.spec) + ring('glass-shade', '#000', x => g.faceShade * x.shade);
+}
+const glassKey = key => key.replace('--', '').replace('|', '-');
+// The colour a box takes, as in the CSS: its status's, or else its kind's.
+const glassTint = (kind, st) => ({ done: '--ok', doing: '--warn', late: '--bad', blocked: '--grey' })[st] || '--' + kind;
+
 function layoutMap(items, rels) {
   const { NW, NH, HG, DG, DW, VG, PAD, HEAD, BAND_GAP } = MAP;
   const kindOf = {};
@@ -1860,13 +1957,15 @@ function layoutMap(items, rels) {
   });
   ports.forEach((sides, n) => Object.entries(sides).forEach(([side, list]) => {
     list.sort((p, q) => p.other.x - q.other.x);
-    list.forEach((p, i) => (p.c.pts[p.k] = [n.x - NW / 2 + (NW * (i + 1)) / (list.length + 1), layers[n.layer].y + (side === 'bottom' ? NH : 0)]));
+    // At the bottom, below the box's glass thickness, so an arrowhead there is not hidden under it.
+    list.forEach((p, i) => (p.c.pts[p.k] = [n.x - NW / 2 + (NW * (i + 1)) / (list.length + 1), layers[n.layer].y + (side === 'bottom' ? NH + glassDepth(n) : 0)]));
   }));
   chains.forEach(c => {
     if (c.same) {
       // Same layer: straight between neighbours, otherwise an arc above the row.
       const dir = c.b.x > c.a.x ? 1 : -1, cy = layers[c.a.layer].y + NH / 2;
-      const sx = c.a.x + (dir * NW) / 2, tx = c.b.x - (dir * NW) / 2;
+      // A box's right side ends beyond its glass thickness.
+      const sx = c.a.x + (dir * NW) / 2 + (dir > 0 ? glassDepth(c.a) : 0), tx = c.b.x - (dir * NW) / 2 + (dir < 0 ? glassDepth(c.b) : 0);
       if (Math.abs(c.a.i - c.b.i) === 1) c.d = `M${sx},${cy} L${tx},${cy}`;
       else c.d = `M${sx},${cy - 10} C${sx + dir * 50},${cy - 70} ${tx - dir * 50},${cy - 70} ${tx},${cy - 10}`;
       return;
@@ -1941,17 +2040,9 @@ function renderMap() {
       <path class="edge-hit" d="${c.d}"></path><title>${esc(label)}</title></g>`;
   }).join('');
 
-  // Boxes are tinted glass with a halo when selected (a path, so the box's rect rules don't reach it).
-  const R = 6, lift = roundedRect(0, 0, NW, NH, R);
-  // Over the fill, a diagonal shine and a fine lit rim (gradients defined once below), inset inside the edge.
-  const I = 1, shine = roundedRect(I, I, NW - I, NH - I, R - I);
-  // Each box casts a shadow in its colour, down and to the right; all are blurred together, under every box.
-  const shadows = Object.values(node).map(n => {
-    const { item } = findEntity(n.id);
-    const st = n.kind === 'goal' ? goalState(item) : n.kind === 'activity' ? activityState(item) : '';
-    const dim = (sel || relSel) && !near.has(n.id) ? ' dim' : '';
-    return `<rect class="node-shadow ${n.kind}${st ? ' st-' + st : ''}${dim}" x="${n.x - NW / 2 + 8}" y="${layers[n.layer].y + 10}" width="${NW}" height="${NH}" rx="${R}"></rect>`;
-  }).join('');
+  // A halo round the box when selected, focused or being linked, and the face's light over its fill, all one
+  // rounded path (paths, so the box's rect rules don't reach them). Under the face, its glass slab.
+  const { R } = GLASS, face = roundedRect(0, 0, NW, NH, R), slabs = new Set();
   const font = getComputedStyle(document.documentElement).getPropertyValue('--font'), textW = NW - 18;
   const nodes = Object.values(node).map(n => {
     const { item } = findEntity(n.id);
@@ -1981,10 +2072,13 @@ function renderMap() {
     const subFit = fitText(sub, `400 11.5px ${font}`, textW);
     const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
+    const slab = `${glassTint(n.kind, st)}|${n.kind === 'goal' ? 'goal' : 'other'}`;
+    slabs.add(slab);
     return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking}${n.id === sel ? ' sel' : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
-      <path class="node-lift" d="${lift}"></path>
+      <path class="node-lift" d="${face}"></path>
+      <use href="#glass-${glassKey(slab)}"></use>
       <rect width="${NW}" height="${NH}" rx="${R}"></rect>
-      <path class="node-shine" d="${shine}"></path>
+      <path class="glass-shade" d="${face}"></path><path class="glass-spec" d="${face}"></path>
       <text x="12" y="23">${esc(title)}</text>
       <text class="sub" x="12" y="${bar ? 38 : 41}">${esc(subFit)}</text>${bar}
       <title>${esc(item.title)}${pct}${st ? ' – ' + esc(t('nodeState.' + st)) : ''}\n${esc(full || sub)}</title>
@@ -1997,12 +2091,6 @@ function renderMap() {
     const levels = b.last - b.first + 1;
     return `<text class="col-label ${b.kind}" x="${PAD}" y="${b.top + 22}">${esc(t('kinds.' + b.kind))}${levels > 1 ? ` (${esc(tp('map.levels', levels))})` : ''}</text>`;
   }).join('');
-
-  // The shine runs at 45° across each box (in the box's own units): a wide band, then a narrower one, both well inside it.
-  const D = (NW + NH) / 2, stop = (o, c) => `<stop offset="${o}" class="${c}"/>`;
-  const glassDefs = `<linearGradient id="node-shine" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${D}" y2="${D}">${stop(.2, 'shine-off')}${stop(.23, 'shine-on')}${stop(.32, 'shine-on')}${stop(.35, 'shine-off')}${stop(.4, 'shine-off')}${stop(.42, 'shine-streak')}${stop(.46, 'shine-streak')}${stop(.48, 'shine-off')}</linearGradient>`
-    + `<linearGradient id="node-rim" x1="0" y1="0" x2="0" y2="1">${stop(0, 'rim-top')}${stop(.4, 'rim-low')}</linearGradient>`
-    + '<filter id="node-blur" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="1.5"/></filter>';
 
   const markers = Object.entries(REL_TYPES).map(([k, d]) =>
     `<marker id="arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${d.color}"/></marker>`).join('');
@@ -2027,7 +2115,7 @@ function renderMap() {
       </div>
     </div>
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}${glassDefs}</defs>${bandSvg}${edges}${bandLabels}<g class="node-shadows" filter="url(#node-blur)">${shadows}</g>${nodes}
+      <defs>${markers}${glassDefs(slabs)}</defs>${bandSvg}${edges}${bandLabels}${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
