@@ -5478,7 +5478,8 @@ window.moreTests = async ({ step, assert }) => {
     assert(ui.view === 'states' && $(`.card[data-open="${s.id}"]`).classList.contains('flash'), 'state card flashes');
     const plot = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
     setView('graphs'); $(`[data-gr="${s.id}"] .gr-plot`).dispatchEvent(plot);
-    assert(!plot.defaultPrevented && ctxMenu.hidden, 'no menu on the chart itself');
+    assert(plot.defaultPrevented && !ctxMenu.hidden && ctxMenu.dataset.id === s.id, 'the chart itself opens the menu too');
+    closeCtxMenu();
     // Overview rows have the menu too (the activity is in progress, not due yet: listed once expanded).
     ui.nextAll = true;
     setView('dashboard');
@@ -6702,6 +6703,25 @@ window.moreTests = async ({ step, assert }) => {
     const dlg = $('dialog.modal[open]'), field = dlg.querySelector('input[type=text]');
     assert(alpha(dlg) > .8 && alpha(dlg) < .95 && alpha(field) < alpha(dlg), `dialog ${alpha(dlg)}, field ${alpha(field)}`);
     dlg.close();
+    setView('dashboard');
+  });
+
+  await step('graphs: right-click anywhere on a graph opens its item menu; tick boxes are milk glass tiles', () => {
+    loadSample(); setView('graphs');
+    const card = $('#view .gr-card'), plot = card.querySelector('.gr-plot');
+    plot.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 200 }));
+    const item = findEntity(card.dataset.gr).item;
+    assert(!ctxMenu.hidden && ctxMenu.dataset.id === card.dataset.gr && ctxMenu.querySelector('.ctx-head strong').textContent === item.title, 'menu from the plot');
+    const acts = [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
+    assert(acts.includes('edit') && acts.includes('delete') && !acts.includes('show:graphs'), `graph menu: ${acts}`);
+    closeCtxMenu();
+    assert(t('help.view.graphs').includes('right-click'), 'the help says so');
+    // Tick boxes: a lit face with a ring and a 2px side; done is green glass.
+    setView('activities');
+    const css = el => getComputedStyle(el), open = $('#view .col .card .check:not(.done)'), done = $('#view .col .card .check.done');
+    const steps = el => (css(el).boxShadow.match(/[1-9]\d*px [1-9]\d*px 0px/g) || []).length;
+    assert(open && done && steps(open) === 2 && css(open).boxShadow.includes('inset') && css(open).borderTopWidth === '0px', 'an empty tile with its side and ring');
+    assert(css(done).backgroundColor === css(document.documentElement).getPropertyValue('--ok').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(', ')})`), 'done tile is green');
     setView('dashboard');
   });
 

@@ -2614,8 +2614,8 @@ function graphCard(s, width) {
     return `<tr><td>${fmtRel(p.date, true)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td>${p === points[0] ? '—' : esc(withUnit(signed(p.value - points[0].value), unit))}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
   }).join('');
 
-  return `<article class="card glass gr-card" data-gr="${s.id}">
-    <div class="card-head" data-ctx-item="${s.id}"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
+  return `<article class="card glass gr-card" data-gr="${s.id}" data-ctx-item="${s.id}">
+    <div class="card-head"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats"><strong class="gr-value">${esc(withUnit(fmtNum(last.value), unit))}</strong>${changeTag(s, change)}</div>
     ${legend}
     <div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
@@ -2782,8 +2782,8 @@ const grLegend = items => `<div class="gr-legend">${items.map(([cls, text]) => `
 const targetKey = targets => ['key-target', targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title })];
 
 function grCardHtml(item, stats, legend, plot, table, scales = '') {
-  return `<article class="card glass gr-card" data-gr="${item.id}">
-    <div class="card-head" data-ctx-item="${item.id}"><h3>${esc(item.title)}</h3><button class="btn small ghost" data-open="${item.id}">${t('btn.edit')}</button></div>
+  return `<article class="card glass gr-card" data-gr="${item.id}" data-ctx-item="${item.id}">
+    <div class="card-head"><h3>${esc(item.title)}</h3><button class="btn small ghost" data-open="${item.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats">${stats}</div>
     ${scales}
     ${legend}
