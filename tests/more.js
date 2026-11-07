@@ -6663,6 +6663,39 @@ window.moreTests = async ({ step, assert }) => {
     setView('dashboard');
   });
 
+  await step('timeline lines are drawn like on the map, with square corners; menus, dialogs and fields are clear glass', () => {
+    loadSample(); ui.tlDeps = true; setView('timeline');
+    const css = el => getComputedStyle(el), dep = REL_TYPES.depends;
+    const lines = [...document.querySelectorAll('.tl-deps .tl-dep')];
+    assert(lines.length > 3, `${lines.length} dependency arrows`);
+    // The map's muted colour, width and finer dash; only straight runs, each ending with a straight stretch into the head.
+    assert(lines.every(l => l.style.stroke === mapLineColour(dep.color) && parseFloat(l.style.strokeWidth) === (dep.width || 1.1) && l.getAttribute('stroke-dasharray') === '4 3'), 'map line style');
+    const runs = lines.map(l => l.getAttribute('d'));
+    assert(runs.every(d => /^M[\d.-]+,[\d.-]+( (h|H|V)[\d.-]+)+$/.test(d)), 'only horizontal and vertical runs');
+    const tail = d => { const v = d.match(/V([\d.-]+) H([\d.-]+)$/), h = d.match(/H([\d.-]+) V[\d.-]+ H[\d.-]+$/); return +v[2] - +h[1]; };
+    assert(runs.every(d => Math.abs(tail(d) - (MAP.LEAD - MAP.TIP)) < .01), `each ends with a straight stretch: ${runs.map(tail)}`);
+    // The map's arrowhead, one size whatever the line width, its tip TIP beyond the line's end.
+    const head = $('#tl-arrow'), mapHead = 'M1,1.5 L10,5 L1,8.5 L3,5 z';
+    assert(head.getAttribute('markerUnits') === 'userSpaceOnUse' && +head.getAttribute('refX') === 10 - MAP.TIP && head.querySelector('path').getAttribute('d') === mapHead, 'map arrowhead');
+    // Tree lines in the labels: the map's colours and widths, square corners.
+    const elbow = $('.tl-elbow');
+    assert(elbow.style.getPropertyValue('--rel').includes('color-mix') && css(elbow).borderBottomLeftRadius === '0px' && parseFloat(css(elbow).borderLeftWidth) <= 1.6, 'thin muted elbows with square corners');
+    assert([...document.querySelectorAll('.tl-legend .line-key')].every(k => k.style.getPropertyValue('--rel').includes('color-mix')), 'line keys in the map colours');
+    // A selected arrow glows, like a selected map line.
+    ui.mapRel = null; const g = $('.tl-deps [data-rel-edit]'); g.classList.add('sel');
+    assert(css(g.querySelector('.tl-dep')).filter.includes('line-glow') && $('.tl-deps #line-glow'), 'a selected arrow glows');
+    // Menus, dialogs, the calendar and fields: what is behind shows faintly through.
+    const alpha = el => +(css(el).backgroundColor.match(/[\d.]+/g)[3] ?? 1);
+    openCtxMenu(db.goals[0].id, 10, 10);
+    assert(alpha(ctxMenu) > .8 && alpha(ctxMenu) < .95 && css(ctxMenu).backgroundImage.includes('radial-gradient'), `menu see-through: ${alpha(ctxMenu)}`);
+    closeCtxMenu();
+    setView('goals'); $('#view .card').click();
+    const dlg = $('dialog.modal[open]'), field = dlg.querySelector('input[type=text]');
+    assert(alpha(dlg) > .8 && alpha(dlg) < .95 && alpha(field) < alpha(dlg), `dialog ${alpha(dlg)}, field ${alpha(field)}`);
+    dlg.close();
+    setView('dashboard');
+  });
+
   await step('map: box text stays inside its box, bands sit close, the light on the faces is defined once', () => {
     const { NW } = MAP;
     // Text that ends within 4 px of the box's right edge (inside its border), with its box's title.

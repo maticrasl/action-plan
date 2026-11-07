@@ -52,6 +52,9 @@
   --glass-side-tint: 50%;
   --glass-dim: 12%;
   --glass-spec: rgb(255 255 255 / .55);
+  /* Menus, dialogs and fields are clear glass: what is behind them shows faintly through. */
+  --pane: color-mix(in srgb, var(--surface) 88%, transparent);
+  --field: color-mix(in srgb, var(--surface) 62%, transparent);
 
   --nav-bg: #1E2A2E;
   --nav-ink: #E9EEED;
@@ -279,7 +282,7 @@ svg { flex: none; }
 .search { flex: 1; min-width: 160px; max-width: 320px; }
 
 input[type=text], input[type=date], input[type=search], select, textarea {
-  width: 100%; border: 1px solid var(--line-strong); background: var(--surface);
+  width: 100%; border: 1px solid var(--line-strong); background: var(--field);
   border-radius: var(--r-md); padding: 9px 12px; outline: none;
 }
 .toolbar select { width: auto; max-width: 300px; }
@@ -297,7 +300,8 @@ textarea { resize: vertical; min-height: 68px; }
 /* Calendar */
 .cal {
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: 284px; max-width: calc(100vw - 48px); padding: 10px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
+  background: radial-gradient(140% 120% at 0 0, var(--glass-spec), transparent 50%), var(--pane); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
+  -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
 }
 .cal.right { left: auto; right: 0; }
 .cal button:not(.btn) { border: 0; background: none; color: var(--ink); border-radius: var(--r-md); cursor: pointer; font: inherit; }
@@ -631,11 +635,13 @@ textarea { resize: vertical; min-height: 68px; }
 .tl-weekend { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
 .tl-today { position: absolute; top: 0; bottom: 0; transform: translateX(-50%); background: var(--today); box-shadow: inset 1px 0 var(--today-edge), inset -1px 0 var(--today-edge); }
 .tl-deps { position: absolute; top: 0; left: var(--label-w); pointer-events: none; z-index: 2; overflow: visible; }
-.tl-dep { fill: none; stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 4 3; }
+/* Colour, width and dash come from the relationship, as on the map; corners stay square. */
+.tl-dep { fill: none; stroke-linecap: round; }
 .tl-dep-g { cursor: pointer; outline: none; }
 .tl-dep-g.dim { opacity: .15; }
 .tl-dep-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; }
-.tl-dep-g:hover .tl-dep, .tl-dep-g:focus-visible .tl-dep, .tl-dep-g.sel .tl-dep { stroke-width: 3; }
+.tl-dep-g:hover .tl-dep, .tl-dep-g:focus-visible .tl-dep { stroke-width: 2.2 !important; }
+.tl-dep-g.sel .tl-dep { stroke-width: 2.8 !important; filter: url(#line-glow); }
 #tl-arrow path { fill: var(--bad); }
 
 .tl-row { display: flex; height: var(--row); position: relative; cursor: pointer; }
@@ -734,7 +740,8 @@ textarea { resize: vertical; min-height: 68px; }
 /* Context menu for map boxes */
 .ctx-menu {
   position: fixed; z-index: 60; min-width: 232px; max-width: min(320px, calc(100vw - 16px));
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  background: radial-gradient(140% 120% at 0 0, var(--glass-spec), transparent 50%), var(--pane); border: 1px solid var(--line); border-radius: var(--r-md);
+  -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
   box-shadow: var(--shadow-pop); padding: 6px; display: flex; flex-direction: column;
   max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain;
   animation: rise .12s ease-out;
@@ -767,12 +774,14 @@ textarea { resize: vertical; min-height: 68px; }
 
 /* ---------- Dialogs ---------- */
 .modal {
-  border: 1px solid var(--line); padding: 0; border-radius: 18px; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); padding: 0; border-radius: 18px; color: var(--ink);
+  background: radial-gradient(140% 90% at 0 0, var(--glass-spec), transparent 50%), var(--pane);
+  -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
   width: min(660px, calc(100vw - 32px)); max-height: calc(100vh - 48px); box-shadow: var(--shadow-pop);
 }
 .modal[open] { animation: rise .18s ease-out; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
-.modal::backdrop { background: rgba(14, 22, 24, .45); backdrop-filter: blur(3px); }
+.modal::backdrop { background: rgba(14, 22, 24, .4); }
 .modal form { display: flex; flex-direction: column; max-height: calc(100vh - 48px); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 20px 22px 8px; }
 .modal-head h2 { font-size: 22px; }
@@ -940,7 +949,7 @@ textarea { resize: vertical; min-height: 68px; }
   position: absolute; z-index: 1; pointer-events: none;
   left: calc(var(--tl-pad) + 3px + (var(--depth) - 1) * var(--tl-step)); width: calc(var(--tl-step) - 6px);
   top: calc(-1 * var(--up) * var(--row) - var(--row) / 2 + 7px); bottom: 50%;
-  border-left: 2px solid var(--rel); border-bottom: 2px solid var(--rel); border-bottom-left-radius: 6px;
+  border-left: var(--w, 1.1px) solid var(--rel); border-bottom: var(--w, 1.1px) solid var(--rel);
 }
 .tl-elbow.dash { border-left-style: dashed; border-bottom-style: dashed; }
 .tl-label .tl-dot, .tl-label .tl-text { position: relative; z-index: 2; }

@@ -1696,8 +1696,9 @@ function glassLighting() {
 
 // The soft glow round a selected box, kept outside its face so the see-through glass stays clear, and round a
 // selected line. Lines span the map in its own units: a straight line's box has no height for the filter to grow from.
+const lineGlow = (W, H) => `<filter id="line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
 const glowDefs = (W, H) => `<filter id="node-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/></feMerge><feComposite in2="SourceGraphic" operator="out"/></filter>`
-  + `<filter id="line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+  + lineGlow(W, H);
 
 // The slab under each box and the light on its face, defined once per colour and thickness used.
 function glassDefs(used) {
@@ -2386,7 +2387,7 @@ function renderTimeline() {
     const also = r.also ? t('tl.alsoUnder', { goals: r.also.join(', ') }) : '';
     const fold = r.fold ? foldBtn(item.id, item.title, r.collapsed) : '';
     return `<div class="tl-row ${kind} ${dim}${item.id === sel ? ' selected' : ''}" data-tl-node="${item.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc([item.title, dateText, also].filter(Boolean).join(', '))}">
-      <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow${REL_TYPES[r.rel].dash ? ' dash' : ''}" style="--rel:${REL_TYPES[r.rel].color};--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}${fold}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-head-line"><span class="tl-title">${esc(item.title)}</span>${also ? `<span class="tl-also" title="${esc(also)}" aria-hidden="true">↻</span>` : ''}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
+      <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow${REL_TYPES[r.rel].dash ? ' dash' : ''}" style="--rel:${mapLineColour(REL_TYPES[r.rel].color)};--w:${REL_TYPES[r.rel].width || 1.1}px;--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}${fold}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-head-line"><span class="tl-title">${esc(item.title)}</span>${also ? `<span class="tl-also" title="${esc(also)}" aria-hidden="true">↻</span>` : ''}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
       <div class="tl-track">${bar}</div>
     </div>`;
   }).join('');
@@ -2398,16 +2399,18 @@ function renderTimeline() {
     const pairs = [...froms.map(d => [match(d, tos), d]), ...tos.map(p => [p, match(p, froms)])];
     return pairs.filter(([p, d], i) => pairs.findIndex(([q, e]) => q === p && e === d) === i);
   };
-  // Finish-to-start arrows: from the end of a prerequisite to the start of what depends on it.
+  // Finish-to-start arrows: from the end of a prerequisite to the start of what depends on it, in straight runs with
+  // square corners, drawn like the map's lines: each ends with a straight stretch (LEAD) and stops inside its arrowhead (TIP).
+  const { LEAD, TIP } = MAP, depLine = REL_TYPES.depends;
   const deps = !ui.tlDeps ? '' : db.relations.filter(r => r.type === 'depends' && geo[r.from] && geo[r.to]).flatMap(r => copyPairs(geo[r.from], geo[r.to]).map(([p, d]) => {
     const x1 = p.end, y1 = p.y, x2 = d.start, y2 = d.y;
-    const path = x2 - 12 >= x1 + 6
-      ? `M${x1},${y1} H${x2 - 12} V${y2} H${x2}`
-      : `M${x1},${y1} h8 V${y2 + (y2 > y1 ? -ROW / 2 : ROW / 2)} H${x2 - 12} V${y2} H${x2}`;
+    const path = x2 - LEAD >= x1 + 6
+      ? `M${x1},${y1} H${x2 - LEAD} V${y2} H${x2 - TIP}`
+      : `M${x1},${y1} h8 V${y2 + (y2 > y1 ? -ROW / 2 : ROW / 2)} H${x2 - LEAD} V${y2} H${x2 - TIP}`;
     const dim = (sel && !(r.from === sel || r.to === sel)) || (relSel && r.id !== relSel.id) ? ' dim' : '';
     // A wide invisible twin makes the thin arrow easy to hit.
     return `<g class="tl-dep-g${dim}${r.id === relSel?.id ? ' sel' : ''}" data-rel-edit="${r.id}" tabindex="0" role="button" aria-pressed="${r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: relText(r) }))}">
-      <path class="tl-dep" d="${path}" marker-end="url(#tl-arrow)"></path><path class="tl-dep-hit" d="${path}"></path><title>${esc(relText(r))}</title></g>`;
+      <path class="tl-dep" d="${path}" style="stroke:${mapLineColour(depLine.color)};stroke-width:${depLine.width || 1.1}" stroke-dasharray="4 3" marker-end="url(#tl-arrow)"></path><path class="tl-dep-hit" d="${path}"></path><title>${esc(relText(r))}</title></g>`;
   })).join('');
 
   const zoom = Object.entries(TL.ZOOM).map(([z, p]) => `<button class="chip ${Math.abs(px - p) < 0.01 ? 'active' : ''}" data-tl-zoom="${z}">${t('tl.zoom.' + z)}</button>`).join('');
@@ -2423,7 +2426,7 @@ function renderTimeline() {
     <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
     ${rows.some(r => isRoutine(r.item) && !isFlexible(r.item)) ? `<div class="map-legend tl-legend"><span class="ctl-label">${t('tl.days')}</span>${['done', 'missed', 'due'].map(k => `<span><i class="swatch tl-day ${k}"></i>${esc(t('tl.day.' + k))}</span>`).join('')}</div>` : ''}
     <div class="map-legend tl-legend"><span class="ctl-label">${t('tl.links')}</span>${['contributes', 'subactivity', 'subgoal', ...(ui.tlDeps || rows.some(r => r.rel === 'depends') ? ['depends'] : [])].map(k =>
-      `<span><i class="line-key${REL_TYPES[k].dash ? ' dash' : ''}" style="--rel:${REL_TYPES[k].color}"></i>${esc(relLabel(k))}</span>`).join('')}</div>
+      `<span><i class="line-key${REL_TYPES[k].dash ? ' dash' : ''}" style="--rel:${mapLineColour(REL_TYPES[k].color)}"></i>${esc(relLabel(k))}</span>`).join('')}</div>
     ${rows.length ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + 145)}" data-from="${from}" data-to="${to}">
       <div class="tl-inner" style="--tl-w:${W}px">
         <div class="tl-head">
@@ -2434,7 +2437,7 @@ function renderTimeline() {
         <div class="tl-body">
           <div class="tl-grid">${lines.join('')}<i class="tl-today" style="left:${x(todayN) + px / 2}px;width:${Math.max(px, 3)}px"></i></div>
           <svg class="tl-deps" width="${W}" height="${rows.length * ROW}">
-            <defs><marker id="tl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>${deps}
+            <defs><marker id="tl-arrow" viewBox="0 0 10 10" refX="${10 - MAP.TIP}" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${mapLineColour(REL_TYPES.depends.color)}"/></marker>${lineGlow(W, rows.length * ROW)}</defs>${deps}
           </svg>
           ${body}
         </div>
