@@ -1407,7 +1407,14 @@ window.moreTests = async ({ step, assert }) => {
     for (let n = 1; n <= 10; n++) if (n !== 3) daily.checkins[addDays(now, -n)] = 1;
     eq(routineStreak(daily), { n: 2, unit: 'day' }, 'days streak: today not ticked yet does not break it');
     eq(consistency(daily), 9 / 10, 'days consistency');
-    if (weekday(now) >= 3) eq(routineState(daily), 'late', 'missed a due day this week');
+    // A day missed this week makes it late only until it is ticked again (both days since are ticked).
+    if (weekday(now) >= 3) {
+      eq(routineState(daily), 'doing', 'ticked again since the missed day: back on track');
+      const since = [1, 2].map(n => addDays(now, -n));
+      since.forEach(d => delete daily.checkins[d]);
+      eq(routineState(daily), 'late', 'missed a due day this week, not ticked since');
+      since.forEach(d => (daily.checkins[d] = 1));
+    }
     daily.checkins[now] = 1;
     eq(routineStreak(daily).n, 3, 'today ticked');
     // Only the due days count in days mode.
@@ -1535,9 +1542,15 @@ window.moreTests = async ({ step, assert }) => {
     }
 
     // Overview: its own list; counts and next actions leave routines out.
+    // Only routines today still asks for are listed: a set-day routine on its day, not on a rest day.
     setView('dashboard');
-    const rows = [...$('.routine-list').querySelectorAll('.routine-row')].map(r => r.dataset.open);
-    assert(rows.includes(run.id) && rows.includes(st.id), 'routines on the overview');
+    const rows = () => [...$('.routine-list').querySelectorAll('.routine-row')].map(r => r.dataset.open);
+    const stDays = st.repeat.days;
+    st.repeat.days = [weekday(now)]; render();
+    assert(rows().includes(run.id) && rows().includes(st.id), 'routines on the overview, a set day today');
+    st.repeat.days = [(weekday(now) + 1) % 7]; render();
+    assert(rows().includes(run.id) && !rows().includes(st.id), 'a set-day routine resting today is left out');
+    st.repeat.days = stDays; render();
     assert(![...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].some(r => r.dataset.open === run.id), 'not in next actions');
     assert($('.facts').textContent.includes(t('dash.factDone', { done: 0, total: 1 })), 'one-off counts only');
     $(`.routine-row[data-open="${run.id}"] [data-checkin]`).click();
@@ -6702,11 +6715,19 @@ window.moreTests = async ({ step, assert }) => {
     setView('goals'); $('#view .card').click();
     const dlg = $('dialog.modal[open]'), field = dlg.querySelector('input[type=text]');
     assert(alpha(dlg) > .8 && alpha(dlg) < .95 && alpha(field) < alpha(dlg), `dialog ${alpha(dlg)}, field ${alpha(field)}`);
+    // One scrollbar: the body scrolls, the dialog never does; thin, on a clear track.
+    const body = dlg.querySelector('.modal-body');
+    assert(css(dlg).overflowY === 'hidden' && dlg.scrollHeight <= dlg.clientHeight + 1 && css(body).overflowY === 'auto' && css(body).scrollbarWidth === 'thin' && ['transparent', 'rgba(0, 0, 0, 0)'].some(c => css(body).scrollbarColor.endsWith(c)), `one thin scrollbar: ${dlg.scrollHeight}/${dlg.clientHeight} ${css(body).scrollbarColor}`);
     dlg.close();
+    // A select's open list is solid, not the see-through colour of its field.
+    setView('map');
+    const opt = $('#view select option'), surface = css(document.body).getPropertyValue('--surface').trim();
+    const rgb = h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
+    assert(opt && css(opt).backgroundColor === rgb(surface) && alpha($('#view select')) < 1, `option list ${css(opt).backgroundColor}`);
     setView('dashboard');
   });
 
-  await step('graphs: right-click anywhere on a graph opens its item menu; tick boxes are milk glass tiles', () => {
+  await step('graphs: right-click anywhere on a graph opens its item menu; tick boxes are holes in the glass', () => {
     loadSample(); setView('graphs');
     const card = $('#view .gr-card'), plot = card.querySelector('.gr-plot');
     plot.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 200 }));
@@ -6716,12 +6737,48 @@ window.moreTests = async ({ step, assert }) => {
     assert(acts.includes('edit') && acts.includes('delete') && !acts.includes('show:graphs'), `graph menu: ${acts}`);
     closeCtxMenu();
     assert(t('help.view.graphs').includes('right-click'), 'the help says so');
-    // Tick boxes: a lit face with a ring and a 2px side; done is green glass.
+    // By night a graph is a dark pane cut from the surface, not a light slab of the items' milk.
+    const was = theme; $('#themeSeg [data-theme-set="dark"]').click();
+    const lum = c => c.match(/[\d.]+/g).slice(0, 3).reduce((x, y) => x + +y, 0);
+    const pane = $('#view .gr-card'), surface = getComputedStyle(document.body).getPropertyValue('--surface').trim();
+    assert(getComputedStyle(pane).getPropertyValue('--glass-base').trim() === surface && lum(getComputedStyle(pane).backgroundColor) < lum(getComputedStyle($('#view select')).backgroundColor) + 40, `dark graph pane ${getComputedStyle(pane).backgroundColor}`);
+    $(`#themeSeg [data-theme-set="${was}"]`).click();
+    // Tick boxes are holes in the glass, as deep as the card's slab: the page's colour, the far (top and left) inner
+    // walls showing, shaded like the slab sides facing the same way: the left one the card's own side colour, the top
+    // one (facing down, like the slab's bottom) darker; no ring. Done, a tile of green glass stands out of it.
     setView('activities');
-    const css = el => getComputedStyle(el), open = $('#view .col .card .check:not(.done)'), done = $('#view .col .card .check.done');
+    const css = el => getComputedStyle(el), open = $('#view .col .card .check:not(.done):not(.doing)'), doing = $('#view .col .card .check.doing'), done = $('#view .col .card .check.done');
     const steps = el => (css(el).boxShadow.match(/[1-9]\d*px [1-9]\d*px 0px/g) || []).length;
-    assert(open && done && steps(open) === 2 && css(open).boxShadow.includes('inset') && css(open).borderTopWidth === '0px', 'an empty tile with its side and ring');
+    const bg = css(document.body).backgroundColor, depth = css(open.closest('.glass')).getPropertyValue('--depth').trim();
+    const sh = css(open).boxShadow;
+    const top = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 3px 0px 0px inset/), left = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 3px 0px 0px 0px inset/);
+    assert(open && depth === '3px' && css(open).backgroundColor === bg && css(open).borderTopWidth === '0px' && top && left && lum(top[1]) < lum(left[1]), `an empty box is a hole ${depth} deep, top wall darker: ${sh}`);
+    const cardSide = css(open.closest('.glass')).boxShadow.match(/(rgba?\([^)]*\)|color\([^)]*\)) 1px 1px 0px/);
+    assert(cardSide && cardSide[1] === left[1], `the left wall is the card's side: ${left[1]} vs ${cardSide && cardSide[1]}`);
+    assert(doing && css(doing).backgroundColor === bg, 'in progress: no amber floor');
+    // The checklist in a routine card is clear, part of the card's glass.
+    const list = $('#view .card.routine .li-ticks');
+    assert(!list || css(list).backgroundColor === 'rgba(0, 0, 0, 0)', 'routine checklist is clear glass');
+    assert(steps(done) === 2 && !css(done).boxShadow.includes('2px 2px 0px 0px inset'), 'done: a green tile with its side');
     assert(css(done).backgroundColor === css(document.documentElement).getPropertyValue('--ok').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(', ')})`), 'done tile is green');
+    setView('dashboard');
+  });
+
+  await step('map: switching between light and dark redraws the glass in the new theme', () => {
+    loadSample(); setView('map');
+    const slabColours = () => [...document.querySelectorAll('.map-wrap defs > g[id^="glass-"] path, .map-wrap defs linearGradient stop')].map(x => x.getAttribute('fill') || x.getAttribute('stop-color')).join();
+    const pick = k => $(`#themeSeg [data-theme-set="${k}"]`).click();
+    const was = theme;
+    pick('light'); const light = slabColours();
+    pick('dark'); const dark = slabColours();
+    assert(dark !== light, 'slabs redrawn when switching to dark');
+    // The same as a map first drawn in dark.
+    render(); eq(slabColours(), dark, 'as if drawn in dark from the start');
+    pick('light'); eq(slabColours(), light, 'and back to light');
+    // Following the system: a change of the system theme redraws it too.
+    pick('system'); document.documentElement.dataset.theme = 'dark'; darkScheme.dispatchEvent(new Event('change'));
+    eq(slabColours(), dark, 'system theme change redraws the map');
+    pick(was);
     setView('dashboard');
   });
 

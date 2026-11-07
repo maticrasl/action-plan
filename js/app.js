@@ -5737,11 +5737,14 @@ const THEME_ICONS = {
 };
 let theme = THEMES.includes(prefs.get('theme')) ? prefs.get('theme') : 'system';
 
+// The map writes its glass in the colours of the theme it was drawn in, so a change of theme redraws the view.
 function applyTheme() {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.dataset.theme = theme;
   renderThemeSetting();
 }
+const darkScheme = matchMedia('(prefers-color-scheme: dark)');
+darkScheme.addEventListener('change', () => { if (theme === 'system') render(); });
 function renderThemeSetting() {
   $('#themeSeg').innerHTML = THEMES.map(k =>
     `<button type="button" data-theme-set="${k}" aria-pressed="${k === theme}">${THEME_ICONS[k]}<span>${t('theme.' + k)}</span></button>`).join('');
@@ -5752,6 +5755,7 @@ $('#themeSeg').addEventListener('click', e => {
   theme = b.dataset.themeSet;
   prefs.set('theme', theme);
   applyTheme();
+  render();
 });
 
 /* ---------- Install as an app ----------

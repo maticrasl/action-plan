@@ -296,6 +296,8 @@ input[type=text], input[type=date], input[type=search], select, textarea {
   border-radius: var(--r-md); padding: 9px 12px; outline: none;
 }
 .toolbar select { width: auto; max-width: 300px; }
+/* A select's open list takes the field's colour, which is see-through: give the list the solid surface and ink. */
+select option, select optgroup { background-color: var(--surface); color: var(--ink); }
 input:focus, select:focus, textarea:focus { border-color: var(--goal); box-shadow: var(--focus); }
 textarea { resize: vertical; min-height: 68px; }
 .date-field { position: relative; }
@@ -339,13 +341,14 @@ textarea { resize: vertical; min-height: 68px; }
 .glass {
   --side: color-mix(in srgb, color-mix(in srgb, var(--tint) var(--glass-side-tint), var(--glass-base)) calc(100% - var(--glass-dim)), #000);
   --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side);
+  --depth: 3px;
   --glow: 0 0 14px 3px color-mix(in srgb, var(--tint) 60%, transparent);
   border: 0;
   box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -14px 22px -14px color-mix(in srgb, var(--tint) 40%, transparent), var(--slab);
   background: linear-gradient(to bottom, var(--glass-spec), transparent 65%),
     color-mix(in srgb, color-mix(in srgb, var(--tint) calc(var(--glass-tint) + var(--wash, 0%)), var(--glass-base)) calc(var(--glass-alpha) * 100%), transparent);
 }
-.glass.goal { --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side), 4px 4px 0 var(--side), 5px 5px 0 var(--side); }
+.glass.goal { --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side), 4px 4px 0 var(--side), 5px 5px 0 var(--side); --depth: 5px; }
 .glass.state { --glass-tint: var(--glass-tint-state); }
 :is(.glass, .node).st-todo:not(.goal, .state), :is(.glass, .node).st-blocked { --glass-tint: var(--glass-tint-quiet); --glass-side-tint: var(--glass-side-quiet); }
 .glass:hover { --wash: 6%; }
@@ -432,21 +435,29 @@ textarea { resize: vertical; min-height: 68px; }
   width: 22px; height: 22px; border-radius: 6px; border: 0;
   cursor: pointer; flex: none; display: grid; place-items: center; font-size: 13px; color: #fff; padding: 0; font-weight: 600;
 }
-/* Tick boxes are small tiles of milk glass: a lit face, a hairline ring in the colour of the card they sit on,
-   a 2px side. Done, the tile is green glass with a white tick; in progress, amber glass. */
+/* Tick boxes are holes cut through the glass, as deep as the card's slab (--depth): the page shows through them.
+   Seen from where the slabs' sides are seen (below and to the right), a hole shows its far walls, the top and the
+   left. They are shaded like the slab sides that face the same way: the top faces down, like a slab's bottom side,
+   which reflects the darker room below, so it is the darker wall; the left faces right, like a slab's right side,
+   so it is the lighter one. The light, to the left, can't reach the floor next to the left wall, so that wall throws
+   a soft shadow onto it. Ticked, a tile of green glass fills the hole and stands out of it. In progress, the walls
+   are amber. Hovered, they turn green. */
 :is(.check, .li-box) {
-  --tile: var(--glass-base);
-  --side: color-mix(in srgb, var(--on-glass-edge, var(--ink-3)) 55%, var(--glass-base));
-  --ring: color-mix(in srgb, var(--on-glass-edge, var(--ink-3)) 75%, transparent);
-  background: linear-gradient(to bottom, var(--glass-spec), transparent 70%), var(--tile);
-  box-shadow: inset 0 0 0 1.5px var(--ring), inset 0 1px 0 var(--glass-rim), 1px 1px 0 var(--side), 2px 2px 0 var(--side);
+  --wall: var(--side, var(--line-strong));
+  --wall-top: color-mix(in srgb, var(--wall) 80%, #000);
+  --wall-left: var(--wall);
+  --d: var(--depth, 3px);
+  background: var(--bg);
+  box-shadow: inset 0 var(--d) 0 var(--wall-top), inset var(--d) 0 0 var(--wall-left),
+    inset calc(var(--d) + 1px) 0 3px -1px rgb(0 0 0 / .14);
 }
 :is(.check.done, .li-tick.done .li-box) {
-  --tile: var(--ok); --ring: transparent; --side: color-mix(in srgb, var(--ok) 72%, #000);
-  background: linear-gradient(to bottom, rgb(255 255 255 / .35), transparent 70%), var(--tile);
+  --side: color-mix(in srgb, var(--ok) 72%, #000);
+  background: linear-gradient(to bottom, rgb(255 255 255 / .35), transparent 70%), var(--ok);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), 1px 1px 0 var(--side), 2px 2px 0 var(--side);
 }
-.check.doing { --tile: color-mix(in srgb, var(--warn) 38%, var(--glass-base)); --ring: var(--warn); --side: color-mix(in srgb, var(--warn) 70%, var(--glass-base)); }
-:is(.check:not(.done):hover, .li-tick:not(.done):hover .li-box) { --ring: var(--ok); }
+.check.doing { --wall: color-mix(in srgb, var(--warn) 80%, var(--glass-base)); }
+:is(.check:not(.done):hover, .li-tick:not(.done):hover .li-box) { --wall: var(--ok); }
 .done-text { text-decoration: line-through; color: var(--ink-3); }
 
 .empty { text-align: center; padding: 48px 20px; color: var(--ink-2); border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); }
@@ -811,11 +822,15 @@ textarea { resize: vertical; min-height: 68px; }
   background: radial-gradient(140% 90% at 0 0, var(--glass-spec), transparent 50%), var(--pane);
   -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
   width: min(660px, calc(100vw - 32px)); max-height: calc(100vh - 48px); box-shadow: var(--shadow-pop);
+  /* Only the body scrolls; the dialog itself never does (its 1px border would otherwise add a second scrollbar). */
+  overflow: hidden;
 }
 .modal[open] { animation: rise .18s ease-out; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+/* Scrollbars in panes are thin, a see-through thumb on a clear track, so the glass shows. */
+:is(.modal-body, .ctx-menu) { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ink) 30%, transparent) transparent; }
 .modal::backdrop { background: rgba(14, 22, 24, .4); }
-.modal form { display: flex; flex-direction: column; max-height: calc(100vh - 48px); }
+.modal form { display: flex; flex-direction: column; max-height: calc(100vh - 50px); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 20px 22px 8px; }
 .modal-head h2 { font-size: 22px; }
 .modal-body { padding: 8px 22px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
@@ -916,7 +931,7 @@ textarea { resize: vertical; min-height: 68px; }
   .row .grow { flex: 1 1 calc(100% - 40px); white-space: normal; }
   .row .links { padding-left: 34px; }
   .modal { width: 100vw; max-width: 100vw; max-height: 92vh; margin: auto 0 0; border-radius: 20px 20px 0 0; }
-  .modal form { max-height: 92vh; }
+  .modal form { max-height: calc(92vh - 2px); }
   .toast { bottom: 148px; }
   .link-bar { bottom: calc(76px + env(safe-area-inset-bottom)); border-radius: var(--r-lg); }
 }
@@ -991,8 +1006,9 @@ textarea { resize: vertical; min-height: 68px; }
 
 /* ---------- Graphs ---------- */
 .gr-list { display: flex; flex-direction: column; gap: 16px; }
-/* A graph is a big pane: clear glass, barely tinted, so the plot reads. */
-.gr-card { cursor: default; gap: 10px; --glass-tint: 5%; }
+/* A graph is a big pane: barely tinted, so the plot reads, and cut from the page's surface rather than the items'
+   milk, so by night it stays dark instead of a light grey slab. */
+.gr-card { cursor: default; gap: 10px; --glass-tint: 5%; --glass-base: var(--surface); }
 .gr-card .card-head .btn { flex-shrink: 0; }
 .gr-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
 .gr-value { font-size: 26px; font-weight: 600; line-height: 1.1; }
@@ -1168,6 +1184,10 @@ textarea { resize: vertical; min-height: 68px; }
 /* A list's items sit on a slip of their own inside the card; round ticks keep them apart from the
    card's square status check. Lines between items start where the text does. */
 .li-ticks { display: flex; flex-direction: column; margin: 4px 0 6px; padding: 2px; background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); border: 1px solid var(--line); border-radius: var(--r-md); }
+/* On glass the checklist is part of the pane: clear, edged and divided in the card's colour. */
+.glass .li-ticks { background: transparent; border-color: color-mix(in srgb, var(--on-glass-edge) 35%, transparent); }
+.glass .li-tick + .li-tick::before { background: color-mix(in srgb, var(--on-glass-edge) 25%, transparent); }
+.glass .li-tick:hover { background: color-mix(in srgb, var(--tint) 12%, transparent); }
 .li-tick { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 7px 8px; text-align: left; font: inherit; font-size: 14px; line-height: 1.35; color: var(--ink); background: none; border: 0; border-radius: var(--r-sm); cursor: pointer; }
 .li-tick + .li-tick::before { content: ""; position: absolute; top: 0; left: 36px; right: 8px; height: 1px; background: var(--line); }
 .li-tick:hover { background: var(--surface-2); }
