@@ -2193,10 +2193,11 @@ function visionNode(n, v, { font, textW, face, sel, dim, purpose, reached, y }) 
 
 // The cloud's soft edge and haze, and the faint wide glow round whatever works toward a vision
 // (wider and fainter than the glow round a selected box).
-const visionDefs = () => `<linearGradient id="vision-sheen" x1="0" y1="0" x2=".35" y2="1"><stop class="vision-sheen-top" offset="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></linearGradient>`
+const visionDefs = (W, H) => `<linearGradient id="vision-sheen" x1="0" y1="0" x2=".35" y2="1"><stop class="vision-sheen-top" offset="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></linearGradient>`
   + `<filter id="vision-cloud" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>`
   + `<filter id="vision-haze" x="-40%" y="-110%" width="180%" height="320%"><feGaussianBlur stdDeviation="9"/></filter>`
-  + `<filter id="vision-glow" x="-45%" y="-130%" width="190%" height="360%"><feGaussianBlur stdDeviation="12"/></filter>`;
+  + `<filter id="vision-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="12" result="b"/><feComposite in="b" in2="SourceGraphic" operator="out"/></filter>`
+  + `<filter id="vision-line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="8"/></filter>`;
 
 // Items working toward a vision glow in every view. With a Purpose everything turns gold, the logo
 // at the top left too, and the first time it is found the user is congratulated (once, on any device).
@@ -2250,7 +2251,7 @@ function renderMap() {
     const dim = (sel && !(c.r.from === sel || c.r.to === sel)) || (relSel && c.r.id !== relSel.id) ? 'dim' : '';
     const label = relText(c.r);
     return `<g class="edge-g ${dim} ${c.r.id === relSel?.id ? 'sel' : ''}${glows(c.r) ? ' vglow' : ''}" data-rel-edit="${c.r.id}" tabindex="0" role="button" aria-pressed="${c.r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: label }))}">
-      ${glows(c.r) ? `<path class="edge-vglow" d="${c.d}"></path>` : ''}<path class="edge" d="${c.d}" style="stroke:${mapLineColour(def.color)};stroke-width:${def.width || 1.1}" ${def.dash ? 'stroke-dasharray="4 3"' : ''} marker-end="url(#arrow-${c.r.type})"></path>
+      <path class="edge" d="${c.d}" style="stroke:${mapLineColour(def.color)};stroke-width:${def.width || 1.1}" ${def.dash ? 'stroke-dasharray="4 3"' : ''} marker-end="url(#arrow-${c.r.type})"></path>
       <path class="edge-hit" d="${c.d}"></path><title>${esc(label)}</title></g>`;
   }).join('');
 
@@ -2302,7 +2303,9 @@ function renderMap() {
 
   // Band labels go over the lines, so a line passing by never cuts through one.
   const bandSvg = bands.map(b => `<rect class="band ${b.kind}" x="6" y="${b.top}" width="${W - 12}" height="${b.bottom - b.top}" rx="14"></rect>`).join('');
-  // The glow round what works toward a vision lies under every line and box, so it never dims a neighbour's text.
+  // The glow round what works toward a vision lies under every line and box, so it never dims a neighbour's text;
+  // lines glow as softly and widely as boxes.
+  const lineGlows = chains.filter(c => glows(c.r)).map(c => `<path class="edge-vglow" data-line-glow="${c.r.id}" d="${c.d}"></path>`).join('');
   const halos = Object.values(node).filter(n => contrib.has(n.id)).map(n => `<path class="node-vglow" data-halo="${n.id}" d="${face}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})"></path>`).join('');
   const bandLabels = bands.map(b => {
     const levels = b.last - b.first + 1;
@@ -2334,7 +2337,7 @@ function renderMap() {
       </div>
     </div>
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}${visions.list.length ? visionDefs() : ''}</defs>${bandSvg}${halos ? `<g class="vglow-halos">${halos}</g>` : ''}${edges}${bandLabels}${nodes}
+      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}${visions.list.length ? visionDefs(W, H) : ''}</defs>${bandSvg}${lineGlows ? `<g class="vglow-lines">${lineGlows}</g>` : ''}${halos ? `<g class="vglow-halos">${halos}</g>` : ''}${edges}${bandLabels}${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}

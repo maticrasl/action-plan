@@ -7181,9 +7181,13 @@ window.moreTests = async ({ step, assert }) => {
     assert(svg.querySelector(`[data-map-node="${g.id}"]`).classList.contains('vglow') && svg.querySelector(`.vglow-halos [data-halo="${a.id}"]`), 'the goal and its activity glow');
     // The glow lies under every line and box: its layer comes before them all.
     const layer = svg.querySelector('.vglow-halos');
+    const lineLayer = svg.querySelector('.vglow-lines');
+    assert(lineLayer && !svg.querySelector('.edge-g .edge-vglow') && [...svg.querySelectorAll('.edge-g, .node')].every(x => lineLayer.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING), 'lines glow in a layer under all lines and boxes');
+    assert(parseFloat(getComputedStyle(lineLayer.querySelector('.edge-vglow')).strokeWidth) >= 12 && getComputedStyle(lineLayer).filter.includes('vision-line-glow'), 'a wide, soft glow');
+    assert(svg.querySelector('#vision-glow feComposite[operator="out"]'), 'the boxes\' glow is cut away inside every box');
     assert(!svg.querySelector('.node .node-vglow') && [...svg.querySelectorAll('.edge-g, .node')].every(x => layer.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING), 'the glow is drawn under all lines and boxes');
     assert(!svg.querySelector(`[data-map-node="${g2.id}"]`).classList.contains('vglow'), 'an unrelated goal does not');
-    assert(svg.querySelector(`[data-rel-edit="${db.relations[0].id}"]`).classList.contains('vglow') && svg.querySelector(`[data-rel-edit="${visionRelId(g.id, B.id)}"] .edge-vglow`), 'and the lines between them');
+    assert(svg.querySelector(`[data-rel-edit="${db.relations[0].id}"]`).classList.contains('vglow') && svg.querySelector(`.vglow-lines [data-line-glow="${visionRelId(g.id, B.id)}"]`), 'and the lines between them');
     // Toggles for the two link types.
     $('[data-rel-toggle="serves"]').click();
     assert(!$(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) && $(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'goal → vision lines hidden');
@@ -7284,7 +7288,14 @@ window.moreTests = async ({ step, assert }) => {
     assert(getComputedStyle(bar).boxShadow.includes('12px'), `a bar's glow stays within its row: ${getComputedStyle(bar).boxShadow}`);
     setView('goals');
     const card = id => $(`#view .card[data-ctx-item="${id}"]`);
-    assert(getComputedStyle(card(g.id)).boxShadow !== getComputedStyle(card(u.id)).boxShadow, 'the glow is a shadow round the card');
+    // The glow lies behind the cards: a layer under the card itself, not a shadow of the card that could cover its neighbours.
+    const halo = getComputedStyle(card(g.id), '::before');
+    assert(halo.boxShadow.includes('26px') && halo.zIndex === '-1' && getComputedStyle(card(u.id), '::before').boxShadow === 'none', `the glow is a layer behind the card: ${halo.boxShadow}`);
+    const withGlow = getComputedStyle(card(g.id)).boxShadow;
+    card(g.id).classList.remove('vglow');
+    eq(withGlow, getComputedStyle(card(g.id)).boxShadow, 'the card itself looks the same');
+    card(g.id).classList.add('vglow');
+    assert(getComputedStyle($('#view')).isolation === 'isolate', 'the view keeps the glow above its own background');
     const silver = getComputedStyle(document.documentElement).getPropertyValue('--vglow').trim();
     assert(!document.documentElement.classList.contains('purpose'), 'not yet a Purpose');
     const logo = () => getComputedStyle($('.brand .blaze-mark circle')).fill;
