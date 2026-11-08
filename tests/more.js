@@ -4045,6 +4045,28 @@ window.moreTests = async ({ step, assert }) => {
     save(); setView('map');
     assert(x(sub) < x(early) && x(early) < x(later), 'the tree (nearest: Sub, 5 days) first; then Early and Later, sharing an activity, by date');
     deletePlan(plans.current);
+    // Dates give way to crossings: Soon and Late serve one vision, Mid another, so Mid between them would cross a line.
+    fresh('Dates and visions');
+    const keptVisions = visions;
+    visions = { list: [], deleted: {} };
+    const v1 = { id: uid(), title: 'Wide vision', parents: [] }, v2 = { id: uid(), title: 'Other vision', parents: [] };
+    visions.list.push(v1, v2);
+    const gs = mk('goal', { title: 'Soon', deadline: addDays(now, 10), visions: [v1.id] });
+    const gm = mk('goal', { title: 'Mid', deadline: addDays(now, 40), visions: [v2.id] });
+    const gl = mk('goal', { title: 'Late', deadline: addDays(now, 90), visions: [v1.id] });
+    const gn = mk('goal', { title: 'Free', deadline: addDays(now, 50) });
+    save(); saveVisions(); setView('map');
+    const seg = g => [x(g), x(findVision(g.visions[0]))];
+    const cross = (a, b) => (seg(a)[0] - seg(b)[0]) * (seg(a)[1] - seg(b)[1]) < 0;
+    assert(!cross(gs, gm) && !cross(gm, gl) && !cross(gs, gl), `no lines cross: ${[gs, gm, gl].map(g => g.title + ' ' + seg(g).map(Math.round)).join(', ')}`);
+    assert(x(gs) < x(gl), 'Soon still before Late');
+    assert(!(x(gs) < x(gm) && x(gm) < x(gl)), 'Mid moved out from between them');
+    // Without the visions' lines, the dates decide again.
+    ui.mapHidden.add('serves'); render();
+    assert(x(gs) < x(gm) && x(gm) < x(gn) && x(gn) < x(gl), 'by date when no line is in the way');
+    ui.mapHidden.delete('serves');
+    deletePlan(plans.current);
+    visions = keptVisions; saveVisions();
     return want.join(' < ');
   });
 
@@ -7396,7 +7418,7 @@ window.moreTests = async ({ step, assert }) => {
   offerTour = () => offers++;
   const SECRET = { A: 'SECRET-ana-goal', B: 'SECRET-bor-goal', G: 'SECRET-guest-goal', C: 'SECRET-cene-goal' };
   const fileText = acct => JSON.stringify(G.files[acct] || null);
-  const keysText = u => userKeys(u).map(k => `${k}=${localStorage.getItem(k)}`).join('\n');
+  const keysText = u => userKeys(u).sort().map(k => `${k}=${localStorage.getItem(k)}`).join('\n');
   const memText = () => JSON.stringify({ db, plans, visions, other: allPlansData().map(p => p.data) }) + document.querySelector('.app').innerHTML;
   const byAcct = key => users.list.find(u => u.account?.id === G.accounts[key].id);
   const addSecret = title => { setView('goals'); mk('goal', { title }); visions.list.push({ id: uid(), title: title + '-vision', parents: [] }); save(); saveVisions(); render(); };
@@ -7553,7 +7575,7 @@ window.moreTests = async ({ step, assert }) => {
     assert($('#toast').textContent === t('user.loggedOut', { name: 'Ana' }), 'toast');
     const names = [...$('#syncSection .user-list').querySelectorAll('b')].map(b => b.textContent);
     eq(names, ['Ana', 'Bor'], 'everyone signed in here is listed');
-    assert([...document.querySelectorAll('#syncSection .user-list [data-sync]')].every(b => b.textContent === t('user.logIn')), 'each with Log in');
+    assert([...document.querySelectorAll('#syncSection .user-list [data-sync="switch"]')].every(b => b.textContent === t('user.logIn')), 'each with Log in');
     assert(keysText(ana).includes(SECRET.A), 'Ana\'s data stays on the device');
     settings.close();
     addSecret(SECRET.G);
@@ -7668,12 +7690,53 @@ window.moreTests = async ({ step, assert }) => {
     settings.close();
   });
 
+  await step('users: removing a user deletes only their data here; logging in again brings back what synced', async () => {
+    const ana = byAcct('A'), bor = currentUser(), cene = byAcct('C');
+    const allKeys = area => Object.keys(area);
+    const nsKeys = (u, area = localStorage) => allKeys(area).filter(k => k.startsWith(ROOT + u.ns));
+    const anaKeys = keysText(ana), borKeys = keysText(bor), lang = localStorage.getItem(LANG_KEY);
+    assert(bor === byAcct('B'), 'Bor is on');
+    renderSync();
+    const removeBtn = u => $(`#syncSection [data-sync="remove"][data-user="${u.id}"]`);
+    // Cancelled: nothing changes.
+    window.confirm = () => false;
+    removeBtn(cene).click();
+    assert(users.list.includes(cene) && keysText(cene).includes(SECRET.G), 'cancel keeps everything');
+    window.confirm = () => true;
+    removeBtn(cene).click();
+    assert(!users.list.includes(cene) && !JSON.parse(localStorage.getItem(USERS_KEY)).list.some(u => u.id === cene.id), 'gone from the list, stored too');
+    assert(!nsKeys(cene).length && !nsKeys(cene, sessionStorage).length, 'every key of theirs deleted');
+    assert(keysText(ana) === anaKeys && keysText(bor) === borKeys && localStorage.getItem(LANG_KEY) === lang && currentUser() === bor, 'the others and the device untouched, still Bor');
+    eq($('#toast').textContent, t('user.removed', { name: 'cene' }), 'toast');
+    assert(!removeBtn(cene), 'no longer listed');
+    // Logging in again makes a new user with what had synced to their Drive.
+    G.pick = 'C';
+    await logIn(); await settle();
+    const back = currentUser();
+    assert(back !== cene && back.account.id === 'perm-C' && JSON.stringify(allPlansData().map(p => p.data)).includes(SECRET.G), 'their synced data is back');
+    // Removing the user you are: the guest opens, nobody else is touched.
+    const guest = users.list.find(u => !u.account);
+    renderSync();
+    removeBtn(back).click();
+    assert(currentUser() === guest && !users.list.includes(back) && !nsKeys(back).length && !nsKeys(back, sessionStorage).length, 'the guest opens, their keys are gone');
+    assert(!drive.token && $('#syncBtn').hidden, 'signed out');
+    noLeak(memText(), ['A', 'B', 'G'], 'the guest\'s screen');
+    // The first user, on the plain keys: only theirs go (the device's language and the user list stay).
+    const borKeys2 = keysText(bor);
+    removeUser(ana.id);
+    const plain = allKeys(localStorage).filter(k => !users.list.some(u => u.ns && k.startsWith(ROOT + u.ns)) && k !== USERS_KEY && k !== LANG_KEY);
+    assert(!users.list.includes(ana) && !plain.length, 'no plain keys left: ' + plain);
+    assert(!sessionStorage.getItem('actionplan.syncToken'), 'nor her token');
+    assert(keysText(bor) === borKeys2 && localStorage.getItem(LANG_KEY) === lang, 'Bor and the language untouched');
+    eq(readUsers().list.map(u => u.id), users.list.map(u => u.id), 'stored list matches');
+    // A guest is never offered for removal.
+    assert(!removeBtn(guest), 'no remove for the guest');
+  });
+
   // Back to a device nobody has signed in on, for anything after this.
-  enterUser('local');
   users.list.filter(u => u.ns).forEach(u => { userKeys(u).forEach(k => localStorage.removeItem(k)); userKeys(u, sessionStorage).forEach(k => sessionStorage.removeItem(k)); });
-  users.list = [currentUser()];
-  currentUser().account = null; currentUser().name = '';
-  saveUsers();
+  users.list = [{ id: 'local', ns: '', name: '', account: null }];
+  enterUser('local');
   drive.forget();
   theme = 'system'; prefs.set('theme', 'system'); applyTheme(); renderSync();
   window.prompt = realPrompt; offerTour = realOffer;

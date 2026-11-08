@@ -221,6 +221,10 @@ const I18N = {
       'user.logOut': 'Log out',
       'user.switched': 'Switched to {name}',
       'user.loggedOut': '{name} logged out – their plans stay on this device, kept apart',
+      'user.remove': 'Remove',
+      'user.removeMe': 'Remove from this device',
+      'user.removeConfirm': 'Remove {name} from this device? Their plans are deleted here; what has synced stays in their Google Drive and comes back when they log in again. Changes not synced yet are lost.',
+      'user.removed': '{name} removed from this device',
       'btn.tutorial': 'Take the tour',
       'btn.help': 'Help mode',
 
@@ -1105,6 +1109,10 @@ const I18N = {
       'user.logOut': 'Odjava',
       'user.switched': 'Preklopljeno na: {name}',
       'user.loggedOut': '{name} – odjava; načrti ostanejo na tej napravi, ločeno',
+      'user.remove': 'Odstrani',
+      'user.removeMe': 'Odstrani s te naprave',
+      'user.removeConfirm': 'Odstranim {name} s te naprave? Načrti se tu izbrišejo; kar je sinhronizirano, ostane v Google Drive tega računa in se vrne ob naslednji prijavi. Še nesinhronizirane spremembe se izgubijo.',
+      'user.removed': '{name} – odstranjeno s te naprave',
       'btn.tutorial': 'Vodeni ogled',
       'btn.help': 'Način pomoči',
 

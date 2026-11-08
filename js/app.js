@@ -1896,10 +1896,9 @@ function layoutMap(items, rels) {
     if (i) { link(up, n, c.chain[i - 1]); link(down, c.chain[i - 1], n); }
   }));
 
-  // Goals linked to each other (sub-goals, dependencies) stay together; unrelated goals and
-  // such groups run left to right by their nearest deadline (none last). Inside a group, fewer crossings
-  // decide. Whenever a row is reordered, its goals are put back in group order in the slots they hold, so
-  // activities, states and line slots arrange themselves around them.
+  // Goals start left to right by their nearest deadline (none last), goals linked to each other (sub-goals,
+  // dependencies) kept together. That order gives way only where it makes lines cross (to visions above, say):
+  // fewer crossings come first, and goals go back toward their dates wherever that crosses nothing more.
   const groupOf = {};
   const find = id => (groupOf[id] === undefined || groupOf[id] === id ? (groupOf[id] = id) : (groupOf[id] = find(groupOf[id])));
   rels.filter(r => kindOf[r.from] === 'goal' && kindOf[r.to] === 'goal').forEach(r => { groupOf[find(r.from)] = find(r.to); });
@@ -1934,7 +1933,6 @@ function layoutMap(items, rels) {
       n.b = ns?.length ? ns.reduce((s, x) => s + x.i, 0) / ns.length : n.i;
     });
     L.list.sort((a, b) => a.b - b.b || a.i - b.i);
-    slotGoals(L);
     L.list.forEach((n, i) => (n.i = i));
   };
   let best = crossings(), bestOrder = layers.map(L => [...L.list]);
@@ -1957,9 +1955,23 @@ function layoutMap(items, rels) {
     layers.forEach(L => {
       for (let i = 0; i + 1 < L.list.length; i++) {
         const u = L.list[i], v = L.list[i + 1];
-        if (!(u.kind === 'goal' && v.kind === 'goal' && rank[u.id] !== rank[v.id]) && pairCross(v, u, up) + pairCross(v, u, down) < pairCross(u, v, up) + pairCross(u, v, down)) {
+        if (pairCross(v, u, up) + pairCross(v, u, down) < pairCross(u, v, up) + pairCross(u, v, down)) {
           L.list[i] = v; L.list[i + 1] = u; v.i = i; u.i = i + 1;
           improved = true;
+        }
+      }
+    });
+  }
+  // Then neighbouring goals swap back toward their date order wherever that adds no crossing.
+  for (let moved = true; moved;) {
+    moved = false;
+    layers.forEach(L => {
+      for (let i = 0; i + 1 < L.list.length; i++) {
+        const u = L.list[i], v = L.list[i + 1];
+        if (u.kind === 'goal' && v.kind === 'goal' && rank[v.id] < rank[u.id]
+          && pairCross(v, u, up) + pairCross(v, u, down) <= pairCross(u, v, up) + pairCross(u, v, down)) {
+          L.list[i] = v; L.list[i + 1] = u; v.i = i; u.i = i + 1;
+          moved = true;
         }
       }
     });

@@ -362,17 +362,19 @@ textarea { resize: vertical; min-height: 68px; }
 }
 /* Every item, as on the map: milk glass washed in its status colour (or its kind's), no edge, glowing from within –
    brighter at the top, a soft band of its colour low inside – its side cut along the bottom and right; goals are
-   cut thicker. Hovered, it takes a little more of its colour. */
+   cut thicker. Hovered, it takes a little more of its colour. Cards and rows (every view but the timeline and the
+   map) keep only a hint of it: --mute scales every wash of colour. */
 .glass {
-  --side: color-mix(in srgb, color-mix(in srgb, var(--tint) var(--glass-side-tint), var(--glass-base)) calc(100% - var(--glass-dim)), #000);
+  --side: color-mix(in srgb, color-mix(in srgb, var(--tint) calc(var(--glass-side-tint) * var(--mute, 1)), var(--glass-base)) calc(100% - var(--glass-dim)), #000);
   --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side);
   --depth: 3px;
   --glow: 0 0 14px 3px color-mix(in srgb, var(--tint) 60%, transparent);
   border: 0;
-  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -14px 22px -14px color-mix(in srgb, var(--tint) 40%, transparent), var(--slab), var(--vg, 0 0 #0000);
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -14px 22px -14px color-mix(in srgb, var(--tint) calc(40% * var(--mute, 1)), transparent), var(--slab), var(--vg, 0 0 #0000);
   background: linear-gradient(to bottom, var(--glass-spec), transparent 65%),
-    color-mix(in srgb, color-mix(in srgb, var(--tint) calc(var(--glass-tint) + var(--wash, 0%)), var(--glass-base)) calc(var(--glass-alpha) * 100%), transparent);
+    color-mix(in srgb, color-mix(in srgb, var(--tint) calc((var(--glass-tint) + var(--wash, 0%)) * var(--mute, 1)), var(--glass-base)) calc(var(--glass-alpha) * 100%), transparent);
 }
+:is(.card, .row).glass { --mute: .25; }
 .glass.goal { --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side), 4px 4px 0 var(--side), 5px 5px 0 var(--side); --depth: 5px; }
 :is(.glass, .node).state { --glass-tint: var(--glass-tint-state); }
 :is(.glass, .node).st-todo:not(.goal, .state), :is(.glass, .node).st-blocked { --glass-tint: var(--glass-tint-quiet); --glass-side-tint: var(--glass-side-quiet); }
@@ -405,8 +407,10 @@ textarea { resize: vertical; min-height: 68px; }
 .tag.ok { background: var(--fill-done); color: var(--ink); }
 .tag.warn { background: var(--fill-doing); color: var(--ink); }
 .tag.bad { background: var(--fill-late); color: var(--ink); }
-/* On glass already in its status colour, a status tag is a clear chip, so it doesn't vanish into the card. */
-.glass .tag:is(.ok, .warn, .bad) { background: color-mix(in srgb, var(--surface) 72%, transparent); }
+/* On cards, which keep only a hint of their colour, a status tag is the grey chip with a faint wash of its status. */
+.glass .tag.ok { background: color-mix(in srgb, var(--ok) 14%, var(--surface-2)); }
+.glass .tag.warn { background: color-mix(in srgb, var(--warn) 18%, var(--surface-2)); }
+.glass .tag.bad { background: color-mix(in srgb, var(--bad) 12%, var(--surface-2)); }
 
 .progress { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
 .progress > i { display: block; height: 100%; background: var(--ok); border-radius: 99px; }

@@ -301,6 +301,24 @@ function logOut() {
   toast(t('user.loggedOut', { name }));
 }
 
+// Removes a user and everything stored for them on this device; what synced stays in their Google Drive,
+// so logging in again brings it back. Removing the current user opens the guest, as logging out does.
+function removeUser(id) {
+  const user = users.list.find(u => u.id === id);
+  if (!user?.account) return;
+  const name = userName(user);
+  if (!confirm(t('user.removeConfirm', { name }))) return;
+  if (user === currentUser()) {
+    drive.forget();
+    enterUser((users.list.find(u => !u.account) || addUser(null)).id);
+  }
+  [localStorage, sessionStorage].forEach(area => userKeys(user, area).forEach(k => area.removeItem(k)));
+  users.list = users.list.filter(u => u !== user);
+  saveUsers();
+  renderSync();
+  toast(t('user.removed', { name }));
+}
+
 function renameUser(name) {
   currentUser().name = name.trim().slice(0, 40);
   saveUsers();
@@ -350,7 +368,7 @@ function renderSync() {
   const list = others.length ? `<p class="user-list-title">${t('user.others')}</p><ul class="user-list">${others.map(u => `<li>
       <span class="user-mono" aria-hidden="true">${esc([...userName(u)][0].toLocaleUpperCase())}</span>
       <span class="user-who"><b>${esc(userName(u))}</b>${u.account.email && u.name ? `<small>${esc(u.account.email)}</small>` : ''}</span>
-      ${action('switch', t(connected ? 'user.switch' : 'user.logIn'), '', u.id)}</li>`).join('')}</ul>` : '';
+      ${action('switch', t(connected ? 'user.switch' : 'user.logIn'), '', u.id)}${action('remove', t('user.remove'), 'ghost', u.id)}</li>`).join('')}</ul>` : '';
   let html;
   if (!syncConfigured()) html = `<p class="hint">${t('sync.notConfigured')}</p>`;
   else if (!connected) html = `<p class="hint">${t('sync.intro')}</p><div class="set-actions">${action('connect', t('sync.connect'), 'primary')}</div>${list}`;
@@ -358,7 +376,7 @@ function renderSync() {
     html = `<label class="set-row user-name"><span>${t('user.name')}</span><input type="text" data-user-name maxlength="40" autocomplete="nickname" value="${esc(user.name)}" placeholder="${esc(userName(user))}"></label>
       ${user.account.email ? `<p class="hint">${t('user.signedInAs', { email: esc(user.account.email) })}</p>` : ''}
       <p class="sync-status" data-status="${syncState.status}"><i aria-hidden="true"></i><span>${esc(syncStatusText())}</span></p>
-      <div class="set-actions">${action('now', t('sync.now'))}${action('connect', t('user.add'))}${action('logout', t('user.logOut'), 'ghost')}</div>
+      <div class="set-actions">${action('now', t('sync.now'))}${action('connect', t('user.add'))}${action('logout', t('user.logOut'), 'ghost')}${action('remove', t('user.removeMe'), 'ghost', user.id)}</div>
       <p class="hint">${t('sync.clockHint')}</p>${list}`;
   }
   body.innerHTML = html;
@@ -372,6 +390,7 @@ function initSync() {
     if (act === 'connect') logIn();
     if (act === 'now') syncNow(true);
     if (act === 'logout') logOut();
+    if (act === 'remove') removeUser(el.dataset.user);
     if (act === 'switch') {
       const user = users.list.find(u => u.id === el.dataset.user);
       if (user?.account) logIn(user.account.email, user);
