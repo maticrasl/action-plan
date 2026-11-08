@@ -7409,6 +7409,19 @@ window.moreTests = async ({ step, assert }) => {
   });
 
 
+  await step('scrollbars: thin everywhere, like the dialogs', () => {
+    loadSample();
+    const thin = el => getComputedStyle(el).scrollbarWidth === 'thin' && ['transparent', 'rgba(0, 0, 0, 0)'].some(c => getComputedStyle(el).scrollbarColor.endsWith(c));
+    const seen = { page: document.documentElement, body: document.body, sidebar: $('.nav') || $('nav') };
+    setView('timeline'); seen.timeline = $('.tl-scroll');
+    assert(Object.values(seen).every(Boolean), 'all found: ' + Object.keys(seen).filter(k => !seen[k]));
+    const off = Object.keys(seen).filter(k => !thin(seen[k]));
+    setView('map');
+    if (!thin($('.map-wrap'))) off.push('map');
+    assert(!off.length, 'not thin: ' + off);
+    deletePlan(plans.current);
+  });
+
   /* ---------- Users: one per Google account on a shared device, their data strictly apart ---------- */
 
   // A fake Google: each token belongs to the account picked in the "popup", and each account has its
