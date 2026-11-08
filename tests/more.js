@@ -2486,7 +2486,7 @@ window.moreTests = async ({ step, assert }) => {
     more.click();
     const items = [...sheet.querySelectorAll('[data-sheet-view]')].map(b => b.dataset.sheetView);
     assert(!sheet.hidden && more.getAttribute('aria-expanded') === 'true', 'opens');
-    assert(items.join() === 'map,timeline,graphs', 'lists the extra views');
+    assert(items.join() === 'visions,map,timeline,graphs', 'lists the extra views');
     assert(sheet.querySelector('[data-sheet-view="timeline"]').textContent.trim() === t('nav.timeline'), 'with labels');
     assert(document.activeElement === sheet.querySelector('button'), 'first item focused');
     sheet.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
@@ -6614,7 +6614,7 @@ window.moreTests = async ({ step, assert }) => {
     return text;
   });
 
-  await step('map and timeline: + asks whether to add a goal, an activity or a current state', () => {
+  await step('map and timeline: + asks whether to add a goal, an activity or a current state (on the map also a vision)', () => {
     fresh('Map add');
     const g = mk('goal', { title: 'Map goal' }); save();
     setView('map');
@@ -6622,7 +6622,8 @@ window.moreTests = async ({ step, assert }) => {
     eq(btn.getAttribute('aria-label'), t('add.item'), 'the button just says Add');
     btn.click();
     const acts = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx).join(',');
-    assert(!ctxMenu.hidden && acts() === 'new:goal,new:activity,new:state' && !ctxMenu.querySelector('.ctx-head'), `offers the three kinds: ${acts()}`);
+    // The map draws visions too, so it offers one as well.
+    assert(!ctxMenu.hidden && acts() === 'new:goal,new:activity,new:state,new:vision' && !ctxMenu.querySelector('.ctx-head'), `offers the kinds: ${acts()}`);
     const r = btn.getBoundingClientRect(), m = ctxMenu.getBoundingClientRect();
     assert(Math.abs(m.right - r.right) < 2 && m.top >= r.bottom, 'opens below the button, lined up with it');
     ctxMenu.querySelector('[data-ctx="new:activity"]').click();
@@ -6874,4 +6875,466 @@ window.moreTests = async ({ step, assert }) => {
     eq(sub(monthly), `${p.done}/1 this month, ${s.n}× in a row`, 'English short form');
     deletePlan(plans.current);
   });
+
+  /* ---------- Visions ---------- */
+  const clearVisions = () => { visions = { list: [], deleted: {} }; saveVisions(); };
+  const mkV = (title, parents = [], p = {}) => { const v = { id: uid(), title, parents: parents.map(x => x.id), ...p }; visions.list.push(v); return v; };
+  const ids = list => [...list].map(x => x.id || x).sort();
+  // Purpose counts the goals of every plan: these steps set the other plans aside while they run.
+  let asideList = [];
+  const setAside = () => { asideList = plans.list.filter(p => p.id !== plans.current); plans.list = plans.list.filter(p => p.id === plans.current); };
+  const putBack = () => { plans.list.push(...asideList); asideList = []; };
+
+  await step('visions: loops refused, several parents allowed, roots and what is reached', () => {
+    clearVisions();
+    fresh('Vision rules');
+    const A = mkV('A life of health'), B = mkV('Be fit', [A]), C = mkV('Run well', [B]), D = mkV('Be a good parent');
+    eq(canParent(A.id, C.id), 'err.visionLoop', 'indirect loop refused');
+    eq(canParent(A.id, B.id), 'err.visionLoop', 'direct loop refused');
+    eq(canParent(A.id, A.id), 'err.self', 'not under itself');
+    eq(canParent(C.id, B.id), 'err.relExists', 'an existing parent is not added twice');
+    eq(canParent(C.id, D.id), null, 'a second parent is allowed');
+    eq(canParent(C.id, 'ghost'), 'err.unknown', 'a missing parent is refused');
+    eq(canParent('', A.id), null, 'a new vision can go under any');
+    C.parents.push(D.id);
+    eq(ids(visionRoots()), ids([A, D]), 'roots');
+    eq(ids(visionAncestors(C.id)), ids([A, B, D]), 'everything above, through both parents');
+    eq(ids(visionChildren(B.id)), ids([C]), 'children');
+    // A goal serving C reaches C and all above; a sub-goal serves what its parent serves.
+    const g1 = mk('goal', { title: 'Run 10 km', visions: [C.id] }), g2 = mk('goal', { title: 'Run 5 km' });
+    rel(g2, g1, 'subgoal');
+    eq(goalVisionIds(g2), [C.id], 'a sub-goal serves through its parent');
+    eq(ids(reachedVisions()), ids([A, B, C, D]), 'reached through the parents of what goals serve');
+    C.parents = [B.id];
+    eq(ids(reachedVisions()), ids([A, B, C]), 'an unrelated vision is not reached');
+    // What works toward a vision.
+    const a1 = mk('activity', { title: 'Train' }), a1c = mk('activity', { title: 'Buy shoes' }), s1 = mk('state', { title: 'Longest run' });
+    const a2 = mk('activity', { title: 'Stretch' }), a3 = mk('activity', { title: 'Waits for training' });
+    const g3 = mk('goal', { title: 'Unrelated goal' }), a4 = mk('activity', { title: 'For the unrelated goal' });
+    rel(a1, g1, 'contributes'); rel(a1c, a1, 'subactivity'); rel(s1, g2, 'measures'); rel(a2, s1, 'improves'); rel(a3, a1, 'depends'); rel(a4, g3, 'contributes');
+    eq(ids(contributingIds()), ids([g1, g2, a1, a1c, s1, a2]), 'goals, sub-goals, activities with sub-activities, measuring states, improving activities; not dependencies');
+    // Dangling ids are ignored.
+    g3.visions = ['ghost'];
+    eq(goalVisionIds(g3), [], 'a vision that is gone is ignored');
+    assert(!contributingIds().has(g3.id), 'and does not make the goal glow');
+    save();
+    deletePlan(plans.current);
+    clearVisions();
+  });
+
+  await step('visions: Purpose needs one top vision and every active goal, in every plan, serving one', () => {
+    clearVisions();
+    fresh('Purpose A');
+    setAside();
+    eq(purposeState().on, false, 'no visions: no Purpose');
+    const A = mkV('A meaningful life'), B = mkV('Be fit', [A]), D = mkV('Be kind');
+    const g1 = mk('goal', { title: 'Marathon', visions: [B.id] }), g2 = mk('goal', { title: 'Sub-goal' }), g3 = mk('goal', { title: 'Volunteer' });
+    rel(g2, g1, 'subgoal');
+    save();
+    let ps = purposeState();
+    assert(!ps.on && ps.roots.length === 2, 'two visions at the top: no Purpose');
+    D.parents = [A.id];
+    ps = purposeState();
+    assert(!ps.on && ps.unlinked.length === 1 && ps.unlinked[0].goal.id === g3.id, 'an active goal serving nothing blocks it (the sub-goal counts through its parent)');
+    g3.status = 'paused';
+    ps = purposeState();
+    assert(ps.on && ps.root.id === A.id, 'paused goals do not count');
+    g3.status = 'achieved';
+    assert(purposeState().on, 'achieved goals do not count');
+    g3.status = 'active'; g3.visions = ['ghost'];
+    assert(!purposeState().on, 'a vision that is gone does not count');
+    g3.visions = [D.id];
+    assert(purposeState().on, 'every active goal serves a vision');
+    save();
+    // A goal in another plan counts too.
+    const first = plans.current;
+    fresh('Purpose B');
+    const other = mk('goal', { title: 'Other plan goal' });
+    save();
+    ps = purposeState();
+    assert(!ps.on && ps.unlinked.some(u => u.goal.id === other.id && u.plan.id === plans.current), 'an unlinked goal in another plan blocks it');
+    openPlan(first);
+    assert(!purposeState().on && purposeState().unlinked[0].goal.id === other.id, 'also seen from the first plan (read from storage)');
+    const second = plans.list.find(p => p.name === 'Purpose B').id;
+    openPlan(second);
+    db.goals[0].visions = [A.id];
+    save();
+    openPlan(first);
+    assert(purposeState().on, 'linked in the other plan: Purpose');
+    // No active goals at all.
+    db.goals.forEach(g => (g.status = 'paused'));
+    save();
+    openPlan(second); db.goals[0].status = 'paused'; save(); openPlan(first);
+    ps = purposeState();
+    assert(!ps.on && ps.active === 0, 'no active goals: no Purpose');
+    putBack();
+    deletePlan(second);
+    deletePlan(first);
+    clearVisions();
+  });
+
+  await step('visions: stored, stamped, deleted with tombstones; deleting one lets go of it', () => {
+    clearVisions();
+    const A = mkV('Top'), B = mkV('Under', [A]);
+    saveVisions();
+    assert(A.updatedAt && B.updatedAt, 'stamped on save');
+    const stampA = A.updatedAt;
+    saveVisions();
+    eq(A.updatedAt, stampA, 'unchanged: not stamped again');
+    const stored = JSON.parse(localStorage.getItem(VISIONS_KEY));
+    eq(stored.list.map(v => v.title), ['Top', 'Under'], 'in storage');
+    deleteVision(A.id);
+    assert(visions.deleted[A.id] && !findVision(A.id), 'tombstone');
+    eq(findVision(B.id).parents, [], 'the narrower vision lets go of it');
+    loadVisions();
+    assert(findVision(B.id) && !findVision(A.id) && visions.deleted[A.id], 'loaded back');
+    // Bad stored data is cleaned.
+    localStorage.setItem(VISIONS_KEY, JSON.stringify({ list: [{ id: 'ok', title: 'Fine', parents: ['x', '<b>'] }, { id: '<i>', title: 'Bad id' }, { id: 'nt' }, null], deleted: [] }));
+    loadVisions();
+    eq(visions.list.map(v => [v.id, v.parents]), [['ok', ['x']]], 'unsafe ids and items without a title are dropped');
+    eq(visions.deleted, {}, 'a broken tombstone list is reset');
+    localStorage.setItem(VISIONS_KEY, '{oops');
+    loadVisions();
+    eq(visions.list, [], 'unreadable storage: empty');
+    clearVisions();
+  });
+
+  await step('visions: sync merges them like plans, repairs loops, keeps the Purpose found first', () => {
+    const v = (id, title, at, parents = []) => ({ id, title, parents, updatedAt: at });
+    let m = mergeVisions({ list: [v('a', 'Old', '2026-01-01')], deleted: {} }, { list: [v('a', 'New', '2026-02-01')], deleted: {} });
+    eq(m.list.map(x => x.title), ['New'], 'the newer version wins');
+    m = mergeVisions({ list: [], deleted: { a: '2026-03-01' } }, { list: [v('a', 'Edited', '2026-02-01')], deleted: {} });
+    assert(!m.list.length && m.deleted.a, 'deleted after the last edit: gone');
+    m = mergeVisions({ list: [], deleted: { a: '2026-01-01' } }, { list: [v('a', 'Edited', '2026-02-01')], deleted: {} });
+    assert(m.list.length === 1 && !m.deleted.a, 'edited after deletion: kept');
+    // Two devices each put one under the other: the newer link stays.
+    m = mergeVisions({ list: [v('x', 'X', '2026-05-02', ['y']), v('y', 'Y', '2026-05-01')], deleted: {} },
+      { list: [v('x', 'X', '2026-05-01'), v('y', 'Y', '2026-05-01T10:00', ['x'])], deleted: {} });
+    eq(m.list.map(x => [x.id, x.parents]), [['x', ['y']], ['y', []]], 'a loop made by two edits is repaired, newer first');
+    m = mergeVisions({ list: [v('p', 'P', '2026-01-01', ['gone', 'p']), v('q', 'Q', '2026-01-01', ['p', 'p'])], deleted: {} }, null);
+    eq(m.list.map(x => [x.id, x.parents]), [['p', []], ['q', ['p']]], 'parents that are gone, itself or doubled are dropped');
+    // A longer loop: a → b → c → a.
+    m = mergeVisions({ list: [v('a', 'A', '3', ['b']), v('b', 'B', '2', ['c']), v('c', 'C', '1', ['a'])], deleted: {} }, null);
+    eq(m.list.find(x => x.id === 'c').parents, [], 'the oldest link of a longer loop goes');
+    m = mergeVisions({ list: [], deleted: {}, purposeFound: '2026-05-01' }, { list: [], deleted: {}, purposeFound: '2026-04-01' });
+    eq(m.purposeFound, '2026-04-01', 'the Purpose found first stays found');
+    eq(mergeVisions(undefined, undefined), { list: [], deleted: {} }, 'nothing on either side');
+    // Stores: a file without visions, this device's store, merge and apply.
+    clearVisions();
+    const A = mkV('Shared'); saveVisions();
+    const local = localStore();
+    eq(local.visions.list.map(x => x.title), ['Shared'], 'this device sends its visions');
+    const old = parseStore(JSON.stringify({ format: SYNC_FORMAT, version: 1, plans: { list: [], deleted: {} }, data: {} }));
+    eq(old.visions, { list: [], deleted: {} }, 'an older file has none');
+    const merged = mergeStores(local, old);
+    eq(merged.visions.list.map(x => x.id), [A.id], 'merged with a file without visions: kept');
+    eq(toFile(merged).visions.list.length, 1, 'written to the file');
+    merged.visions.list.push({ id: 'remote', title: 'From the other device', parents: [A.id], updatedAt: new Date().toISOString() });
+    applyStore(merged);
+    assert(findVision('remote') && JSON.parse(localStorage.getItem(VISIONS_KEY)).list.length === 2, 'applied and stored');
+    applyStore({ plans: merged.plans, data: merged.data });
+    assert(findVision('remote'), 'a store without visions leaves them alone');
+    clearVisions();
+  });
+
+  await step('visions: the view – empty, cards in tree order, status toward a Purpose, both languages', () => {
+    clearVisions();
+    fresh('Vision view');
+    setView('visions');
+    assert($('#view .empty [data-new="vision"]') && $('#view').textContent.includes(t('vis.shared')), 'empty: explains and offers to add one');
+    eq($('#addBtn').getAttribute('aria-label'), t('add.vision'), 'the add button adds a vision');
+    assert(!$('#view [data-sample], #view [data-templates]'), 'no sample or templates offered for visions');
+    const A = mkV('Zeta life'), B = mkV('Alpha under Zeta', [A]), D = mkV('Beta top'), C = mkV('Child of two', [B, D]);
+    const g = mk('goal', { title: 'Serving goal', visions: [B.id] }), u = mk('goal', { title: 'Lonely goal' });
+    save(); saveVisions(); render();
+    const cards = [...document.querySelectorAll('#view .card.vision')];
+    eq(cards.map(c => c.querySelector('h3').textContent), ['Beta top', 'Zeta life', 'Alpha under Zeta', 'Child of two'], 'roots by title, each child under its first parent');
+    eq(cards.map(c => c.style.getPropertyValue('--level')), ['0', '0', '1', '2'], 'indented by level');
+    const childCard = cards[3];
+    assert(childCard.textContent.includes(t('vis.alsoUnder')) && childCard.querySelector(`.tag.vision[data-open="${D.id}"]`), 'a second parent is named');
+    assert(cards[2].querySelector(`.tag.goal[data-open="${g.id}"]`), 'goals serving it are listed');
+    assert(cards[1].classList.contains('reached') && cards[2].classList.contains('reached') && !cards[0].classList.contains('reached'), 'reached visions are brighter');
+    const status = $('#view .vis-status').textContent;
+    assert(status.includes(tp('vis.manyRoots', 2, { names: '“Zeta life”, “Beta top”' })), `status names the visions at the top: ${status}`);
+    assert(status.includes('Lonely goal'), 'and the goals serving none');
+    // A goal from another plan is listed with its plan's name.
+    const here = plans.current;
+    fresh('Other plan');
+    mk('goal', { title: 'Far goal', visions: [A.id] }); save();
+    openPlan(here); setView('visions');
+    assert($('#view .tag.other-plan').textContent.includes('Far goal') && $('#view .tag.other-plan').textContent.includes('Other plan'), 'other plans\' goals show their plan');
+    assert($('#view .vis-status').textContent.includes(t('vis.goalInPlan', { goal: 'Lonely goal', plan: 'Vision view' })), 'with several plans, unlinked goals name their plan');
+    deletePlan(plans.list.find(p => p.name === 'Other plan').id);
+    openPlan(here); setView('visions');
+    // Escaping.
+    mkV('<img src=x onerror=alert(1)>'); saveVisions(); render();
+    assert(!$('#view img') && $('#view').textContent.includes('<img'), 'titles are escaped');
+    visions.list.pop(); saveVisions();
+    // Help mode: no tutorial text for visions, and no raw key either.
+    setHelp(true);
+    assert(!$('#view .help-banner') && !$('#view').textContent.includes('help.view'), 'help mode: no banner, no raw key');
+    setHelp(false);
+    // Slovenian.
+    changeLanguage('sl'); setView('visions');
+    assert($('#viewTitle').textContent === 'Vizije' && $('#view').textContent.includes('Vizije so skupne'), 'Slovenian');
+    changeLanguage('en'); render();
+    deletePlan(plans.current);
+    clearVisions();
+  });
+
+  await step('visions: forms – add, edit, loop-free parents, goals both ways, delete', () => {
+    clearVisions();
+    fresh('Vision forms');
+    setView('visions');
+    const g = mk('goal', { title: 'Goal one' }), g2 = mk('goal', { title: 'Goal two' });
+    save();
+    $('#view [data-new="vision"]').click();
+    assert(modal.open && $('#modalTitle').textContent === t('new.vision'), 'the form opens');
+    submitForm();
+    assert(modal.querySelector('[data-field="title"].invalid'), 'a title is required');
+    $('#f-title').value = '  To be fit  ';
+    $('#f-description').value = 'Strong and rested';
+    submitForm();
+    assert(!modal.open && visions.list.length === 1, 'added');
+    const A = visions.list[0];
+    eq([A.title, A.description, A.parents], ['To be fit', 'Strong and rested', []], 'trimmed');
+    assert($('#toast').textContent.includes(t('toast.visionAdded')), 'toast');
+    // A narrower one from the card's menu, with its parent picked.
+    openCtxMenu(A.id, 10, 10);
+    const acts = [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
+    assert(acts.includes('edit') && acts.includes('add:vision:parents') && acts.includes('show:map') && acts.includes('delete') && !acts.includes('link') && !acts.includes('show:visions'), `menu: ${acts}`);
+    runCtxAction('add:vision:parents', A.id);
+    assert(modal.querySelector(`[data-picker="vision"] [data-picked-id="${A.id}"]`), 'the broader vision is picked');
+    $('#f-title').value = 'Run';
+    // Goals in this plan, picked in the form.
+    pickItem(modal.querySelector(`[data-name="goals"] .pick-opt[data-pick="${g.id}"]`));
+    submitForm();
+    const B = visions.list.find(v => v.title === 'Run');
+    eq(B.parents, [A.id], 'saved under it');
+    eq(g.visions, [B.id], 'the goal serves it');
+    // Editing the broader one offers no vision below it.
+    openForm('vision', A.id);
+    const offered = [...modal.querySelectorAll('[data-name="parents"] .pick-opt')].map(o => o.dataset.pick);
+    eq(offered, [], 'neither itself nor the one below it');
+    modal.close();
+    openForm('vision', B.id);
+    eq([...modal.querySelectorAll('[data-name="parents"] .pick-opt')].map(o => o.dataset.pick), [A.id], 'the narrower one can go under the broader');
+    // Unpicking the goal takes the link away.
+    unpickItem(modal.querySelector('[data-name="goals"]'), g.id);
+    submitForm();
+    assert(!('visions' in g), 'no visions left: no field');
+    // The goal form links goals to visions, and drops ids of visions that are gone.
+    g2.visions = ['ghost', A.id];
+    save();
+    openForm('goal', g2.id);
+    const picker = modal.querySelector('[data-picker="vision"][data-name="visions"]');
+    assert(picker && [...picker.querySelectorAll('[data-picked-id]')].map(x => x.dataset.pickedId).join() === A.id, 'the goal form shows the visions it serves');
+    pickItem(picker.querySelector(`.pick-opt[data-pick="${B.id}"]`));
+    Object.entries({ specific: 'A specific outcome that is long enough', metric: 'Runs', unit: 'x', baseline: '0', target: '10', achievable: 'Yes it is doable', relevant: 'Matters a lot to me', deadline: '01/01/2099' })
+      .forEach(([k, val]) => { const el = $('#f-' + k); if (el) el.value = val; });
+    submitForm();
+    assert(!modal.open, 'goal saved: ' + [...modal.querySelectorAll('.field.invalid')].map(f => f.dataset.field));
+    eq(g2.visions, [A.id, B.id], 'serves both; the one that is gone is dropped');
+    // Without any visions, the goal form has no such field.
+    const kept = visions; visions = { list: [], deleted: {} };
+    openForm('goal', g.id);
+    assert(!modal.querySelector('[data-name="visions"]'), 'no visions: no field');
+    modal.close();
+    visions = kept;
+    // Delete from the form: a narrower one lets go, goals keep a dangling id that is ignored.
+    openForm('vision', A.id);
+    $('#deleteBtn').click();
+    assert(!findVision(A.id) && visions.deleted[A.id], 'deleted');
+    eq(findVision(B.id).parents, [], 'the narrower vision lets go of it');
+    eq(ownVisions(g2), [B.id], 'the goal keeps only what is there');
+    assert($('#toast').textContent.includes(t('toast.deleted.vision')), 'toast');
+    // Clicking a card opens it; the menu's delete asks and deletes.
+    setView('visions');
+    $(`#view .card.vision[data-open="${B.id}"]`).click();
+    assert(modal.open && $('#modalTitle').textContent === t('edit.vision'), 'a card opens its form');
+    modal.close();
+    runCtxAction('delete', B.id);
+    assert(!visions.list.length, 'deleted from the menu');
+    deletePlan(plans.current);
+    clearVisions();
+  });
+
+  await step('visions: the map – a band above goals, clouds, lines, hiding unrelated visions, linking', () => {
+    clearVisions();
+    fresh('Vision map');
+    const A = mkV('Health'), B = mkV('Fitness', [A]), C = mkV('Unrelated');
+    const g = mk('goal', { title: 'Run', visions: [B.id], deadline: d(30) }), g2 = mk('goal', { title: 'Read', deadline: d(40) });
+    const a = mk('activity', { title: 'Train', dueDate: d(5) });
+    rel(a, g, 'contributes');
+    save(); saveVisions();
+    setView('map');
+    const svg = $('.map-wrap svg');
+    eq([...svg.querySelectorAll('.band')].map(b => b.classList[1]), ['vision', 'goal', 'activity'], 'visions on top');
+    const y = id => Number(svg.querySelector(`[data-map-node="${id}"]`).getAttribute('transform').match(/,([\d.]+)\)/)[1]);
+    assert(y(A.id) < y(B.id) && y(B.id) < y(g.id), 'the broader vision above the narrower, both above goals');
+    assert(svg.querySelectorAll('.node.vision').length === 3 && !svg.querySelector('.node.vision use'), 'visions are clouds, not glass');
+    assert(svg.querySelector('#vision-cloud') && svg.querySelector('#vision-glow'), 'their filters are defined');
+    eq(getComputedStyle(svg.querySelector(`[data-map-node="${B.id}"] rect.cloud`)).filter.includes('url'), true, 'with blurred edges');
+    assert(svg.querySelector(`[data-map-node="${B.id}"]`).classList.contains('reached') && !svg.querySelector(`[data-map-node="${C.id}"]`).classList.contains('reached'), 'reached visions are brighter');
+    assert(svg.querySelector(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) && svg.querySelector(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'lines to visions');
+    // Glow on what works toward a vision.
+    assert(svg.querySelector(`[data-map-node="${g.id}"]`).classList.contains('vglow') && svg.querySelector(`[data-map-node="${a.id}"] .node-vglow`), 'the goal and its activity glow');
+    assert(!svg.querySelector(`[data-map-node="${g2.id}"]`).classList.contains('vglow'), 'an unrelated goal does not');
+    assert(svg.querySelector(`[data-rel-edit="${db.relations[0].id}"]`).classList.contains('vglow') && svg.querySelector(`[data-rel-edit="${visionRelId(g.id, B.id)}"] .edge-vglow`), 'and the lines between them');
+    // Toggles for the two link types.
+    $('[data-rel-toggle="serves"]').click();
+    assert(!$(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) && $(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'goal → vision lines hidden');
+    $('[data-rel-toggle="serves"]').click();
+    $('[data-rel-toggle="subvision"]').click();
+    assert(!$(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'vision → vision lines hidden');
+    $('[data-rel-toggle="subvision"]').click();
+    eq($('[data-rel-toggle="serves"] .count').textContent, '1', 'counted');
+    // Hide unrelated visions.
+    $('[data-hide-visions]').click();
+    eq([...$('.map-wrap svg').querySelectorAll('.node.vision')].map(n => n.dataset.mapNode).sort(), ids([A, B]), 'only what goals serve, and above it');
+    assert(prefs.get('hideVisions') === true && $('[data-hide-visions]').getAttribute('aria-pressed') === 'true', 'remembered');
+    $('[data-hide-visions]').click();
+    eq($('.map-wrap svg').querySelectorAll('.node.vision').length, 3, 'shown again');
+    // One goal picked: only its visions.
+    ui.mapGoal = g2.id; render();
+    eq($('.map-wrap svg').querySelectorAll('.node.vision').length, 0, 'a goal serving none: no visions');
+    ui.mapGoal = g.id; render();
+    eq([...$('.map-wrap svg').querySelectorAll('.node.vision')].map(n => n.dataset.mapNode).sort(), ids([A, B]), 'its visions and those above');
+    ui.mapGoal = ''; render();
+    // Linking by tapping (or dragging).
+    assert(canLink(g2.id, C.id) && canLink(C.id, g2.id) && !canLink(a.id, A.id) && !canLink(A.id, B.id) && canLink(C.id, A.id), 'which links fit');
+    linkItems(C.id, g2.id);
+    eq(g2.visions, [C.id], 'vision then goal: the goal serves it');
+    assert($('#toast').textContent.includes(t('map.visionLinked', { a: 'Read', b: 'Unrelated' })), 'said so, goal first');
+    linkItems(g2.id, C.id);
+    assert($('#toast').textContent.includes(t('err.relExists')), 'not twice');
+    linkItems(C.id, A.id);
+    eq(C.parents, [A.id], 'vision onto vision: serves it');
+    linkItems(A.id, C.id);
+    assert($('#toast').textContent.includes(t('err.visionLoop')) && !A.parents.length, 'no loops');
+    linkItems(a.id, A.id);
+    assert($('#toast').textContent.includes(t('err.visionGoalOnly')) && !('visions' in a), 'only goals serve visions');
+    // Selecting a line, editing and removing it.
+    const line = visionRelId(g.id, B.id);
+    $(`[data-rel-edit="${line}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    assert(ui.mapRel === line && $('.map-rel-selection').textContent.includes('Run') && $('.map-rel-selection').textContent.includes(t('rel.serves')), 'selected, and named');
+    openForm('relation', line);
+    assert(modal.open && $('#modalTitle').textContent === t('edit.vision') && $('#f-title').value === 'Fitness', 'editing it opens the vision');
+    modal.close();
+    openRelMenu(line, 20, 20);
+    assert(!ctxMenu.hidden && ctxMenu.querySelector('[data-ctx="rel-remove"]'), 'it has a menu');
+    closeCtxMenu();
+    $(`[data-rel-remove="${line}"]`).click();
+    assert(!('visions' in g) && !ui.mapRel && $('#toast').textContent.includes(t('map.visionUnlinked')), 'removed');
+    removeRelation(visionRelId(C.id, A.id));
+    eq(C.parents, [], 'a vision line removed');
+    // A vision's menu on the map links and highlights.
+    openCtxMenu(A.id, 10, 10);
+    const acts = [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
+    assert(acts.includes('link') && acts.includes('highlight') && acts.includes('show:visions') && !acts.includes('show:map'), `map menu: ${acts}`);
+    closeCtxMenu();
+    // Shown in the map from the Visions view, with filters that hid it cleared.
+    ui.hideVisions = true; ui.mapGoal = g2.id;
+    setView('visions'); showIn('map', C.id);
+    assert(ui.view === 'map' && $(`[data-map-node="${C.id}"]`) && !ui.hideVisions && !ui.mapGoal, 'show in map reveals it');
+    // Double-click opens it.
+    const n = () => $(`[data-map-node="${A.id}"]`);
+    n().dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    n().dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2 }));
+    assert(modal.open && $('#f-title').value === 'Health', 'double-click opens it');
+    modal.close();
+    // Only visions, no items: the map still draws them.
+    fresh('Only visions');
+    setView('map');
+    assert($('.map-wrap svg .node.vision') && !$('#view > .empty'), 'visions alone are drawn');
+    clearVisions(); render();
+    assert(!$('[data-hide-visions]') && !$('[data-rel-toggle="serves"]'), 'no visions: no vision chips');
+    deletePlan(plans.current);
+    deletePlan(plans.list.find(p => p.name === 'Vision map').id);
+  });
+
+  await step('visions: glow in every view, gold Purpose, logo, popup once', async () => {
+    clearVisions();
+    fresh('Glow');
+    setAside();
+    const A = mkV('Purposeful life');
+    const g = mk('goal', { title: 'Lead', visions: [A.id], deadline: d(20), startDate: d(-5) });
+    const u = mk('goal', { title: 'Loose', deadline: d(25), startDate: d(-5) });
+    const a = mk('activity', { title: 'Practise', status: 'doing', dueDate: d(0), startDate: d(-2) });
+    const r = mk('activity', { title: 'Daily habit', startDate: d(-10), repeat: { every: 1, unit: 'day' }, checkins: {} });
+    const s = mk('state', { title: 'Level', value: '3', date: d(-1), history: [{ date: d(-3), value: '1' }, { date: d(-1), value: '3' }] });
+    const ua = mk('activity', { title: 'Loose work', status: 'doing', dueDate: d(0), startDate: d(-2) });
+    rel(a, g, 'contributes'); rel(r, g, 'contributes'); rel(s, g, 'measures'); rel(ua, u, 'contributes');
+    save(); saveVisions();
+    const glowing = () => [...document.querySelectorAll('#view .vglow')].map(el => el.dataset.ctxItem || el.dataset.tlNode);
+    const per = {};
+    for (const v of ['dashboard', 'goals', 'activities', 'states', 'timeline', 'graphs']) {
+      setView(v);
+      per[v] = glowing();
+      assert(per[v].length && !per[v].includes(u.id) && !per[v].includes(ua.id), `${v}: only what serves a vision glows (${per[v]})`);
+    }
+    assert(per.goals.includes(g.id) && per.activities.includes(a.id) && per.states.includes(s.id) && per.timeline.includes(g.id) && per.graphs.includes(s.id) && per.dashboard.includes(a.id), JSON.stringify(per));
+    setView('goals');
+    const card = id => $(`#view .card[data-ctx-item="${id}"]`);
+    assert(getComputedStyle(card(g.id)).boxShadow !== getComputedStyle(card(u.id)).boxShadow, 'the glow is a shadow round the card');
+    const silver = getComputedStyle(document.documentElement).getPropertyValue('--vglow').trim();
+    assert(!document.documentElement.classList.contains('purpose'), 'not yet a Purpose');
+    const logo = () => getComputedStyle($('.brand .blaze-mark circle')).fill;
+    const red = logo();
+    // Purpose: the loose goal is paused.
+    assert(!visions.purposeFound, 'not found yet');
+    u.status = 'paused'; save(); render();
+    assert(document.documentElement.classList.contains('purpose'), 'Purpose');
+    const dlg = $('#purposeDlg');
+    assert(dlg.open && $('#purposeText').textContent === t('purpose.text', { name: A.title }), 'congratulated');
+    eq(visions.purposeFound, today(), 'remembered');
+    assert(getComputedStyle(document.documentElement).getPropertyValue('--vglow').trim() !== silver, 'the glow turns gold');
+    assert(logo() !== red, `the logo turns gold: ${logo()}`);
+    dlg.querySelector('button').click();
+    await tick();
+    assert(!dlg.open, 'closes');
+    render();
+    assert(!dlg.open, 'not shown again');
+    setView('visions');
+    assert($('#view .card.vision.purpose .tag.purpose') && $('#view .vis-status.found').textContent.includes(A.title), 'the Purpose card is gold, tagged, and the status says so');
+    setView('map');
+    assert($(`[data-map-node="${A.id}"]`).classList.contains('purpose') && $(`[data-map-node="${A.id}"] .sub`).textContent.startsWith(t('vis.purpose')), 'gold on the map too');
+    // Lost and found again: no second popup.
+    u.status = 'active'; save(); render();
+    assert(!document.documentElement.classList.contains('purpose') && logo() === red, 'lost: silver again, the logo red');
+    u.status = 'paused'; save(); render();
+    assert(document.documentElement.classList.contains('purpose') && !dlg.open, 'found again without a popup');
+    // In Slovenian.
+    visions.purposeFound = undefined; changeLanguage('sl'); render();
+    assert(dlg.open && $('#purposeTitle').textContent === 'Našli ste svoj Smisel' && $('#purposeText').textContent.includes('Purposeful life'), 'Slovenian popup');
+    dlg.close();
+    changeLanguage('en'); render();
+    // No visions: nothing glows.
+    clearVisions(); setView('goals');
+    assert(!document.querySelector('#view .vglow') && !document.documentElement.classList.contains('purpose'), 'no visions: no glow');
+    putBack();
+    deletePlan(plans.current);
+  });
+
+  await step('visions: phone – cards fit 390 px, the deepest level too', async () => {
+    clearVisions();
+    fresh('Phone visions');
+    const A = mkV('A long vision title that goes on and on and on'), B = mkV('Narrower', [A]), C = mkV('Narrowest of them all', [B]), D = mkV('Deeper still', [C]);
+    mk('goal', { title: 'G', visions: [D.id] });
+    save(); saveVisions();
+    setView('visions');
+    const frame = document.createElement('iframe');
+    Object.assign(frame.style, { width: '390px', height: '900px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px">${$('#view').innerHTML}</body>`;
+    await new Promise(res => { frame.onload = res; document.body.append(frame); });
+    const doc = frame.contentDocument, cards = [...doc.querySelectorAll('.card.vision')];
+    eq(cards.length, 4, 'all four drawn');
+    assert(cards.every(c => c.getBoundingClientRect().right <= 390 - 16 + 0.5 && c.getBoundingClientRect().width > 200), `inside the screen, still wide enough: ${cards.map(c => Math.round(c.getBoundingClientRect().width))}`);
+    assert(cards[3].getBoundingClientRect().left > cards[0].getBoundingClientRect().left, 'deeper visions are indented');
+    assert(doc.documentElement.scrollWidth <= 390, `no sideways scroll: ${doc.documentElement.scrollWidth}`);
+    frame.remove();
+    deletePlan(plans.current);
+    clearVisions();
+  });
+
 };

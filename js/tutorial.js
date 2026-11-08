@@ -214,7 +214,8 @@ function decorateHelp() {
   closeHelpTip();
   if (!ui.help) return;
   const view = $('#view');
-  view.insertAdjacentHTML('afterbegin', `<aside class="help-banner">
+  // A view without a help text of its own (Visions) shows no banner.
+  if (I18N.en.strings['help.view.' + ui.view]) view.insertAdjacentHTML('afterbegin', `<aside class="help-banner">
     <span class="help-mark" aria-hidden="true">?</span><p>${t('help.view.' + ui.view)}</p>
     <button type="button" class="btn ghost" data-help-off>${t('help.off')}</button></aside>`);
   HELP_TIPS.forEach(({ sel, key, where = 'afterend' }) => {

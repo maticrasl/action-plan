@@ -236,5 +236,5 @@ function mergeStores(a, b) {
     data[id] = plan;
   });
   const kept = new Set(list.map(p => p.id));
-  return { plans: { list, deleted: Object.fromEntries(Object.entries(deleted).filter(([id]) => !kept.has(id))) }, data };
+  return { plans: { list, deleted: Object.fromEntries(Object.entries(deleted).filter(([id]) => !kept.has(id))) }, data, visions: mergeVisions(a.visions, b.visions) };
 }

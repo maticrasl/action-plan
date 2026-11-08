@@ -24,6 +24,11 @@ const REL_TYPES = {
   improves:    { from: ['activity'],         to: ['state'],    color: 'var(--rel-state)', dash: true },
 };
 const ACYCLIC = new Set(['depends', 'subgoal', 'subactivity']);
+// Links to visions, drawn on the map but kept on the goal (`visions`) and the vision (`parents`), not as relationships.
+const VISION_RELS = {
+  serves:    { from: ['goal'],   to: ['vision'], color: 'var(--vision-ink)' },
+  subvision: { from: ['vision'], to: ['vision'], color: 'var(--vision-ink)', width: 1.6 },
+};
 const PARENT_REL = { goal: 'subgoal', activity: 'subactivity' };
 
 const ACTIVITY_STATUS = ['todo', 'doing', 'done'];
@@ -31,13 +36,13 @@ const GOAL_STATUS = ['active', 'achieved', 'paused'];
 // Visual state used to color goals and activities on the map.
 const NODE_STATES = ['todo', 'doing', 'late', 'blocked', 'done'];
 
-const relLabel = type => (REL_TYPES[type] ? t('rel.' + type) : type);
+const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type) : type);
 const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
 let db = emptyDb();
 const ui = {
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
-  mapHidden: new Set(), hideDone: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
+  mapHidden: new Set(), hideDone: false, hideVisions: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
   tlDates: null, // the selected timeline item whose dates can be dragged: its bar was clicked, not just its row
   rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
   grZoom: {}, // how far each graph is zoomed: 1 fits the card
@@ -75,6 +80,7 @@ function readPlan(id) {
 }
 
 function load() {
+  loadVisions();
   try {
     const saved = JSON.parse(localStorage.getItem(PLANS_KEY));
     if (Array.isArray(saved?.list) && saved.list.length) plans = saved;
@@ -103,6 +109,7 @@ function save() {
   offerReached();
   stampChanges(db);
   stampPlanChanges(plans);
+  plansVersion++;
   try {
     localStorage.setItem(planKey(plans.current), JSON.stringify(db));
     localStorage.setItem(PLANS_KEY, JSON.stringify(plans));
@@ -291,7 +298,8 @@ function findEntity(id) {
     const item = collection(kind).find(x => x.id === id);
     if (item) return { kind, item };
   }
-  return null;
+  const vision = findVision(id);
+  return vision ? { kind: 'vision', item: vision } : null;
 }
 
 /* ---------- Relations ---------- */
@@ -412,6 +420,10 @@ function setIncoming(toId, type, fromIds) {
 }
 
 function removeEntity(kind, id) {
+  if (kind === 'vision') {
+    if (ui.mapSelected === id) ui.mapSelected = null;
+    return deleteVision(id);
+  }
   const list = collection(kind);
   list.splice(list.findIndex(x => x.id === id), 1);
   db.relations = db.relations.filter(r => r.from !== id && r.to !== id);
@@ -1330,6 +1342,7 @@ const VIEWS = {
   goals: { add: 'goal', render: renderGoals },
   activities: { add: 'activity', render: renderActivities },
   states: { add: 'state', render: renderStates },
+  visions: { add: 'vision', render: renderVisions },
   map: { add: 'item', render: renderMap },
   timeline: { add: 'item', render: renderTimeline },
   graphs: { add: 'state', render: renderGraphs },
@@ -1369,6 +1382,7 @@ function render() {
     wrap.scrollLeft = prevScroll ? prevScroll.left : Number(wrap.dataset.focusX) - wrap.clientWidth / 2;
     if (prevScroll) wrap.scrollTop = prevScroll.top;
   }
+  markVisions();
   decorateHelp();
   updatePlanBadges();
 }
@@ -1618,6 +1632,73 @@ function activityCard(a) {
   </article>`;
 }
 
+/* ---------- Visions ---------- */
+
+// Visions top down: each one under its first parent, children by title; one with more parents names the others.
+function visionOrder() {
+  const out = [], seen = new Set(), byTitle = (a, b) => a.title.localeCompare(b.title, locale());
+  const walk = (v, depth) => {
+    if (seen.has(v.id)) return;
+    seen.add(v.id);
+    out.push({ v, depth });
+    visions.list.filter(c => visionParents(c)[0] === v.id).sort(byTitle).forEach(c => walk(c, depth + 1));
+  };
+  visionRoots().sort(byTitle).forEach(v => walk(v, 0));
+  visions.list.forEach(v => walk(v, 0));
+  return out;
+}
+
+// How far the visions are from a Purpose, or that it is found.
+function purposeStatus(ps) {
+  if (ps.on) return `<div class="vis-status found" role="status">${esc(t('vis.found', { name: ps.root.title }))}</div>`;
+  const lines = [];
+  if (ps.roots.length > 1) lines.push(tp('vis.manyRoots', ps.roots.length, { names: ps.roots.map(v => `“${v.title}”`).join(', ') }));
+  if (!ps.active) lines.push(t('vis.noGoals'));
+  else if (ps.unlinked.length) lines.push(tp('vis.unlinked', ps.unlinked.length, { names: ps.unlinked.map(({ plan, goal }) => plans.list.length > 1 ? t('vis.goalInPlan', { goal: goal.title, plan: plan.name }) : goal.title).join(', ') }));
+  return lines.length ? `<div class="vis-status">${lines.map(l => `<p>${esc(l)}</p>`).join('')}</div>` : '';
+}
+
+const purposeTag = () => `<span class="tag purpose">${esc(t('vis.purpose'))}</span>`;
+
+function visionCard(v, depth, ps, reached) {
+  const also = visionParents(v).slice(1).map(findVision);
+  const goals = servingGoals(v.id).map(({ plan, goal }) => plan.id === plans.current ? linkTag(goal.id)
+    : `<span class="tag goal other-plan" title="${esc(plan.name)}">${esc(t('vis.goalInPlan', { goal: goal.title, plan: plan.name }))}</span>`).join('');
+  return `<article class="card vision${reached.has(v.id) ? ' reached' : ''}${ps.root?.id === v.id ? ' purpose' : ''}" style="--level:${depth}" data-open="${v.id}" data-ctx-item="${v.id}">
+    <div class="card-head"><h3>${esc(v.title)}</h3>${ps.root?.id === v.id ? purposeTag() : ''}</div>
+    ${v.description ? `<p class="desc">${esc(v.description)}</p>` : ''}
+    ${also.length ? `<div class="links"><span class="meta">${t('vis.alsoUnder')}</span>${also.map(p => `<span class="tag vision" data-open="${p.id}">${esc(p.title)}</span>`).join('')}</div>` : ''}
+    ${goals ? `<div class="links"><span class="meta">${t('vis.servedBy')}</span>${goals}</div>` : ''}
+  </article>`;
+}
+
+function renderVisions() {
+  const note = `<p class="meta vis-note">${t('vis.shared')}</p>`;
+  if (!visions.list.length) return `<div class="empty"><h3>${t('vis.emptyTitle')}</h3><div>${t('vis.emptyText')}</div>
+    <button class="btn primary" data-new="vision"><span aria-hidden="true">+</span> ${t('add.vision')}</button></div>${note}`;
+  const ps = purposeState(), reached = reachedVisions();
+  return `${note}${purposeStatus(ps)}<div class="vision-tree">${visionOrder().map(({ v, depth }) => visionCard(v, depth, ps, reached)).join('')}</div>`;
+}
+
+function visionForm(v) {
+  const parents = v.id ? v.parents : v.links?.parents || [];
+  // Not itself, nor any vision below it: that would make a loop.
+  const options = visions.list.filter(x => x.id !== v.id && !(v.id && visionAncestors(x.id).has(v.id)));
+  const goals = v.id ? db.goals.filter(g => ownVisions(g).includes(v.id)).map(g => g.id) : v.links?.goals || [];
+  return `
+    ${field('title', t('f.vision'), text('title', v.title, t('f.visionPh')))}
+    ${field('description', t('f.visionDesc'), area('description', v.description, t('f.visionDescPh')))}
+    ${checklist('parents', t('f.visionParents'), 'vision', options, parents, t('f.visionParentsHint'))}
+    ${checklist('goals', t('f.visionGoals'), 'goal', db.goals, goals)}`;
+}
+
+// A goal's own links to visions, without those that are gone; none is no field at all.
+function setGoalVisions(g, ids) {
+  const keep = ids.filter(findVision);
+  if (keep.length) g.visions = [...new Set(keep)];
+  else delete g.visions;
+}
+
 /* ---------- Relationship map ---------- */
 
 /* ---------- Map layout: layered graph drawing (Sugiyama method) ----------
@@ -1748,11 +1829,11 @@ function layoutMap(items, rels) {
   const kindOf = {};
   Object.entries(items).forEach(([k, list]) => list.forEach(x => (kindOf[x.id] = k)));
 
-  // 1. Layering
+  // 1. Layering (visions: a broader vision above those that serve it)
   const above = {};
   rels.forEach(r => {
     if (kindOf[r.from] !== kindOf[r.to] || kindOf[r.from] === 'state') return;
-    if (r.type === 'subgoal' || r.type === 'subactivity') (above[r.from] ||= []).push(r.to);
+    if (r.type === 'subgoal' || r.type === 'subactivity' || r.type === 'subvision') (above[r.from] ||= []).push(r.to);
     if (r.type === 'depends') (above[r.to] ||= []).push(r.from);
   });
   const depth = {}, visiting = new Set();
@@ -1779,8 +1860,8 @@ function layoutMap(items, rels) {
   };
 
   const layers = [], bands = [], node = {};
-  ['goal', 'activity', 'state'].forEach(kind => {
-    if (!items[kind].length) return;
+  ['vision', 'goal', 'activity', 'state'].forEach(kind => {
+    if (!items[kind]?.length) return;
     const base = layers.length;
     const levelOf = kind === 'goal' ? heightOf : depthOf;
     const maxDepth = Math.max(...items[kind].map(it => levelOf(it.id)));
@@ -2040,8 +2121,98 @@ document.fonts?.addEventListener('loadingdone', () => { if (ui.view === 'map' &&
 const roundedRect = (x0, y0, x1, y1, r) =>
   `M${x0 + r},${y0} H${x1 - r} A${r},${r} 0 0 1 ${x1},${y0 + r} V${y1 - r} A${r},${r} 0 0 1 ${x1 - r},${y1} H${x0 + r} A${r},${r} 0 0 1 ${x0},${y1 - r} V${y0 + r} A${r},${r} 0 0 1 ${x0 + r},${y0} Z`;
 
+/* ---------- Visions on the map ----------
+   Links to visions are not stored relationships: a goal keeps the visions it serves, a vision its
+   parents. On the map they are drawn as lines with ids of their own, vl~<from>~<to>. */
+const visionRelId = (from, to) => `vl~${from}~${to}`;
+function visionRel(id) {
+  const [pre, from, to] = String(id || '').split('~');
+  if (pre !== 'vl') return null;
+  const child = findVision(from);
+  if (child) return visionParents(child).includes(to) ? { id, from, to, type: 'subvision' } : null;
+  const goal = db.goals.find(g => g.id === from);
+  return goal && ownVisions(goal).includes(to) ? { id, from, to, type: 'serves' } : null;
+}
+
+// Why two boxes can't be linked through a vision (an i18n key), or null. Two visions: the first serves the second.
+function visionLinkError(a, b) {
+  const A = findEntity(a), B = findEntity(b);
+  if (!A || !B) return 'err.unknown';
+  if (A.kind === 'vision' && B.kind === 'vision') return canParent(a, b);
+  const goal = A.kind === 'goal' ? A.item : B.kind === 'goal' ? B.item : null;
+  if (!goal) return 'err.visionGoalOnly';
+  return ownVisions(goal).includes(A.kind === 'vision' ? a : b) ? 'err.relExists' : null;
+}
+
+function linkVision(a, b) {
+  const err = visionLinkError(a, b);
+  if (err) return toast(t(err));
+  const A = findEntity(a).item, B = findEntity(b).item;
+  if (findVision(a) && findVision(b)) { A.parents.push(b); saveVisions(); }
+  else { const [goal, vis] = findVision(b) ? [A, B] : [B, A]; setGoalVisions(goal, [...ownVisions(goal), vis.id]); save(); }
+  render();
+  const [x, y] = findVision(a) && !findVision(b) ? [B, A] : [A, B];
+  toast(t('map.visionLinked', { a: x.title, b: y.title }));
+}
+
+function unlinkVision(r) {
+  if (r.type === 'subvision') {
+    const v = findVision(r.from);
+    v.parents = v.parents.filter(p => p !== r.to);
+    saveVisions();
+  } else {
+    const g = db.goals.find(x => x.id === r.from);
+    setGoalVisions(g, ownVisions(g).filter(x => x !== r.to));
+    save();
+  }
+  if (ui.mapRel === r.id) ui.mapRel = null;
+  render();
+  toast(t('map.visionUnlinked'));
+}
+
+const hideVisionsToggle = () => `<button class="chip" data-hide-visions aria-pressed="${ui.hideVisions}">${t('map.hideVisions')}</button>`;
+
+// A vision is not glass but a cloud: the box's shape in silver with soft, blurred edges (gold for the Purpose,
+// brighter once some goal serves it). Its line under the title counts the goals serving it, directly or through
+// narrower visions, in all plans.
+function visionNode(n, v, { font, textW, face, sel, dim, purpose, reached, y }) {
+  const { NW, NH } = MAP, count = goalsReaching(v.id);
+  const goals = count ? tp('vis.goals', count) : t('vis.noGoalsShort');
+  const sub = purpose ? `${t('vis.purpose')} · ${goals}` : goals;
+  const title = fitText(v.title, `500 13px ${font}`, textW), subFit = fitText(sub, `400 11.5px ${font}`, textW);
+  return `<g class="node vision${reached ? ' reached' : ''}${purpose ? ' purpose' : ''}${ui.mapLinkFrom === v.id ? ' link-source' : ''}${v.id === sel ? ' sel' : ''}${dim ? ' dim' : ''}" data-map-node="${v.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(v.title)}" transform="translate(${n.x - NW / 2},${y})">
+      <path class="node-lift" d="${face}"></path>
+      <rect class="cloud-haze" width="${NW}" height="${NH}" rx="${GLASS.R}" filter="url(#vision-haze)"></rect>
+      <rect class="cloud" width="${NW}" height="${NH}" rx="${GLASS.R}" filter="url(#vision-cloud)"></rect>
+      <rect class="cloud-sheen" width="${NW}" height="${NH}" rx="${GLASS.R}" filter="url(#vision-cloud)"></rect>
+      <text x="12" y="23">${esc(title)}</text>
+      <text class="sub" x="12" y="41">${esc(subFit)}</text>
+      <title>${esc(v.title)}${v.description ? '\n' + esc(v.description) : ''}\n${esc(sub)}</title>
+    </g>`;
+}
+
+// The cloud's soft edge and haze, and the faint wide glow round whatever works toward a vision
+// (wider and fainter than the glow round a selected box).
+const visionDefs = () => `<linearGradient id="vision-sheen" x1="0" y1="0" x2=".35" y2="1"><stop class="vision-sheen-top" offset="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></linearGradient>`
+  + `<filter id="vision-cloud" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>`
+  + `<filter id="vision-haze" x="-40%" y="-110%" width="180%" height="320%"><feGaussianBlur stdDeviation="9"/></filter>`
+  + `<filter id="vision-glow" x="-45%" y="-130%" width="190%" height="360%"><feGaussianBlur stdDeviation="12"/></filter>`;
+
+// Items working toward a vision glow in every view. With a Purpose everything turns gold, the logo
+// at the top left too, and the first time it is found the user is congratulated (once, on any device).
+function markVisions() {
+  const ps = purposeState(), contrib = contributingIds();
+  document.documentElement.classList.toggle('purpose', ps.on);
+  viewEl.querySelectorAll('.glass[data-ctx-item], .tl-row[data-tl-node]').forEach(el => el.classList.toggle('vglow', contrib.has(el.dataset.ctxItem || el.dataset.tlNode)));
+  if (!ps.on || visions.purposeFound || (typeof tour !== 'undefined' && tour.step >= 0)) return;
+  visions.purposeFound = today();
+  saveVisions();
+  $('#purposeText').textContent = t('purpose.text', { name: ps.root.title });
+  if (!$('#purposeDlg').open) $('#purposeDlg').showModal();
+}
+
 function renderMap() {
-  if (!itemCount()) return emptyState(t('map.emptyTitle'), t('map.emptyText'), 'goal');
+  if (!itemCount() && !visions.list.length) return emptyState(t('map.emptyTitle'), t('map.emptyText'), 'goal');
 
   const scope = scopeFor(ui.mapGoal);
   const keep = kind => item => (!scope || scope[kind].has(item.id)) && !(ui.hideDone && (kind === 'goal' ? isComplete('goal', item) : kind === 'activity' && item.status === 'done'));
@@ -2050,24 +2221,36 @@ function renderMap() {
     activity: db.activities.filter(keep('activity')),
     state: db.states.filter(keep('state')),
   };
-  const visible = new Set([...items.goal, ...items.activity, ...items.state].map(x => x.id));
+  // With a goal or category picked, or unrelated visions hidden, only the visions the goals shown serve, and those above them.
+  let near = null;
+  if (scope || ui.hideVisions) {
+    near = new Set();
+    items.goal.forEach(g => ownVisions(g).forEach(id => [id, ...visionAncestors(id)].forEach(x => near.add(x))));
+  }
+  items.vision = visions.list.filter(v => !near || near.has(v.id));
+  const visible = new Set([...items.vision, ...items.goal, ...items.activity, ...items.state].map(x => x.id));
   const rels = db.relations.filter(r => REL_TYPES[r.type] && !ui.mapHidden.has(r.type) && visible.has(r.from) && visible.has(r.to));
+  if (!ui.mapHidden.has('serves')) items.goal.forEach(g => ownVisions(g).forEach(id => visible.has(id) && rels.push({ id: visionRelId(g.id, id), from: g.id, to: id, type: 'serves' })));
+  if (!ui.mapHidden.has('subvision')) items.vision.forEach(v => visionParents(v).forEach(p => visible.has(p) && rels.push({ id: visionRelId(v.id, p), from: v.id, to: p, type: 'subvision' })));
+  // What works toward a vision glows, and so do the lines between such items.
+  const contrib = contributingIds(), ps = purposeState(), reached = reachedVisions();
+  const glows = r => (contrib.has(r.from) || visible.has(r.from) && findVision(r.from)) && (contrib.has(r.to) || !!findVision(r.to)) && r.type !== 'depends';
   const { NW, NH, PAD } = MAP;
   const { node, layers, bands, chains, W, H } = layoutMap(items, rels);
 
   // Either an item or a relationship line can be selected.
   const relSel = rels.find(r => r.id === ui.mapRel) || null;
   const sel = !relSel && ui.mapSelected && visible.has(ui.mapSelected) ? ui.mapSelected : null;
-  const near = relSel ? new Set([relSel.from, relSel.to]) : neighbourhood(sel, rels);
+  const nearSel = relSel ? new Set([relSel.from, relSel.to]) : neighbourhood(sel, rels);
 
   // Each line sits in a group with a wide invisible twin, so it is easy to hit; a click selects it,
   // a second click (or Enter) edits the relationship and Delete removes it.
   const edges = chains.map(c => {
-    const def = REL_TYPES[c.r.type];
+    const def = REL_TYPES[c.r.type] || VISION_RELS[c.r.type];
     const dim = (sel && !(c.r.from === sel || c.r.to === sel)) || (relSel && c.r.id !== relSel.id) ? 'dim' : '';
     const label = relText(c.r);
-    return `<g class="edge-g ${dim} ${c.r.id === relSel?.id ? 'sel' : ''}" data-rel-edit="${c.r.id}" tabindex="0" role="button" aria-pressed="${c.r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: label }))}">
-      <path class="edge" d="${c.d}" style="stroke:${mapLineColour(def.color)};stroke-width:${def.width || 1.1}" ${def.dash ? 'stroke-dasharray="4 3"' : ''} marker-end="url(#arrow-${c.r.type})"></path>
+    return `<g class="edge-g ${dim} ${c.r.id === relSel?.id ? 'sel' : ''}${glows(c.r) ? ' vglow' : ''}" data-rel-edit="${c.r.id}" tabindex="0" role="button" aria-pressed="${c.r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: label }))}">
+      ${glows(c.r) ? `<path class="edge-vglow" d="${c.d}"></path>` : ''}<path class="edge" d="${c.d}" style="stroke:${mapLineColour(def.color)};stroke-width:${def.width || 1.1}" ${def.dash ? 'stroke-dasharray="4 3"' : ''} marker-end="url(#arrow-${c.r.type})"></path>
       <path class="edge-hit" d="${c.d}"></path><title>${esc(label)}</title></g>`;
   }).join('');
 
@@ -2077,6 +2260,7 @@ function renderMap() {
   const font = getComputedStyle(document.documentElement).getPropertyValue('--font'), textW = NW - 18;
   const nodes = Object.values(node).map(n => {
     const { item } = findEntity(n.id);
+    if (n.kind === 'vision') return visionNode(n, item, { font, textW, face, sel, dim: (sel || relSel) && !nearSel.has(n.id), purpose: ps.root?.id === n.id, reached: reached.has(n.id), y: layers[n.layer].y });
     let st = '', sub, full, bar = '', pct = '';
     if (n.kind === 'goal') {
       st = goalState(item);
@@ -2101,12 +2285,12 @@ function renderMap() {
     // Sizes and weights as in the CSS for .node text and .node .sub.
     const title = fitText(item.title, `${n.kind === 'goal' ? 500 : 400} 13px ${font}`, textW);
     const subFit = fitText(sub, `400 11.5px ${font}`, textW);
-    const dim = (sel || relSel) && !near.has(n.id) ? 'dim' : '';
+    const dim = (sel || relSel) && !nearSel.has(n.id) ? 'dim' : '';
     const linking = ui.mapLinkFrom === n.id ? ' link-source' : '';
     const slab = `${glassTint(n.kind, st)}|${glassThickness(n)}`;
     slabs.add(slab);
-    return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking}${n.id === sel ? ' sel' : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
-      <path class="node-lift" d="${face}"></path>
+    return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking}${n.id === sel ? ' sel' : ''}${contrib.has(n.id) ? ' vglow' : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
+      ${contrib.has(n.id) ? `<path class="node-vglow" d="${face}"></path>` : ''}<path class="node-lift" d="${face}"></path>
       <use href="#glass-${glassKey(slab)}"></use>
       <rect width="${NW}" height="${NH}" rx="${R}"></rect>
       <path class="glass-shade" d="${face}"></path><path class="glass-spec" d="${face}"></path>
@@ -2123,12 +2307,15 @@ function renderMap() {
     return `<text class="col-label ${b.kind}" x="${PAD}" y="${b.top + 22}">${esc(t('kinds.' + b.kind))}${levels > 1 ? ` (${esc(tp('map.levels', levels))})` : ''}</text>`;
   }).join('');
 
-  const markers = Object.entries(REL_TYPES).map(([k, d]) => arrowMarker(`arrow-${k}`, d.color)).join('');
+  const markers = Object.entries({ ...REL_TYPES, ...VISION_RELS }).map(([k, d]) => arrowMarker(`arrow-${k}`, d.color)).join('');
 
   const toggles = Object.entries(REL_TYPES).map(([k, d]) => {
     const count = db.relations.filter(r => r.type === k).length;
     return `<button class="chip rel-toggle" data-rel-toggle="${k}" aria-pressed="${!ui.mapHidden.has(k)}" title="${esc(relSignature(k))}"><i class="${d.dash ? 'dash' : ''}" style="border-color:${mapLineColour(d.color)}"></i>${esc(relLabel(k))}<span class="count">${count}</span></button>`;
-  }).join('');
+  }).join('') + (visions.list.length ? Object.entries(VISION_RELS).map(([k, d]) => {
+    const count = k === 'serves' ? db.goals.reduce((n, g) => n + ownVisions(g).length, 0) : visions.list.reduce((n, v) => n + visionParents(v).length, 0);
+    return `<button class="chip rel-toggle" data-rel-toggle="${k}" aria-pressed="${!ui.mapHidden.has(k)}" title="${esc(`${kindList(d.from)} → ${kindList(d.to)}`)}"><i style="border-color:${mapLineColour(d.color)}"></i>${esc(relLabel(k))}<span class="count">${count}</span></button>`;
+  }).join('') : '');
   const goalNodes = items.goal.length ? items.goal : Object.values(items).flat();
   const focusX = Math.round(goalNodes.reduce((s, x) => s + node[x.id].x, 0) / goalNodes.length * ui.mapScale);
   let relNote = '';
@@ -2137,7 +2324,7 @@ function renderMap() {
 
   return `
     ${categoryChips()}
-    <div class="toolbar">${goalSelect('map', ui.mapGoal)}${hideDoneToggle()}</div>
+    <div class="toolbar">${goalSelect('map', ui.mapGoal)}${hideDoneToggle()}${visions.list.length ? hideVisionsToggle() : ''}</div>
     <div class="map-controls">
       <div class="chips" role="group" aria-label="${esc(t('map.toggles'))}"><span class="ctl-label">${t('map.show')}</span>${toggles}</div>
       <div class="map-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}
@@ -2145,7 +2332,7 @@ function renderMap() {
       </div>
     </div>
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}</defs>${bandSvg}${edges}${bandLabels}${nodes}
+      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}${visions.list.length ? visionDefs() : ''}</defs>${bandSvg}${edges}${bandLabels}${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
@@ -2206,6 +2393,8 @@ function mapRelSelection(r) {
 }
 
 function removeRelation(id) {
+  const vr = visionRel(id);
+  if (vr) return unlinkVision(vr);
   db.relations = db.relations.filter(r => r.id !== id);
   if (ui.mapRel === id) ui.mapRel = null;
   save();
@@ -3088,6 +3277,9 @@ function smartSection(letter, body) {
 // for a new relationship, { from: id } pre-selects its source.
 // A new activity first asks whether it is done once or repeats; `links.repeat` carries the answer.
 function openForm(kind, id = null, links = {}) {
+  // A line to a vision opens the vision that holds the link: the one served by a goal, or the narrower of two.
+  const vr = kind === 'relation' && visionRel(id);
+  if (vr) return openForm('vision', vr.type === 'serves' ? vr.to : vr.from);
   formCtx = { kind, id };
   cal = null;
   let item = null;
@@ -3103,7 +3295,7 @@ function openForm(kind, id = null, links = {}) {
     setTimeout(() => modal.querySelector('[data-act-kind]')?.focus(), 30);
     return;
   }
-  $('#modalBody').innerHTML = { goal: goalForm, state: stateForm, activity: activityForm, relation: relationForm }[kind](item || { links });
+  $('#modalBody').innerHTML = { goal: goalForm, state: stateForm, activity: activityForm, relation: relationForm, vision: visionForm }[kind](item || { links });
   if (kind === 'relation') {
     const r = item || links;
     if (r.from) $('#f-from').value = r.from;
@@ -3165,6 +3357,7 @@ function goalForm(g) {
       ${field('status', t('f.status'), select('status', statusLabels(GOAL_STATUS, 'goal.'), g.status || 'active'))}
       ${field('parent', t('f.parent'), select('parent', parents, parent))}
     </div>
+    ${checklist('visions', t('f.goalVisions'), 'vision', visions.list, g.id ? ownVisions(g) : g.links?.visions || [])}
     ${checklist('activities', t('f.goalActivities'), 'activity', db.activities, linkedFrom(g, 'contributes'))}
     ${checklist('depends', t('f.goalDepends'), 'goal', db.goals.filter(x => x.id !== g.id), linksOf(g, 'depends'))}`;
 }
@@ -3559,6 +3752,20 @@ function submitForm() {
   if (Object.keys(bad).length) return showErrors(bad);
   if (!v.title || !v.title.trim()) return showErrors({ title: t('err.titleRequired') });
 
+  if (kind === 'vision') {
+    const vis = existing || { id: uid(), createdAt: today(), parents: [] };
+    Object.assign(vis, { title: v.title.trim(), description: (v.description || '').trim(), parents: [] });
+    if (!existing) visions.list.push(vis);
+    arr('parents').forEach(p => { if (!canParent(vis.id, p)) vis.parents.push(p); });
+    const chosen = new Set(arr('goals'));
+    db.goals.forEach(g => {
+      const own = ownVisions(g), has = own.includes(vis.id);
+      if (chosen.has(g.id) !== has) setGoalVisions(g, has ? own.filter(x => x !== vis.id) : [...own, vis.id]);
+    });
+    saveVisions();
+    return finish(t(existing ? 'toast.visionUpdated' : 'toast.visionAdded'));
+  }
+
   if (kind === 'goal') {
     const c = smartCheck(v);
     if (Object.keys(c.errs).length) return showErrors(c.errs);
@@ -3577,6 +3784,7 @@ function submitForm() {
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
     setIncoming(g.id, 'contributes', arr('activities'));
+    setGoalVisions(g, arr('visions'));
     return finish(t(existing ? 'toast.goalUpdated' : 'toast.goalCreated'));
   }
 
@@ -3922,7 +4130,7 @@ $('#addBtn').addEventListener('click', e => {
   const r = e.currentTarget.getBoundingClientRect();
   Object.assign(ctxMenu.dataset, { id: '', rel: '', add: '1' });
   ctxMenu.setAttribute('aria-label', t('add.item'));
-  showCtxMenu('', '', '', ['goal', 'activity', 'state'].map(k => ({ act: 'new:' + k, label: t('add.' + k) })), r.right, r.bottom + 6, e.detail === 0);
+  showCtxMenu('', '', '', ['goal', 'activity', 'state', ...(ui.view === 'map' ? ['vision'] : [])].map(k => ({ act: 'new:' + k, label: t('add.' + k) })), r.right, r.bottom + 6, e.detail === 0);
   // Lined up with the button's right edge; above it when the button floats at the bottom (phones).
   const m = ctxMenu.getBoundingClientRect();
   ctxMenu.style.left = `${Math.max(8, Math.min(r.right - m.width, innerWidth - m.width - 8))}px`;
@@ -3930,7 +4138,7 @@ $('#addBtn').addEventListener('click', e => {
 });
 
 viewEl.addEventListener('click', e => {
-  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
+  const el = e.target.closest('[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]');
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !e.target.closest('[data-map-zoom]')) {
     const from = ui.mapLinkFrom, to = el?.dataset.mapNode;
@@ -4021,6 +4229,7 @@ viewEl.addEventListener('click', e => {
     return render();
   }
   if (el.hasAttribute('data-hide-done')) return setToggle('hideDone', !ui.hideDone);
+  if (el.hasAttribute('data-hide-visions')) return setToggle('hideVisions', !ui.hideVisions);
 });
 
 viewEl.addEventListener('input', e => {
@@ -4761,6 +4970,11 @@ const LONG_PRESS_MS = 500;
 
 function ctxOptions(kind, item) {
   const opt = (act, label, extra = {}) => ({ act, label, ...extra });
+  if (kind === 'vision') return [
+    opt('edit', t('btn.edit')), ...(ui.view === 'map' ? [opt('highlight', t('ctx.highlight'))] : []), '-', opt('add:vision:parents', t('ctx.addSubvision')),
+    '-', ...SHOW_IN.vision.filter(v => v !== ui.view).map(v => opt('show:' + v, t('ctx.showInView', { view: t('nav.' + v) }), { icon: v })),
+    ...(ui.view === 'map' ? [opt('link', t('ctx.link'))] : []), '-', opt('delete', t('btn.delete'), { danger: true }),
+  ];
   // Highlighting links and showing one goal only mean something where links are drawn.
   const options = [opt('edit', t('btn.edit')), ...(selectsInView() ? [opt('highlight', t('ctx.highlight'))] : [])];
   if (kind === 'goal') {
@@ -4796,7 +5010,7 @@ function ctxOptions(kind, item) {
 
 // The views each kind of item appears in (graphs: only states with measurements or amounts, and
 // routines with check-ins).
-const SHOW_IN = { goal: ['goals', 'map', 'timeline'], activity: ['activities', 'map', 'timeline', 'graphs'], state: ['states', 'map', 'graphs'] };
+const SHOW_IN = { vision: ['visions', 'map'], goal: ['goals', 'map', 'timeline'], activity: ['activities', 'map', 'timeline', 'graphs'], state: ['states', 'map', 'graphs'] };
 
 // Switches to another view with the item selected there (map, timeline) or its card brought into
 // view, first changing the filters there that would hide it (setView clears the search).
@@ -4822,6 +5036,11 @@ function showIn(view, id) {
 // a goal's own, then those of the goals it is linked to – or else to all) and, in the timeline,
 // the folded goals it is under.
 function revealIn(view, kind, item) {
+  // On the map every vision shows once no goal or category is picked and none are hidden.
+  if (kind === 'vision') {
+    if (view === 'map') { Object.assign(ui, { mapGoal: '', category: '' }); if (ui.hideVisions) { ui.hideVisions = false; prefs.set('hideVisions', false); } }
+    return;
+  }
   if (view === 'goals') {
     if (ui.goalFilter !== 'all' && item.status !== ui.goalFilter) ui.goalFilter = 'all';
     if (!inCategory(item)) ui.category = item.category || '';
@@ -4899,7 +5118,7 @@ function closeCtxMenu(refocus = false) {
 // A relationship line's menu (long-press, right-click or the menu key): it selects the line and
 // offers what the selection row below offers.
 function openRelMenu(relId, x, y, byKey = false) {
-  const r = db.relations.find(x => x.id === relId);
+  const r = db.relations.find(x => x.id === relId) || visionRel(relId);
   if (!r) return;
   Object.assign(ui, { mapRel: relId, mapSelected: null });
   render();
@@ -5189,10 +5408,11 @@ function startMapLink(id) {
 }
 
 // Whether any relationship fits two items, in either direction.
-const canLink = (a, b) => possibleTypes(a, b).length > 0 || possibleTypes(b, a).length > 0;
+const canLink = (a, b) => (findVision(a) || findVision(b) ? !visionLinkError(a, b) : possibleTypes(a, b).length > 0 || possibleTypes(b, a).length > 0);
 const LINK_MARKS = ['link-source', 'link-target', 'link-bad'];
 
 function linkItems(from, to) {
+  if (findVision(from) || findVision(to)) return linkVision(from, to);
   if (!canLink(from, to))
     return toast(t('map.linkNone', { a: findEntity(from).item.title, b: findEntity(to).item.title }));
   openForm('relation', null, { from, to });
@@ -5834,8 +6054,9 @@ try { firstVisit = !localStorage.getItem(PLANS_KEY) && !localStorage.getItem(STO
 load();
 renderPlanSwitch();
 if (VIEWS[prefs.get('view')]) ui.view = prefs.get('view');
-ui.mapHidden = new Set([].concat(prefs.get('mapHidden', [])).filter(k => REL_TYPES[k]));
+ui.mapHidden = new Set([].concat(prefs.get('mapHidden', [])).filter(k => REL_TYPES[k] || VISION_RELS[k]));
 ui.hideDone = prefs.get('hideDone', false) === true;
+ui.hideVisions = prefs.get('hideVisions', false) === true;
 ui.nextAll = prefs.get('nextAll', false) === true;
 ui.tlDeps = prefs.get('tlDeps', true) !== false;
 ui.planBadges = prefs.get('planBadges', true) !== false;

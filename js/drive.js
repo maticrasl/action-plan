@@ -134,15 +134,16 @@ function parseStore(text) {
   return {
     plans: { list, deleted: raw.plans.deleted && typeof raw.plans.deleted === 'object' ? raw.plans.deleted : {} },
     data: Object.fromEntries(list.map(p => [p.id, normalize(raw.data?.[p.id])])),
+    visions: normalizeVisions(raw.visions),
   };
 }
 
-const toFile = store => ({ format: SYNC_FORMAT, version: 1, plans: store.plans, data: store.data });
+const toFile = store => ({ format: SYNC_FORMAT, version: 1, plans: store.plans, data: store.data, visions: store.visions });
 
 // Everything on this device, as a detached copy.
 function localStore() {
   const data = Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? db : readPlan(p.id)]));
-  return JSON.parse(JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data }));
+  return JSON.parse(JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data, visions }));
 }
 
 // The empty starter plan a new device makes on its first visit would otherwise sync as an extra
@@ -154,12 +155,12 @@ function dropStarterPlans(store) {
     return starterNames.has(p.name) && SYNC_COLLS.every(c => !d[c].length) && !Object.keys(d.deleted || {}).length;
   };
   const list = store.plans.list.filter(p => !isStarter(p));
-  return { plans: { ...store.plans, list }, data: Object.fromEntries(list.map(p => [p.id, store.data[p.id]])) };
+  return { plans: { ...store.plans, list }, data: Object.fromEntries(list.map(p => [p.id, store.data[p.id]])), visions: store.visions };
 }
 
 // Make the merged store this device's data; the open plan is reloaded only if it changed.
 function applyStore(store) {
-  const before = JSON.stringify(db), current = plans.current;
+  const before = JSON.stringify(db) + JSON.stringify(visions), current = plans.current;
   if (!store.plans.list.length) {
     const id = uid();
     store.plans.list.push({ id, name: t('plan.defaultName') });
@@ -175,10 +176,12 @@ function applyStore(store) {
     toast(t('err.storage'));
   }
   takePlanSnapshot(plans);
+  if (store.visions) applyVisions(store.visions);
+  plansVersion++;
   db = readPlan(plans.current);
   takeSnapshot(db);
   renderPlanSwitch();
-  if (plans.current !== current || JSON.stringify(db) !== before) render();
+  if (plans.current !== current || JSON.stringify(db) + JSON.stringify(visions) !== before) render();
 }
 
 /* ---------- Sync ---------- */

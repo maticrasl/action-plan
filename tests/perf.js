@@ -39,6 +39,28 @@
     check('1,100 amounts: states view', 100, () => setView('states'));
     check('1,100 amounts: state form', 100, () => { openForm('state', 'k'); modal.close(); });
     deletePlan(plans.current);
+    // Visions, last so their extra drawing doesn't weigh on the checks above: the 300-item map again,
+    // with 20 visions in a tree that every goal serves (clouds, lines, the glow, a gold Purpose).
+    createPlan('Visions map', emptyDb());
+    for (let i = 0; i < 30; i++) db.goals.push({ id: 'g' + i, title: 'Goal ' + i, status: 'active', baseline: '0', target: '10', visions: ['v' + (i % 20)] });
+    for (let i = 0; i < 240; i++) {
+      db.activities.push({ id: 'a' + i, title: 'Activity ' + i, status: st[i % 3], dueDate: addDays(today(), i % 40 - 10) });
+      db.relations.push({ id: 'c' + i, from: 'a' + i, to: 'g' + (i % 30), type: 'contributes' });
+      if (i % 8) db.relations.push({ id: 'd' + i, from: 'a' + i, to: 'a' + (i - 1), type: 'depends' });
+    }
+    for (let i = 0; i < 30; i++) {
+      db.states.push({ id: 's' + i, title: 'State ' + i, value: String(i), date: today(), history: [] });
+      db.relations.push({ id: 'm' + i, from: 's' + i, to: 'g' + i, type: 'measures' });
+    }
+    for (let i = 0; i < 20; i++) visions.list.push({ id: 'v' + i, title: 'Vision ' + i, parents: i ? ['v' + ((i - 1) >> 1)] : [] });
+    // That is a Purpose: drawn gold, but without the popup.
+    visions.purposeFound = today();
+    save(); saveVisions();
+    check('300 items + 20 visions: map view', 300, () => setView('map'));
+    check('20 visions: visions view', 100, () => setView('visions'));
+    check('300 items + 20 visions: goals view with glow', 150, () => setView('goals'));
+    visions = { list: [], deleted: {} }; saveVisions();
+    deletePlan(plans.current);
   } catch (e) { out.push(`FAIL perf setup: ${e}`); }
   const pre = document.createElement('pre');
   pre.id = 'PERF';

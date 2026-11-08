@@ -48,6 +48,10 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/></svg>
         <span data-i18n="nav.states">States</span>
       </button>
+      <button class="nav-item nav-extra" data-view="visions" data-i18n-title="nav.visions">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span data-i18n="nav.visions">Visions</span>
+      </button>
       <button class="nav-item nav-extra" data-view="map" data-i18n-title="nav.map">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><circle cx="5.5" cy="12" r="2"/><circle cx="18.5" cy="12" r="2"/><circle cx="12" cy="19.5" r="2"/><path d="M11 6.2l-4.3 4.2M13 6.2l4.3 4.2M6.7 13.6l4.3 4.2M17.3 13.6L13 17.8"/></svg>
         <span data-i18n="nav.map">Map</span>
@@ -120,6 +124,16 @@
     </form>
   </dialog>
 
+  <dialog id="purposeDlg" class="modal purpose-dlg" aria-labelledby="purposeTitle">
+    <form method="dialog" novalidate>
+      <div class="purpose-body">
+        <svg class="blaze-mark gold" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13"/><circle cx="16" cy="16" r="6"/></svg>
+        <h2 id="purposeTitle" data-i18n="purpose.title">You have found your Purpose</h2>
+        <p id="purposeText"></p>
+        <button class="btn primary" value="ok" data-i18n="purpose.ok">Wonderful</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="planDelete" class="modal plan-delete" aria-labelledby="planDeleteTitle">
     <form method="dialog" id="planDeleteForm" novalidate>
       <header class="modal-head">
@@ -271,6 +285,7 @@
   <script src="js/templates.js"></script>
   <script src="js/tutorial.js"></script>
   <script src="js/sync.js"></script>
+  <script src="js/visions.js"></script>
   <script src="js/drive.js"></script>
   <script src="js/app.js"></script>
 </body>
