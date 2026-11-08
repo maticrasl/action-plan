@@ -4143,13 +4143,18 @@ matchMedia('(max-width: 720px)').addEventListener('change', e => { if (!e.matche
 
 // On the map and the timeline, the button asks what to add: a goal, an activity or a current state
 // (links are drawn between the items there).
+// What to add, in views that hold several kinds: at x, y (a right-click on the map's empty space) or under the button.
+function openAddMenu(x, y, byKey) {
+  Object.assign(ctxMenu.dataset, { id: '', rel: '', add: '1' });
+  ctxMenu.setAttribute('aria-label', t('add.item'));
+  showCtxMenu('', '', '', ['goal', 'activity', 'state', ...(ui.view === 'map' ? ['vision'] : [])].map(k => ({ act: 'new:' + k, label: t('add.' + k) })), x, y, byKey);
+}
+
 $('#addBtn').addEventListener('click', e => {
   const kind = VIEWS[ui.view].add;
   if (kind !== 'item') return openForm(kind);
   const r = e.currentTarget.getBoundingClientRect();
-  Object.assign(ctxMenu.dataset, { id: '', rel: '', add: '1' });
-  ctxMenu.setAttribute('aria-label', t('add.item'));
-  showCtxMenu('', '', '', ['goal', 'activity', 'state', ...(ui.view === 'map' ? ['vision'] : [])].map(k => ({ act: 'new:' + k, label: t('add.' + k) })), r.right, r.bottom + 6, e.detail === 0);
+  openAddMenu(r.right, r.bottom + 6, e.detail === 0);
   // Lined up with the button's right edge; above it when the button floats at the bottom (phones).
   const m = ctxMenu.getBoundingClientRect();
   ctxMenu.style.left = `${Math.max(8, Math.min(r.right - m.width, innerWidth - m.width - 8))}px`;
@@ -5198,7 +5203,11 @@ viewEl.addEventListener('contextmenu', e => {
   // Phones may report a still finger of a pinch as a long-press.
   if (tlDrag?.touch || pinch) return e.preventDefault();
   const node = e.target.closest(MENU_SEL), line = e.target.closest('[data-rel-edit]');
-  if (!node && !line) return;
+  if (!node && !line) {
+    // The map's empty space offers what the Add button does.
+    if (ui.view === 'map' && e.target.closest('.map-wrap')) { e.preventDefault(); openAddMenu(e.clientX, e.clientY, false); }
+    return;
+  }
   e.preventDefault();
   openMenuAt(line, node, e.clientX, e.clientY);
 });

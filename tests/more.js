@@ -4070,6 +4070,34 @@ window.moreTests = async ({ step, assert }) => {
     return want.join(' < ');
   });
 
+  await step('map: right-clicking empty space opens the Add menu there; elsewhere the browser keeps its own', () => {
+    const { g } = mapFixture();
+    const rc = (el, x, y) => { const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: x, clientY: y }); el.dispatchEvent(e); return e; };
+    const ev = rc($('.map-wrap svg'), 300, 200);
+    assert(ev.defaultPrevented && !ctxMenu.hidden, 'the menu opens instead of the browser menu');
+    eq([...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx), ['new:goal', 'new:activity', 'new:state', 'new:vision'], 'what the Add button offers');
+    ctxMenu.style.animation = 'none';
+    const m = ctxMenu.getBoundingClientRect();
+    assert(Math.abs(m.left - 300) < 1 && Math.abs(m.top - 200) < 1, `at the pointer: ${m.left},${m.top}`);
+    ctxMenu.querySelector('[data-ctx="new:vision"]').click();
+    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'vision' && !formCtx.id, 'picking one opens its new form');
+    modal.close();
+    // Near the bottom right corner it stays on screen.
+    rc($('.map-wrap svg'), innerWidth - 2, innerHeight - 2);
+    const c = ctxMenu.getBoundingClientRect();
+    assert(c.right <= innerWidth - 7 && c.bottom <= innerHeight - 7, 'kept on screen');
+    closeCtxMenu();
+    // A box still gets its own menu.
+    rc(nodeEl(g.id), 100, 100);
+    assert(!ctxMenu.hidden && !ctxMenu.dataset.add && ctxMenu.dataset.id === g.id, 'a box: its item menu');
+    closeCtxMenu();
+    // Outside the map's drawing, and in other views, nothing changes.
+    assert(!rc($('#view'), 10, 10).defaultPrevented && ctxMenu.hidden, 'not on the controls around the map');
+    setView('goals');
+    assert(!rc($('#view'), 10, 10).defaultPrevented && ctxMenu.hidden, 'not in other views');
+    setView('map');
+  });
+
   await step('map: clicking a line selects it; clicking it again or double-clicking opens it', () => {
     const { g, a, b, s } = mapFixture();
     const r = relOf(a, g);
