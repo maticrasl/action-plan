@@ -68,16 +68,31 @@ const drive = {
   // Google for a new one, and it is kept only if it is for that user's own account.
   async getToken(interactive) {
     if (!this.token) { try { this.token = JSON.parse(userSession.getItem(TOKEN_KEY)); } catch (e) { /* none */ } }
-    if (this.token && this.token.expires - Date.now() > 60000) return this.token.value;
-    if (!interactive) throw new SyncError('auth');
     const user = currentUser();
-    const token = await this.request(user.account?.email || '', '');
+    if (this.token && this.token.expires - Date.now() > 60000) {
+      // Linked before users existed: whose token this is gets learnt first, without a popup.
+      if (user.account.id) return this.token.value;
+      const value = this.token.value, who = await this.whoami(value);
+      if (currentUser() !== user) throw new SyncError('switched');
+      try { this.claim(user, who); } catch (e) { this.forget(); throw e; }
+      return value;
+    }
+    if (!interactive) throw new SyncError('auth');
+    const token = await this.request(user.account.email, user.account.id ? '' : 'select_account');
     const who = await this.whoami(token.value);
     if (currentUser() !== user) throw new SyncError('switched');
-    if (user.account.id && who.id !== user.account.id) throw new SyncError('account');
-    if (!user.account.id) { user.account = { id: who.id, email: who.email }; saveUsers(); } // linked before users existed
+    this.claim(user, who);
     this.keep(token);
     return token.value;
+  },
+
+  // A token is used only for its user's own account. A user linked before users existed takes the
+  // account it is for, unless another user here already has it.
+  claim(user, who) {
+    if (user.account.id) { if (who.id !== user.account.id) throw new SyncError('account'); return; }
+    if (users.list.some(u => u !== user && u.account?.id === who.id)) throw new SyncError('account');
+    user.account = { id: who.id, email: who.email };
+    saveUsers();
   },
 
   // Asks Google for an access token: `hint` is the account's email, `prompt` '' or 'select_account'.
@@ -257,11 +272,12 @@ async function syncNow(interactive = false) {
 
 /* ---------- Signing in and out: one user per Google account (users.js) ---------- */
 
-const userName = u => u.name || u.account?.email || t('user.guest');
+const NAME_MAX = 40;
+const userName = u => u.name || u.account?.email || t(u.account ? 'user.unnamed' : 'user.guest');
 
 function askUserName(who) {
-  const suggestion = (who.name || who.email.split('@')[0] || t('user.defaultName')).slice(0, 40);
-  return (prompt(t('user.askName'), suggestion) || '').trim().slice(0, 40) || suggestion;
+  const suggestion = (who.name || who.email.split('@')[0] || t('user.defaultName')).slice(0, NAME_MAX);
+  return (prompt(t('user.askName'), suggestion) || '').trim().slice(0, NAME_MAX) || suggestion;
 }
 
 // Signs in with Google (from Settings). The chosen account's own user if this device has one;
@@ -278,26 +294,33 @@ async function logIn(hint = '', target = null) {
     return toast(t('sync.connectFailed'));
   }
   if (currentUser() !== from) return;
+  const before = JSON.stringify(users);
   let user = users.list.find(u => u.account?.id === who.id) || (target?.account && !target.account.id ? target : null);
   const known = !!user;
-  if (!user) user = from.account ? addUser(null) : from;
+  if (!user) user = from.account ? addUser() : from;
   user.account = { id: who.id, email: who.email };
   if (!user.name) user.name = askUserName(who);
-  saveUsers();
+  // Not stored (storage full): nothing changes, so no data here is left to whoever logs in next.
+  if (!saveUsers()) { users = JSON.parse(before); return toast(t('err.storage')); }
   const firstVisit = user !== from && enterUser(user.id);
   drive.keep(token);
   if (!known) prefs.set('syncedOnce', false);
   toast(known && user !== from ? t('user.switched', { name: userName(user) }) : t('sync.connected'));
   renderSync();
   await syncNow(true);
-  if (firstVisit) offerTour();
+  // A first visit, unless the sync brought back plans from the account's other devices.
+  if (firstVisit && plans.list.length === 1 && !SYNC_COLLS.some(c => db[c].length)) offerTour();
 }
 
-// Signs out: this user's data stays on the device, apart, and the guest's (empty at first) opens.
+// The guest's space opens (made, empty, when there is none); the one before keeps their data, apart.
+function openGuest() {
+  drive.forget();
+  enterUser((users.list.find(u => !u.account) || addUser()).id);
+}
+
 function logOut() {
   const name = userName(currentUser());
-  drive.forget();
-  enterUser((users.list.find(u => !u.account) || addUser(null)).id);
+  openGuest();
   toast(t('user.loggedOut', { name }));
 }
 
@@ -308,10 +331,7 @@ function removeUser(id) {
   if (!user?.account) return;
   const name = userName(user);
   if (!confirm(t('user.removeConfirm', { name }))) return;
-  if (user === currentUser()) {
-    drive.forget();
-    enterUser((users.list.find(u => !u.account) || addUser(null)).id);
-  }
+  if (user === currentUser()) openGuest();
   [localStorage, sessionStorage].forEach(area => userKeys(user, area).forEach(k => area.removeItem(k)));
   users.list = users.list.filter(u => u !== user);
   saveUsers();
@@ -320,7 +340,7 @@ function removeUser(id) {
 }
 
 function renameUser(name) {
-  currentUser().name = name.trim().slice(0, 40);
+  currentUser().name = name.trim().slice(0, NAME_MAX);
   saveUsers();
   renderSync();
 }
@@ -344,7 +364,10 @@ function syncStatusText() {
     const at = prefs.get('lastSync', null);
     return at ? t('sync.status.synced', { time: syncTime(at) }) : t('sync.status.never');
   }
-  if (s === 'account') return t('sync.status.account', { email: currentUser().account?.email || '' });
+  if (s === 'account') {
+    const email = currentUser().account?.email;
+    return email ? t('sync.status.account', { email }) : t('sync.status.accountTaken');
+  }
   return t('sync.status.' + s);
 }
 
@@ -373,7 +396,7 @@ function renderSync() {
   if (!syncConfigured()) html = `<p class="hint">${t('sync.notConfigured')}</p>`;
   else if (!connected) html = `<p class="hint">${t('sync.intro')}</p><div class="set-actions">${action('connect', t('sync.connect'), 'primary')}</div>${list}`;
   else {
-    html = `<label class="set-row user-name"><span>${t('user.name')}</span><input type="text" data-user-name maxlength="40" autocomplete="nickname" value="${esc(user.name)}" placeholder="${esc(userName(user))}"></label>
+    html = `<label class="set-row user-name"><span>${t('user.name')}</span><input type="text" data-user-name maxlength="${NAME_MAX}" autocomplete="nickname" value="${esc(user.name)}" placeholder="${esc(userName(user))}"></label>
       ${user.account.email ? `<p class="hint">${t('user.signedInAs', { email: esc(user.account.email) })}</p>` : ''}
       <p class="sync-status" data-status="${syncState.status}"><i aria-hidden="true"></i><span>${esc(syncStatusText())}</span></p>
       <div class="set-actions">${action('now', t('sync.now'))}${action('connect', t('user.add'))}${action('logout', t('user.logOut'), 'ghost')}${action('remove', t('user.removeMe'), 'ghost', user.id)}</div>
@@ -397,6 +420,16 @@ function initSync() {
     }
   });
   $('#syncSection').addEventListener('change', e => { if (e.target.matches('[data-user-name]')) renameUser(e.target.value); });
+  // Another tab changed the user list: this one takes it over, so it never writes an old list back.
+  // If it removed the user open here, this tab's token for them goes too and the guest opens.
+  addEventListener('storage', e => {
+    if (e.key !== USERS_KEY) return;
+    const was = currentUser();
+    users = readUsers();
+    if (users.list.some(u => u.id === was.id)) { users.current = was.id; return renderSync(); }
+    userKeys(was, sessionStorage).forEach(k => sessionStorage.removeItem(k));
+    enterUser((users.list.find(u => !u.account) || addUser()).id);
+  });
   // Load Google's script ahead of a click, so its popup opens straight from that click.
   $('#settingsBtn').addEventListener('click', () => { if (syncConfigured()) loadGis().catch(() => {}); });
   addEventListener('online', () => syncNow(false));

@@ -1897,8 +1897,8 @@ function layoutMap(items, rels) {
   }));
 
   // Goals start left to right by their nearest deadline (none last), goals linked to each other (sub-goals,
-  // dependencies) kept together. That order gives way only where it makes lines cross (to visions above, say):
-  // fewer crossings come first, and goals go back toward their dates wherever that crosses nothing more.
+  // dependencies) next to each other. That order gives way only where it makes lines cross (to visions above,
+  // say): fewer crossings come first, and goals go back toward their dates wherever that crosses nothing more.
   const groupOf = {};
   const find = id => (groupOf[id] === undefined || groupOf[id] === id ? (groupOf[id] = id) : (groupOf[id] = find(groupOf[id])));
   rels.filter(r => kindOf[r.from] === 'goal' && kindOf[r.to] === 'goal').forEach(r => { groupOf[find(r.from)] = find(r.to); });
@@ -1950,29 +1950,33 @@ function layoutMap(items, rels) {
     (nbrs.get(u) || []).forEach(a => (nbrs.get(v) || []).forEach(b => { if (a.i > b.i) c++; }));
     return c;
   };
+  // The crossings between u's lines and v's when u is left of v.
+  const cost = (u, v) => pairCross(u, v, up) + pairCross(u, v, down);
+  const swap = (L, i) => { const u = L.list[i], v = L.list[i + 1]; L.list[i] = v; L.list[i + 1] = u; v.i = i; u.i = i + 1; };
   for (let pass = 0, improved = true; improved && pass < 8; pass++) {
     improved = false;
     layers.forEach(L => {
-      for (let i = 0; i + 1 < L.list.length; i++) {
-        const u = L.list[i], v = L.list[i + 1];
-        if (pairCross(v, u, up) + pairCross(v, u, down) < pairCross(u, v, up) + pairCross(u, v, down)) {
-          L.list[i] = v; L.list[i + 1] = u; v.i = i; u.i = i + 1;
-          improved = true;
-        }
-      }
+      for (let i = 0; i + 1 < L.list.length; i++) if (cost(L.list[i + 1], L.list[i]) < cost(L.list[i], L.list[i + 1])) { swap(L, i); improved = true; }
     });
   }
-  // Then neighbouring goals swap back toward their date order wherever that adds no crossing.
+  // Then goals go back toward their date order wherever that adds no crossing: a whole row in date order
+  // if that costs nothing (goals past the line slots and boxes between them), else neighbour by neighbour.
+  let total = crossings();
+  layers.forEach(L => {
+    if (L.list.filter(n => n.kind === 'goal').length < 2) return;
+    const kept = [...L.list];
+    slotGoals(L);
+    L.list.forEach((n, i) => (n.i = i));
+    const c = crossings();
+    if (c <= total) total = c;
+    else { L.list = kept; L.list.forEach((n, i) => (n.i = i)); }
+  });
   for (let moved = true; moved;) {
     moved = false;
     layers.forEach(L => {
       for (let i = 0; i + 1 < L.list.length; i++) {
         const u = L.list[i], v = L.list[i + 1];
-        if (u.kind === 'goal' && v.kind === 'goal' && rank[v.id] < rank[u.id]
-          && pairCross(v, u, up) + pairCross(v, u, down) <= pairCross(u, v, up) + pairCross(u, v, down)) {
-          L.list[i] = v; L.list[i + 1] = u; v.i = i; u.i = i + 1;
-          moved = true;
-        }
+        if (u.kind === 'goal' && v.kind === 'goal' && rank[v.id] < rank[u.id] && cost(v, u) <= cost(u, v)) { swap(L, i); moved = true; }
       }
     });
   }
@@ -4141,9 +4145,8 @@ document.addEventListener('pointerdown', e => { if (!e.target.closest('#navSheet
 // The menu only exists on phones; close it when the window grows past that.
 matchMedia('(max-width: 720px)').addEventListener('change', e => { if (!e.matches) closeNavSheet(); });
 
-// On the map and the timeline, the button asks what to add: a goal, an activity or a current state
-// (links are drawn between the items there).
-// What to add, in views that hold several kinds: at x, y (a right-click on the map's empty space) or under the button.
+// On the map and the timeline (where links are drawn between kinds), what to add: under the Add button, or at x, y
+// for a right-click on the map's empty space.
 function openAddMenu(x, y, byKey) {
   Object.assign(ctxMenu.dataset, { id: '', rel: '', add: '1' });
   ctxMenu.setAttribute('aria-label', t('add.item'));
@@ -6105,6 +6108,8 @@ function bootUser() {
 function enterUser(id) {
   if (typeof tour !== 'undefined' && tour.step >= 0) endTour(false);
   closeCtxMenu();
+  closeAmountPop();
+  reachedQueue.length = 0; // "goal reached" popups still waiting were the other user's
   hideToast(); // an undo in it would act on the other user's plan
   document.querySelectorAll('dialog[open]').forEach(d => { if (d !== settings) d.close(); });
   clearTimeout(syncState.timer);

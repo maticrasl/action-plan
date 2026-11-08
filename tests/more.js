@@ -7734,7 +7734,7 @@ window.moreTests = async ({ step, assert }) => {
   await step('users: removing a user deletes only their data here; logging in again brings back what synced', async () => {
     const ana = byAcct('A'), bor = currentUser(), cene = byAcct('C');
     const allKeys = area => Object.keys(area);
-    const nsKeys = (u, area = localStorage) => allKeys(area).filter(k => k.startsWith(ROOT + u.ns));
+    const nsKeys = (u, area = localStorage) => allKeys(area).filter(k => k.startsWith(KEY_ROOT + u.ns));
     const anaKeys = keysText(ana), borKeys = keysText(bor), lang = localStorage.getItem(LANG_KEY);
     assert(bor === byAcct('B'), 'Bor is on');
     renderSync();
@@ -7765,13 +7765,93 @@ window.moreTests = async ({ step, assert }) => {
     // The first user, on the plain keys: only theirs go (the device's language and the user list stay).
     const borKeys2 = keysText(bor);
     removeUser(ana.id);
-    const plain = allKeys(localStorage).filter(k => !users.list.some(u => u.ns && k.startsWith(ROOT + u.ns)) && k !== USERS_KEY && k !== LANG_KEY);
+    const plain = allKeys(localStorage).filter(k => !users.list.some(u => u.ns && k.startsWith(KEY_ROOT + u.ns)) && k !== USERS_KEY && k !== LANG_KEY);
     assert(!users.list.includes(ana) && !plain.length, 'no plain keys left: ' + plain);
     assert(!sessionStorage.getItem('actionplan.syncToken'), 'nor her token');
     assert(keysText(bor) === borKeys2 && localStorage.getItem(LANG_KEY) === lang, 'Bor and the language untouched');
     eq(readUsers().list.map(u => u.id), users.list.map(u => u.id), 'stored list matches');
     // A guest is never offered for removal.
     assert(!removeBtn(guest), 'no remove for the guest');
+  });
+
+  await step('users: linked before users existed – learnt from a token still valid, never another user\'s account', async () => {
+    fakeGoogle();
+    const legacy = addUser(); legacy.account = { id: '', email: '' }; saveUsers();
+    enterUser(legacy.id);
+    G.pick = 'C'; drive.keep(await drive.request('', '')); // a token from before the update
+    const reqs = G.requests.length;
+    await syncNow(false); await settle();
+    eq(legacy.account, { id: 'perm-C', email: 'cene@example.com' }, 'learnt from the token, without a popup');
+    assert(G.requests.length === reqs && syncState.status === 'synced', 'no popup, synced');
+    // Another such user whose token is for Bor, who has a user here: refused, the token dropped, Bor's Drive untouched.
+    const twin = addUser(); twin.account = { id: '', email: '' }; saveUsers();
+    enterUser(twin.id);
+    G.pick = 'B'; drive.keep(await drive.request('', ''));
+    const bFile = fileText('perm-B');
+    await syncNow(false); await settle();
+    eq(syncState.status, 'account', 'refused');
+    eq($('#syncBtn').title, t('sync.status.accountTaken'), 'says the account is someone else\'s here');
+    assert(!twin.account.id && !drive.token && !sessionStorage.getItem(userKey('actionplan.syncToken')) && fileText('perm-B') === bFile, 'not taken, token dropped, nothing synced');
+    await syncNow(true); await settle();
+    eq(G.requests.at(-1), { hint: '', prompt: 'select_account' }, 'renewing lets them choose the account');
+    eq(syncState.status, 'account', 'Bor again: still refused');
+    eq(users.list.filter(u => u.account?.id === 'perm-B').length, 1, 'one user per account');
+    removeUser(twin.id); removeUser(legacy.id);
+    assert(!users.list.includes(twin) && !users.list.includes(legacy), 'cleaned up');
+  });
+
+  await step('users: a login whose user list cannot be stored changes nothing', async () => {
+    const me = currentUser(), count = users.list.length, stored = localStorage.getItem(USERS_KEY);
+    assert(!me.account, 'from the guest');
+    const set = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) { if (k === USERS_KEY) throw new DOMException('full', 'QuotaExceededError'); return set.call(this, k, v); };
+    G.pick = 'C';
+    try { await logIn(); await settle(); } finally { Storage.prototype.setItem = set; }
+    assert(currentUser().id === me.id && !currentUser().account && users.list.length === count, 'the guest stays a guest, no user added');
+    assert(!users.list.some(u => u.account?.id === 'perm-C') && localStorage.getItem(USERS_KEY) === stored, 'the account is nobody\'s here');
+    assert(!drive.token && $('#syncBtn').hidden, 'its token not kept, not signed in');
+    eq($('#toast').textContent, t('err.storage'), 'says storage is full');
+  });
+
+  await step('users: another tab changing the user list is taken over, never written back old', async () => {
+    const me = currentUser();
+    const other = JSON.parse(localStorage.getItem(USERS_KEY));
+    other.list.find(u => u.account?.id === 'perm-B').name = 'Bor from tab 2';
+    other.list.push({ id: 'tab2user', ns: 'u.tab2user.', name: 'Dana', account: { id: 'perm-D', email: 'dana@example.com' } });
+    other.current = 'tab2user';
+    localStorage.setItem(USERS_KEY, JSON.stringify(other));
+    dispatchEvent(new StorageEvent('storage', { key: USERS_KEY }));
+    assert(currentUser().id === me.id, 'this tab stays with its user');
+    assert(users.list.some(u => u.id === 'tab2user') && byAcct('B').name === 'Bor from tab 2', 'the new list is taken over');
+    saveUsers();
+    assert(JSON.parse(localStorage.getItem(USERS_KEY)).list.some(u => u.id === 'tab2user'), 'saving here keeps what the other tab added');
+    // The other tab removes the user open here: this tab drops their token and opens the guest.
+    G.pick = 'B';
+    await logIn('bor@example.com', byAcct('B')); await settle();
+    const bor = currentUser(), tokenKey = `actionplan.${bor.ns}syncToken`;
+    assert(sessionStorage.getItem(tokenKey), 'Bor signed in here');
+    const after = JSON.parse(localStorage.getItem(USERS_KEY));
+    after.list = after.list.filter(u => u.id !== bor.id);
+    localStorage.setItem(USERS_KEY, JSON.stringify(after));
+    dispatchEvent(new StorageEvent('storage', { key: USERS_KEY }));
+    assert(!currentUser().account && !users.list.some(u => u.id === bor.id), 'the guest opens');
+    assert(!sessionStorage.getItem(tokenKey) && !drive.token, 'Bor\'s token gone from this tab');
+    noLeak(memText(), ['B'], 'the guest\'s screen');
+    // Put Bor back (his data is still stored) for what follows.
+    users.list.push(bor); users.list = users.list.filter(u => u.id !== 'tab2user'); saveUsers();
+  });
+
+  await step('users: a new user whose account already has plans in Drive gets no first-visit tour', async () => {
+    G.accounts.D = { id: 'perm-D', email: 'dana@example.com', name: 'Dana' };
+    G.files['perm-D'] = JSON.parse(fileText('perm-B'));
+    G.pick = 'B'; await logIn('bor@example.com', byAcct('B')); await settle();
+    const before = offers;
+    G.pick = 'D'; await logIn(); await settle();
+    const dana = currentUser();
+    assert(dana.account.id === 'perm-D' && dana !== byAcct('B'), 'a new user for Dana');
+    assert(SYNC_COLLS.some(c => allPlansData().some(p => p.data[c].length)), 'her plans came down');
+    eq(offers, before, 'no tour offered');
+    removeUser(dana.id);
   });
 
   // Back to a device nobody has signed in on, for anything after this.

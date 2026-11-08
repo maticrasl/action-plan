@@ -917,7 +917,7 @@ textarea { resize: vertical; min-height: 68px; }
 .modal[open] { animation: rise .18s ease-out; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
 /* Every scrollbar (the page, views, panes, lists) is thin, a see-through thumb on a clear track, so the glass shows. */
-:root, * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ink) 30%, transparent) transparent; }
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ink) 30%, transparent) transparent; }
 .modal::backdrop { background: rgba(14, 22, 24, .4); }
 .modal form { display: flex; flex-direction: column; max-height: calc(100vh - 50px); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 20px 22px 8px; }
