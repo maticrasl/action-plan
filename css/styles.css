@@ -667,7 +667,12 @@ textarea { resize: vertical; min-height: 68px; }
 :root.purpose .brand .blaze-mark circle:first-child, .blaze-mark.gold circle:first-child { fill: var(--purpose); }
 :root.purpose .brand .blaze-mark circle:last-child, .blaze-mark.gold circle:last-child { fill: #FFF4D2; }
 /* Items working toward a vision: a faint, wide glow (wider and fainter than a selected box's). */
-.vglow { --vg: 0 0 30px 7px var(--vglow); }
+/* Only round the item itself: what is nested in a glowing card (or row) does not glow again. */
+.glass { --vg: 0 0 #0000; }
+.glass.vglow { --vg: 0 0 24px 5px var(--vglow); }
+/* On the timeline the row is marked; its bar glows, kept within the row, and labels stay on top of every bar's glow. */
+.tl-row.vglow :is(.tl-bar, .tl-milestone).glass { --vg: 0 0 12px 2px var(--vglow); }
+.tl-bar-label { z-index: 2; }
 .node-vglow { fill: var(--vglow); filter: url(#vision-glow); pointer-events: none; }
 .edge-vglow { fill: none; stroke: var(--vglow); stroke-width: 5; stroke-opacity: .5; stroke-linecap: round; pointer-events: none; }
 .vis-note { margin: 0 0 12px; }

@@ -7178,7 +7178,10 @@ window.moreTests = async ({ step, assert }) => {
     assert(svg.querySelector(`[data-map-node="${B.id}"]`).classList.contains('reached') && !svg.querySelector(`[data-map-node="${C.id}"]`).classList.contains('reached'), 'reached visions are brighter');
     assert(svg.querySelector(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) && svg.querySelector(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'lines to visions');
     // Glow on what works toward a vision.
-    assert(svg.querySelector(`[data-map-node="${g.id}"]`).classList.contains('vglow') && svg.querySelector(`[data-map-node="${a.id}"] .node-vglow`), 'the goal and its activity glow');
+    assert(svg.querySelector(`[data-map-node="${g.id}"]`).classList.contains('vglow') && svg.querySelector(`.vglow-halos [data-halo="${a.id}"]`), 'the goal and its activity glow');
+    // The glow lies under every line and box: its layer comes before them all.
+    const layer = svg.querySelector('.vglow-halos');
+    assert(!svg.querySelector('.node .node-vglow') && [...svg.querySelectorAll('.edge-g, .node')].every(x => layer.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING), 'the glow is drawn under all lines and boxes');
     assert(!svg.querySelector(`[data-map-node="${g2.id}"]`).classList.contains('vglow'), 'an unrelated goal does not');
     assert(svg.querySelector(`[data-rel-edit="${db.relations[0].id}"]`).classList.contains('vglow') && svg.querySelector(`[data-rel-edit="${visionRelId(g.id, B.id)}"] .edge-vglow`), 'and the lines between them');
     // Toggles for the two link types.
@@ -7274,6 +7277,11 @@ window.moreTests = async ({ step, assert }) => {
       assert(per[v].length && !per[v].includes(u.id) && !per[v].includes(ua.id), `${v}: only what serves a vision glows (${per[v]})`);
     }
     assert(per.goals.includes(g.id) && per.activities.includes(a.id) && per.states.includes(s.id) && per.timeline.includes(g.id) && per.graphs.includes(s.id) && per.dashboard.includes(a.id), JSON.stringify(per));
+    // On the timeline the labels beside the bars stay over every bar's glow.
+    setView('timeline');
+    const lbl = $('#view .tl-bar-label'), bar = $('#view .tl-row.vglow .tl-bar, #view .tl-row.vglow .tl-milestone');
+    assert(lbl && bar && +getComputedStyle(lbl).zIndex > +getComputedStyle(bar).zIndex, 'timeline labels sit over glowing bars');
+    assert(getComputedStyle(bar).boxShadow.includes('12px'), `a bar's glow stays within its row: ${getComputedStyle(bar).boxShadow}`);
     setView('goals');
     const card = id => $(`#view .card[data-ctx-item="${id}"]`);
     assert(getComputedStyle(card(g.id)).boxShadow !== getComputedStyle(card(u.id)).boxShadow, 'the glow is a shadow round the card');

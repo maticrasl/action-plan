@@ -2290,7 +2290,7 @@ function renderMap() {
     const slab = `${glassTint(n.kind, st)}|${glassThickness(n)}`;
     slabs.add(slab);
     return `<g class="node ${n.kind}${st ? ' st-' + st : ''}${linking}${n.id === sel ? ' sel' : ''}${contrib.has(n.id) ? ' vglow' : ''} ${dim}" data-map-node="${n.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc(item.title)}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})">
-      ${contrib.has(n.id) ? `<path class="node-vglow" d="${face}"></path>` : ''}<path class="node-lift" d="${face}"></path>
+      <path class="node-lift" d="${face}"></path>
       <use href="#glass-${glassKey(slab)}"></use>
       <rect width="${NW}" height="${NH}" rx="${R}"></rect>
       <path class="glass-shade" d="${face}"></path><path class="glass-spec" d="${face}"></path>
@@ -2302,6 +2302,8 @@ function renderMap() {
 
   // Band labels go over the lines, so a line passing by never cuts through one.
   const bandSvg = bands.map(b => `<rect class="band ${b.kind}" x="6" y="${b.top}" width="${W - 12}" height="${b.bottom - b.top}" rx="14"></rect>`).join('');
+  // The glow round what works toward a vision lies under every line and box, so it never dims a neighbour's text.
+  const halos = Object.values(node).filter(n => contrib.has(n.id)).map(n => `<path class="node-vglow" data-halo="${n.id}" d="${face}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})"></path>`).join('');
   const bandLabels = bands.map(b => {
     const levels = b.last - b.first + 1;
     return `<text class="col-label ${b.kind}" x="${PAD}" y="${b.top + 22}">${esc(t('kinds.' + b.kind))}${levels > 1 ? ` (${esc(tp('map.levels', levels))})` : ''}</text>`;
@@ -2332,7 +2334,7 @@ function renderMap() {
       </div>
     </div>
     <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}${visions.list.length ? visionDefs() : ''}</defs>${bandSvg}${edges}${bandLabels}${nodes}
+      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}${visions.list.length ? visionDefs() : ''}</defs>${bandSvg}${halos ? `<g class="vglow-halos">${halos}</g>` : ''}${edges}${bandLabels}${nodes}
     </svg></div>
     ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
     ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
