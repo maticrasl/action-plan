@@ -1,5 +1,7 @@
 // Extra coverage, run by test.js after its own steps: rules, progress, change tracking,
 // merge edge cases, persistence, sync states, drag & drop, keyboard, zoom, i18n plurals.
+// The real Drive methods, before any test swaps them for fakes.
+const REAL_DRIVE = { ...drive };
 window.moreTests = async ({ step, assert }) => {
   const tick = () => new Promise(r => setTimeout(r, 0));
   const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
@@ -2390,9 +2392,9 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('sync states: offline, paused, error, retry, unchanged file', async () => {
-    const reset = () => { prefs.set('syncConnected', true); syncState.busy = false; syncState.again = false; };
+    const reset = () => { currentUser().account = { id: 'acct-test', email: 'test@example.com' }; syncState.busy = false; syncState.again = false; };
     const out = {};
-    prefs.set('syncConnected', null); setSyncStatus('idle');
+    currentUser().account = null; setSyncStatus('idle');
     let called = false; drive.getToken = async () => { called = true; return 'tok'; };
     await syncNow(true);
     assert(!called && syncState.status === 'idle', 'not connected: nothing happens');
@@ -2448,8 +2450,8 @@ window.moreTests = async ({ step, assert }) => {
     clearTimeout(syncState.timer);
     await syncNow(false);
     assert(reads === 1 && syncState.status === 'synced', 'syncs after the tour');
-    disconnectSync();
-    assert(!prefs.get('syncConnected', false) && $('#syncBtn').hidden, 'disconnected');
+    currentUser().account = null; renderSync();
+    assert($('#syncBtn').hidden, 'signed out: no cloud button');
     return `${Object.values(out).join(',')} writes=${writes}`;
   });
 
@@ -7356,4 +7358,323 @@ window.moreTests = async ({ step, assert }) => {
     clearVisions();
   });
 
+
+  /* ---------- Users: one per Google account on a shared device, their data strictly apart ---------- */
+
+  // A fake Google: each token belongs to the account picked in the "popup", and each account has its
+  // own Drive file. A write with one account's token can only land in that account's file.
+  const G = { accounts: {
+    A: { id: 'perm-A', email: 'ana@example.com', name: 'Ana Novak' },
+    B: { id: 'perm-B', email: 'bor@example.com', name: 'Bor' },
+    C: { id: 'perm-C', email: 'cene@example.com', name: '' },
+  }, files: {}, tokens: {}, pick: 'A', requests: [], n: 0, reads: 0 };
+  const fakeGoogle = () => {
+    Object.assign(drive, REAL_DRIVE);
+    drive.request = async (hint, prompt) => {
+      G.requests.push({ hint, prompt });
+      const value = `tok${++G.n}`;
+      G.tokens[value] = G.accounts[G.pick].id;
+      return { value, expires: Date.now() + 3600e3 };
+    };
+    drive.whoami = async value => ({ ...Object.values(G.accounts).find(a => a.id === G.tokens[value]) });
+    drive.read = async value => {
+      G.reads++;
+      const f = G.files[G.tokens[value]];
+      return { id: f ? 'file-' + G.tokens[value] : null, content: f ? parseStore(JSON.stringify(f)) : null, extra: [] };
+    };
+    drive.write = async (value, id, content) => {
+      const acct = G.tokens[value];
+      if (!acct || (id && id !== 'file-' + acct)) throw new Error('write to a file of another account');
+      G.files[acct] = JSON.parse(JSON.stringify(content));
+      return 'file-' + acct;
+    };
+    drive.remove = async () => {};
+  };
+  const realPrompt = window.prompt, realOffer = offerTour;
+  let prompts = [], offers = 0, nameAnswer = null;
+  window.prompt = (msg, def) => { prompts.push([msg, def]); return nameAnswer ?? def; };
+  offerTour = () => offers++;
+  const SECRET = { A: 'SECRET-ana-goal', B: 'SECRET-bor-goal', G: 'SECRET-guest-goal', C: 'SECRET-cene-goal' };
+  const fileText = acct => JSON.stringify(G.files[acct] || null);
+  const keysText = u => userKeys(u).map(k => `${k}=${localStorage.getItem(k)}`).join('\n');
+  const memText = () => JSON.stringify({ db, plans, visions, other: allPlansData().map(p => p.data) }) + document.querySelector('.app').innerHTML;
+  const byAcct = key => users.list.find(u => u.account?.id === G.accounts[key].id);
+  const addSecret = title => { setView('goals'); mk('goal', { title }); visions.list.push({ id: uid(), title: title + '-vision', parents: [] }); save(); saveVisions(); render(); };
+  const noLeak = (text, keys, where) => keys.forEach(k => assert(!text.includes(SECRET[k]), `${where} holds ${SECRET[k]}`));
+  const settle = async () => { for (let i = 0; i < 5; i++) await tick(); clearTimeout(syncState.timer); syncState.timer = null; };
+
+  await step('users: storage keys are per user; a tampered user list is not trusted', () => {
+    const root = currentUser();
+    assert(users.list.length === 1 && root.id === 'local' && root.ns === '' && !root.account, 'one user, no account, the plain keys');
+    eq([userKey('actionplan.plans'), userKey('other.key')], ['actionplan.plans', 'other.key'], 'first user: keys unchanged');
+    const saved = localStorage.getItem(USERS_KEY);
+    localStorage.setItem(USERS_KEY, JSON.stringify({ current: 'x', list: [
+      { id: 'x', ns: 'u.y.', name: 'bad', account: null }, { id: 'y"><b', ns: '', account: null },
+      { id: 'z', ns: 'u.z.', name: 5, account: { id: 7 } }] }));
+    const read = readUsers();
+    eq(read.list.map(u => [u.id, u.ns, u.name, u.account]), [['z', 'u.z.', '', null]], 'only well-formed users, each on its own prefix');
+    eq(read.current, 'z', 'current falls back to a listed user');
+    localStorage.setItem(USERS_KEY, '{oops');
+    eq(readUsers().list.map(u => u.id), ['local'], 'broken list: the first user');
+    // A device that synced before users existed is linked to an account the next sync learns.
+    localStorage.removeItem(USERS_KEY);
+    localStorage.setItem('actionplan.v1.syncConnected', 'true');
+    eq(readUsers().list[0].account, { id: '', email: '' }, 'linked before users existed');
+    localStorage.removeItem('actionplan.v1.syncConnected');
+    eq(readUsers().list[0].account, null, 'never linked');
+    if (saved === null) localStorage.removeItem(USERS_KEY); else localStorage.setItem(USERS_KEY, saved);
+  });
+
+  await step('users: the first Google login takes this device\'s data to that account', async () => {
+    fakeGoogle();
+    clearTimeout(syncState.timer); Object.assign(syncState, { busy: false, again: false, timer: null });
+    fresh('Ana plan');
+    addSecret(SECRET.A);
+    theme = 'dark'; prefs.set('theme', 'dark'); applyTheme();
+    prefs.set('view', 'goals');
+    G.pick = 'A'; prompts = []; nameAnswer = 'Ana';
+    await logIn();
+    await settle();
+    const me = currentUser();
+    assert(users.list.length === 1 && me.id === 'local', 'still the one user');
+    eq(me.account, { id: 'perm-A', email: 'ana@example.com' }, 'linked to the account');
+    eq(prompts.map(p => p[1]), ['Ana Novak'], 'asked for a name once, suggesting the Google name');
+    assert(me.name === 'Ana' && JSON.parse(localStorage.getItem(USERS_KEY)).list[0].name === 'Ana', 'name kept');
+    eq(G.requests.at(-1), { hint: '', prompt: 'select_account' }, 'Google lets the user pick the account');
+    assert(fileText('perm-A').includes(SECRET.A) && fileText('perm-A').includes('Ana plan'), 'everything synced to that account');
+    assert(syncState.status === 'synced' && !$('#syncBtn').hidden, 'synced, cloud shown');
+    assert(G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A', 'token kept for this user');
+    assert(!offers, 'no first-visit tour: the data is the same');
+  });
+
+  await step('users: another account on a device already logged in gets an empty user, as on a first visit', async () => {
+    const aFile = fileText('perm-A');
+    G.pick = 'B'; prompts = []; nameAnswer = null;
+    await logIn();
+    await settle();
+    const bor = currentUser();
+    assert(users.list.length === 2 && bor.id !== 'local' && bor.ns === `u.${bor.id}.`, 'a second user on their own prefix');
+    eq(bor.account, { id: 'perm-B', email: 'bor@example.com' }, 'linked to the new account');
+    eq(bor.name, 'Bor', 'name prompted (Google name taken as given)');
+    assert(plans.list.length === 1 && plans.list[0].name === t('plan.defaultName') && itemCount() === 0 && !visions.list.length, 'one empty starter plan, no visions');
+    assert(ui.view === 'dashboard' && theme === 'system' && !document.documentElement.dataset.theme, 'default view and theme, not Ana\'s');
+    eq(offers, 1, 'the first-visit language picker and tour are offered');
+    noLeak(memText(), ['A'], 'Bor\'s screen and memory');
+    noLeak(fileText('perm-B'), ['A'], 'Bor\'s Drive');
+    noLeak(keysText(bor), ['A'], 'Bor\'s stored keys');
+    assert(fileText('perm-A') === aFile, 'Ana\'s Drive untouched');
+    assert(G.tokens[JSON.parse(sessionStorage.getItem(`actionplan.u.${bor.id}.syncToken`)).value] === 'perm-B', 'Bor\'s own token, under his prefix');
+    assert(G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A', 'Ana\'s token stays hers');
+    // The real offer: a new user has not seen the tour, so the language picker opens.
+    realOffer(); await tick(); await tick();
+    assert($('.lang-pick'), 'language picker shown');
+    $('.lang-pick [data-lang-done]').click();
+    assert(tour.step >= 0, 'then the tour');
+    endTour(false);
+    assert(prefs.get('tourSeen') === true && plans.list.length === 1, 'tour seen, its plan gone');
+    addSecret(SECRET.B);
+    await syncNow(true); await settle();
+    assert(fileText('perm-B').includes(SECRET.B), 'Bor\'s edits sync to Bor\'s Drive');
+    assert(fileText('perm-A') === aFile, 'and not to Ana\'s');
+  });
+
+  await step('users: switching back opens that user\'s own data, as they left it', async () => {
+    renderSync();
+    const ana = byAcct('A');
+    const row = [...$('#syncSection .user-list').children].find(li => li.textContent.includes('Ana'));
+    assert(row && row.textContent.includes('ana@example.com'), 'Ana listed under others, with her email');
+    G.pick = 'A'; prompts = [];
+    row.querySelector('[data-sync="switch"]').click();
+    await settle(); await settle();
+    assert(currentUser() === ana && !prompts.length, 'Ana again, no name asked');
+    eq(G.requests.at(-1), { hint: 'ana@example.com', prompt: 'select_account' }, 'Google is told which account');
+    assert(theme === 'dark' && ui.view === 'goals', 'her theme and view');
+    assert(db.goals.some(g => g.title === SECRET.A) || allPlansData().some(p => p.data.goals.some(g => g.title === SECRET.A)), 'her goal');
+    noLeak(memText(), ['B'], 'Ana\'s screen and memory');
+    noLeak(keysText(ana), ['B'], 'Ana\'s stored keys');
+    noLeak(keysText(byAcct('B')), ['A'], 'Bor\'s stored keys');
+    noLeak(fileText('perm-A'), ['B'], 'Ana\'s Drive');
+    assert($('#toast').textContent === t('user.switched', { name: 'Ana' }), 'toast says who');
+  });
+
+  await step('users: a renewed token for someone else\'s account is refused', async () => {
+    const aFile = fileText('perm-A'), bFile = fileText('perm-B');
+    drive.forget();
+    G.pick = 'B'; // the popup picked Bor's account while Ana renews
+    await syncNow(true); await settle();
+    eq(syncState.status, 'account', 'status says it was another account');
+    assert($('#syncBtn').title === t('sync.status.account', { email: 'ana@example.com' }), 'and which to choose');
+    assert(!sessionStorage.getItem('actionplan.syncToken') && !drive.token, 'the wrong token is not kept');
+    assert(fileText('perm-A') === aFile && fileText('perm-B') === bFile, 'neither Drive touched');
+    G.pick = 'A';
+    await syncNow(true); await settle();
+    eq(syncState.status, 'synced', 'the right account syncs again');
+    eq(G.requests.at(-1), { hint: 'ana@example.com', prompt: '' }, 'renewal hints Ana\'s account');
+  });
+
+  await step('users: a sync on its way when another user takes over stops, both ways', async () => {
+    const ana = currentUser(), bFile = fileText('perm-B');
+    let release; const slow = drive.read;
+    drive.read = value => new Promise(r => { release = () => r(slow(value)); });
+    addSecret(SECRET.A + '-2'); clearTimeout(syncState.timer);
+    const running = syncNow(false);
+    await tick();
+    G.pick = 'B';
+    const switching = logIn('bor@example.com', byAcct('B'));
+    await settle();
+    assert(currentUser() === byAcct('B'), 'Bor took over');
+    const reads = G.reads;
+    drive.read = slow;
+    release(); await running; await switching; await settle();
+    noLeak(memText(), ['A'], 'Bor\'s screen after Ana\'s late answer');
+    noLeak(keysText(currentUser()), ['A'], 'Bor\'s keys after Ana\'s late answer');
+    assert(!fileText('perm-A').includes(SECRET.A + '-2'), 'Ana\'s stopped sync wrote nothing');
+    assert(fileText('perm-B') === bFile, 'nor into Bor\'s Drive');
+    assert(!syncState.busy, 'not stuck');
+    await syncNow(true); await settle();
+    noLeak(fileText('perm-B'), ['A'], 'Bor\'s next sync');
+    assert(G.reads > reads, 'Bor syncs normally');
+    // Back to Ana: her unsynced edit is still hers and goes up now.
+    G.pick = 'A';
+    await logIn('ana@example.com', ana); await settle();
+    assert(fileText('perm-A').includes(SECRET.A + '-2'), 'Ana\'s edit synced once she is back');
+    noLeak(fileText('perm-A'), ['B'], 'Ana\'s Drive');
+  });
+
+  await step('users: log out leaves an empty guest; a guest\'s login keeps the guest\'s data', async () => {
+    const before = users.list.length, ana = currentUser();
+    $('#settingsBtn').click();
+    $('#syncSection [data-sync="logout"]').click();
+    const guest = currentUser();
+    assert(users.list.length === before + 1 && !guest.account && guest.ns === `u.${guest.id}.`, 'a new guest on their own prefix');
+    assert($('#syncBtn').hidden && !drive.token && !sessionStorage.getItem('actionplan.syncToken'), 'signed out, Ana\'s token gone');
+    assert(plans.list.length === 1 && itemCount() === 0 && !visions.list.length, 'an empty start');
+    noLeak(memText(), ['A', 'B'], 'the guest\'s screen and memory');
+    assert($('#toast').textContent === t('user.loggedOut', { name: 'Ana' }), 'toast');
+    const names = [...$('#syncSection .user-list').querySelectorAll('b')].map(b => b.textContent);
+    eq(names, ['Ana', 'Bor'], 'everyone signed in here is listed');
+    assert([...document.querySelectorAll('#syncSection .user-list [data-sync]')].every(b => b.textContent === t('user.logIn')), 'each with Log in');
+    assert(keysText(ana).includes(SECRET.A), 'Ana\'s data stays on the device');
+    settings.close();
+    addSecret(SECRET.G);
+    G.pick = 'C'; prompts = [];
+    await logIn(); await settle();
+    assert(currentUser() === guest && users.list.length === before + 1, 'the guest becomes the new account\'s user');
+    eq(guest.name, 'cene', 'no Google name: the email\'s name is suggested');
+    assert(fileText('perm-C').includes(SECRET.G), 'the guest\'s data synced to it');
+    noLeak(fileText('perm-C'), ['A', 'B'], 'Cene\'s Drive');
+    // Logging out again makes a new guest; a known account from there opens its user and leaves the guest be.
+    logOut();
+    const guest2 = currentUser();
+    assert(guest2 !== guest && !guest2.account && users.list.length === before + 2, 'a new guest');
+    addSecret('guest-two-goal');
+    G.pick = 'B';
+    await logIn(); await settle();
+    assert(currentUser() === byAcct('B') && users.list.includes(guest2) && !guest2.account, 'Bor opened, guest kept as it was');
+    noLeak(memText(), ['A', 'C', 'G'], 'Bor\'s screen');
+    assert(!memText().includes('guest-two-goal') && keysText(guest2).includes('guest-two-goal'), 'the guest\'s goal stays the guest\'s');
+    logOut();
+    assert(currentUser() === guest2 && db.goals.some(g => g.title === 'guest-two-goal'), 'logging out returns to that one guest');
+  });
+
+  await step('users: no item of one user is stored under another, in storage or session', () => {
+    const owner = { A: byAcct('A'), B: byAcct('B'), G: byAcct('C') }; // the first guest's data became Cene's
+    Object.entries(owner).forEach(([k, u]) => {
+      assert(keysText(u).includes(SECRET[k]), `${k} still has their own`);
+      users.list.filter(o => o !== u).forEach(o => assert(!keysText(o).includes(SECRET[k]), `${SECRET[k]} found under ${o.name || o.id}`));
+    });
+    users.list.forEach(u => {
+      const tok = userKeys(u, sessionStorage).map(k => JSON.parse(sessionStorage.getItem(k))?.value).filter(Boolean);
+      tok.forEach(v => assert(G.tokens[v] === u.account?.id, `${u.name}: a token of ${G.tokens[v]}`));
+    });
+    // Every stored key belongs to exactly one user (or the device: the user list and the language).
+    const owners = {};
+    for (let i = 0; i < localStorage.length; i++) owners[localStorage.key(i)] = 0;
+    users.list.forEach(u => userKeys(u).forEach(k => owners[k]++));
+    const odd = Object.entries(owners).filter(([k, n]) => n !== 1 && k !== USERS_KEY && k !== LANG_KEY);
+    assert(!odd.length, 'keys with no single owner: ' + odd.map(o => o.join(':')));
+    eq(Object.values(G.files).map(f => f.format), ['actionplan-sync', 'actionplan-sync', 'actionplan-sync'], 'one file per account');
+    return `${users.list.length} users`;
+  });
+
+  await step('users: name on the first login, changed in Settings, escaped', async () => {
+    G.pick = 'A';
+    await logIn('ana@example.com', byAcct('A')); await settle();
+    $('#settingsBtn').click();
+    const input = $('#syncSection [data-user-name]');
+    assert(input.value === 'Ana' && $('#syncSection').textContent.includes(t('user.signedInAs', { email: 'ana@example.com' })), 'name and account shown');
+    input.focus();
+    setSyncStatus('syncing');
+    assert(document.activeElement === input && $('#syncSection .sync-status').dataset.status === 'syncing', 'a status change keeps the field in focus');
+    input.value = '  <img src=x onerror=alert(1)> Ana  ';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    input.blur(); renderSync();
+    eq(currentUser().name, '<img src=x onerror=alert(1)> Ana', 'renamed, trimmed');
+    eq(JSON.parse(localStorage.getItem(USERS_KEY)).list.find(u => u.id === currentUser().id).name, currentUser().name, 'stored');
+    eq(byAcct('B').name, 'Bor', 'others keep their names');
+    G.pick = 'B'; await logIn('bor@example.com', byAcct('B')); await settle();
+    renderSync();
+    assert(!$('#syncSection img') && $('#syncSection .user-list').textContent.includes('<img src=x'), 'shown as text');
+    $('#syncSection [data-user-name]').value = '';
+    $('#syncSection [data-user-name]').dispatchEvent(new Event('change', { bubbles: true }));
+    renderSync();
+    assert($('#syncSection [data-user-name]').placeholder === 'bor@example.com', 'an empty name shows the email');
+    byAcct('B').name = 'Bor'; saveUsers();
+    changeLanguage('sl');
+    assert($('#syncSection').textContent.includes(I18N.sl.strings['user.logOut']) && $('#syncSection h3').textContent === I18N.sl.strings['sync.title'], 'Slovenian');
+    changeLanguage('en');
+    settings.close();
+  });
+
+  await step('users: a device linked before users existed learns its account on the next sync', async () => {
+    const bor = currentUser();
+    bor.account = { id: '', email: '' };
+    drive.forget();
+    G.pick = 'B';
+    await syncNow(true); await settle();
+    eq(bor.account, { id: 'perm-B', email: 'bor@example.com' }, 'account learnt');
+    eq(syncState.status, 'synced', 'and synced');
+    // Picked from the list while its account is not known yet: that user, not a new one.
+    bor.account = { id: '', email: '' }; saveUsers();
+    const count = users.list.length;
+    logOut();
+    await logIn('', bor); await settle();
+    assert(currentUser() === bor && users.list.length === count && bor.account.id === 'perm-B', 'the picked user');
+  });
+
+  await step('users: failed or cancelled Google sign-in changes nothing', async () => {
+    const me = currentUser(), count = users.list.length, file = fileText('perm-B');
+    drive.request = async () => { throw new SyncError('auth'); };
+    await logIn();
+    assert(currentUser() === me && users.list.length === count && $('#toast').textContent === t('sync.connectFailed'), 'same user, toast');
+    fakeGoogle();
+    drive.whoami = async () => { throw new SyncError('offline'); };
+    await logIn();
+    assert(currentUser() === me && users.list.length === count && fileText('perm-B') === file, 'identity unknown: nothing changes');
+    fakeGoogle();
+  });
+
+  await step('users: phone width – the account section fits 390 px', async () => {
+    $('#settingsBtn').click();
+    const frame = document.createElement('iframe');
+    Object.assign(frame.style, { width: '390px', height: '900px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0"><div class="modal-body" style="padding:0 16px">${$('#syncSection').outerHTML}</div></body>`;
+    await new Promise(res => { frame.onload = res; document.body.append(frame); });
+    const doc = frame.contentDocument;
+    const wide = [...doc.querySelectorAll('#syncSection *')].filter(el => el.getBoundingClientRect().right > 390 - 16 + 0.5).map(el => `${el.tagName}.${el.className}:${Math.round(el.getBoundingClientRect().right)}`);
+    assert(doc.documentElement.scrollWidth <= 390, `no sideways scroll: ${doc.documentElement.scrollWidth} ${wide.join(' ')}`);
+    [...doc.querySelectorAll('.user-list li, .user-name')].forEach(el => assert(el.getBoundingClientRect().right <= 390 - 16 + 0.5, 'row inside the screen'));
+    frame.remove();
+    settings.close();
+  });
+
+  // Back to a device nobody has signed in on, for anything after this.
+  enterUser('local');
+  users.list.filter(u => u.ns).forEach(u => { userKeys(u).forEach(k => localStorage.removeItem(k)); userKeys(u, sessionStorage).forEach(k => sessionStorage.removeItem(k)); });
+  users.list = [currentUser()];
+  currentUser().account = null; currentUser().name = '';
+  saveUsers();
+  drive.forget();
+  theme = 'system'; prefs.set('theme', 'system'); applyTheme(); renderSync();
+  window.prompt = realPrompt; offerTour = realOffer;
 };

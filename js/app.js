@@ -40,21 +40,23 @@ const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type
 const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
 let db = emptyDb();
-const ui = {
+// What the views show; each user starts from these (enterUser), then their remembered preferences.
+const freshUi = () => ({
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
   mapHidden: new Set(), hideDone: false, hideVisions: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
   tlDates: null, // the selected timeline item whose dates can be dragged: its bar was clicked, not just its row
   rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
   grZoom: {}, // how far each graph is zoomed: 1 fits the card
-};
+});
+const ui = freshUi();
 
 // Small per-device preferences (view, hidden relation types, hide-done, theme).
 const prefs = {
   get(key, fallback) {
-    try { const v = localStorage.getItem(`${STORAGE_KEY}.${key}`); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
+    try { const v = userStorage.getItem(`${STORAGE_KEY}.${key}`); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
   },
   set(key, value) {
-    try { localStorage.setItem(`${STORAGE_KEY}.${key}`, JSON.stringify(value)); } catch (e) { /* ignore */ }
+    try { userStorage.setItem(`${STORAGE_KEY}.${key}`, JSON.stringify(value)); } catch (e) { /* ignore */ }
   },
 };
 
@@ -72,7 +74,7 @@ const currentPlan = () => plans.list.find(p => p.id === plans.current);
 
 function readPlan(id) {
   try {
-    const raw = localStorage.getItem(planKey(id));
+    const raw = userStorage.getItem(planKey(id));
     return raw ? normalize(JSON.parse(raw)) : emptyDb();
   } catch (e) {
     return emptyDb();
@@ -82,7 +84,7 @@ function readPlan(id) {
 function load() {
   loadVisions();
   try {
-    const saved = JSON.parse(localStorage.getItem(PLANS_KEY));
+    const saved = JSON.parse(userStorage.getItem(PLANS_KEY));
     if (Array.isArray(saved?.list) && saved.list.length) plans = saved;
   } catch (e) { /* start fresh */ }
   if (plans.list.length) {
@@ -94,7 +96,7 @@ function load() {
   }
   let legacy = emptyDb();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = userStorage.getItem(STORAGE_KEY);
     if (raw) legacy = normalize(JSON.parse(raw));
   } catch (e) { /* ignore */ }
   const id = uid();
@@ -111,8 +113,8 @@ function save() {
   stampPlanChanges(plans);
   plansVersion++;
   try {
-    localStorage.setItem(planKey(plans.current), JSON.stringify(db));
-    localStorage.setItem(PLANS_KEY, JSON.stringify(plans));
+    userStorage.setItem(planKey(plans.current), JSON.stringify(db));
+    userStorage.setItem(PLANS_KEY, JSON.stringify(plans));
   } catch (e) {
     toast(t('err.storage'));
   }
@@ -156,7 +158,7 @@ function createPlan(name, data = emptyDb()) {
 }
 
 function deletePlan(id) {
-  try { localStorage.removeItem(planKey(id)); } catch (e) { /* ignore */ }
+  try { userStorage.removeItem(planKey(id)); } catch (e) { /* ignore */ }
   plans.list = plans.list.filter(p => p.id !== id);
   if (!plans.list.length) return createPlan(t('plan.defaultName'));
   openPlan(plans.list[0].id);
@@ -182,7 +184,7 @@ function mergePlanInto(fromId, toId, remove = false) {
   db.relations.push(...source.relations.filter(r => ids.has(r.from) && ids.has(r.to))
     .map(r => place({ ...r, from: ids.get(r.from), to: ids.get(r.to) })));
   if (remove) {
-    try { localStorage.removeItem(planKey(fromId)); } catch (e) { /* ignore */ }
+    try { userStorage.removeItem(planKey(fromId)); } catch (e) { /* ignore */ }
     plans.list = plans.list.filter(p => p.id !== fromId);
   }
   save();
@@ -5792,7 +5794,7 @@ const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
 const storedHealth = new Map(); // plan id → { key, health }
 function storedPlanHealth(id) {
   let raw = null;
-  try { raw = localStorage.getItem(planKey(id)); } catch (e) { /* ignore */ }
+  try { raw = userStorage.getItem(planKey(id)); } catch (e) { /* ignore */ }
   const key = `${today()}|${raw}`;
   if (storedHealth.get(id)?.key !== key) storedHealth.set(id, { key, health: planHealth(readPlan(id)) });
   return storedHealth.get(id).health;
@@ -5974,7 +5976,7 @@ const THEME_ICONS = {
   light: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="currentColor"/></svg>',
 };
-let theme = THEMES.includes(prefs.get('theme')) ? prefs.get('theme') : 'system';
+let theme = 'system'; // the current user's, read by bootUser
 
 function applyTheme() {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
@@ -6050,28 +6052,61 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 
 /* ---------- Boot ---------- */
 
+// Loads the current user's plans, visions and preferences and shows them; true on their first visit.
+function bootUser() {
+  // First visit = nothing stored yet; load() creates the first plan, so check before it.
+  let firstVisit = false;
+  try { firstVisit = !userStorage.getItem(PLANS_KEY) && !userStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+  theme = THEMES.includes(prefs.get('theme')) ? prefs.get('theme') : 'system';
+  applyTheme();
+  load();
+  renderPlanSwitch();
+  if (VIEWS[prefs.get('view')]) ui.view = prefs.get('view');
+  ui.mapHidden = new Set([].concat(prefs.get('mapHidden', [])).filter(k => REL_TYPES[k] || VISION_RELS[k]));
+  ui.hideDone = prefs.get('hideDone', false) === true;
+  ui.hideVisions = prefs.get('hideVisions', false) === true;
+  ui.nextAll = prefs.get('nextAll', false) === true;
+  ui.tlDeps = prefs.get('tlDeps', true) !== false;
+  ui.planBadges = prefs.get('planBadges', true) !== false;
+  ui.tlPx = clamp(Number(prefs.get('tlPx', TL.ZOOM[prefs.get('tlZoom')] || TL.ZOOM.month)) || TL.ZOOM.month, TL.MIN, TL.MAX);
+  ui.mapScale = clamp(Number(prefs.get('mapScale', 1)) || 1, MAP.MIN_SCALE, MAP.MAX_SCALE);
+  ui.category = typeof prefs.get('category') === 'string' ? prefs.get('category') : '';
+  ui.help = prefs.get('help', false) === true;
+  ui.navCollapsed = prefs.get('navCollapsed', false) === true;
+  applyNavCollapsed();
+  $('#helpBtn').setAttribute('aria-pressed', ui.help);
+  render();
+  return firstVisit;
+}
+
+// Another user takes over this device: nothing of the one before stays in memory, on screen or
+// in a sync on its way (syncNow stops itself). Returns true on that user's first visit.
+function enterUser(id) {
+  if (typeof tour !== 'undefined' && tour.step >= 0) endTour(false);
+  closeCtxMenu();
+  hideToast(); // an undo in it would act on the other user's plan
+  document.querySelectorAll('dialog[open]').forEach(d => { if (d !== settings) d.close(); });
+  clearTimeout(syncState.timer);
+  Object.assign(syncState, { status: 'idle', again: false, timer: null });
+  drive.token = null;
+  users.current = id;
+  saveUsers();
+  Object.keys(ui).forEach(k => delete ui[k]);
+  Object.assign(ui, freshUi());
+  storedHealth.clear();
+  otherPlansCache = { key: '', list: [] };
+  plans = { current: null, list: [] };
+  db = emptyDb();
+  const firstVisit = bootUser();
+  renderSettings();
+  renderSync();
+  return firstVisit;
+}
+
 applyStaticI18n();
 renderLangSwitch();
-applyTheme();
-// First visit = nothing stored yet; load() creates the first plan, so check before it.
-let firstVisit = false;
-try { firstVisit = !localStorage.getItem(PLANS_KEY) && !localStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
-load();
-renderPlanSwitch();
-if (VIEWS[prefs.get('view')]) ui.view = prefs.get('view');
-ui.mapHidden = new Set([].concat(prefs.get('mapHidden', [])).filter(k => REL_TYPES[k] || VISION_RELS[k]));
-ui.hideDone = prefs.get('hideDone', false) === true;
-ui.hideVisions = prefs.get('hideVisions', false) === true;
-ui.nextAll = prefs.get('nextAll', false) === true;
-ui.tlDeps = prefs.get('tlDeps', true) !== false;
-ui.planBadges = prefs.get('planBadges', true) !== false;
-ui.tlPx = clamp(Number(prefs.get('tlPx', TL.ZOOM[prefs.get('tlZoom')] || TL.ZOOM.month)) || TL.ZOOM.month, TL.MIN, TL.MAX);
-ui.mapScale = clamp(Number(prefs.get('mapScale', 1)) || 1, MAP.MIN_SCALE, MAP.MAX_SCALE);
-ui.category = typeof prefs.get('category') === 'string' ? prefs.get('category') : '';
-ui.help = prefs.get('help', false) === true;
-ui.navCollapsed = prefs.get('navCollapsed', false) === true;
-applyNavCollapsed();
+const firstVisit = bootUser();
 renderInstall();
-render();
-initTutorial(firstVisit);
+initTutorial();
+if (firstVisit) offerTour();
 initSync();

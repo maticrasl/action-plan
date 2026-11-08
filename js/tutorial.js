@@ -329,9 +329,12 @@ function chooseLanguage(done) {
 
 /* ---------- Boot (called from app.js) ---------- */
 
-function initTutorial(firstVisit) {
-  $('#helpBtn').setAttribute('aria-pressed', ui.help);
+function initTutorial() {
   $('#helpBtn').addEventListener('click', () => setHelp(!ui.help));
   $('#tutorialBtn').addEventListener('click', startTour);
-  if (firstVisit && !prefs.get('tourSeen', false)) requestAnimationFrame(() => chooseLanguage(startTour));
+}
+
+// On a first visit (also a new user's first sign-in), the language picker, then the tour.
+function offerTour() {
+  if (!prefs.get('tourSeen', false)) requestAnimationFrame(() => chooseLanguage(startTour));
 }

@@ -342,14 +342,13 @@
     drive.getToken = async () => 'tok';
     drive.read = async () => ({ id: 'file1', content: parseStore(JSON.stringify(toFile(remote))), extra: [] });
     drive.write = async (tok, id, content) => { written = content; return id; };
-    drive.revoke = () => {};
-    prefs.set('syncConnected', true);
+    currentUser().account = { id: 'acct-test', email: 'test@example.com' }; // signed in
     prefs.set('syncedOnce', true);
     await syncNow(true);
     assert(written && written.format === 'actionplan-sync', 'written');
     assert(plans.list.some(p => p.id === 'remote-plan'), 'remote plan merged in');
     const status = syncState.status, btn = !$('#syncBtn').hidden;
-    disconnectSync();
+    currentUser().account = null; renderSync(); // back to a device nobody signed in on
     return `status=${status} btnShown=${btn} plans=${written.plans.list.length} after=${syncState.status}`;
   });
 

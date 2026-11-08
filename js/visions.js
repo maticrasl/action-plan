@@ -31,7 +31,7 @@ function normalizeVisions(raw) {
 const takeVisionSnapshot = () => { visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)])); };
 
 function loadVisions() {
-  try { visions = normalizeVisions(JSON.parse(localStorage.getItem(VISIONS_KEY))); } catch (e) { visions = normalizeVisions(null); }
+  try { visions = normalizeVisions(JSON.parse(userStorage.getItem(VISIONS_KEY))); } catch (e) { visions = normalizeVisions(null); }
   takeVisionSnapshot();
   visionsVersion++;
 }
@@ -49,7 +49,7 @@ function saveVisions() {
   Object.keys(visions.deleted).forEach(id => { if (visions.deleted[id] < cutoff) delete visions.deleted[id]; });
   takeVisionSnapshot();
   visionsVersion++;
-  try { localStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { toast(t('err.storage')); }
+  try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { toast(t('err.storage')); }
   if (typeof scheduleSync === 'function') scheduleSync();
 }
 
@@ -206,7 +206,7 @@ function mergeVisions(a, b) {
 // Makes a merged list this device's.
 function applyVisions(merged) {
   visions = normalizeVisions(merged);
-  try { localStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { /* the plans' write reports it */ }
+  try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { /* the plans' write reports it */ }
   takeVisionSnapshot();
   visionsVersion++;
 }
