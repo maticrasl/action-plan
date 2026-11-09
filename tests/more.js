@@ -4011,7 +4011,7 @@ window.moreTests = async ({ step, assert }) => {
     return 'ok';
   });
 
-  await step('goals by deadline: Goals, Overview and Timeline top to bottom, the map left to right', () => {
+  await step('goals by deadline: Goals, Overview and Timeline top to bottom; the map ignores dates', () => {
     fresh('By deadline');
     const now = today();
     const none = mk('goal', { title: 'No deadline', status: 'active' });
@@ -4032,8 +4032,15 @@ window.moreTests = async ({ step, assert }) => {
     eq([...document.querySelectorAll('.tl-row.goal .tl-title')].map(x => x.textContent), want, 'Timeline: by deadline, not start');
     setView('map');
     const x = it => $(`[data-map-node="${it.id}"]`).getBoundingClientRect().left;
-    assert(x(soon) < x(mid) && x(mid) < x(late) && x(late) < x(none), 'map: left to right by deadline');
-    assert(x(a) > x(soon) && x(a) < x(late) && x(s) > x(soon) && x(s) < x(late), 'a goal’s activities and states stay in its group');
+    const nearest = (b, gs) => gs.reduce((m, g) => (Math.abs(x(g) - x(b)) < Math.abs(x(m) - x(b)) ? g : m));
+    const goals4 = [soon, mid, late, none];
+    assert(nearest(a, goals4) === mid && nearest(s, goals4) === mid, 'a goal’s activities and states stay with it');
+    // Dates play no part in the map: other deadlines leave every box where it was.
+    const places = () => goals4.map(x).map(Math.round);
+    const wasPlaces = places();
+    soon.deadline = addDays(now, 300); none.deadline = addDays(now, 1); save(); render();
+    eq(places(), wasPlaces, 'map: changing deadlines moves nothing');
+    delete none.deadline; soon.deadline = addDays(now, 10); save(); render();
     eq([...$('[data-goal-select]').options].slice(1).map(o => o.textContent), want, 'goal filter list');
     deletePlan(plans.current);
     // Goals linked to each other stay together, wherever their dates fall; sharing an activity does not link them.
@@ -4043,9 +4050,9 @@ window.moreTests = async ({ step, assert }) => {
     const shared = mk('activity', { title: 'Shared', startDate: now, dueDate: addDays(now, 9) });
     rel(sub, top, 'subgoal'); rel(shared, early, 'contributes'); rel(shared, later, 'contributes');
     save(); setView('map');
-    assert(x(sub) < x(early) && x(early) < x(later), 'the tree (nearest: Sub, 5 days) first; then Early and Later, sharing an activity, by date');
+    assert(!(Math.min(x(early), x(later)) < x(sub) && x(sub) < Math.max(x(early), x(later))), 'Sub is not between Early and Later, which share an activity');
     deletePlan(plans.current);
-    // Dates give way to crossings: Soon and Late serve one vision, Mid another, so Mid between them would cross a line.
+    // Soon and Late serve one vision, Mid another, so Mid between them would cross a line.
     fresh('Dates and visions');
     const keptVisions = visions;
     visions = { list: [], deleted: {} };
@@ -4059,12 +4066,15 @@ window.moreTests = async ({ step, assert }) => {
     const seg = g => [x(g), x(findVision(g.visions[0]))];
     const cross = (a, b) => (seg(a)[0] - seg(b)[0]) * (seg(a)[1] - seg(b)[1]) < 0;
     assert(!cross(gs, gm) && !cross(gm, gl) && !cross(gs, gl), `no lines cross: ${[gs, gm, gl].map(g => g.title + ' ' + seg(g).map(Math.round)).join(', ')}`);
-    assert(x(gs) < x(gl), 'Soon still before Late');
-    assert(!(x(gs) < x(gm) && x(gm) < x(gl)), 'Mid moved out from between them');
-    // Without the visions' lines, the dates decide again.
-    ui.mapHidden.add('serves'); render();
-    assert(x(gs) < x(gm) && x(gm) < x(gn) && x(gn) < x(gl), 'by date when no line is in the way');
-    ui.mapHidden.delete('serves');
+    assert(!(Math.min(x(gs), x(gl)) < x(gm) && x(gm) < Math.max(x(gs), x(gl))), 'Mid moved out from between them');
+    deletePlan(plans.current);
+    // When a crossing cannot be avoided, it falls on the activities' lines, not on those to the visions.
+    fresh('Visions first');
+    const g1 = mk('goal', { title: 'One', visions: [v1.id] }), g2 = mk('goal', { title: 'Two', visions: [v2.id] }), g3 = mk('goal', { title: 'Three', visions: [v1.id] });
+    const a12 = mk('activity', { title: 'A', startDate: now, dueDate: addDays(now, 9) }), a23 = mk('activity', { title: 'B', startDate: now, dueDate: addDays(now, 9) });
+    rel(a12, g1, 'contributes'); rel(a12, g2, 'contributes'); rel(a23, g2, 'contributes'); rel(a23, g3, 'contributes');
+    save(); setView('map');
+    assert(!(Math.min(x(g1), x(g3)) < x(g2) && x(g2) < Math.max(x(g1), x(g3))), 'the goal of the other vision is not between them');
     deletePlan(plans.current);
     visions = keptVisions; saveVisions();
     return want.join(' < ');

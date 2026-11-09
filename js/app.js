@@ -1709,14 +1709,15 @@ function setGoalVisions(g, ids) {
                    depends on them (longest-path layering), so chains read bottom-up toward the goal.
    2. Dummies    – an edge spanning several layers gets a virtual node in each layer it crosses,
                    so it is routed through the gaps between boxes instead of across them.
-   3. Ordering   – alternating barycenter sweeps plus adjacent swaps minimise edge crossings.
+   3. Ordering   – from a start with linked boxes together, alternating barycenter sweeps plus adjacent
+                   swaps minimise edge crossings, those of lines to visions first.
    4. Placement  – every box is pulled toward the median of its neighbours while keeping the order
                    and spacing (weighted isotonic regression), which keeps edges short and straight. */
 // On the map, lines are fine and their colours muted toward grey, so they stay quieter than the glass boxes.
 const mapLineColour = color => `color-mix(in srgb, ${color} 72%, var(--ink-3))`;
 // LEAD: the straight stretch each line ends with, a little longer than its arrowhead (10). TIP: how far short
 // of where it points a line stops; its arrowhead covers the rest, so even a thick line ends inside the head's wide back.
-const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, LEAD: 14, TIP: 8, MIN_SCALE: 0.25, MAX_SCALE: 3 };
+const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, LEAD: 14, TIP: 8, MIN_SCALE: 0.25, MAX_SCALE: 3, VISION_LINE: 6 };
 
 // Map boxes are slabs of milk glass, lit by a broad light (a panel, like a window) to the left of and a little
 // above the map. Their side, along the bottom and the right and round the corners, is cut into slivers, each
@@ -1827,7 +1828,7 @@ const glassKey = key => key.replace('--', '').replace('|', '-');
 const glassTint = (kind, st) => ({ done: '--ok', doing: '--warn', late: '--bad', blocked: '--grey' })[st] || '--' + kind;
 
 function layoutMap(items, rels) {
-  const { NW, NH, HG, DG, DW, VG, PAD, HEAD, BAND_GAP, LEAD, TIP } = MAP;
+  const { NW, NH, HG, DG, DW, VG, PAD, HEAD, BAND_GAP, LEAD, TIP, VISION_LINE } = MAP;
   const kindOf = {};
   Object.entries(items).forEach(([k, list]) => list.forEach(x => (kindOf[x.id] = k)));
 
@@ -1883,7 +1884,7 @@ function layoutMap(items, rels) {
     const [top, bottom] = a.layer < b.layer ? [a, b] : [b, a];
     const chain = [top];
     for (let l = top.layer + 1; l < bottom.layer; l++) {
-      const d = { id: `${r.id}:${l}`, dummy: true, layer: l, w: DW };
+      const d = { id: `${r.id}:${l}`, dummy: true, layer: l, w: DW, toVision: top.kind === 'vision' };
       layers[l].list.push(d);
       chain.push(d);
     }
@@ -1896,34 +1897,30 @@ function layoutMap(items, rels) {
     if (i) { link(up, n, c.chain[i - 1]); link(down, c.chain[i - 1], n); }
   }));
 
-  // Goals start left to right by their nearest deadline (none last), goals linked to each other (sub-goals,
-  // dependencies) next to each other. That order gives way only where it makes lines cross (to visions above,
-  // say): fewer crossings come first, and goals go back toward their dates wherever that crosses nothing more.
-  const groupOf = {};
-  const find = id => (groupOf[id] === undefined || groupOf[id] === id ? (groupOf[id] = id) : (groupOf[id] = find(groupOf[id])));
-  rels.filter(r => kindOf[r.from] === 'goal' && kindOf[r.to] === 'goal').forEach(r => { groupOf[find(r.from)] = find(r.to); });
-  const due = {};
-  items.goal.forEach(g => { const k = find(g.id), d = g.deadline || '9999'; if (!due[k] || d < due[k]) due[k] = d; });
-  const order = [...new Set(items.goal.map(g => find(g.id)))].sort((a, b) => due[a].localeCompare(due[b]));
-  const rank = Object.fromEntries(items.goal.map(g => [g.id, order.indexOf(find(g.id))]));
-  const slotGoals = L => {
-    const slots = L.list.map((n, i) => (n.kind === 'goal' ? i : -1)).filter(i => i >= 0);
-    const goals = slots.map(i => L.list[i]).sort((a, b) => rank[a.id] - rank[b.id]);
-    slots.forEach((i, k) => (L.list[i] = goals[k]));
+  // Start with whatever is linked side by side, going through the lines from the top: boxes on their own come last.
+  const seen = new Set(), visit = n => {
+    if (seen.has(n)) return;
+    seen.add(n);
+    (down.get(n) || []).forEach(visit);
+    (up.get(n) || []).forEach(visit);
   };
-  layers.forEach(slotGoals);
+  layers.forEach(L => L.list.forEach(visit));
+  layers.forEach(L => (L.list = []));
+  seen.forEach(n => layers[n.layer].list.push(n));
 
   // 3. Crossing minimisation
   const reindex = () => layers.forEach(L => L.list.forEach((n, i) => (n.i = i)));
   reindex();
+  // How much a line counts when it crosses another: a line to a vision counts most.
+  const weight = (a, b) => (a.kind === 'vision' || a.toVision || b.kind === 'vision' || b.toVision ? VISION_LINE : 1);
   const crossings = () => {
     let c = 0;
     for (let l = 0; l < layers.length - 1; l++) {
       const segs = [];
-      layers[l].list.forEach(n => (down.get(n) || []).forEach(m => segs.push([n.i, m.i])));
+      layers[l].list.forEach(n => (down.get(n) || []).forEach(m => segs.push([n.i, m.i, weight(n, m)])));
       for (let i = 0; i < segs.length; i++)
         for (let j = i + 1; j < segs.length; j++)
-          if ((segs[i][0] - segs[j][0]) * (segs[i][1] - segs[j][1]) < 0) c++;
+          if ((segs[i][0] - segs[j][0]) * (segs[i][1] - segs[j][1]) < 0) c += segs[i][2] * segs[j][2];
     }
     return c;
   };
@@ -1947,7 +1944,7 @@ function layoutMap(items, rels) {
   // Swap neighbours while that removes crossings.
   const pairCross = (u, v, nbrs) => {
     let c = 0;
-    (nbrs.get(u) || []).forEach(a => (nbrs.get(v) || []).forEach(b => { if (a.i > b.i) c++; }));
+    (nbrs.get(u) || []).forEach(a => (nbrs.get(v) || []).forEach(b => { if (a.i > b.i) c += weight(u, a) * weight(v, b); }));
     return c;
   };
   // The crossings between u's lines and v's when u is left of v.
@@ -1957,27 +1954,6 @@ function layoutMap(items, rels) {
     improved = false;
     layers.forEach(L => {
       for (let i = 0; i + 1 < L.list.length; i++) if (cost(L.list[i + 1], L.list[i]) < cost(L.list[i], L.list[i + 1])) { swap(L, i); improved = true; }
-    });
-  }
-  // Then goals go back toward their date order wherever that adds no crossing: a whole row in date order
-  // if that costs nothing (goals past the line slots and boxes between them), else neighbour by neighbour.
-  let total = crossings();
-  layers.forEach(L => {
-    if (L.list.filter(n => n.kind === 'goal').length < 2) return;
-    const kept = [...L.list];
-    slotGoals(L);
-    L.list.forEach((n, i) => (n.i = i));
-    const c = crossings();
-    if (c <= total) total = c;
-    else { L.list = kept; L.list.forEach((n, i) => (n.i = i)); }
-  });
-  for (let moved = true; moved;) {
-    moved = false;
-    layers.forEach(L => {
-      for (let i = 0; i + 1 < L.list.length; i++) {
-        const u = L.list[i], v = L.list[i + 1];
-        if (u.kind === 'goal' && v.kind === 'goal' && rank[v.id] < rank[u.id] && cost(v, u) <= cost(u, v)) { swap(L, i); moved = true; }
-      }
     });
   }
 
