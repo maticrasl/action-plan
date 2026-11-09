@@ -68,6 +68,17 @@
     return `invalid=[${invalid}] live="${live}"`;
   });
 
+  await step('drag from inside a dialog to its backdrop keeps it open', () => {
+    openForm('goal');
+    const press = el => el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    press($('#f-title'));
+    modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert(modal.open, 'press inside, release outside keeps it open');
+    press(modal);
+    modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert(!modal.open, 'a real backdrop click still closes');
+  });
+
   await step('bad number is rejected', () => {
     openForm('state');
     $('#f-title').value = 'Bad number state';

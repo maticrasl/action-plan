@@ -4532,6 +4532,13 @@ modal.addEventListener('cancel', e => {
   closeCalendar(true);
 });
 document.addEventListener('pointerdown', e => { if (cal && !cal.field.contains(e.target)) closeCalendar(); });
+// A press that starts inside a dialog (selecting text) and ends on its backdrop
+// fires a click on the dialog itself; swallow it so the dialog stays open.
+let pressTarget = null;
+document.addEventListener('pointerdown', e => { pressTarget = e.target; }, true);
+document.addEventListener('click', e => {
+  if (e.target instanceof HTMLDialogElement && pressTarget && pressTarget !== e.target) e.stopImmediatePropagation();
+}, true);
 modal.addEventListener('click', e => {
   if (e.target === modal || e.target.closest('[data-close]')) modal.close();
 });
