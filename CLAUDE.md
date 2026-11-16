@@ -2,8 +2,10 @@
 
 ## Restructuring in progress — feature freeze
 Follow `docs/restructure/RULES.md`. No features until `docs/restructure/STATUS.md` says done.
-Commands: `npm run check` (all checks, quiet), `npm run outline -- <file>`, `npm run perf`.
-Never read `js/app.js` or `tests/more.js` whole.
+Commands: `npm run check` (all checks, quiet), `npm run outline -- <file>`, `npm run perf`,
+`npm run dev` (dev server), `npm run build` (into `dist/`), `npm run preview` (serves `dist/`).
+Sources: `src/main.ts` boots `src/legacy/*.js` (ES modules); `src/test-bridge.ts` exposes them to the suite.
+Never read `src/legacy/app.js` or `tests/more.js` whole.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 

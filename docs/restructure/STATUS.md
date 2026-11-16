@@ -3,7 +3,7 @@
 | Phase | State |
 |---|---|
 | 00 baseline | merged (PR #1); CI skip list in PR from `restructure/phase-00-ci`; known flake accepted |
-| 01 modules and build | not started |
+| 01 modules and build | done on `restructure/phase-01`, not pushed; waits for owner check, Pages switch, "ship it" |
 | 02 core leaves | not started |
 | 03 core domain | not started |
 | 04 store and sync | not started |
@@ -60,11 +60,19 @@ A `NO RESULT` run is this flake, not a broken change: run `npm run check` again.
 
 ## Notes for the next phase
 
-- Node 26.13.1 is in `C:\Program Files\nodejs`. A terminal opened before the install lacks it on PATH; open a new one.
-- `gh` 2.104.0 is installed and logged in (`C:\Program Files\GitHub CLI\gh.exe`). Old shells lack it on PATH.
-- `tests/run.sh` is still there. Phase 1 deletes it. `npm run test:browser` replaces it.
-- Fixtures were generated once from the code at tag `pre-restructure` (`node scripts/fixtures.mjs --generate`). Never regenerate them.
-  Clock frozen at 2026-11-16T11:00Z, ids counted, network off (`tests/fixtures/fixture-pre.js`).
-- Current behaviour the fixtures record: the legacy migration keeps the `actionplan.v1` key, and a restore re-stamps restored visions' `updatedAt`.
-- Both tools take an app folder to test a changed copy: `node scripts/fixtures.mjs <dir>`, `node scripts/run-suite.mjs <dir>`.
-- The main checkout has untracked copies of `CLAUDE.md` and `docs/restructure/`. After the merge, pulling there fails until they are moved away.
+- Node (`C:\Program Files\nodejs`) and `gh` (`C:\Program Files\GitHub CLI`) may be missing from an old shell's PATH.
+- Fixtures come from tag `pre-restructure`; never regenerate them. Clock 2026-11-16T11:00Z, ids counted, network off.
+- Runners build `vite build --mode test` into `dist-test/` and serve it on 127.0.0.1 (`scripts/lib/chrome.mjs`).
+  Virtual time waits for the module and the appended scripts over HTTP: the IIFE fallback was not needed.
+  Test pages (`test.html`, `perf.html`, `fx.html`) are emitted by `vite.config.ts` from the built `index.html`.
+- Test build has no `public/` (a manifest makes Chrome fire `beforeinstallprompt`) and no `sw.js`, as under file://.
+  It copies `styles.css` to `css/styles.css`: more.js renders iframes that link that path.
+- `test-bridge.ts` finds setters by name: export `x` is assignable from tests iff its module exports `setX`.
+  Tests assign `today`, `offerTour` (functions: setter reassigns the declaration) and `lastNodeClick` too.
+- `vite.config.ts` is not type-checked: it needs `@types/node`, not on the allowed list (owner asked).
+  `@eslint/js` and `globals` were added for ESLint's recommended set and browser globals (owner asked).
+- ESLint options set for legacy code: unused caught errors and rest siblings allowed, NBSP allowed in regexes.
+- `check.yml` no longer runs on pushes to `main`; `deploy.yml` calls it, then builds and publishes `dist/`.
+- Upgrade test (step 11) passed, scripted over CDP: old cache dropped on the 2nd reload, offline start works.
+- Perf after phase 1: within the baseline; the largest, 300 items + 20 visions map, 229 ms (was 198).
+- The main checkout may still hold untracked copies of `CLAUDE.md` and `docs/restructure/`; pulling there fails until moved.
