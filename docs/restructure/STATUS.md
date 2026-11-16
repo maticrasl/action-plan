@@ -2,7 +2,7 @@
 
 | Phase | State |
 |---|---|
-| 00 baseline | built on branch `restructure/phase-00`; stopped: `test:browser` is flaky (see below); CI not run yet |
+| 00 baseline | done on branch `restructure/phase-00`, waiting for "ship it" (first CI run); known flake accepted |
 | 01 modules and build | not started |
 | 02 core leaves | not started |
 | 03 core domain | not started |
@@ -36,7 +36,9 @@ Compare against these after phases 7 and 8. Average ms per draw (budget in brack
 Empty. CI has not run yet: nothing is pushed before "ship it". If Linux Chrome fails steps for
 rendering reasons, list them there and here.
 
-## Open: flaky `test:browser` (blocks "three green runs in a row")
+## Known flake in `test:browser` (owner, 2026-11-16: do not investigate)
+
+A `NO RESULT` run is this flake, not a broken change: run `npm run check` again. Any other failure counts.
 
 - About 1 run in 15–20 prints `NO RESULT`: Chrome dumps the page before the suite writes `<pre id="OK">`.
   `tests/run.sh` used the same Chrome flags and budget, so this predates phase 0. Fixtures never flaked (34 runs).
@@ -46,12 +48,12 @@ rendering reasons, list them there and here.
 - The suite normally uses ~38 s of the 60 s virtual-time budget (36 s under full CPU load).
 - Theory not confirmed: virtual time jumps to the 5-minute sync interval (`SYNC_EVERY`) while an import awaits a
   real file read. Making `Blob.text()` slow by several seconds did not reproduce it at 60 s (2 attempts).
-  Stopped here (RULES §4). Next idea: run Chrome with `--enable-logging=stderr --v=0` in a loop and read the log of a failing run.
+  Not pursued further, by the owner's decision.
 
 ## Notes for the next phase
 
 - Node 26.13.1 is in `C:\Program Files\nodejs`. A terminal opened before the install lacks it on PATH; open a new one.
-- `gh` is not installed. Shipping needs it (OWNER.md, "Before phase 0", step 3).
+- `gh` 2.104.0 is installed and logged in (`C:\Program Files\GitHub CLI\gh.exe`). Old shells lack it on PATH.
 - `tests/run.sh` is still there. Phase 1 deletes it. `npm run test:browser` replaces it.
 - Fixtures were generated once from the code at tag `pre-restructure` (`node scripts/fixtures.mjs --generate`). Never regenerate them.
   Clock frozen at 2026-11-16T11:00Z, ids counted, network off (`tests/fixtures/fixture-pre.js`).
