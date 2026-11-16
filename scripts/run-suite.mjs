@@ -3,35 +3,32 @@
 //   default  the suite: prints FAIL entries, the errors block and one summary line; exit 0 if all passed
 //   --perf   the draw-time budgets (tests/perf.js) on real time instead; prints their lines, never fails
 // On CI (CI=true), steps listed in tests/ci-skip.txt still run but their failure does not count.
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { ROOT, dumpDom, injectedPage, readPre, stageApp, writePage } from './lib/chrome.mjs';
+import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
 
 const args = process.argv.slice(2);
 const verbose = args.includes('--verbose'), perf = args.includes('--perf');
 const src = resolve(args.find(a => !a.startsWith('--')) || ROOT);
 const tests = join(ROOT, 'tests');
 
-const { dir, cleanup } = stageApp(src);
+const { url, profiles, close } = await serveTestBuild(src);
 try {
-  for (const f of ['pre.js', 'more.js', 'test.js', 'perf.js']) copyFileSync(join(tests, f), join(dir, 'js', f));
   process.exitCode = perf ? await runPerf() : await runSuite();
 } finally {
-  cleanup();
+  close();
 }
 
 async function runPerf() {
-  writePage(dir, 'perf.html', injectedPage(dir, { before: ['pre.js'], after: ['perf.js'] }));
   // Real time: no virtual-time budget, so the clock runs while perf.js measures.
-  const out = readPre(await dumpDom(dir, 'perf.html', { virtualTime: 0, profile: 'profile-perf' }), 'PERF');
+  const out = readPre(await dumpDom(url + 'perf.html', profiles, { virtualTime: 0, profile: 'profile-perf' }), 'PERF');
   console.log(out ?? 'FAIL draw times: NO RESULT');
   return 0;
 }
 
 async function runSuite() {
-  writePage(dir, 'index.html', injectedPage(dir, { before: ['pre.js'], after: ['more.js', 'test.js'] }));
-  const dom = await dumpDom(dir, 'index.html');
+  const dom = await dumpDom(url + 'test.html', profiles);
   const out = readPre(dom, 'OK');
   if (out === null || out.startsWith('HARNESS CRASH')) {
     const saved = join(tmpdir(), 'actionplan-last-dom.html');

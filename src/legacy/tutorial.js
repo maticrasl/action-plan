@@ -1,4 +1,7 @@
-'use strict';
+/** The guided tour and help mode. */
+import { I18N, lang, t } from './i18n.js';
+import { scheduleSync } from './drive.js';
+import { $, changeLanguage, clamp, closeCtxMenu, createPlan, deletePlan, esc, itemCount, modal, openPlan, plans, prefs, render, renderPlanSwitch, sampleData, save, setView, settings, toast, ui, uniqueName } from './app.js';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode
@@ -14,7 +17,7 @@
    steps without a visible target show a centred card. Optional steps are left out when their
    target is hidden at the start (the sidebar toggle on phones, upright or sideways, the sync button when sync is off). */
 
-const TOUR_STEPS = [
+export const TOUR_STEPS = [
   { key: 'about' },
   { key: 'welcome' },
   { key: 'dashboard', view: 'dashboard', target: ['.summary'] },
@@ -35,14 +38,14 @@ const TOUR_STEPS = [
   { key: 'done' },
 ];
 
-const tour = { step: -1, steps: TOUR_STEPS, planId: null, prevPlan: null, prevView: null };
-const SPOT_PAD = 6;
-const EDGE = 16;
+export const tour = { step: -1, steps: TOUR_STEPS, planId: null, prevPlan: null, prevView: null };
+export const SPOT_PAD = 6;
+export const EDGE = 16;
 
-const isVisible = el => !!el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
-const firstVisible = sels => (sels || []).map(s => document.querySelector(s)).find(isVisible) || null;
+export const isVisible = el => !!el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
+export const firstVisible = sels => (sels || []).map(s => document.querySelector(s)).find(isVisible) || null;
 
-function startTour() {
+export function startTour() {
   if (tour.step >= 0) return;
   closeHelpTip();
   closeCtxMenu();
@@ -64,7 +67,7 @@ function startTour() {
   showStep(0);
 }
 
-function showStep(i) {
+export function showStep(i) {
   tour.step = clamp(i, 0, tour.steps.length - 1);
   const s = tour.steps[tour.step];
   if (s.view && ui.view !== s.view) setView(s.view);
@@ -89,12 +92,12 @@ function showStep(i) {
 }
 
 // The map and timeline scroll on their own; a target inside them (a map box) is only partly on screen.
-const SCROLLER = '.map-wrap, .tl-scroll';
-const scrollerOf = el => el.parentElement?.closest(SCROLLER) || null;
+export const SCROLLER = '.map-wrap, .tl-scroll';
+export const scrollerOf = el => el.parentElement?.closest(SCROLLER) || null;
 
 // Scroll so the target's top sits just under the (sticky) top bar; a target inside the map or
 // timeline is first scrolled to the middle of it.
-function bringIntoView(el) {
+export function bringIntoView(el) {
   if (!el || el.closest('.topbar, .nav') || getComputedStyle(el).position === 'fixed') return;
   const wrap = scrollerOf(el);
   if (wrap) {
@@ -107,7 +110,7 @@ function bringIntoView(el) {
   if (r.top < top || r.bottom > innerHeight) window.scrollBy(0, r.top - top);
 }
 
-function placeTour() {
+export function placeTour() {
   if (tour.step < 0) return;
   const card = $('.tour-card');
   const spot = $('.tour-spot');
@@ -144,7 +147,7 @@ function placeTour() {
   Object.assign(card.style, { left: `${left}px`, top: `${top}px` });
 }
 
-function endTour(keep) {
+export function endTour(keep) {
   if (tour.step < 0) return;
   tour.step = -1;
   removeEventListener('keydown', tourKeys, true);
@@ -162,7 +165,7 @@ function endTour(keep) {
   setView(tour.prevView);
 }
 
-function tourKeys(e) {
+export function tourKeys(e) {
   if (e.key === 'Escape') endTour(false);
   else if (e.key === 'ArrowRight' && tour.step < tour.steps.length - 1) showStep(tour.step + 1);
   else if (e.key === 'ArrowLeft' && tour.step > 0) showStep(tour.step - 1);
@@ -188,7 +191,7 @@ document.addEventListener('click', e => {
    While on, each view opens with a banner explaining what it is for, and the
    first instance of each key control gets an ⓘ button with a one-line tip. */
 
-const HELP_TIPS = [
+export const HELP_TIPS = [
   { sel: '.summary-line', key: 'summary', where: 'beforeend' },
   { sel: '.cat-chips', key: 'categories', where: 'beforeend' },
   { sel: '.card.goal .smart', key: 'smart' },
@@ -210,7 +213,7 @@ const HELP_TIPS = [
   { sel: '.map-legend', key: 'status', where: 'beforeend' },
 ];
 
-function decorateHelp() {
+export function decorateHelp() {
   closeHelpTip();
   if (!ui.help) return;
   const view = $('#view');
@@ -224,14 +227,14 @@ function decorateHelp() {
   });
 }
 
-function setHelp(on) {
+export function setHelp(on) {
   ui.help = on;
   prefs.set('help', on);
   $('#helpBtn').setAttribute('aria-pressed', on);
   render();
 }
 
-function openHelpTip(dot) {
+export function openHelpTip(dot) {
   closeHelpTip();
   const tip = document.createElement('div');
   tip.className = 'help-tip';
@@ -248,7 +251,7 @@ function openHelpTip(dot) {
   tip.style.top = `${below ? r.bottom + 8 : r.top - 8 - tip.offsetHeight}px`;
 }
 
-function closeHelpTip() {
+export function closeHelpTip() {
   $('#helpTip')?.remove();
   document.querySelectorAll('[data-help-tip][aria-expanded="true"]').forEach(d => {
     d.setAttribute('aria-expanded', 'false');
@@ -276,7 +279,7 @@ addEventListener('scroll', closeHelpTip, true);
 /* ---------- First visit: choose a language before the tour ---------- */
 
 // Switch language; the still-empty starter plan takes the new language's default name.
-function pickLanguage(code) {
+export function pickLanguage(code) {
   const starter = plans.list.length === 1 && !itemCount() && plans.list[0].name === t('plan.defaultName');
   changeLanguage(code);
   if (!starter) return;
@@ -285,7 +288,7 @@ function pickLanguage(code) {
   renderPlanSwitch();
 }
 
-function chooseLanguage(done) {
+export function chooseLanguage(done) {
   document.body.insertAdjacentHTML('beforeend', `
     <div class="tour-block dim lang-pick-block"></div>
     <div class="tour-card centered lang-pick" role="dialog" aria-modal="true" aria-labelledby="langPickTitle" aria-describedby="langPickText"></div>`);
@@ -329,12 +332,15 @@ function chooseLanguage(done) {
 
 /* ---------- Boot (called from app.js) ---------- */
 
-function initTutorial() {
+export function initTutorial() {
   $('#helpBtn').addEventListener('click', () => setHelp(!ui.help));
   $('#tutorialBtn').addEventListener('click', startTour);
 }
 
 // On a first visit (also a new user's first sign-in), the language picker, then the tour.
-function offerTour() {
+export function offerTour() {
   if (!prefs.get('tourSeen', false)) requestAnimationFrame(() => chooseLanguage(startTour));
 }
+// Tests replace offerTour; callers see the replacement through the live import.
+// eslint-disable-next-line no-func-assign
+export function setOfferTour(f) { offerTour = f; }

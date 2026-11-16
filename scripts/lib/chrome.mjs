@@ -1,9 +1,10 @@
-/** Headless Chrome helpers: stage a copy of the app, inject scripts, dump a page's DOM. */
+/** Headless Chrome helpers: build the test pages, serve them on a local port, dump a page's DOM. */
 import { execFile } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFile, rmSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { extname, join, normalize, resolve, sep } from 'node:path';
+import { build } from 'vite';
 
 export const ROOT = resolve(import.meta.dirname, '..', '..');
 
@@ -16,40 +17,52 @@ export function chromePath() {
   return 'google-chrome';
 }
 
-// A temp folder holding index.html, css/ and js/ of the app (as tests/run.sh copied them).
-// Returns { dir, cleanup }.
-export function stageApp(src = ROOT) {
-  const dir = mkdtempSync(join(tmpdir(), 'actionplan-'));
-  for (const p of ['index.html', 'css', 'js']) cpSync(join(src, p), join(dir, p), { recursive: true });
-  return { dir, cleanup: () => rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }) };
+// Builds the app at `src` in test mode (vite.config.ts: test.html, perf.html, fx.html) and serves
+// the result on a free local port. Returns { dir, profiles, url, close }: the built folder, a temp
+// folder for Chrome profiles, the server's address with a trailing slash, and a function that stops
+// the server and removes the profiles.
+export async function serveTestBuild(src = ROOT) {
+  await build({ root: src, configFile: join(src, 'vite.config.ts'), mode: 'test', logLevel: 'error' });
+  const dir = join(src, 'dist-test');
+  const server = createServer((req, res) => {
+    const path = normalize(join(dir, decodeURIComponent(new URL(req.url, 'http://x').pathname)));
+    if (path !== dir && !path.startsWith(dir + sep)) return void res.writeHead(403).end();
+    readFile(path, (err, data) => {
+      if (err) return void res.writeHead(404).end();
+      res.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream', 'cache-control': 'no-store' });
+      res.end(data);
+    });
+  });
+  await new Promise(ok => server.listen(0, '127.0.0.1', ok));
+  const profiles = mkdtempSync(join(tmpdir(), 'actionplan-'));
+  return {
+    dir,
+    profiles,
+    url: `http://127.0.0.1:${server.address().port}/`,
+    close: () => {
+      server.close();
+      rmSync(profiles, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    },
+  };
 }
 
-// index.html with <script src="js/<name>"> tags put before i18n.js and after app.js.
-export function injectedPage(dir, { before = [], after = [] }) {
-  const html = readFileSync(join(dir, 'index.html'), 'utf8');
-  const tag = n => `<script src="js/${n}"></script>`;
-  const first = tag('i18n.js'), last = tag('app.js');
-  if (!html.includes(first) || !html.includes(last)) throw new Error('index.html: script tags to inject at not found');
-  return html
-    .replace(first, () => before.map(n => `${tag(n)}\n  `).join('') + first)
-    .replace(last, () => last + after.map(n => `\n  ${tag(n)}`).join(''));
-}
+const TYPES = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json', '.map': 'application/json', '.webmanifest': 'application/manifest+json',
+  '.png': 'image/png', '.svg': 'image/svg+xml',
+};
 
-export function writePage(dir, name, html) {
-  writeFileSync(join(dir, name), html);
-}
-
-// Runs headless Chrome on <dir>/<page> and resolves to the dumped DOM. `virtualTime` in ms, or 0 for
-// real time. Each run gets its own profile folder, so storage starts empty.
-export function dumpDom(dir, page, { virtualTime = 60000, profile = 'profile', offline = false } = {}) {
+// Runs headless Chrome on `url` and resolves to the dumped DOM. `virtualTime` in ms, or 0 for real
+// time. Each run gets its own profile folder under `profiles`, so storage starts empty.
+export function dumpDom(url, profiles, { virtualTime = 60000, profile = 'profile', offline = false } = {}) {
   const args = [
     '--headless=new', '--disable-gpu', '--no-first-run',
-    `--user-data-dir=${join(dir, profile)}`, '--window-size=1280,900',
+    `--user-data-dir=${join(profiles, profile)}`, '--window-size=1280,900',
   ];
   if (process.platform === 'linux') args.push('--no-sandbox'); // GitHub's runners refuse Chrome's sandbox
-  if (offline) args.push('--host-resolver-rules=MAP * ~NOTFOUND'); // nothing reaches the network
+  if (offline) args.push('--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1'); // nothing but the test server is reachable
   if (virtualTime) args.push(`--virtual-time-budget=${virtualTime}`);
-  args.push('--dump-dom', pathToFileURL(join(dir, page)).href);
+  args.push('--dump-dom', url);
   return new Promise((ok, fail) => {
     execFile(chromePath(), args, { maxBuffer: 512 * 1024 * 1024, timeout: 10 * 60 * 1000, windowsHide: true }, (err, stdout) => {
       if (err && !stdout) return fail(new Error(`chrome failed: ${err.message}`));

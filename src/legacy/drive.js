@@ -1,4 +1,11 @@
-'use strict';
+/** Google Drive sync: sign-in, the sync file, merging and status. */
+import { I18N, locale, t } from './i18n.js';
+import { GOOGLE_CLIENT_ID } from './config.js';
+import { offerTour, tour } from './tutorial.js';
+import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from './sync.js';
+import { USERS_KEY, addUser, currentUser, readUsers, saveUsers, setUsers, userKeys, userSession, userStorage, users } from './users.js';
+import { applyVisions, normalizeVisions, plansVersion, setPlansVersion, visions } from './visions.js';
+import { $, PLANS_KEY, db, emptyDb, enterUser, esc, normalize, planKey, plans, prefs, readPlan, render, renderPlanSwitch, safeId, setDb, setPlans, toast, uid } from './app.js';
 
 /* =========================================================
    Google Drive sync
@@ -12,30 +19,30 @@
    Loaded before app.js; initSync() is called from its boot section.
    ========================================================= */
 
-const SYNC_FILE = 'actionplan-sync.json';
-const SYNC_FORMAT = 'actionplan-sync';
-const SYNC_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
-const SYNC_DELAY = 3000;       // after a change
-const SYNC_EVERY = 5 * 60000;  // while the app is open
-const TOKEN_KEY = 'actionplan.syncToken'; // sessionStorage: survives a reload, not a browser restart
-const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
-const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
-const DRIVE_ABOUT = 'https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,permissionId)';
+export const SYNC_FILE = 'actionplan-sync.json';
+export const SYNC_FORMAT = 'actionplan-sync';
+export const SYNC_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+export const SYNC_DELAY = 3000;       // after a change
+export const SYNC_EVERY = 5 * 60000;  // while the app is open
+export const TOKEN_KEY = 'actionplan.syncToken'; // sessionStorage: survives a reload, not a browser restart
+export const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
+export const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
+export const DRIVE_ABOUT = 'https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress,permissionId)';
 
-const syncConfigured = () => typeof GOOGLE_CLIENT_ID === 'string' && GOOGLE_CLIENT_ID.endsWith('.apps.googleusercontent.com');
+export const syncConfigured = () => typeof GOOGLE_CLIENT_ID === 'string' && GOOGLE_CLIENT_ID.endsWith('.apps.googleusercontent.com');
 // Signed in = the current user has a Google account (users.js); the sync file is in that account's Drive.
-const syncConnected = () => syncConfigured() && !!currentUser().account;
+export const syncConnected = () => syncConfigured() && !!currentUser().account;
 
 // status: idle | syncing | synced | paused (needs a click) | offline | error | account (signed in to someone else's account)
-const syncState = { status: 'idle', busy: false, again: false, timer: null };
+export const syncState = { status: 'idle', busy: false, again: false, timer: null };
 
-class SyncError extends Error {
+export class SyncError extends Error {
   constructor(code) { super(code); this.code = code; }
 }
 
 /* ---------- Google: access token and Drive file ---------- */
 
-function loadGis() {
+export function loadGis() {
   if (window.google?.accounts?.oauth2) return Promise.resolve();
   loadGis.promise ||= new Promise((resolve, reject) => {
     const s = document.createElement('script');
@@ -48,7 +55,7 @@ function loadGis() {
   return loadGis.promise;
 }
 
-async function driveFetch(token, url, options = {}) {
+export async function driveFetch(token, url, options = {}) {
   let res;
   try {
     res = await fetch(url, { ...options, headers: { Authorization: `Bearer ${token}`, ...options.headers } });
@@ -61,7 +68,7 @@ async function driveFetch(token, url, options = {}) {
 }
 
 // Tests swap these methods for an in-memory fake.
-const drive = {
+export const drive = {
   token: null, // the current user's { value, expires }
 
   // A valid access token for the current user. Without one, only a click (interactive) may ask
@@ -163,7 +170,7 @@ const drive = {
 
 /* ---------- Stores: this device ↔ the sync file ---------- */
 
-function parseStore(text) {
+export function parseStore(text) {
   let raw;
   try { raw = JSON.parse(text); } catch (e) { throw new SyncError('error'); }
   if (raw?.format !== SYNC_FORMAT || !Array.isArray(raw.plans?.list)) throw new SyncError('error');
@@ -175,17 +182,17 @@ function parseStore(text) {
   };
 }
 
-const toFile = store => ({ format: SYNC_FORMAT, version: 1, plans: store.plans, data: store.data, visions: store.visions });
+export const toFile = store => ({ format: SYNC_FORMAT, version: 1, plans: store.plans, data: store.data, visions: store.visions });
 
 // Everything on this device, as a detached copy.
-function localStore() {
+export function localStore() {
   const data = Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? db : readPlan(p.id)]));
   return JSON.parse(JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data, visions }));
 }
 
 // The empty starter plan a new device makes on its first visit would otherwise sync as an extra
 // "My plan"; on the first sync it is dropped when the Drive file already has plans.
-function dropStarterPlans(store) {
+export function dropStarterPlans(store) {
   const starterNames = new Set(Object.values(I18N).map(l => l.strings['plan.defaultName']));
   const isStarter = p => {
     const d = store.data[p.id];
@@ -196,7 +203,7 @@ function dropStarterPlans(store) {
 }
 
 // Make the merged store this device's data; the open plan is reloaded only if it changed.
-function applyStore(store) {
+export function applyStore(store) {
   const before = JSON.stringify(db) + JSON.stringify(visions), current = plans.current;
   if (!store.plans.list.length) {
     const id = uid();
@@ -205,7 +212,7 @@ function applyStore(store) {
   }
   const keep = new Set(store.plans.list.map(p => p.id));
   plans.list.filter(p => !keep.has(p.id)).forEach(p => { try { userStorage.removeItem(planKey(p.id)); } catch (e) { /* ignore */ } });
-  plans = { current: keep.has(current) ? current : store.plans.list[0].id, list: store.plans.list, deleted: store.plans.deleted };
+  setPlans({ current: keep.has(current) ? current : store.plans.list[0].id, list: store.plans.list, deleted: store.plans.deleted });
   try {
     store.plans.list.forEach(p => userStorage.setItem(planKey(p.id), JSON.stringify(store.data[p.id])));
     userStorage.setItem(PLANS_KEY, JSON.stringify(plans));
@@ -214,8 +221,8 @@ function applyStore(store) {
   }
   takePlanSnapshot(plans);
   if (store.visions) applyVisions(store.visions);
-  plansVersion++;
-  db = readPlan(plans.current);
+  setPlansVersion(plansVersion + 1);
+  setDb(readPlan(plans.current));
   takeSnapshot(db);
   renderPlanSwitch();
   if (plans.current !== current || JSON.stringify(db) + JSON.stringify(visions) !== before) render();
@@ -223,14 +230,14 @@ function applyStore(store) {
 
 /* ---------- Sync ---------- */
 
-function scheduleSync(delay = SYNC_DELAY) {
+export function scheduleSync(delay = SYNC_DELAY) {
   if (!syncConnected()) return;
   clearTimeout(syncState.timer);
   syncState.timer = setTimeout(() => syncNow(false), delay);
 }
 
 // `interactive` is true when a click started the sync, so Google may show its sign-in popup.
-async function syncNow(interactive = false) {
+export async function syncNow(interactive = false) {
   // During the tour the open plan is a temporary one; endTour syncs once it is over.
   if (!syncConnected() || (typeof tour !== 'undefined' && tour.step >= 0)) return;
   if (syncState.busy) { syncState.again = true; return; }
@@ -272,10 +279,10 @@ async function syncNow(interactive = false) {
 
 /* ---------- Signing in and out: one user per Google account (users.js) ---------- */
 
-const NAME_MAX = 40;
-const userName = u => u.name || u.account?.email || t(u.account ? 'user.unnamed' : 'user.guest');
+export const NAME_MAX = 40;
+export const userName = u => u.name || u.account?.email || t(u.account ? 'user.unnamed' : 'user.guest');
 
-function askUserName(who) {
+export function askUserName(who) {
   const suggestion = (who.name || who.email.split('@')[0] || t('user.defaultName')).slice(0, NAME_MAX);
   return (prompt(t('user.askName'), suggestion) || '').trim().slice(0, NAME_MAX) || suggestion;
 }
@@ -284,7 +291,7 @@ function askUserName(who) {
 // else the data here becomes that account's when it belongs to no account yet (a guest's), and
 // otherwise the account gets a new, empty user, as on a first visit. `target` is the user picked
 // in the list, whose account may not be known yet (linked before users existed).
-async function logIn(hint = '', target = null) {
+export async function logIn(hint = '', target = null) {
   const from = currentUser();
   let token, who;
   try {
@@ -301,7 +308,7 @@ async function logIn(hint = '', target = null) {
   user.account = { id: who.id, email: who.email };
   if (!user.name) user.name = askUserName(who);
   // Not stored (storage full): nothing changes, so no data here is left to whoever logs in next.
-  if (!saveUsers()) { users = JSON.parse(before); return toast(t('err.storage')); }
+  if (!saveUsers()) { setUsers(JSON.parse(before)); return toast(t('err.storage')); }
   const firstVisit = user !== from && enterUser(user.id);
   drive.keep(token);
   if (!known) prefs.set('syncedOnce', false);
@@ -313,12 +320,12 @@ async function logIn(hint = '', target = null) {
 }
 
 // The guest's space opens (made, empty, when there is none); the one before keeps their data, apart.
-function openGuest() {
+export function openGuest() {
   drive.forget();
   enterUser((users.list.find(u => !u.account) || addUser()).id);
 }
 
-function logOut() {
+export function logOut() {
   const name = userName(currentUser());
   openGuest();
   toast(t('user.loggedOut', { name }));
@@ -326,7 +333,7 @@ function logOut() {
 
 // Removes a user and everything stored for them on this device; what synced stays in their Google Drive,
 // so logging in again brings it back. Removing the current user opens the guest, as logging out does.
-function removeUser(id) {
+export function removeUser(id) {
   const user = users.list.find(u => u.id === id);
   if (!user?.account) return;
   const name = userName(user);
@@ -339,7 +346,7 @@ function removeUser(id) {
   toast(t('user.removed', { name }));
 }
 
-function renameUser(name) {
+export function renameUser(name) {
   currentUser().name = name.trim().slice(0, NAME_MAX);
   saveUsers();
   renderSync();
@@ -347,18 +354,18 @@ function renameUser(name) {
 
 /* ---------- Status: the cloud button in the top bar and the Account section in Settings ---------- */
 
-function setSyncStatus(status) {
+export function setSyncStatus(status) {
   syncState.status = status;
   renderSync();
 }
 
-function syncTime(iso) {
+export function syncTime(iso) {
   const d = new Date(iso);
   const sameDay = d.toDateString() === new Date().toDateString();
   return d.toLocaleString(locale(), sameDay ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-function syncStatusText() {
+export function syncStatusText() {
   const s = syncState.status;
   if (s === 'idle' || s === 'synced') {
     const at = prefs.get('lastSync', null);
@@ -371,7 +378,7 @@ function syncStatusText() {
   return t('sync.status.' + s);
 }
 
-function renderSync() {
+export function renderSync() {
   const connected = syncConnected(), user = currentUser();
   const btn = $('#syncBtn');
   btn.hidden = !connected;
@@ -405,7 +412,7 @@ function renderSync() {
   body.innerHTML = html;
 }
 
-function initSync() {
+export function initSync() {
   $('#syncBtn').addEventListener('click', () => syncNow(true));
   $('#syncSection').addEventListener('click', e => {
     const el = e.target.closest('[data-sync]');
@@ -425,7 +432,7 @@ function initSync() {
   addEventListener('storage', e => {
     if (e.key !== USERS_KEY) return;
     const was = currentUser();
-    users = readUsers();
+    setUsers(readUsers());
     if (users.list.some(u => u.id === was.id)) { users.current = was.id; return renderSync(); }
     userKeys(was, sessionStorage).forEach(k => sessionStorage.removeItem(k));
     enterUser((users.list.find(u => !u.account) || addUser()).id);

@@ -1,4 +1,4 @@
-'use strict';
+/** Ready-made plan templates, as data. */
 
 /* =========================================================
    Plan templates
@@ -19,17 +19,17 @@
      that adds up (`cumulative`, its graph's `scale`) counts it per `period` or in total.
    ========================================================= */
 
-const TPL_LANGS = ['en', 'sl'];
-const TPL_AREAS = ['health', 'money', 'learning', 'career', 'home', 'wellbeing', 'faith'];
+export const TPL_LANGS = ['en', 'sl'];
+export const TPL_AREAS = ['health', 'money', 'learning', 'career', 'home', 'wellbeing', 'faith'];
 
-const WEEKDAYS = [0, 1, 2, 3, 4];
-const DAILY = { every: 1, unit: 'day' };
-const perWeek = times => ({ every: 1, unit: 'week', times });
-const onDays = (...days) => ({ every: 1, unit: 'week', days });
-const monthlyOn = day => ({ every: 1, unit: 'month', on: 'day', day });
-const MONTH_END = { every: 1, unit: 'month', on: 'lastDay' };
+export const WEEKDAYS = [0, 1, 2, 3, 4];
+export const DAILY = { every: 1, unit: 'day' };
+export const perWeek = times => ({ every: 1, unit: 'week', times });
+export const onDays = (...days) => ({ every: 1, unit: 'week', days });
+export const monthlyOn = day => ({ every: 1, unit: 'month', on: 'day', day });
+export const MONTH_END = { every: 1, unit: 'month', on: 'lastDay' };
 
-const TEMPLATES = [
+export const TEMPLATES = [
 
   /* ---------- Health & fitness ---------- */
 

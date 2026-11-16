@@ -1,4 +1,4 @@
-'use strict';
+/** Translations (English, Slovenian) and the t()/tp() lookups. */
 
 /* =========================================================
    Translations
@@ -8,7 +8,7 @@
    To add a language, copy the `en` block and translate it.
    ========================================================= */
 
-const I18N = {
+export const I18N = {
   en: {
     name: 'English',
     locale: 'en-GB',
@@ -1814,11 +1814,11 @@ const I18N = {
   },
 };
 
-const LANG_KEY = 'actionplan.lang';
-let lang = detectLang();
-let pluralRules = new Intl.PluralRules(I18N[lang].locale);
+export const LANG_KEY = 'actionplan.lang';
+export let lang = detectLang();
+export let pluralRules = new Intl.PluralRules(I18N[lang].locale);
 
-function detectLang() {
+export function detectLang() {
   try {
     const saved = localStorage.getItem(LANG_KEY);
     if (I18N[saved]) return saved;
@@ -1827,37 +1827,37 @@ function detectLang() {
   return pref.find(l => I18N[l]) || 'en';
 }
 
-function setLanguage(code) {
+export function setLanguage(code) {
   if (!I18N[code]) return;
   lang = code;
   pluralRules = new Intl.PluralRules(I18N[code].locale);
   try { localStorage.setItem(LANG_KEY, code); } catch (e) { /* ignore */ }
 }
 
-const locale = () => I18N[lang].locale;
+export const locale = () => I18N[lang].locale;
 
-function lookup(key) {
+export function lookup(key) {
   return I18N[lang].strings[key] ?? I18N.en.strings[key] ?? key;
 }
 
-function fill(str, params) {
+export function fill(str, params) {
   return params ? str.replace(/\{(\w+)\}/g, (m, k) => (k in params ? params[k] : m)) : str;
 }
 
 // t('key', {name: 'x'}) – simple string with {placeholders}
-function t(key, params) {
+export function t(key, params) {
   return fill(lookup(key), params);
 }
 
 // tp('key', n, params) – plural-aware; {n} is filled automatically
-function tp(key, n, params = {}) {
+export function tp(key, n, params = {}) {
   const forms = lookup(key);
   const str = typeof forms === 'string' ? forms : forms[pluralRules.select(n)] ?? forms.other;
   return fill(str, { n, ...params });
 }
 
 // Translates static markup: data-i18n (text), data-i18n-aria (aria-label), data-i18n-title (title).
-function applyStaticI18n(root = document) {
+export function applyStaticI18n(root = document) {
   document.documentElement.lang = lang;
   root.querySelectorAll('[data-i18n]').forEach(el => (el.textContent = t(el.dataset.i18n)));
   root.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', t(el.dataset.i18nAria)));

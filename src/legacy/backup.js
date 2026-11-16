@@ -1,4 +1,10 @@
-'use strict';
+/** Full backup and restore of every plan and the visions. */
+import { t, tp } from './i18n.js';
+import { SYNC_COLLS } from './sync.js';
+import { userStorage } from './users.js';
+import { saveVisions, visions } from './visions.js';
+import { SYNC_FORMAT, localStore, parseStore, toFile } from './drive.js';
+import { PLAN_FORMAT, download, fmtDate, isoDate, planKey, plans, render, renderPlanSwitch, save, settings, toast, today, uid, uniqueName } from './app.js';
 
 /* =========================================================
    Full backup: every plan and the visions in one file
@@ -9,16 +15,16 @@
    Loaded after drive.js and before app.js; uses their helpers only when called.
    ========================================================= */
 
-const backupFile = () => ({ ...toFile(localStore()), kind: 'backup', exportedAt: new Date().toISOString() });
+export const backupFile = () => ({ ...toFile(localStore()), kind: 'backup', exportedAt: new Date().toISOString() });
 
-function backupAll() {
+export function backupAll() {
   const blob = new Blob([JSON.stringify(backupFile(), null, 2)], { type: 'application/json' });
   download(blob, `${t('backup.file')} ${today()}.json`);
 }
 
 // Reads a backup file; throws an error with code 'invalid', 'plan' (a single plan's export) or
 // 'version' (from a newer app).
-function parseBackup(text) {
+export function parseBackup(text) {
   const fail = code => Object.assign(new Error(code), { code });
   let raw;
   try { raw = JSON.parse(text); } catch (e) { throw fail('invalid'); }
@@ -33,7 +39,7 @@ function parseBackup(text) {
 
 // Adds every plan in the backup as a new plan named "{name} ({date of the backup})" and the visions
 // whose id is not here. The open plan stays open. Returns how many of each were added.
-function restoreBackup({ store, exportedAt }) {
+export function restoreBackup({ store, exportedAt }) {
   const at = new Date(exportedAt);
   const date = isNaN(at) ? '' : ` (${fmtDate(isoDate(at))})`;
   let added = 0;
@@ -54,9 +60,9 @@ function restoreBackup({ store, exportedAt }) {
   return { plans: added, visions: missing.length };
 }
 
-const restoreFromFile = async file => restoreText(await file.text());
+export const restoreFromFile = async file => restoreText(await file.text());
 
-function restoreText(text) {
+export function restoreText(text) {
   let backup;
   try {
     backup = parseBackup(text);

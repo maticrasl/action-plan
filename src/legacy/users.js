@@ -1,4 +1,6 @@
-'use strict';
+/** Several users on one device: per-user storage keys. */
+import { LANG_KEY } from './i18n.js';
+import { uid } from './app.js';
 
 /* =========================================================
    Users: several people on one device, each signed in with their own Google account
@@ -13,10 +15,10 @@
    Loaded before visions.js and app.js, which read storage while they load.
    ========================================================= */
 
-const USERS_KEY = 'actionplan.users';
-const KEY_ROOT = 'actionplan.';
+export const USERS_KEY = 'actionplan.users';
+export const KEY_ROOT = 'actionplan.';
 
-function readUsers() {
+export function readUsers() {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(USERS_KEY)); } catch (e) { /* none yet */ }
   const list = Array.isArray(raw?.list) ? raw.list.filter(u => u && /^[\w-]{1,64}$/.test(u.id) && (u.ns === '' || u.ns === `u.${u.id}.`))
@@ -31,28 +33,29 @@ function readUsers() {
   return { current: list.some(u => u.id === raw.current) ? raw.current : list[0].id, list };
 }
 
-let users = readUsers();
-const currentUser = () => users.list.find(u => u.id === users.current);
+export let users = readUsers();
+export function setUsers(v) { users = v; }
+export const currentUser = () => users.list.find(u => u.id === users.current);
 
 // False when it could not be stored (storage full): a login must not go on then, or after a reload the
 // data it took over would belong to nobody again.
-function saveUsers() {
+export function saveUsers() {
   try { localStorage.setItem(USERS_KEY, JSON.stringify(users)); return true; } catch (e) { return false; }
 }
 
 // The current user's key for a device key: 'actionplan.plans' → 'actionplan.u.<id>.plans'.
-const userKey = key => (key.startsWith(KEY_ROOT) ? KEY_ROOT + currentUser().ns + key.slice(KEY_ROOT.length) : key);
+export const userKey = key => (key.startsWith(KEY_ROOT) ? KEY_ROOT + currentUser().ns + key.slice(KEY_ROOT.length) : key);
 
-const scoped = area => ({
+export const scoped = area => ({
   getItem: key => area().getItem(userKey(key)),
   setItem: (key, value) => area().setItem(userKey(key), value),
   removeItem: key => area().removeItem(userKey(key)),
 });
-const userStorage = scoped(() => localStorage);
-const userSession = scoped(() => sessionStorage);
+export const userStorage = scoped(() => localStorage);
+export const userSession = scoped(() => sessionStorage);
 
 // A new user with nothing stored yet, a guest until an account is set on it.
-function addUser() {
+export function addUser() {
   const id = uid();
   const user = { id, ns: `u.${id}.`, name: '', account: null };
   users.list.push(user);
@@ -61,7 +64,7 @@ function addUser() {
 }
 
 // Every key stored for this user on this device (removing a user deletes them).
-function userKeys(user, area = localStorage) {
+export function userKeys(user, area = localStorage) {
   const others = users.list.filter(u => u !== user && u.ns).map(u => KEY_ROOT + u.ns);
   const keys = [];
   for (let i = 0; i < area.length; i++) {
