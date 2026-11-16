@@ -1,0 +1,3 @@
+# Suite steps whose failure does not count on CI (GitHub's Linux Chrome), one step name per line.
+# They still gate locally. Add a step only for a rendering difference (fonts, sizes), and list it
+# in docs/restructure/STATUS.md.

@@ -3,7 +3,8 @@
 //   default  the suite: prints FAIL entries, the errors block and one summary line; exit 0 if all passed
 //   --perf   the draw-time budgets (tests/perf.js) on real time instead; prints their lines, never fails
 // On CI (CI=true), steps listed in tests/ci-skip.txt still run but their failure does not count.
-import { copyFileSync, existsSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { ROOT, dumpDom, injectedPage, readPre, stageApp, writePage } from './lib/chrome.mjs';
 
@@ -30,9 +31,12 @@ async function runPerf() {
 
 async function runSuite() {
   writePage(dir, 'index.html', injectedPage(dir, { before: ['pre.js'], after: ['more.js', 'test.js'] }));
-  const out = readPre(await dumpDom(dir, 'index.html'), 'OK');
+  const dom = await dumpDom(dir, 'index.html');
+  const out = readPre(dom, 'OK');
   if (out === null || out.startsWith('HARNESS CRASH')) {
-    console.log(out ?? 'NO RESULT (the suite did not finish within the virtual-time budget, or the page failed to load)');
+    const saved = join(tmpdir(), 'actionplan-last-dom.html');
+    writeFileSync(saved, dom);
+    console.log(out ?? `NO RESULT (the suite did not finish within the virtual-time budget, or the page failed to load); page dump (${dom.length} bytes): ${saved}`);
     return 1;
   }
   if (verbose) console.log(out);
@@ -45,9 +49,11 @@ async function runSuite() {
   const steps = entries.filter(e => /^(PASS|FAIL) /.test(e));
   const errors = entries.find(e => e.startsWith('errors: '))?.slice(8) ?? 'missing';
   const skip = ciSkips();
-  const name = e => e.replace(/^FAIL /, '').split(/: |\n/)[0];
-  const failed = steps.filter(e => e.startsWith('FAIL ') && !skip.has(name(e)));
-  const skipped = steps.filter(e => e.startsWith('FAIL ') && skip.has(name(e)));
+  // Step names hold ": " themselves, so a listed name is matched as the start of the FAIL line.
+  const listed = e => [...skip].find(s => e === `FAIL ${s}` || e.startsWith(`FAIL ${s}: `) || e.startsWith(`FAIL ${s}\n`));
+  const name = e => listed(e) ?? e;
+  const failed = steps.filter(e => e.startsWith('FAIL ') && !listed(e));
+  const skipped = steps.filter(e => e.startsWith('FAIL ') && listed(e));
   if (!verbose) {
     failed.forEach(e => console.log(e.split('\n')[0])); // the stack only with --verbose
     if (errors !== 'none') console.log('errors: ' + errors);
