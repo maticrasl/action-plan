@@ -2,7 +2,7 @@
 
 | Phase | State |
 |---|---|
-| 00 baseline | done on branch `restructure/phase-00`, waiting for "ship it" (first CI run); known flake accepted |
+| 00 baseline | merged (PR #1); CI skip list in PR from `restructure/phase-00-ci`; known flake accepted |
 | 01 modules and build | not started |
 | 02 core leaves | not started |
 | 03 core domain | not started |
@@ -33,8 +33,16 @@ Compare against these after phases 7 and 8. Average ms per draw (budget in brack
 
 ## CI skip list (`tests/ci-skip.txt`)
 
-Empty. CI has not run yet: nothing is pushed before "ship it". If Linux Chrome fails steps for
-rendering reasons, list them there and here.
+These steps fail on GitHub's Linux Chrome (the same 4 in all 3 runs of PR #1) and still gate locally.
+Fixtures pass on Linux.
+
+- `routine cards: a short schedule tag that fits, the full one as its tooltip`: text width. It fails while
+  set to Slovenian and never switches back, so the next two fail as a result:
+- `monthly routines: the form shows the right fields and saves each option`
+- `monthly routines: check-ins, streaks and the week strip`
+- `item menu: show in another view, selected there`: a map box side 6 px off (658 → 664)
+
+Phase 9 (tests) can make the first step restore English in `finally` and take the two monthly steps off.
 
 ## Known flake in `test:browser` (owner, 2026-11-16: do not investigate)
 
