@@ -1,0 +1,1684 @@
+{
+  "format": "actionplan-sync",
+  "version": 1,
+  "plans": {
+    "list": [
+      {
+        "id": "00000000-0000-4000-8000-000000000079",
+        "name": "Everything",
+        "updatedAt": "2026-09-01T07:30:00.000Z"
+      }
+    ],
+    "deleted": {
+      "00000000-0000-4000-8000-000000000001": "2026-09-01T07:30:00.000Z"
+    }
+  },
+  "data": {
+    "00000000-0000-4000-8000-000000000079": {
+      "goals": [
+        {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "unit": "km",
+          "baseline": "5",
+          "current": "",
+          "target": "21.1",
+          "startDate": "2026-08-02",
+          "deadline": "2026-11-30",
+          "status": "active",
+          "category": "Health",
+          "title": "Run a half marathon",
+          "specific": "Finish the city half marathon (21.1 km) without walking breaks.",
+          "metric": "Longest continuous run",
+          "achievable": "I already run 8 km and can train 4 hours per week following a 16-week plan.",
+          "relevant": "Improves my health and gives me a challenge I care about.",
+          "period": "week",
+          "updatedAt": "2026-10-20T16:45:00.000Z",
+          "visions": [
+            "00000000-0000-4000-8000-000000000099"
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "unit": "€",
+          "baseline": "1000",
+          "current": "",
+          "target": "6000",
+          "startDate": "2026-07-03",
+          "deadline": "2027-04-29",
+          "status": "active",
+          "category": "Finance",
+          "title": "Save an emergency fund",
+          "specific": "Build a separate savings account covering 3 months of expenses.",
+          "metric": "Savings balance",
+          "achievable": "Automating a 450 € monthly transfer fits my budget after cutting subscriptions.",
+          "relevant": "Reduces financial stress and gives me freedom to make career choices.",
+          "visions": [
+            "00000000-0000-4000-8000-00000000009a",
+            "00000000-0000-4000-8000-00000000009b"
+          ],
+          "updatedAt": "2026-10-20T16:45:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000004",
+          "unit": "km",
+          "baseline": "5",
+          "current": "",
+          "target": "10",
+          "startDate": "2026-08-02",
+          "deadline": "2026-10-01",
+          "status": "active",
+          "category": "Health",
+          "title": "Run 10 km under 60 min",
+          "specific": "Complete a 10 km run in under 60 minutes as a stepping stone.",
+          "metric": "Distance run continuously",
+          "achievable": "Halfway point of the training plan; well within reach.",
+          "relevant": "Milestone toward the half marathon."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000005",
+          "unit": "kg",
+          "baseline": "81",
+          "current": "",
+          "target": "75",
+          "startDate": "2026-08-02",
+          "deadline": "2026-12-30",
+          "status": "active",
+          "category": "Health",
+          "title": "Reach 75 kg",
+          "specific": "Lose 6 kg so long runs are easier on my knees.",
+          "metric": "Body weight",
+          "achievable": "Half a kilo a week through training and fewer evening snacks is realistic.",
+          "relevant": "Lighter running means fewer injuries before the race."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000006",
+          "baseline": "0",
+          "current": "8",
+          "target": "8",
+          "startDate": "2026-06-03",
+          "deadline": "2026-08-22",
+          "status": "achieved",
+          "category": "Finance",
+          "title": "Finish a personal finance course",
+          "specific": "Complete all 8 modules of the online personal finance course.",
+          "metric": "Modules completed",
+          "unit": "modules",
+          "achievable": "One module a week fits into Sunday mornings.",
+          "relevant": "I want to understand budgeting before I start saving seriously."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000007",
+          "baseline": "0",
+          "current": "",
+          "target": "1500",
+          "startDate": "2026-10-01",
+          "deadline": "2027-06-28",
+          "status": "paused",
+          "category": "Learning",
+          "title": "Learn Spanish to A2",
+          "specific": "Reach A2 level in Spanish and know 1,500 everyday words.",
+          "metric": "Words learned",
+          "unit": "words",
+          "achievable": "15 minutes a day with an app adds up to 1,500 words in under a year.",
+          "relevant": "I want to talk with people when I travel to Spain.",
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000008",
+          "baseline": "0",
+          "current": "",
+          "target": "10",
+          "startDate": "2026-07-23",
+          "deadline": "2026-08-29",
+          "status": "active",
+          "category": "Finance",
+          "title": "Sell 10 unused items",
+          "specific": "Sell ten things I no longer use on an online marketplace.",
+          "metric": "Items sold",
+          "unit": "items",
+          "achievable": "The cellar is full of gear in good condition that people buy.",
+          "relevant": "Adds money to the emergency fund and frees up space."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000009",
+          "baseline": "0",
+          "current": "",
+          "target": "14",
+          "startDate": "2026-10-31",
+          "deadline": "2027-10-06",
+          "status": "active",
+          "category": "Travel",
+          "title": "Two weeks in Spain",
+          "specific": "Spend two weeks travelling through Spain, speaking Spanish day to day.",
+          "metric": "Days in Spain",
+          "unit": "days",
+          "achievable": "Possible once the fund is in place and my Spanish is good enough.",
+          "relevant": "A reward that puts the language and the savings to use."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000000a",
+          "progress": "activities",
+          "startDate": "2026-08-07",
+          "deadline": "2026-10-16",
+          "status": "active",
+          "category": "House renovation",
+          "title": "Renovate the bathroom",
+          "specific": "Finish the five steps of the bathroom renovation: quotes, demolition, plumbing, tiles and fittings.",
+          "achievable": "A contractor does the plumbing; I do the demolition and fittings at weekends.",
+          "relevant": "The old bathroom leaks and makes the whole house feel run-down."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000000b",
+          "unit": "€",
+          "baseline": "180",
+          "current": "",
+          "target": "120",
+          "startDate": "2026-07-03",
+          "deadline": "2027-02-28",
+          "status": "active",
+          "category": "House renovation",
+          "title": "Cut the heating bill to 120 € a month",
+          "specific": "Bring the average winter heating bill down from 180 € to 120 € a month.",
+          "metric": "Monthly heating bill",
+          "achievable": "Insulating the attic alone usually saves a quarter of the heat.",
+          "relevant": "Saves money every winter and makes the house warmer."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000000c",
+          "progress": "routines",
+          "startDate": "2026-07-28",
+          "deadline": "2027-01-29",
+          "status": "active",
+          "category": "Health",
+          "title": "Exercise regularly",
+          "specific": "Make exercise a habit: run three times a week and do strength training every Monday and Thursday.",
+          "achievable": "Short sessions count, and the days are flexible except for the two strength evenings.",
+          "relevant": "Regular exercise keeps me fit for the race and beyond it."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000000d",
+          "unit": "km",
+          "baseline": "12",
+          "current": "",
+          "target": "30",
+          "period": "week",
+          "startDate": "2026-07-28",
+          "deadline": "2027-01-29",
+          "status": "active",
+          "category": "Health",
+          "title": "Run 30 km a week",
+          "specific": "Build up to 30 km of running every week, so the long runs of the race plan feel easy.",
+          "metric": "Distance run per week",
+          "achievable": "Adding a kilometre or two each week from about 12 km is a safe pace.",
+          "relevant": "Weekly volume is what carries me through 21 km on race day."
+        }
+      ],
+      "states": [
+        {
+          "id": "00000000-0000-4000-8000-00000000000e",
+          "unit": "km",
+          "value": "8",
+          "date": "2026-08-30",
+          "history": [
+            {
+              "date": "2026-07-05",
+              "value": "4"
+            },
+            {
+              "date": "2026-07-12",
+              "value": "4.5"
+            },
+            {
+              "date": "2026-07-19",
+              "value": "4.5"
+            },
+            {
+              "date": "2026-07-26",
+              "value": "5"
+            },
+            {
+              "date": "2026-08-02",
+              "value": "5"
+            },
+            {
+              "date": "2026-08-09",
+              "value": "6"
+            },
+            {
+              "date": "2026-08-16",
+              "value": "6.5"
+            },
+            {
+              "date": "2026-08-23",
+              "value": "7.5"
+            },
+            {
+              "date": "2026-08-30",
+              "value": "8"
+            }
+          ],
+          "title": "Running fitness",
+          "description": "The longest distance I can run at an easy, conversational pace, from the running app after the weekend long run."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000000f",
+          "unit": "€",
+          "value": "1900",
+          "date": "2026-08-27",
+          "history": [
+            {
+              "date": "2026-05-04",
+              "value": "550"
+            },
+            {
+              "date": "2026-06-03",
+              "value": "800"
+            },
+            {
+              "date": "2026-06-18",
+              "value": "760"
+            },
+            {
+              "date": "2026-07-03",
+              "value": "1000"
+            },
+            {
+              "date": "2026-07-18",
+              "value": "1080"
+            },
+            {
+              "date": "2026-08-02",
+              "value": "1450"
+            },
+            {
+              "date": "2026-08-12",
+              "value": "1520"
+            },
+            {
+              "date": "2026-08-27",
+              "value": "1900"
+            }
+          ],
+          "title": "Savings account",
+          "description": "Balance of the separate emergency-fund account, checked on the 1st of each month after the transfer."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "unit": "€",
+          "value": "2000",
+          "date": "2026-08-27",
+          "history": [
+            {
+              "date": "2026-02-28",
+              "value": "2450"
+            },
+            {
+              "date": "2026-03-30",
+              "value": "2380"
+            },
+            {
+              "date": "2026-04-29",
+              "value": "2520"
+            },
+            {
+              "date": "2026-05-29",
+              "value": "2300"
+            },
+            {
+              "date": "2026-06-28",
+              "value": "2250"
+            },
+            {
+              "date": "2026-07-28",
+              "value": "2100"
+            },
+            {
+              "date": "2026-08-27",
+              "value": "2000"
+            }
+          ],
+          "title": "Monthly spending",
+          "description": "Everything spent from the main account in a calendar month, groceries and eating out included. Lower is better."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000011",
+          "unit": "kg",
+          "value": "78",
+          "date": "2026-08-31",
+          "history": [
+            {
+              "date": "2026-06-30",
+              "value": "82.4"
+            },
+            {
+              "date": "2026-07-07",
+              "value": "82.1"
+            },
+            {
+              "date": "2026-07-14",
+              "value": "82.3"
+            },
+            {
+              "date": "2026-07-21",
+              "value": "81.8"
+            },
+            {
+              "date": "2026-07-28",
+              "value": "81.4"
+            },
+            {
+              "date": "2026-08-02",
+              "value": "81"
+            },
+            {
+              "date": "2026-08-09",
+              "value": "80.3"
+            },
+            {
+              "date": "2026-08-16",
+              "value": "79.6"
+            },
+            {
+              "date": "2026-08-23",
+              "value": "78.9"
+            },
+            {
+              "date": "2026-08-31",
+              "value": "78"
+            }
+          ],
+          "title": "Body weight",
+          "description": "Morning weight before breakfast, on the same scale, once a week."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "value": "6",
+          "date": "2026-08-28",
+          "history": [
+            {
+              "date": "2026-07-25",
+              "value": "0"
+            },
+            {
+              "date": "2026-07-30",
+              "value": "1"
+            },
+            {
+              "date": "2026-08-05",
+              "value": "2"
+            },
+            {
+              "date": "2026-08-12",
+              "value": "2"
+            },
+            {
+              "date": "2026-08-17",
+              "value": "3"
+            },
+            {
+              "date": "2026-08-21",
+              "value": "4"
+            },
+            {
+              "date": "2026-08-25",
+              "value": "5"
+            },
+            {
+              "date": "2026-08-28",
+              "value": "6"
+            }
+          ],
+          "title": "Items sold",
+          "description": "Unused things sold online or at the flea market, counted once the buyer has paid.",
+          "unit": "items"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "unit": "€",
+          "value": "165",
+          "date": "2026-08-27",
+          "history": [
+            {
+              "date": "2026-04-04",
+              "value": "195"
+            },
+            {
+              "date": "2026-05-04",
+              "value": "188"
+            },
+            {
+              "date": "2026-06-03",
+              "value": "184"
+            },
+            {
+              "date": "2026-07-03",
+              "value": "180"
+            },
+            {
+              "date": "2026-08-02",
+              "value": "172"
+            },
+            {
+              "date": "2026-08-27",
+              "value": "165"
+            }
+          ],
+          "title": "Heating bill",
+          "description": "The monthly heating bill from the utility company. Lower is better."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000014",
+          "unit": "km",
+          "cumulative": true,
+          "scale": "week",
+          "entries": [
+            {
+              "id": "00000000-0000-4000-8000-000000000034",
+              "date": "2026-07-28",
+              "amount": "4.5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000035",
+              "date": "2026-07-30",
+              "amount": "4.5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000036",
+              "date": "2026-08-01",
+              "amount": "7",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000037",
+              "date": "2026-08-04",
+              "amount": "5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000038",
+              "date": "2026-08-06",
+              "amount": "5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000039",
+              "date": "2026-08-08",
+              "amount": "7.5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-00000000003a",
+              "date": "2026-08-12",
+              "amount": "5.5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-00000000003b",
+              "date": "2026-08-18",
+              "amount": "6",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-00000000003c",
+              "date": "2026-08-20",
+              "amount": "8.5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-00000000003d",
+              "date": "2026-08-22",
+              "amount": "6.5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-00000000003e",
+              "date": "2026-08-25",
+              "amount": "6.5",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-00000000003f",
+              "date": "2026-08-27",
+              "amount": "9",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000040",
+              "date": "2026-08-29",
+              "amount": "7",
+              "routine": "00000000-0000-4000-8000-00000000002c"
+            }
+          ],
+          "value": "82.5",
+          "date": "2026-08-29",
+          "history": [],
+          "title": "Distance run",
+          "description": "Kilometres run, added after each run."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000008f",
+          "title": "Water drunk",
+          "description": "Litres a day",
+          "unit": "l",
+          "value": "3.5",
+          "date": "2026-08-30",
+          "history": [],
+          "cumulative": true,
+          "scale": "day",
+          "entries": [
+            {
+              "id": "00000000-0000-4000-8000-000000000093",
+              "date": "2026-08-29",
+              "amount": "1.5",
+              "routine": "00000000-0000-4000-8000-00000000007a"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000094",
+              "date": "2026-08-30",
+              "amount": "2",
+              "routine": "00000000-0000-4000-8000-00000000007a"
+            }
+          ],
+          "updatedAt": "2026-10-20T16:45:00.000Z",
+          "droppedEntries": {
+            "00000000-0000-4000-8000-000000000095": 1
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000090",
+          "title": "Weight",
+          "description": "",
+          "unit": "kg",
+          "value": "80.8",
+          "date": "2026-11-16",
+          "history": [
+            {
+              "date": "2026-08-12",
+              "value": "82.4"
+            },
+            {
+              "date": "2026-08-22",
+              "value": "81.9"
+            },
+            {
+              "date": "2026-08-28",
+              "value": "81.2"
+            },
+            {
+              "date": "2026-11-16",
+              "value": "80.8"
+            }
+          ],
+          "updatedAt": "2026-11-16T11:00:00.000Z",
+          "dropped": {
+            "2026-10-10": 1
+          }
+        }
+      ],
+      "activities": [
+        {
+          "id": "00000000-0000-4000-8000-000000000015",
+          "status": "done",
+          "startDate": "2026-08-02",
+          "dueDate": "2026-08-12",
+          "title": "Buy proper running shoes",
+          "description": "Gait analysis at the sports store."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000016",
+          "status": "doing",
+          "startDate": "2026-08-02",
+          "dueDate": "2026-11-28",
+          "title": "Follow 16-week training plan",
+          "description": "3 runs + 1 strength session per week."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000018",
+          "status": "doing",
+          "startDate": "2026-09-22",
+          "dueDate": "2026-09-29",
+          "title": "Run a 10 km test race",
+          "description": "Local Sunday race.",
+          "autoStarted": "2026-09-22",
+          "updatedAt": "2026-11-16T11:00:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000019",
+          "status": "done",
+          "startDate": "2026-07-03",
+          "dueDate": "2026-07-08",
+          "title": "Automate monthly savings transfer",
+          "description": "450 € on the 1st of each month."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000001a",
+          "status": "doing",
+          "startDate": "2026-08-18",
+          "dueDate": "2026-08-31",
+          "title": "Cancel unused subscriptions",
+          "description": "Streaming, gym #2, cloud storage.",
+          "autoStarted": "2026-08-18",
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000001b",
+          "status": "todo",
+          "startDate": "2026-08-12",
+          "dueDate": "2026-10-31",
+          "repeat": {
+            "every": 1,
+            "unit": "week",
+            "times": 5
+          },
+          "checkins": {
+            "2026-08-12": 1,
+            "2026-08-13": 1,
+            "2026-08-17": 1,
+            "2026-08-18": 1,
+            "2026-08-19": 1,
+            "2026-08-20": 1,
+            "2026-08-21": 1,
+            "2026-08-24": 1,
+            "2026-08-25": 1,
+            "2026-08-26": 1,
+            "2026-08-27": 1,
+            "2026-08-28": 1,
+            "2026-08-31": 1
+          },
+          "title": "Cook at home 5 days a week",
+          "description": "Meal prep on Sundays."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000001c",
+          "status": "doing",
+          "startDate": "2026-08-02",
+          "dueDate": "2026-09-27",
+          "title": "Weeks 1–8: base building",
+          "description": "3 easy runs per week."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000001d",
+          "status": "doing",
+          "startDate": "2026-09-28",
+          "dueDate": "2026-11-28",
+          "title": "Weeks 9–16: race-specific training",
+          "description": "Intervals and tempo runs.",
+          "autoStarted": "2026-09-28",
+          "updatedAt": "2026-11-16T11:00:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000001e",
+          "status": "todo",
+          "dueDate": "2026-11-15",
+          "title": "Long run of 18 km",
+          "description": "Final test before the race."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000001f",
+          "status": "done",
+          "startDate": "2026-08-18",
+          "dueDate": "2026-08-22",
+          "title": "Review bank statements",
+          "description": "Find all recurring payments."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000020",
+          "status": "doing",
+          "startDate": "2026-08-23",
+          "dueDate": "2026-08-31",
+          "title": "Cancel streaming services",
+          "description": "",
+          "autoStarted": "2026-08-23",
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000021",
+          "status": "doing",
+          "startDate": "2026-08-07",
+          "dueDate": "2026-10-31",
+          "title": "Cut evening snacks",
+          "description": "Fruit instead of crisps after 8 pm."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000022",
+          "status": "doing",
+          "startDate": "2026-08-17",
+          "dueDate": "2026-09-11",
+          "title": "List items for sale",
+          "description": "Photos and prices for the bike, skis and desk.",
+          "list": [
+            {
+              "id": "00000000-0000-4000-8000-00000000002e",
+              "text": "Bike",
+              "done": true
+            },
+            {
+              "id": "00000000-0000-4000-8000-00000000002f",
+              "text": "Skis",
+              "done": false
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000030",
+              "text": "Desk",
+              "done": false
+            }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000023",
+          "status": "done",
+          "startDate": "2026-06-03",
+          "dueDate": "2026-08-20",
+          "title": "Finish all course modules",
+          "description": ""
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000024",
+          "status": "doing",
+          "startDate": "2026-10-01",
+          "dueDate": "2026-10-06",
+          "title": "Choose a language app",
+          "description": "Try three apps for a week each.",
+          "autoStarted": "2026-10-01",
+          "updatedAt": "2026-11-16T11:00:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000025",
+          "status": "done",
+          "startDate": "2026-08-07",
+          "dueDate": "2026-08-17",
+          "title": "Get three contractor quotes",
+          "description": "Compare price, timing and references."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000026",
+          "status": "done",
+          "startDate": "2026-08-20",
+          "dueDate": "2026-08-28",
+          "title": "Remove the old tiles",
+          "description": "Weekend job; rent a skip for the rubble."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000027",
+          "status": "doing",
+          "startDate": "2026-08-29",
+          "dueDate": "2026-10-01",
+          "title": "Bathroom works",
+          "description": "Plumbing, then tiles, then fittings."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000028",
+          "status": "doing",
+          "startDate": "2026-08-29",
+          "dueDate": "2026-09-09",
+          "title": "Replace the plumbing",
+          "description": "Done by the contractor."
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000029",
+          "status": "doing",
+          "startDate": "2026-09-10",
+          "dueDate": "2026-09-21",
+          "title": "Lay the new tiles",
+          "description": "",
+          "autoStarted": "2026-09-10",
+          "updatedAt": "2026-11-16T11:00:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000002a",
+          "status": "doing",
+          "startDate": "2026-09-22",
+          "dueDate": "2026-10-01",
+          "title": "Install the shower, sink and toilet",
+          "description": "",
+          "autoStarted": "2026-09-22",
+          "updatedAt": "2026-11-16T11:00:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000002b",
+          "status": "doing",
+          "startDate": "2026-10-11",
+          "dueDate": "2026-10-31",
+          "title": "Insulate the attic",
+          "description": "20 cm of mineral wool between the rafters.",
+          "autoStarted": "2026-10-11",
+          "updatedAt": "2026-11-16T11:00:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000002c",
+          "status": "todo",
+          "startDate": "2026-07-28",
+          "repeat": {
+            "every": 1,
+            "unit": "week",
+            "times": 3
+          },
+          "checkins": {
+            "2026-07-28": 1,
+            "2026-07-30": 1,
+            "2026-08-01": 1,
+            "2026-08-04": 1,
+            "2026-08-06": 1,
+            "2026-08-08": 1,
+            "2026-08-12": 1,
+            "2026-08-18": 1,
+            "2026-08-20": 1,
+            "2026-08-22": 1,
+            "2026-08-25": 1,
+            "2026-08-27": 1,
+            "2026-08-29": 1
+          },
+          "title": "Run 3 times a week",
+          "description": "Any days; a short easy run counts too."
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000002d",
+          "status": "todo",
+          "startDate": "2026-08-04",
+          "repeat": {
+            "every": 1,
+            "unit": "week",
+            "days": [
+              0,
+              3
+            ]
+          },
+          "checkins": {
+            "2026-08-06": 1,
+            "2026-08-10": 1,
+            "2026-08-13": 1,
+            "2026-08-17": 1,
+            "2026-08-24": 1,
+            "2026-08-27": 1,
+            "2026-08-31": 1
+          },
+          "title": "Strength training",
+          "description": "30 minutes of core and leg exercises in the evening.",
+          "list": [
+            {
+              "id": "00000000-0000-4000-8000-000000000031",
+              "text": "Squats",
+              "done": false
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000032",
+              "text": "Lunges",
+              "done": false
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000033",
+              "text": "Plank",
+              "done": false
+            }
+          ],
+          "listDays": {
+            "2026-08-06": {
+              "00000000-0000-4000-8000-000000000031": 1,
+              "00000000-0000-4000-8000-000000000032": 1,
+              "00000000-0000-4000-8000-000000000033": 1
+            },
+            "2026-08-10": {
+              "00000000-0000-4000-8000-000000000031": 1,
+              "00000000-0000-4000-8000-000000000032": 1,
+              "00000000-0000-4000-8000-000000000033": 1
+            },
+            "2026-08-13": {
+              "00000000-0000-4000-8000-000000000031": 1,
+              "00000000-0000-4000-8000-000000000032": 1,
+              "00000000-0000-4000-8000-000000000033": 1
+            },
+            "2026-08-17": {
+              "00000000-0000-4000-8000-000000000031": 1,
+              "00000000-0000-4000-8000-000000000032": 1,
+              "00000000-0000-4000-8000-000000000033": 1
+            },
+            "2026-08-24": {
+              "00000000-0000-4000-8000-000000000031": 1,
+              "00000000-0000-4000-8000-000000000032": 1,
+              "00000000-0000-4000-8000-000000000033": 1
+            },
+            "2026-08-27": {
+              "00000000-0000-4000-8000-000000000031": 1,
+              "00000000-0000-4000-8000-000000000032": 1,
+              "00000000-0000-4000-8000-000000000033": 1
+            },
+            "2026-08-31": {
+              "00000000-0000-4000-8000-000000000031": 1,
+              "00000000-0000-4000-8000-000000000032": 1,
+              "00000000-0000-4000-8000-000000000033": 1
+            }
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000007a",
+          "title": "Stretch every other day",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 2,
+            "unit": "day"
+          },
+          "checkins": {
+            "2026-08-31": 1,
+            "2026-08-30": 1,
+            "2026-08-29": 1,
+            "2026-08-27": 0,
+            "2026-08-24": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000007b",
+          "title": "Swim on Monday and Thursday",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 1,
+            "unit": "week",
+            "days": [
+              0,
+              3
+            ],
+            "makeUp": true
+          },
+          "checkins": {
+            "2026-08-30": 1,
+            "2026-08-29": 1,
+            "2026-08-28": 0,
+            "2026-08-26": 1,
+            "2026-08-23": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000007c",
+          "title": "Long walk every two weeks",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 2,
+            "unit": "week",
+            "times": 1
+          },
+          "checkins": {
+            "2026-08-29": 1,
+            "2026-08-28": 0,
+            "2026-08-27": 1,
+            "2026-08-25": 1,
+            "2026-08-22": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000007d",
+          "title": "Pay the rent",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 1,
+            "unit": "month",
+            "on": "day",
+            "day": 31
+          },
+          "checkins": {
+            "2026-08-31": 0,
+            "2026-08-30": 1,
+            "2026-08-29": 1,
+            "2026-08-27": 1,
+            "2026-08-24": 0
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000007e",
+          "title": "Review the budget",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 1,
+            "unit": "month",
+            "on": "lastDay"
+          },
+          "checkins": {
+            "2026-08-30": 1,
+            "2026-08-29": 1,
+            "2026-08-28": 1,
+            "2026-08-26": 0,
+            "2026-08-23": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000007f",
+          "title": "Book club",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 1,
+            "unit": "month",
+            "on": "nth",
+            "nth": -1,
+            "weekday": 3
+          },
+          "checkins": {
+            "2026-08-29": 1,
+            "2026-08-28": 1,
+            "2026-08-27": 0,
+            "2026-08-25": 1,
+            "2026-08-22": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000080",
+          "title": "Hike twice a month",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 1,
+            "unit": "month",
+            "times": 2
+          },
+          "checkins": {
+            "2026-08-31": 1,
+            "2026-08-30": 0,
+            "2026-08-29": 1,
+            "2026-08-27": 1,
+            "2026-08-24": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000081",
+          "title": "Yearly check-up",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-02-13",
+          "repeat": {
+            "every": 1,
+            "unit": "year"
+          },
+          "checkins": {
+            "2026-08-30": 0,
+            "2026-08-29": 1,
+            "2026-08-28": 1,
+            "2026-08-26": 1,
+            "2026-08-23": 0
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000082",
+          "title": "Ten guitar lessons",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 1,
+            "unit": "week",
+            "days": [
+              2
+            ],
+            "count": 10
+          },
+          "dueDate": "2026-10-04",
+          "checkins": {
+            "2026-08-29": 1,
+            "2026-08-28": 1,
+            "2026-08-27": 1,
+            "2026-08-25": 0,
+            "2026-08-22": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000083",
+          "title": "Old weekly habit",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "times": 2,
+            "per": "week"
+          },
+          "checkins": {
+            "2026-08-31": 1,
+            "2026-08-30": 1,
+            "2026-08-29": 0,
+            "2026-08-27": 1,
+            "2026-08-24": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000084",
+          "title": "Old set days",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "days": [
+              1,
+              4
+            ]
+          },
+          "checkins": {
+            "2026-08-30": 1,
+            "2026-08-29": 0,
+            "2026-08-28": 1,
+            "2026-08-26": 1,
+            "2026-08-23": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000085",
+          "title": "Old monthly on a weekday",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 1,
+            "unit": "month",
+            "on": "weekday"
+          },
+          "checkins": {
+            "2026-08-29": 0,
+            "2026-08-28": 1,
+            "2026-08-27": 1,
+            "2026-08-25": 1,
+            "2026-08-22": 0
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000089",
+          "title": "Morning list",
+          "description": "",
+          "status": "todo",
+          "startDate": "2026-08-02",
+          "repeat": {
+            "every": 1,
+            "unit": "day"
+          },
+          "list": [
+            {
+              "id": "00000000-0000-4000-8000-000000000086",
+              "text": "Water"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000087",
+              "text": "Stretch"
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000088",
+              "text": "Plan the day"
+            }
+          ],
+          "listDays": {
+            "2026-08-30": {
+              "00000000-0000-4000-8000-000000000086": 1,
+              "00000000-0000-4000-8000-000000000087": 1,
+              "00000000-0000-4000-8000-000000000088": 1
+            },
+            "2026-08-31": {
+              "00000000-0000-4000-8000-000000000086": 1,
+              "00000000-0000-4000-8000-000000000087": 0
+            }
+          },
+          "checkins": {
+            "2026-08-30": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000008c",
+          "title": "Pack for the trip",
+          "description": "",
+          "status": "doing",
+          "startDate": "2026-08-02",
+          "dueDate": "2026-09-11",
+          "list": [
+            {
+              "id": "00000000-0000-4000-8000-00000000008a",
+              "text": "Tent",
+              "done": true,
+              "at": "2026-09-01T07:30:00.000Z"
+            },
+            {
+              "id": "00000000-0000-4000-8000-00000000008b",
+              "text": "Stove",
+              "done": false
+            }
+          ],
+          "droppedItems": {
+            "00000000-0000-4000-8000-00000000008d": 1
+          },
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000008e",
+          "title": "Starts on its own",
+          "description": "",
+          "status": "doing",
+          "startDate": "2026-09-02",
+          "dueDate": "2026-09-06",
+          "updatedAt": "2026-11-16T11:00:00.000Z",
+          "autoStarted": "2026-09-02"
+        }
+      ],
+      "relations": [
+        {
+          "id": "00000000-0000-4000-8000-000000000041",
+          "from": "00000000-0000-4000-8000-000000000004",
+          "to": "00000000-0000-4000-8000-000000000002",
+          "type": "subgoal"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000042",
+          "from": "00000000-0000-4000-8000-000000000005",
+          "to": "00000000-0000-4000-8000-000000000002",
+          "type": "subgoal"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000043",
+          "from": "00000000-0000-4000-8000-000000000008",
+          "to": "00000000-0000-4000-8000-000000000003",
+          "type": "subgoal"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000044",
+          "from": "00000000-0000-4000-8000-000000000003",
+          "to": "00000000-0000-4000-8000-000000000006",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000045",
+          "from": "00000000-0000-4000-8000-000000000009",
+          "to": "00000000-0000-4000-8000-000000000007",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000046",
+          "from": "00000000-0000-4000-8000-000000000009",
+          "to": "00000000-0000-4000-8000-000000000003",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000047",
+          "from": "00000000-0000-4000-8000-00000000000e",
+          "to": "00000000-0000-4000-8000-000000000002",
+          "type": "measures"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000048",
+          "from": "00000000-0000-4000-8000-00000000000e",
+          "to": "00000000-0000-4000-8000-000000000004",
+          "type": "measures"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000049",
+          "from": "00000000-0000-4000-8000-00000000000f",
+          "to": "00000000-0000-4000-8000-000000000003",
+          "type": "measures"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000004a",
+          "from": "00000000-0000-4000-8000-000000000011",
+          "to": "00000000-0000-4000-8000-000000000005",
+          "type": "measures"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000004b",
+          "from": "00000000-0000-4000-8000-000000000012",
+          "to": "00000000-0000-4000-8000-000000000008",
+          "type": "measures"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000004c",
+          "from": "00000000-0000-4000-8000-000000000013",
+          "to": "00000000-0000-4000-8000-00000000000b",
+          "type": "measures"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000004d",
+          "from": "00000000-0000-4000-8000-000000000014",
+          "to": "00000000-0000-4000-8000-00000000000d",
+          "type": "measures"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000004e",
+          "from": "00000000-0000-4000-8000-00000000000d",
+          "to": "00000000-0000-4000-8000-000000000002",
+          "type": "subgoal"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000004f",
+          "from": "00000000-0000-4000-8000-00000000002c",
+          "to": "00000000-0000-4000-8000-000000000014",
+          "type": "improves"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000050",
+          "from": "00000000-0000-4000-8000-000000000015",
+          "to": "00000000-0000-4000-8000-000000000002",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000051",
+          "from": "00000000-0000-4000-8000-000000000016",
+          "to": "00000000-0000-4000-8000-000000000002",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000052",
+          "from": "00000000-0000-4000-8000-000000000016",
+          "to": "00000000-0000-4000-8000-000000000004",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000054",
+          "from": "00000000-0000-4000-8000-000000000018",
+          "to": "00000000-0000-4000-8000-000000000004",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000055",
+          "from": "00000000-0000-4000-8000-000000000019",
+          "to": "00000000-0000-4000-8000-000000000003",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000056",
+          "from": "00000000-0000-4000-8000-00000000001a",
+          "to": "00000000-0000-4000-8000-000000000003",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000057",
+          "from": "00000000-0000-4000-8000-00000000001b",
+          "to": "00000000-0000-4000-8000-000000000003",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000058",
+          "from": "00000000-0000-4000-8000-000000000021",
+          "to": "00000000-0000-4000-8000-000000000005",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000059",
+          "from": "00000000-0000-4000-8000-000000000022",
+          "to": "00000000-0000-4000-8000-000000000008",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000005a",
+          "from": "00000000-0000-4000-8000-000000000023",
+          "to": "00000000-0000-4000-8000-000000000006",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000005b",
+          "from": "00000000-0000-4000-8000-000000000024",
+          "to": "00000000-0000-4000-8000-000000000007",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000005c",
+          "from": "00000000-0000-4000-8000-000000000025",
+          "to": "00000000-0000-4000-8000-00000000000a",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000005d",
+          "from": "00000000-0000-4000-8000-000000000026",
+          "to": "00000000-0000-4000-8000-00000000000a",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000005e",
+          "from": "00000000-0000-4000-8000-000000000027",
+          "to": "00000000-0000-4000-8000-00000000000a",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000005f",
+          "from": "00000000-0000-4000-8000-00000000002b",
+          "to": "00000000-0000-4000-8000-00000000000b",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000060",
+          "from": "00000000-0000-4000-8000-00000000002c",
+          "to": "00000000-0000-4000-8000-00000000000c",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000061",
+          "from": "00000000-0000-4000-8000-00000000002d",
+          "to": "00000000-0000-4000-8000-00000000000c",
+          "type": "contributes"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000062",
+          "from": "00000000-0000-4000-8000-00000000002c",
+          "to": "00000000-0000-4000-8000-00000000000e",
+          "type": "improves"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000063",
+          "from": "00000000-0000-4000-8000-000000000016",
+          "to": "00000000-0000-4000-8000-00000000000e",
+          "type": "improves"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000064",
+          "from": "00000000-0000-4000-8000-00000000001a",
+          "to": "00000000-0000-4000-8000-000000000010",
+          "type": "improves"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000065",
+          "from": "00000000-0000-4000-8000-00000000001b",
+          "to": "00000000-0000-4000-8000-000000000010",
+          "type": "improves"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000066",
+          "from": "00000000-0000-4000-8000-000000000021",
+          "to": "00000000-0000-4000-8000-000000000011",
+          "type": "improves"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000067",
+          "from": "00000000-0000-4000-8000-000000000022",
+          "to": "00000000-0000-4000-8000-000000000012",
+          "type": "improves"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000068",
+          "from": "00000000-0000-4000-8000-00000000002b",
+          "to": "00000000-0000-4000-8000-000000000013",
+          "type": "improves"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000069",
+          "from": "00000000-0000-4000-8000-00000000001c",
+          "to": "00000000-0000-4000-8000-000000000016",
+          "type": "subactivity"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000006a",
+          "from": "00000000-0000-4000-8000-00000000001d",
+          "to": "00000000-0000-4000-8000-000000000016",
+          "type": "subactivity"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000006b",
+          "from": "00000000-0000-4000-8000-00000000001e",
+          "to": "00000000-0000-4000-8000-00000000001d",
+          "type": "subactivity"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000006c",
+          "from": "00000000-0000-4000-8000-00000000001f",
+          "to": "00000000-0000-4000-8000-00000000001a",
+          "type": "subactivity"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000006d",
+          "from": "00000000-0000-4000-8000-000000000020",
+          "to": "00000000-0000-4000-8000-00000000001a",
+          "type": "subactivity"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000006e",
+          "from": "00000000-0000-4000-8000-000000000028",
+          "to": "00000000-0000-4000-8000-000000000027",
+          "type": "subactivity"
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000006f",
+          "from": "00000000-0000-4000-8000-000000000029",
+          "to": "00000000-0000-4000-8000-000000000027",
+          "type": "subactivity"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000070",
+          "from": "00000000-0000-4000-8000-00000000002a",
+          "to": "00000000-0000-4000-8000-000000000027",
+          "type": "subactivity"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000071",
+          "from": "00000000-0000-4000-8000-000000000016",
+          "to": "00000000-0000-4000-8000-000000000015",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000072",
+          "from": "00000000-0000-4000-8000-00000000001d",
+          "to": "00000000-0000-4000-8000-00000000001c",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000073",
+          "from": "00000000-0000-4000-8000-000000000018",
+          "to": "00000000-0000-4000-8000-00000000001c",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000074",
+          "from": "00000000-0000-4000-8000-000000000020",
+          "to": "00000000-0000-4000-8000-00000000001f",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000075",
+          "from": "00000000-0000-4000-8000-000000000026",
+          "to": "00000000-0000-4000-8000-000000000025",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000076",
+          "from": "00000000-0000-4000-8000-000000000027",
+          "to": "00000000-0000-4000-8000-000000000025",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000077",
+          "from": "00000000-0000-4000-8000-000000000029",
+          "to": "00000000-0000-4000-8000-000000000028",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000078",
+          "from": "00000000-0000-4000-8000-00000000002a",
+          "to": "00000000-0000-4000-8000-000000000029",
+          "type": "depends"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000091",
+          "from": "00000000-0000-4000-8000-00000000007a",
+          "to": "00000000-0000-4000-8000-00000000008f",
+          "type": "improves",
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000092",
+          "from": "00000000-0000-4000-8000-00000000008f",
+          "to": "00000000-0000-4000-8000-000000000002",
+          "type": "measures",
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000096",
+          "from": "00000000-0000-4000-8000-000000000090",
+          "to": "00000000-0000-4000-8000-000000000003",
+          "type": "measures",
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000097",
+          "from": "00000000-0000-4000-8000-000000000004",
+          "to": "00000000-0000-4000-8000-000000000005",
+          "type": "depends",
+          "updatedAt": "2026-09-01T07:30:00.000Z"
+        }
+      ],
+      "deleted": {
+        "00000000-0000-4000-8000-000000000017": "2026-10-20T16:45:00.000Z",
+        "00000000-0000-4000-8000-000000000053": "2026-10-20T16:45:00.000Z"
+      }
+    }
+  },
+  "visions": {
+    "list": [
+      {
+        "id": "00000000-0000-4000-8000-000000000098",
+        "title": "A good life",
+        "description": "What it is all for",
+        "parents": [],
+        "updatedAt": "2026-10-20T16:45:00.000Z"
+      },
+      {
+        "id": "00000000-0000-4000-8000-000000000099",
+        "title": "A healthy body",
+        "parents": [
+          "00000000-0000-4000-8000-000000000098"
+        ],
+        "updatedAt": "2026-10-20T16:45:00.000Z"
+      },
+      {
+        "id": "00000000-0000-4000-8000-00000000009a",
+        "title": "A calm mind",
+        "parents": [
+          "00000000-0000-4000-8000-000000000098"
+        ],
+        "updatedAt": "2026-10-20T16:45:00.000Z"
+      },
+      {
+        "id": "00000000-0000-4000-8000-00000000009b",
+        "title": "Energy for the family",
+        "parents": [
+          "00000000-0000-4000-8000-000000000099",
+          "00000000-0000-4000-8000-00000000009a"
+        ],
+        "updatedAt": "2026-10-20T16:45:00.000Z"
+      }
+    ],
+    "deleted": {
+      "00000000-0000-4000-8000-00000000009c": "2026-11-16T11:00:00.000Z"
+    }
+  }
+}

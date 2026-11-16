@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "npm run test:browser",
+    "check": "npm run test:fixtures && npm run test:browser",
+    "test:fixtures": "node scripts/fixtures.mjs",
     "test:browser": "node scripts/run-suite.mjs",
     "perf": "node scripts/run-suite.mjs --perf",
     "outline": "node scripts/outline.mjs"
