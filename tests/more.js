@@ -2959,6 +2959,133 @@ window.moreTests = async ({ step, assert }) => {
     changeLanguage('en');
     return text.replace(/\s+/g, ' ').trim().slice(0, 120);
   });
+  await step('full backup: every plan and the visions in one file; restoring adds copies and missing visions', async () => {
+    const startId = plans.current, n0 = plans.list.length, v0 = clone(visions);
+    const src = addPlan(progressPlan());
+    const kept = { id: uid(), title: 'Kept vision', parents: [] }, lost = { id: uid(), title: 'Lost vision', parents: [kept.id] };
+    visions.list.push(kept, lost);
+    db.goals[0].visions = [lost.id];
+    save(); saveVisions();
+    const original = clone(db);
+
+    // The Settings button downloads one file in the sync file's format.
+    const [file] = await capture(() => $('#backupAllBtn').click());
+    const count = file.json.plans.list.length;
+    assert(file.name === `${t('backup.file')} ${today()}.json` && file.blob.type === 'application/json', `file name ${file.name}`);
+    eq([file.json.format, file.json.kind, file.json.version], ['actionplan-sync', 'backup', 1], 'sync format, marked as a backup');
+    assert(!isNaN(new Date(file.json.exportedAt)), 'dated');
+    eq(file.json.plans.list.map(p => p.id), plans.list.map(p => p.id), 'every plan listed');
+    eq(file.json.data[src.id], original, 'the open plan, with its progress');
+    eq(file.json.data[startId], clone(readPlan(startId)), 'a plan that is not open');
+    eq(file.json.visions.list, clone(visions.list), 'the visions');
+    eq(parseStore(JSON.stringify(file.json)).visions.list, clone(visions.list), 'the sync parser reads it');
+
+    // Lose a plan and a vision, change the kept vision, then restore.
+    deletePlan(src.id);
+    openPlan(startId);
+    visions.list = visions.list.filter(v => v.id !== lost.id);
+    findVision(kept.id).title = 'Kept vision, renamed since';
+    saveVisions();
+    const others = clone(plans.list), othersData = clone(plans.list.map(p => readPlan(p.id)));
+    await restoreFromFile(fileOf(file.json));
+    const date = fmtDate(isoDate(new Date(file.json.exportedAt)));
+    eq(plans.list.length, n0 + count, 'every plan in the file added');
+    eq(plans.list.slice(0, n0).map(p => [p.id, p.name]), others.map(p => [p.id, p.name]), 'plans that were here keep id and name');
+    eq(clone(plans.list.slice(0, n0).map(p => readPlan(p.id))), othersData, 'and their content');
+    eq(plans.current, startId, 'the open plan stays open');
+    const copy = plans.list.find(p => p.name === `${src.name} (${date})`);
+    assert(copy && copy.id !== src.id, 'the lost plan is back as a copy named with the backup\'s date');
+    const back = readPlan(copy.id);
+    for (const k of SYNC_COLLS) eq(back[k], original[k], `${k} identical`);
+    eq(back.deleted, {}, 'no deletions carried over');
+    assert(findVision(lost.id)?.title === 'Lost vision', 'the missing vision is back');
+    eq(visionParents(findVision(lost.id)), [kept.id], 'under its parent');
+    eq(findVision(kept.id).title, 'Kept vision, renamed since', 'a vision that is here is left alone');
+    eq(visions.list.filter(v => v.id === kept.id).length, 1, 'and not doubled');
+    assert(!visions.deleted[lost.id], 'its deletion is forgotten, so sync keeps it');
+    eq(JSON.parse(userStorage.getItem(VISIONS_KEY)).list.map(v => v.id), visions.list.map(v => v.id), 'visions stored');
+    eq($('#toast').textContent, `${tp('backup.done', count)}. ${tp('backup.visions', 1)}`, 'toast counts both');
+    assert(servingGoals(lost.id).some(s => s.plan.id === copy.id), 'the copied goal serves the vision again');
+
+    // Restoring the same file again: copies get a number, no vision is added twice.
+    const vn = visions.list.length;
+    restoreText(JSON.stringify(file.json));
+    assert(plans.list.some(p => p.name === `${src.name} (${date}) 2`), 'a second copy gets a number');
+    eq(visions.list.length, vn, 'no vision added twice');
+    eq($('#toast').textContent, tp('backup.done', count), 'toast without visions');
+    eq(new Set(plans.list.map(p => p.id)).size, plans.list.length, 'plan ids unique');
+
+    // What sync uploads (no kind, no date) restores too, under the plain names.
+    const n2 = plans.list.length;
+    restoreText(JSON.stringify(toFile({ plans: { list: [{ id: 'x1', name: 'From Drive' }], deleted: {} }, data: { x1: progressPlan().data }, visions: { list: [], deleted: {} } })));
+    assert(plans.list.length === n2 + 1 && plans.list.at(-1).name === 'From Drive', 'a sync file without a date');
+
+    // Files that are not backups change nothing and say why.
+    const n3 = plans.list.length, vis = clone(visions);
+    const refused = (f, key, m) => {
+      restoreText(typeof f === 'string' ? f : JSON.stringify(f));
+      assert(plans.list.length === n3 && $('#toast').textContent === t(key), m);
+      eq(visions, vis, m + ': visions untouched');
+    };
+    refused('not json', 'err.import', 'not JSON');
+    refused('null', 'err.import', 'null');
+    refused({ format: 'something-else', plans: { list: [] } }, 'err.import', 'another format');
+    refused({ format: 'actionplan-sync', version: 1 }, 'err.import', 'no plan list');
+    refused(planFile('full'), 'backup.isPlan', 'a single plan\'s export');
+    refused({ name: 'Legacy', goals: [] }, 'backup.isPlan', 'an old plan export without a header');
+    refused({ ...file.json, version: 2 }, 'backup.newer', 'from a newer version');
+
+    // Unsafe ids and markup in a file do not reach the page.
+    restoreText(JSON.stringify({ format: 'actionplan-sync', version: 1, kind: 'backup', exportedAt: 'never',
+      plans: { list: [{ id: 'ok', name: '<img src=x onerror=alert(1)>' }, { id: '"><b>', name: 'bad id' }] },
+      data: { ok: { goals: [{ id: 'g1', title: 'G' }, { id: '<i>', title: 'bad' }] } },
+      visions: { list: [{ id: '<u>', title: 'bad' }, { id: 'vok', title: '<b>bold</b>', parents: [] }, { id: 'vok', title: 'twice', parents: [] }] } }));
+    const odd = plans.list.at(-1);
+    assert(plans.list.length === n3 + 1 && odd.name === '<img src=x onerror=alert(1)>', 'only the plan with a plain id; no date when the file has none');
+    eq(readPlan(odd.id).goals.map(g => g.id), ['g1'], 'items with unsafe ids dropped');
+    eq(visions.list.filter(v => v.id === 'vok' || v.id === '<u>').map(v => v.title), ['<b>bold</b>'], 'visions with unsafe ids dropped, a repeated id added once');
+    assert(!document.querySelector('img[src="x"]'), 'the name is not markup in the plan switcher');
+
+    // The Settings file picker restores, resets itself and closes Settings.
+    $('#settingsBtn').click();
+    const input = $('#backupInput'), n4 = plans.list.length;
+    assert(settings.open && settings.contains(input) && settings.contains($('#backupAllBtn')) && input.accept.includes('.json'), 'both in Settings');
+    const dt = new DataTransfer();
+    dt.items.add(fileOf(file.json));
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    // Reading the file takes real time, which the test's virtual clock does not wait for: poll.
+    for (let i = 0; i < 100 && plans.list.length === n4; i++) await new Promise(r => setTimeout(r, 20));
+    assert(plans.list.length === n4 + count && input.value === '' && !settings.open, 'picked file restored, picker reset, Settings closed');
+
+    // Storage full: the plan written before it filled up stays, the other is not listed, the message says so.
+    const n5 = plans.list.length, set = Storage.prototype.setItem;
+    let newPlans = 0;
+    Storage.prototype.setItem = function (k, v) {
+      if (k.includes('actionplan.plan.') && !plans.list.some(p => k.endsWith('.' + p.id)) && ++newPlans > 1) throw new Error('full');
+      return set.call(this, k, v);
+    };
+    try {
+      restoreText(JSON.stringify(toFile({ plans: { list: [{ id: 'a', name: 'Fits' }, { id: 'b', name: 'Does not fit' }], deleted: {} }, data: {}, visions: { list: [], deleted: {} } })));
+    } finally { Storage.prototype.setItem = set; }
+    assert(plans.list.length === n5 + 1 && plans.list.at(-1).name === 'Fits', 'only the plan that was stored is listed');
+    eq($('#toast').textContent, t('err.storage'), 'storage message');
+
+    // Slovenian wording.
+    changeLanguage('sl');
+    assert($('#backupAllBtn').textContent === I18N.sl.strings['backup.all'] && input.previousElementSibling.textContent === I18N.sl.strings['backup.restore'], 'buttons in Slovenian');
+    assert(tp('backup.done', 2) === 'Dodana 2 načrta kot kopiji' && tp('backup.visions', 3) === 'Vrnjene 3 manjkajoče vizije', 'Slovenian plurals');
+    const [slFile] = await capture(() => backupAll());
+    assert(slFile.name.startsWith(I18N.sl.strings['backup.file'] + ' '), `Slovenian file name ${slFile.name}`);
+    changeLanguage('en');
+
+    plans.list.slice(n0).map(p => p.id).forEach(deletePlan);
+    openPlan(startId);
+    visions = v0; saveVisions(); render();
+    eq(plans.list.length, n0, 'cleaned up');
+    return `${count} plans, ${file.json.visions.list.length} visions`;
+  });
+
   /* ---------- Merging one plan into another ---------- */
 
   const mrg = $('#planMerge');
