@@ -1,5 +1,10 @@
 # CLAUDE.md
 
+## Restructuring in progress — feature freeze
+Follow `docs/restructure/RULES.md`. No features until `docs/restructure/STATUS.md` says done.
+Commands: `npm run check` (all checks, quiet), `npm run outline -- <file>`, `npm run perf`.
+Never read `js/app.js` or `tests/more.js` whole.
+
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
