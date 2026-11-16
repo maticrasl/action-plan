@@ -2,5 +2,10 @@
   "name": "action-plan",
   "private": true,
   "type": "module",
-  "scripts": {}
+  "scripts": {
+    "check": "npm run test:browser",
+    "test:browser": "node scripts/run-suite.mjs",
+    "perf": "node scripts/run-suite.mjs --perf",
+    "outline": "node scripts/outline.mjs"
+  }
 }
