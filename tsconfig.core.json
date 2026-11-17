@@ -1,0 +1,10 @@
+{
+  // src/core and src/i18n without page APIs: `document`, `window` or `localStorage` there is a compile error,
+  // so a server can reuse them. Their unit tests run in Node and are checked by tsconfig.test.json.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"]
+  },
+  "include": ["src/core", "src/i18n"],
+  "exclude": ["src/**/*.test.ts"]
+}
