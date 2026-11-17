@@ -19,8 +19,7 @@ import { consistency, keptDay, makesUp, periodProgress, routineState, routineStr
 import { activityState, blockers, byActivities, byRoutines, countedActivities, goalActivities, goalCurrent, goalProgress, goalReached, goalRoutines, goalScope, goalState, isComplete, measuringState, ownMetric, smartCheck, startDueActivities } from '../core/progress';
 import { PLAN_FORMAT, PLAN_VERSION, dropRoutineDeps, hasProgress, normalize, parsePlanFile, progressCounts, resetProgress } from '../core/normalize';
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
-import { templateData, tplText } from '../core/templates/index';
-import { TEMPLATES, TPL_AREAS } from './templates.js';
+import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/index';
 
 export const STORAGE_KEY = 'actionplan.v1';
 
