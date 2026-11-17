@@ -95,6 +95,54 @@ export function propertyChunk(sf, objName, prop) {
 // The text a moved property becomes in its new file.
 export const propertyAsDecl = (name, c) => `${c.comments}export const ${name} = ${c.value};\n`;
 
+// The elements under one section header inside a top-level array literal (`TEMPLATES[Money]`):
+// `head` is the header's line, `body` the elements' whole lines (their commas included), and
+// start/end the lines to cut, from the header up to the next header or the closing bracket.
+export function arrayChunk(sf, arrName, title) {
+  const text = sf.text;
+  for (const stmt of sf.statements) {
+    if (!ts.isVariableStatement(stmt)) continue;
+    const decl = stmt.declarationList.declarations.find(d => ts.isIdentifier(d.name) && d.name.text === arrName);
+    if (!decl) continue;
+    const arr = decl.initializer;
+    if (!arr || !ts.isArrayLiteralExpression(arr)) throw new Error(`${arrName} is not an array literal`);
+    const heads = arraySections(sf, arr);
+    const i = heads.findIndex(h => h.title === title);
+    if (i < 0) throw new Error(`${arrName} has no section "${title}"; sections: ${heads.map(h => h.title).join(' | ')}`);
+    const start = lineStart(text, heads[i].pos);
+    const end = i + 1 < heads.length ? lineStart(text, heads[i + 1].pos) : lineStart(text, arr.getEnd() - 1);
+    const nodes = arr.elements.filter(e => e.getStart() >= start && e.getStart() < end);
+    if (!nodes.length) throw new Error(`section "${title}" of ${arrName} is empty`);
+    const comments = attachedComments(text, nodes[0]);
+    const bodyStart = lineStart(text, comments.length ? comments[0].pos : nodes[0].getStart());
+    const bodyEnd = lineEnd(text, nodes.at(-1).end);
+    if (text.slice(nodes.at(-1).end, bodyEnd).replace(/,/, '').trim()) throw new Error(`${arrName}: more after the last element of "${title}" on its line`);
+    if (text.slice(lineEnd(text, heads[i].end), bodyStart).trim()) throw new Error(`${arrName}: something between the header "${title}" and its first element`);
+    return {
+      nodes,
+      start,
+      end,
+      bodyEnd,
+      indent: text.slice(bodyStart, nodes[0].getStart()).match(/^[ \t]*/)[0],
+      head: text.slice(heads[i].pos, lineEnd(text, heads[i].end)), // without the indent: it goes to the top level
+      body: text.slice(bodyStart, bodyEnd),
+    };
+  }
+  throw new Error(`no top-level ${arrName}`);
+}
+// The section headers inside an array literal, as { pos, end, title }.
+export function arraySections(sf, arr) {
+  const out = [];
+  for (const node of [...arr.elements, arr.getLastToken()])
+    for (const r of ts.getLeadingCommentRanges(sf.text, node.pos) ?? []) {
+      const m = sf.text.slice(r.pos, r.end).match(SECTION);
+      if (m) out.push({ pos: r.pos, end: r.end, title: m[1] });
+    }
+  return out;
+}
+// The declaration moved array elements become in their new file (the header goes above it).
+export const arrayAsDecl = (name, c) => `export const ${name} = [\n${c.body}];\n`;
+
 // Section header comments anywhere in the file, as { pos, title }.
 export function sections(sf) {
   const seen = new Set(), out = [];
