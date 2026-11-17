@@ -1,11 +1,12 @@
 /** The app: data model, storage, views, forms and event wiring. */
-import { I18N, applyStaticI18n, lang, locale, setLanguage, t, tp } from './i18n.js';
 import { TEMPLATES, TPL_AREAS, TPL_LANGS } from './templates.js';
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from './sync.js';
 import { saveUsers, userStorage, users } from './users.js';
 import { canParent, contributingIds, deleteVision, findVision, goalsReaching, loadVisions, ownVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion, visionAncestors, visionParents, visionRoots, visions } from './visions.js';
 import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
+import { I18N, lang, locale, t, tp } from '../i18n/index';
+import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
 
 /* =========================================================
    Data model

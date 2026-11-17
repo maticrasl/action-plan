@@ -1,9 +1,9 @@
 /** Visions: the global list above goals, stored apart from plans. */
-import { t } from './i18n.js';
 import { TOMBSTONE_DAYS, itemContent, mergeDeleted, newerOf, newestFirst, stamp } from './sync.js';
 import { userStorage } from './users.js';
 import { scheduleSync } from './drive.js';
 import { currentPlan, db, plans, readPlan, safeId, toast } from './app.js';
+import { t } from '../i18n/index';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")

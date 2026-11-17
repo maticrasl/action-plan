@@ -1,7 +1,7 @@
 /** The guided tour and help mode. */
-import { I18N, lang, t } from './i18n.js';
 import { scheduleSync } from './drive.js';
 import { $, changeLanguage, clamp, closeCtxMenu, createPlan, deletePlan, esc, itemCount, modal, openPlan, plans, prefs, render, renderPlanSwitch, sampleData, save, setView, settings, toast, ui, uniqueName } from './app.js';
+import { I18N, lang, t } from '../i18n/index';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode

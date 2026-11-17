@@ -1,5 +1,6 @@
 /** Boots the app: loads the modules in the old script order, then starts it. */
-import { applyStaticI18n, detectLang, setLang } from './legacy/i18n.js';
+import { setLang } from './i18n/index';
+import { applyStaticI18n, detectLang } from './ui/i18n-dom';
 import './legacy/config.js';
 import './legacy/templates.js';
 import { initTutorial, offerTour } from './legacy/tutorial.js';

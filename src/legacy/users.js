@@ -1,6 +1,6 @@
 /** Several users on one device: per-user storage keys. */
-import { LANG_KEY } from './i18n.js';
 import { uid } from './app.js';
+import { LANG_KEY } from '../ui/i18n-dom';
 
 /* =========================================================
    Users: several people on one device, each signed in with their own Google account
