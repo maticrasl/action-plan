@@ -3,7 +3,7 @@ import { TEMPLATES, TPL_AREAS, TPL_LANGS } from './templates.js';
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from './sync.js';
 import { saveUsers, userStorage, users } from './users.js';
-import { canParent, contributingIds, deleteVision, goalsReaching, loadVisions, ownVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion, visionAncestors, visionParents, visionRoots } from './visions.js';
+import { deleteVision, goalsReaching, loadVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion } from './visions.js';
 import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
@@ -11,7 +11,7 @@ import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../cor
 import { dateInput, daysUntil, fmtDate, fmtDay, fmtRel, fmtSpan, isoDate, parseDateInput, today } from '../core/dates';
 import { ACTIVITY_STATUS, GOAL_STATUS, KINDS, NODE_STATES, REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
 import { db, setDb, visions } from '../core/state';
-import { findVision } from '../core/visions';
+import { canParent, contributingIds, findVision, ownVisions, visionAncestors, visionParents, visionRoots } from '../core/visions';
 import { addRelation, ancestors, canRelate, collection, descendants, findEntity, kindList, possibleTypes, reaches, relLabel, relSignature, relsFrom, relsTo } from '../core/relations';
 import { addDays, daysBetween, isDueDay, isFlexible, isRoutine, lastOccurrence, monthDay, monthRule, nextDueDay, nthInMonth, periodOf, periodUnit, routineStart, runsOn, sched, weekday } from '../core/routines/schedule';
 import { checkedOn, dayItemsDone, followList, isList, isListRoutine, itemOn, listDone, setCheckin, setDayItems, tickable } from '../core/routines/checkins';
@@ -19,6 +19,7 @@ import { DAY_MS, dayNum, dayStr, isoOf } from '../core/days';
 import { PERIODS, SCALES, addEntry, calPeriod, convertState, deleteEntry, dropRoutineEntries, entriesOf, followLatest, goalPeriod, graphEntries, graphScale, improvedStates, isCumulative, lastPeriodTotal, migrateCumulative, periodTotals, refreshTotal, stateDate, stateScale, stateTotal, sumOf } from '../core/cumulative';
 import { consistency, keptDay, makesUp, periodProgress, routineState, routineStreak, routineToday } from '../core/routines/keeping';
 import { activityState, blockers, byActivities, byRoutines, countedActivities, goalActivities, goalCurrent, goalProgress, goalReached, goalRoutines, goalScope, goalState, isComplete, measuringState, ownMetric, smartCheck, startDueActivities } from '../core/progress';
+import { safeId } from '../core/normalize';
 
 export const STORAGE_KEY = 'actionplan.v1';
 
@@ -172,10 +173,6 @@ export function mergePlanInto(fromId, toId, remove = false) {
   renderPlanSwitch();
   render();
 }
-
-// Ids go into the page's HTML unescaped, so only items with a plain id are kept (a shared file could
-// hide markup in one); relationships need plain ids at both ends too.
-export const safeId = id => typeof id === 'string' && /^[\w-]{1,64}$/.test(id);
 
 // Nothing may depend on a routine; older plans, and edits meeting in sync, can hold such links.
 export const dropRoutineDeps = (rels, activities) => {
