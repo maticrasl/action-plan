@@ -13,7 +13,9 @@ import { ACTIVITY_STATUS, GOAL_STATUS, KINDS, NODE_STATES, PARENT_REL, REL_TYPES
 import { db, setDb, visions } from '../core/state';
 import { findVision } from '../core/visions';
 import { addRelation, ancestors, canRelate, collection, descendants, findEntity, kindList, possibleTypes, reaches, relLabel, relSignature, relsFrom, relsTo } from '../core/relations';
-import { isRoutine } from '../core/routines/schedule';
+import { addDays, daysBetween, isDueDay, isFlexible, isRoutine, lastOccurrence, monthDay, monthRule, nextDueDay, nthInMonth, periodOf, periodUnit, routineStart, runsOn, sched, unitFrom, unitIndex, weekday } from '../core/routines/schedule';
+import { checkedOn, dayItemsDone, followList, isList, isListRoutine, itemOn, listDone, setCheckin, setDayItems, tickable } from '../core/routines/checkins';
+import { DAY_MS, dayNum, dayStr, isoOf } from '../core/days';
 
 export const STORAGE_KEY = 'actionplan.v1';
 
@@ -410,32 +412,6 @@ export function goalScope(goalId) {
   return { goal, activity, state };
 }
 
-/* ---------- Routines: activities that repeat ----------
-   `repeat` is { every, unit: 'day' | 'week' | 'month' | 'year', ... }, like a calendar's custom
-   recurrence: every `every` days, weeks, months or years, counted from the start date.
-   - week: `days` (Monday = 0) it falls on, or `times`: any that many days per period;
-   - month: `on` 'day' (`day` of the month, or the start's; 29–31 fall on the last day of shorter
-     months), 'lastDay', 'nth' (the `nth` – 1 to 5, or -1 for the last – `weekday` of the month),
-     or `times`: any that many days per period. Older routines store 'weekday' or 'last', which
-     meant the start's n-th or last weekday; `sched` reads them as 'nth';
-   - year: on the start's day and month;
-   - `count`: it ends after that many occurrences (the due date is set to the last one).
-   Older plans store { times, per: 'week' | 'month' } or { days }; `sched` reads both.
-   `checkins` maps a date to 1 (done) or 0 (unticked, kept so sync can merge it). A routine runs
-   from its start date to its due date, if any. Weeks start on Monday. */
-
-/* A list is a one-off activity with `list`: items ({ id, text, done, at }) to tick off. It is done once
-   every item is ticked; unticking one puts a done list back in progress. `at` is when the item was
-   last ticked or renamed, and `droppedItems` keeps the ids of removed items, so sync can merge two
-   copies item by item. */
-export const isList = a => !isRoutine(a) && Array.isArray(a?.list);
-export const listDone = a => a.list.filter(i => i.done).length;
-export function followList(a) {
-  const n = listDone(a);
-  if (a.list.length && n === a.list.length) a.status = 'done';
-  else if (a.status === 'done' || (n && a.status === 'todo')) a.status = 'doing';
-}
-
 export function tickListItem(id, itemId, iso = today()) {
   const a = db.activities.find(x => x.id === id);
   if (a && isListRoutine(a)) return tickRoutineItem(a, itemId, iso);
@@ -451,14 +427,6 @@ export function tickListItem(id, itemId, iso = today()) {
   // The card is drawn anew (perhaps in another column): keep the keyboard on the item.
   justTicked($(`[data-li-tick="${id}"][data-li="${itemId}"]`))?.focus();
 }
-
-/* A list routine is a routine with a `list`: each day it is done, its items are ticked off anew.
-   `listDays` maps a date to { itemId: 1 | 0 } (0 kept so sync can merge an untick). Ticking the last
-   item ticks the day off; unticking one unticks it again. Ticking the day itself ticks every item. */
-export const isListRoutine = a => isRoutine(a) && Array.isArray(a?.list);
-export const itemOn = (a, iso, itemId) => a.listDays?.[iso]?.[itemId] === 1;
-export const dayItemsDone = (a, iso) => a.list.filter(i => itemOn(a, iso, i.id)).length;
-export const setDayItems = (a, iso, ticks) => { a.listDays = { ...a.listDays, [iso]: { ...a.listDays?.[iso], ...ticks } }; };
 
 export function tickRoutineItem(a, itemId, iso) {
   if (!tickable(a, iso) || !a.list.some(i => i.id === itemId)) return;
@@ -479,83 +447,6 @@ export function tickRoutineItem(a, itemId, iso) {
 }
 // A ticked item's box pops once; the class is only added here, so a later render does not replay it.
 export const justTicked = el => { if (el?.matches('.done')) el.classList.add('just'); return el; };
-// Monday = 0 (day 0 of the epoch, 1 January 1970, was a Thursday).
-export const weekday = iso => (dayNum(iso) + 3) % 7;
-export const addDays = (iso, n) => dayStr(dayNum(iso) + n);
-export const daysBetween = (from, to) => Array.from({ length: Math.max(0, dayNum(to) - dayNum(from) + 1) }, (_, i) => addDays(from, i));
-export const routineStart = a => a.startDate || a.createdAt || today();
-export const checkedOn = (a, iso) => a.checkins?.[iso] === 1;
-export const runsOn = (a, iso) => iso >= routineStart(a) && !(a.dueDate && iso > a.dueDate);
-export const monthDay = iso => Number(iso.slice(8));
-export const monthLength = iso => monthDay(isoOf(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0));
-export const nthInMonth = iso => Math.ceil(monthDay(iso) / 7);
-export const lastInMonth = iso => monthDay(iso) + 7 > monthLength(iso);
-
-export function sched(a) {
-  const r = a.repeat;
-  if (r.unit) return r.unit === 'month' && !r.times ? monthRule({ every: 1, ...r }, routineStart(a)) : { every: 1, ...r };
-  return r.days ? { every: 1, unit: 'week', days: r.days } : { every: 1, unit: r.per === 'month' ? 'month' : 'week', times: r.times };
-}
-// A monthly rule with everything it falls on spelled out (older ones took it from the start date).
-export function monthRule(s, start) {
-  if (s.on === 'lastDay') return s;
-  if (s.on === 'weekday' || s.on === 'last') return { ...s, on: 'nth', nth: s.on === 'last' ? -1 : nthInMonth(start), weekday: weekday(start) };
-  if (s.on === 'nth') return { ...s, nth: s.nth ?? nthInMonth(start), weekday: s.weekday ?? weekday(start) };
-  return { ...s, on: 'day', day: s.day || monthDay(start) };
-}
-
-// Flexible routines ask for a number of days per period; fixed ones fall on set days.
-export const isFlexible = a => !!sched(a).times;
-
-// Number of the day, week, month or year a date falls in, and the first day of one.
-export function unitIndex(iso, unit) {
-  const [y, m] = iso.split('-').map(Number);
-  return { day: dayNum(iso), week: Math.floor((dayNum(iso) + 3) / 7), month: y * 12 + m - 1, year: y }[unit];
-}
-export function unitFrom(i, unit) {
-  return { day: () => dayStr(i), week: () => dayStr(i * 7 - 3), month: () => isoOf(Math.floor(i / 12), i % 12, 1), year: () => isoOf(i, 0, 1) }[unit]();
-}
-
-// Whether a fixed routine falls on a date (a flexible one may be done on any day).
-export function isDueDay(a, iso) {
-  const s = sched(a);
-  if (s.times) return true;
-  const start = routineStart(a);
-  if ((unitIndex(iso, s.unit) - unitIndex(start, s.unit)) % s.every) return false;
-  if (s.unit === 'week') return (s.days || [weekday(start)]).includes(weekday(iso));
-  if (s.unit === 'month') {
-    if (s.on === 'lastDay') return monthDay(iso) === monthLength(iso);
-    if (s.on === 'nth') return weekday(iso) === s.weekday && (s.nth < 0 ? lastInMonth(iso) : nthInMonth(iso) === s.nth);
-    return monthDay(iso) === Math.min(s.day, monthLength(iso));
-  }
-  if (s.unit === 'year') return iso.slice(5) === start.slice(5);
-  return true;
-}
-
-// The period progress is shown for: a flexible routine's own (every 2 weeks: two weeks from the
-// start's week), or a fixed routine's calendar week (daily and weekly), month or year.
-export const periodUnit = a => { const s = sched(a); return s.times ? s.unit : s.unit === 'day' ? 'week' : s.unit; };
-
-export function periodOf(a, iso) {
-  const s = sched(a), unit = periodUnit(a);
-  const span = s.times ? s.every : 1;
-  const first = unitIndex(routineStart(a), unit);
-  const i = first + Math.floor((unitIndex(iso, unit) - first) / span) * span;
-  return { from: unitFrom(i, unit), to: addDays(unitFrom(i + span, unit), -1) };
-}
-
-// The date of the `count`-th occurrence: the last due day, or the end of the last period needed.
-export function lastOccurrence(a, count) {
-  const s = sched(a);
-  if (s.times) {
-    let p = periodOf(a, routineStart(a));
-    for (let k = 1; k < Math.ceil(count / s.times); k++) p = periodOf(a, addDays(p.to, 1));
-    return p.to;
-  }
-  let n = 0;
-  for (let d = routineStart(a), i = 0; i < 36600; d = addDays(d, 1), i++) if (isDueDay(a, d) && ++n >= count) return d;
-  return '';
-}
 
 /* Set days are strict: only a tick on a due day counts. With `repeat.makeUp` a tick on another day of
    the period counts too – it makes up for a missed due day (the earliest first) or counts ahead. */
@@ -748,12 +639,6 @@ export function shortBase(a) {
   }
   if (s.unit === 'month') return on(s.on === 'lastDay' ? t('rt.short.monthLast') : s.on === 'nth' ? `${nthWord(s.nth, s.weekday)} ${weekdayName(s.weekday)}` : t('rt.monthDay', { d: s.day }));
   return on(fmtDay(start, { day: 'numeric', month: 'short' }));
-}
-// The first day from `from` on which a fixed routine is due, or '' when it is not due again.
-export function nextDueDay(a, from = today()) {
-  const start = routineStart(a) > from ? routineStart(a) : from;
-  for (let d = start, i = 0; i < 36600 && runsOn(a, d); d = addDays(d, 1), i++) if (isDueDay(a, d)) return d;
-  return '';
 }
 
 // This period's progress; when nothing is due in it (an off week of every 2 weeks, before the
@@ -994,8 +879,6 @@ export function periodTotals(s, period) {
 
 export const improvedStates = a => relsFrom(a.id, 'improves').map(r => db.states.find(s => s.id === r.to)).filter(isCumulative);
 export const feedingRoutines = s => relsTo(s.id, 'improves').map(r => db.activities.find(a => a.id === r.from)).filter(isRoutine);
-export const tickable = (a, iso) => runsOn(a, iso) && iso <= today();
-export const setCheckin = (a, iso, on) => { a.checkins = { ...a.checkins, [iso]: on ? 1 : 0 }; };
 
 // Adds an amount. From a routine's tick it is tagged with the routine; added on the state, it ticks
 // the routines that feed the state that day, tagged when there is just one.
@@ -2211,9 +2094,6 @@ export function askDeleteItem(id) {
 
 // ZOOM presets and the MIN–MAX range for free zooming are in pixels per day.
 export const TL = { ROW: 40, ZOOM: { week: 30, month: 8, quarter: 2.6 }, MIN: 1.5, MAX: 80 };
-export const DAY_MS = 86400000;
-export const dayNum = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / DAY_MS; };
-export const dayStr = n => new Date(n * DAY_MS).toISOString().slice(0, 10);
 export const endOf = (kind, item) => (kind === 'goal' ? item.deadline : item.dueDate);
 // A routine that runs a set number of times ends where its start puts it: only the whole bar moves.
 export const fixedEnd = item => isRoutine(item) && !!item.repeat.count;
@@ -4187,7 +4067,6 @@ $('#modalForm').addEventListener('input', e => {
    Opens below the field on the field's date, else (for an end date) on the form's start date, else today. */
 
 export let cal = null; // { field, box, y, m, focus: 'yyyy-mm-dd' }
-export const isoOf = (y, m, d) => new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
 
 export function openCalendar(field) {
   closeCalendar();
