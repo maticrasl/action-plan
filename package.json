@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.core.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "eslint .",
     "test:unit": "vitest run --reporter=./scripts/vitest-quiet.mjs --passWithNoTests",
     "test:fixtures": "node scripts/fixtures.mjs",
