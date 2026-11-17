@@ -2,7 +2,9 @@
 
 ## Restructuring in progress — feature freeze
 Follow `docs/restructure/RULES.md`. No features until `docs/restructure/STATUS.md` says done.
-Commands: `npm run check` (all checks, quiet), `npm run outline -- <file>`, `npm run perf`,
+Commands: `npm run check` (all checks, quiet), `npm run check:fast` (tsc, eslint, unit tests),
+`npm run outline -- <file>`, `npm run map` (each file's purpose), `npm run move -- …` (moves
+declarations verbatim; usage at the top of `scripts/move-decls.mjs`), `npm run perf`,
 `npm run dev` (dev server), `npm run build` (into `dist/`), `npm run preview` (serves `dist/`).
 Sources: `src/main.ts` boots `src/legacy/*.js` (ES modules); `src/test-bridge.ts` exposes them to the suite.
 Never read `src/legacy/app.js` or `tests/more.js` whole.

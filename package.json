@@ -3,16 +3,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "npm run typecheck && npm run lint && npm run test:fixtures && npm run test:browser",
+    "check": "npm run -s check:fast && npm run -s test:fixtures && npm run -s test:browser",
+    "check:fast": "npm run -s typecheck && npm run -s lint && npm run -s test:unit",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.core.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "eslint .",
+    "test:unit": "vitest run --reporter=./scripts/vitest-quiet.mjs --passWithNoTests",
     "test:fixtures": "node scripts/fixtures.mjs",
     "test:browser": "node scripts/run-suite.mjs",
     "perf": "node scripts/run-suite.mjs --perf",
-    "outline": "node scripts/outline.mjs"
+    "outline": "node scripts/outline.mjs",
+    "map": "node scripts/map.mjs",
+    "move": "node scripts/move-decls.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -22,6 +26,7 @@
     "prettier": "^3.10.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.73.0",
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
   }
 }

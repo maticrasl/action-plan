@@ -1,6 +1,7 @@
 /** Change tracking and the per-item merge of plans and visions. */
 import { mergeVisions } from './visions.js';
-import { ACYCLIC, PARENT_REL, dropRoutineDeps, emptyDb, followList, isCumulative, refreshTotal } from './app.js';
+import { dropRoutineDeps, followList, isCumulative, refreshTotal } from './app.js';
+import { ACYCLIC, PARENT_REL, emptyDb } from '../core/model';
 
 /* =========================================================
    Sync groundwork: change tracking and per-item merge

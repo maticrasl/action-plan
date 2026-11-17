@@ -1,52 +1,23 @@
 /** The app: data model, storage, views, forms and event wiring. */
-import { I18N, applyStaticI18n, lang, locale, setLanguage, t, tp } from './i18n.js';
 import { TEMPLATES, TPL_AREAS, TPL_LANGS } from './templates.js';
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from './sync.js';
 import { saveUsers, userStorage, users } from './users.js';
 import { canParent, contributingIds, deleteVision, findVision, goalsReaching, loadVisions, ownVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion, visionAncestors, visionParents, visionRoots, visions } from './visions.js';
 import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
-
-/* =========================================================
-   Data model
-   ---------------------------------------------------------
-   goals      – SMART goals
-   states     – snapshots of "where I am now" (optionally numeric)
-   activities – concrete actions with status and due date
-   relations  – typed links between any two of the above
-   ========================================================= */
+import { I18N, lang, locale, t, tp } from '../i18n/index';
+import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
+import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
+import { dateInput, daysUntil, fmtDate, fmtDay, fmtRel, fmtSpan, isoDate, parseDateInput, today } from '../core/dates';
+import { ACTIVITY_STATUS, ACYCLIC, GOAL_STATUS, KINDS, NODE_STATES, PARENT_REL, REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
 
 export const STORAGE_KEY = 'actionplan.v1';
-
-// Labels for kinds, relation types and statuses live in i18n.js (kind.*, rel.*, activity.*, goal.*).
-export const KINDS = ['goal', 'state', 'activity'];
-
-// `from` lists the allowed source kinds; `to: 'same'` means the target must be the same kind as the source.
-export const REL_TYPES = {
-  contributes: { from: ['activity'],         to: ['goal'],     color: 'var(--contrib)' },
-  subgoal:     { from: ['goal'],             to: ['goal'],     color: 'var(--goal)', width: 1.6 },
-  subactivity: { from: ['activity'],         to: ['activity'], color: 'var(--activity)', width: 1.6 },
-  depends:     { from: ['activity', 'goal'], to: 'same',       color: 'var(--bad)', dash: true },
-  measures:    { from: ['state'],            to: ['goal'],     color: 'var(--rel-state)' },
-  improves:    { from: ['activity'],         to: ['state'],    color: 'var(--rel-state)', dash: true },
-};
-export const ACYCLIC = new Set(['depends', 'subgoal', 'subactivity']);
-// Links to visions, drawn on the map but kept on the goal (`visions`) and the vision (`parents`), not as relationships.
-export const VISION_RELS = {
-  serves:    { from: ['goal'],   to: ['vision'], color: 'var(--vision-ink)' },
-  subvision: { from: ['vision'], to: ['vision'], color: 'var(--vision-ink)', width: 1.6 },
-};
-export const PARENT_REL = { goal: 'subgoal', activity: 'subactivity' };
-
-export const ACTIVITY_STATUS = ['todo', 'doing', 'done'];
-export const GOAL_STATUS = ['active', 'achieved', 'paused'];
-// Visual state used to color goals and activities on the map.
-export const NODE_STATES = ['todo', 'doing', 'late', 'blocked', 'done'];
 
 export const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type) : type);
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
-export let db = emptyDb();
+// main.ts starts it as an empty plan before boot reads the user's own.
+export let db;
 export function setDb(v) { db = v; }
 // What the views show; each user starts from these (enterUser), then their remembered preferences.
 export const freshUi = () => ({
@@ -67,10 +38,6 @@ export const prefs = {
     try { userStorage.setItem(`${STORAGE_KEY}.${key}`, JSON.stringify(value)); } catch (e) { /* ignore */ }
   },
 };
-
-export function emptyDb() {
-  return { goals: [], states: [], activities: [], relations: [], deleted: {} };
-}
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.
@@ -232,75 +199,7 @@ export function normalize(data) {
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const viewEl = $('#view');
-export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-export const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
-
-// Local calendar date as YYYY-MM-DD.
-export function isoDate(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-export function today() {
-  return isoDate(new Date());
-}
-// Tests replace today; callers see the replacement through the live binding.
-// eslint-disable-next-line no-func-assign
-export function setToday(f) { today = f; }
-export function daysUntil(date) {
-  if (!date) return null;
-  return Math.round((new Date(date + 'T00:00') - new Date(today() + 'T00:00')) / 86400000);
-}
-// A date or number formatter for the app's language. Making one is slow (toLocaleString makes one on
-// every call), and a long table formats thousands of values, so each is made once and kept.
-export const formatters = new Map();
-export function formatter(Kind, opts) {
-  const key = `${Kind.name} ${locale()} ${JSON.stringify(opts)}`;
-  if (!formatters.has(key)) formatters.set(key, new Kind(locale(), opts));
-  return formatters.get(key);
-}
-export function fmtDate(date) {
-  if (!date) return '';
-  return formatter(Intl.DateTimeFormat, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(date + 'T00:00'));
-}
-// "today", "tomorrow" or "yesterday" for those days, else the date (`other` formats it); `cap` for one
-// that stands alone, such as a tag or a table cell.
-export function fmtRel(date, cap = false, other = fmtDate) {
-  const word = date && { '-1': 'yesterday', 0: 'today', 1: 'tomorrow' }[daysUntil(date)];
-  if (!word) return other(date);
-  const s = t('day.' + word);
-  return cap ? s.charAt(0).toLocaleUpperCase(locale()) + s.slice(1) : s;
-}
-// "3 Mar 2026 – tomorrow", or the one date there is.
-export const fmtSpan = (s, e, cap = false) => (s && e ? `${fmtRel(s, cap)} – ${fmtRel(e)}` : fmtRel(s || e, cap));
-// A yyyy-mm-dd date in the app's language, read as a calendar day (no time zone shift).
-export const fmtDay = (iso, opts) => formatter(Intl.DateTimeFormat, { ...opts, timeZone: 'UTC' }).format(new Date(iso + 'T00:00Z'));
-export function fmtNum(n) {
-  return formatter(Intl.NumberFormat, { maximumFractionDigits: 2 }).format(Number(n));
-}
-// A number typed with a decimal dot or comma ("78.5", "78,5", "1 234,5", "1,234.5"); NaN if it isn't one.
-export function parseNum(s) {
-  let v = String(s ?? '').trim().replace(/[\s  ']/g, '').replace(/^−/, '-');
-  const dot = v.lastIndexOf('.'), comma = v.lastIndexOf(',');
-  // With both, the last one is the decimal separator and the other groups thousands.
-  if (dot >= 0 && comma >= 0) v = dot > comma ? v.replace(/,/g, '') : v.replace(/\./g, '').replace(',', '.');
-  else v = v.replace(',', '.');
-  return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(v) ? Number(v) : NaN;
-}
-// A stored number ("78.5") as typed in the current language ("78,5" in Slovenian).
-export const numInput = v => (isNum(v) ? String(v).replace('.', (1.5).toLocaleString(locale()).charAt(1)) : v ?? '');
-// Dates are typed as dd/mm/yyyy (also accepting dots, dashes or spaces, and yyyy-mm-dd) and stored as yyyy-mm-dd.
-export function parseDateInput(s) {
-  s = String(s ?? '').trim();
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/), d, mo, y;
-  if (m) [, y, mo, d] = m.map(Number);
-  else if ((m = s.match(/^(\d{1,2})[/.\-\s]+(\d{1,2})[/.\-\s]+(\d{4})$/))) [, d, mo, y] = m.map(Number);
-  else return null;
-  const dt = new Date(Date.UTC(y, mo - 1, d));
-  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
-  return dt.toISOString().slice(0, 10);
-}
-export const dateInput = iso => (iso ? iso.split('-').reverse().join('/') : '');
 
 export const itemCount = () => db.goals.length + db.states.length + db.activities.length;
 
