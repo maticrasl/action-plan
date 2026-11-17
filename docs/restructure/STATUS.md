@@ -44,22 +44,16 @@ Fixtures pass on Linux.
 
 Phase 9 (tests) can make the first step restore English in `finally` and take the two monthly steps off.
 
-## Known flake in `test:browser` (owner, 2026-11-16: do not investigate)
+## `NO RESULT` flake in `test:browser`: cause found, fix in `tests/pre.js` (2026-11-17)
 
-A `NO RESULT` run is this flake, not a broken change: run `npm run check` again. Any other failure counts.
-
-- About 1 run in 15–20 prints `NO RESULT`: Chrome dumps the page before the suite writes `<pre id="OK">`.
-- Since phase 1 (test build over HTTP), on CI: 3 of 6 runs on 2026-11-17 were `NO RESULT`, each dumped at ~11 s
-  where a passing suite takes ~20 s; each re-run passed. Locally 0 of 6. A `NO RESULT` on `main` blocks the deploy
-  until re-run (`gh run rerun <id> --failed`). Owner to decide whether to investigate now.
-  `tests/run.sh` used the same Chrome flags and budget, so this predates phase 0. Fixtures never flaked (34 runs).
-- Caught once with the dump saved (the runner now saves it to `%TEMP%\actionplan-last-dom.html`): page loaded,
-  Timeline view, toast "Plan imported", no `OK` block. That run finished ~8 s sooner than the others, so the
-  dump came early, not late.
-- The suite normally uses ~38 s of the 60 s virtual-time budget (36 s under full CPU load).
-- Theory not confirmed: virtual time jumps to the 5-minute sync interval (`SYNC_EVERY`) while an import awaits a
-  real file read. Making `Blob.text()` slow by several seconds did not reproduce it at 60 s (2 attempts).
-  Not pursued further, by the owner's decision.
+- Was: about 1 run in 15–20 locally, 5 of 11 on CI on 2026-11-17; Chrome dumped the page early, without `<pre id="OK">`.
+- Cause: Chrome sets virtual time after `load` with `pauseIfNetworkFetchesPending` (`headless_command.js`), so it
+  stands still only for network fetches. While `Blob.text()` reads a file (imports, restores, downloaded files),
+  the page counts as idle and its timers run ahead; a slow read spends the rest of the 60 s budget. Reproduced
+  by making every read slow (30 MB through the same call): `NO RESULT` 2 of 2 at ~15 s; one read took 25–39 s virtual.
+- Fix: `tests/pre.js` reads blobs through `fetch(blob: URL)`, which holds virtual time. Same slow reads: 3 of 3
+  passed, longest read ~100 ms virtual. A `NO RESULT` now counts as a real failure; if it comes back, look for
+  another kind of real async work (FileReader, crypto, workers) that the suite awaits.
 
 ## Notes for the next phase
 
