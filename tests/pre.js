@@ -9,3 +9,14 @@ localStorage.setItem('actionplan.v1.tourSeen', 'true');
 window.requestAnimationFrame = cb => setTimeout(() => cb(performance.now()), 0);
 window.confirm = () => true;
 window.prompt = (msg, def) => 'Prompted plan';
+// Chrome's virtual time stands still for network fetches only. While Blob.text() reads a file, it
+// runs the page's timers ahead and can spend the whole --virtual-time-budget, so the page is dumped
+// before the suite ends (NO RESULT). Fetching a blob: URL holds virtual time like any fetch.
+// The originals are kept because the suite replaces URL.createObjectURL to catch downloads.
+{
+  const fetchUrl = fetch, toUrl = URL.createObjectURL, revoke = URL.revokeObjectURL;
+  Blob.prototype.text = async function () {
+    const url = toUrl(this);
+    try { return await (await fetchUrl(url)).text(); } finally { revoke(url); }
+  };
+}
