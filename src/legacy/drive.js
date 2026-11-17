@@ -3,12 +3,12 @@ import { GOOGLE_CLIENT_ID } from './config.js';
 import { offerTour, tour } from './tutorial.js';
 import { USERS_KEY, addUser, currentUser, readUsers, saveUsers, setUsers, userKeys, userSession, userStorage, users } from './users.js';
 import { applyVisions, plansVersion, setPlansVersion } from './visions.js';
-import { $, PLANS_KEY, enterUser, esc, normalize, planKey, plans, prefs, readPlan, render, renderPlanSwitch, setPlans, toast } from './app.js';
+import { $, PLANS_KEY, enterUser, esc, planKey, plans, prefs, readPlan, render, renderPlanSwitch, setPlans, toast } from './app.js';
 import { I18N, locale, t } from '../i18n/index';
 import { uid } from '../core/util';
 import { emptyDb } from '../core/model';
 import { db, setDb, visions } from '../core/state';
-import { safeId } from '../core/normalize';
+import { normalize, safeId } from '../core/normalize';
 import { normalizeVisions } from '../core/visions';
 import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from '../core/merge';
 
