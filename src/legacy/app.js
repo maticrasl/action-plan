@@ -9,42 +9,9 @@ import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
 import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
 import { dateInput, daysUntil, fmtDate, fmtDay, fmtRel, fmtSpan, isoDate, parseDateInput, today } from '../core/dates';
-
-/* =========================================================
-   Data model
-   ---------------------------------------------------------
-   goals      – SMART goals
-   states     – snapshots of "where I am now" (optionally numeric)
-   activities – concrete actions with status and due date
-   relations  – typed links between any two of the above
-   ========================================================= */
+import { ACTIVITY_STATUS, ACYCLIC, GOAL_STATUS, KINDS, NODE_STATES, PARENT_REL, REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
 
 export const STORAGE_KEY = 'actionplan.v1';
-
-// Labels for kinds, relation types and statuses live in i18n.js (kind.*, rel.*, activity.*, goal.*).
-export const KINDS = ['goal', 'state', 'activity'];
-
-// `from` lists the allowed source kinds; `to: 'same'` means the target must be the same kind as the source.
-export const REL_TYPES = {
-  contributes: { from: ['activity'],         to: ['goal'],     color: 'var(--contrib)' },
-  subgoal:     { from: ['goal'],             to: ['goal'],     color: 'var(--goal)', width: 1.6 },
-  subactivity: { from: ['activity'],         to: ['activity'], color: 'var(--activity)', width: 1.6 },
-  depends:     { from: ['activity', 'goal'], to: 'same',       color: 'var(--bad)', dash: true },
-  measures:    { from: ['state'],            to: ['goal'],     color: 'var(--rel-state)' },
-  improves:    { from: ['activity'],         to: ['state'],    color: 'var(--rel-state)', dash: true },
-};
-export const ACYCLIC = new Set(['depends', 'subgoal', 'subactivity']);
-// Links to visions, drawn on the map but kept on the goal (`visions`) and the vision (`parents`), not as relationships.
-export const VISION_RELS = {
-  serves:    { from: ['goal'],   to: ['vision'], color: 'var(--vision-ink)' },
-  subvision: { from: ['vision'], to: ['vision'], color: 'var(--vision-ink)', width: 1.6 },
-};
-export const PARENT_REL = { goal: 'subgoal', activity: 'subactivity' };
-
-export const ACTIVITY_STATUS = ['todo', 'doing', 'done'];
-export const GOAL_STATUS = ['active', 'achieved', 'paused'];
-// Visual state used to color goals and activities on the map.
-export const NODE_STATES = ['todo', 'doing', 'late', 'blocked', 'done'];
 
 export const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type) : type);
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
@@ -71,10 +38,6 @@ export const prefs = {
     try { userStorage.setItem(`${STORAGE_KEY}.${key}`, JSON.stringify(value)); } catch (e) { /* ignore */ }
   },
 };
-
-export function emptyDb() {
-  return { goals: [], states: [], activities: [], relations: [], deleted: {} };
-}
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.
