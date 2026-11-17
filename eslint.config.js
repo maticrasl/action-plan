@@ -24,5 +24,7 @@ export default tseslint.config(
     files: ['**/*.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    // As for the legacy code it is moved from.
+    rules: { '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none', ignoreRestSiblings: true }] },
   },
 );
