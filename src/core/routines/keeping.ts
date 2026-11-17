@@ -1,48 +1,78 @@
 /** Keeping a routine: progress per period, make-up days, the late rule, streaks and consistency. */
-import { addDays, daysBetween, isDueDay, isFlexible, periodOf, periodUnit, routineStart, runsOn, sched } from './schedule';
+import {
+  addDays,
+  daysBetween,
+  isDueDay,
+  isFlexible,
+  periodOf,
+  periodUnit,
+  routineStart,
+  runsOn,
+  sched,
+  type Routine,
+  type Span,
+} from './schedule';
 import { today } from '../dates';
 import { checkedOn } from './checkins';
 import { blockers } from '../progress';
+import type { ISODate, NodeState, Period } from '../model';
+
+// A period's check-ins against what it asks for.
+export interface PeriodProgress extends Span {
+  done: number;
+  target: number;
+  met: boolean;
+}
+// Due days kept in a row (unit 'day'), or periods met in a row.
+export interface Streak {
+  n: number;
+  unit: Period;
+}
+// What today asks of a routine (see routineToday).
+export type TodayAsk = 'done' | 'due' | 'makeUp' | 'any' | 'met' | 'rest';
 
 /* Set days are strict: only a tick on a due day counts. With `repeat.makeUp` a tick on another day of
    the period counts too – it makes up for a missed due day (the earliest first) or counts ahead. */
-export const makesUp = a => !isFlexible(a) && !!a.repeat?.makeUp;
+export const makesUp = (a: Routine): boolean => !isFlexible(a) && !!a.repeat?.makeUp;
 // The due days, up to yesterday, in the period around `iso` that ticks on other days made up for.
-export function madeUpDays(a, iso) {
+export function madeUpDays(a: Routine, iso: ISODate): Set<ISODate> {
   if (!makesUp(a)) return new Set();
-  const { from, to } = periodOf(a, iso), now = today();
+  const { from, to } = periodOf(a, iso),
+    now = today();
   const days = daysBetween(from, to < now ? to : now).filter(d => runsOn(a, d));
   const extra = days.filter(d => !isDueDay(a, d) && checkedOn(a, d)).length;
   return new Set(days.filter(d => d < now && isDueDay(a, d) && !checkedOn(a, d)).slice(0, extra));
 }
 // Whether a due day was kept: ticked, or made up for; the made-up days are worked out once per period.
-export function keptDay(a) {
-  const byPeriod = new Map();
+export function keptDay(a: Routine): (d: ISODate) => boolean {
+  const byPeriod = new Map<ISODate, Set<ISODate>>();
   return d => {
     if (checkedOn(a, d)) return true;
     if (!makesUp(a)) return false;
     const k = periodOf(a, d).from;
     if (!byPeriod.has(k)) byPeriod.set(k, madeUpDays(a, d));
-    return byPeriod.get(k).has(d);
+    return byPeriod.get(k)!.has(d);
   };
 }
 
 // Check-ins in the period around `iso` against what the period asks for. Specific days count only
 // when they are due (unless they can be made up); days before the start or after the end do not count.
-export function periodProgress(a, iso = today()) {
+export function periodProgress(a: Routine, iso: ISODate = today()): PeriodProgress {
   const { from, to } = periodOf(a, iso);
   const days = daysBetween(from, to).filter(d => runsOn(a, d));
   if (!isFlexible(a)) {
     const due = days.filter(d => isDueDay(a, d));
-    const done = makesUp(a) ? Math.min(due.length, days.filter(d => checkedOn(a, d)).length) : due.filter(d => checkedOn(a, d)).length;
+    const done = makesUp(a)
+      ? Math.min(due.length, days.filter(d => checkedOn(a, d)).length)
+      : due.filter(d => checkedOn(a, d)).length;
     return { from, to, done, target: due.length, met: due.length > 0 && done >= due.length };
   }
   const done = days.filter(d => checkedOn(a, d)).length;
-  const { times } = sched(a);
+  const times = sched(a).times!;
   return { from, to, done, target: times, met: done >= times };
 }
 
-export function routineState(a) {
+export function routineState(a: Routine): NodeState {
   const now = today();
   if (a.dueDate && a.dueDate < now) return 'done';
   if (routineStart(a) > now) return 'todo';
@@ -59,15 +89,17 @@ export function routineState(a) {
 // The day in this period from which a routine is behind, or '': a fixed routine's last missed due
 // day before today (ticks after it count), a flexible one's first day on which the days left could
 // no longer reach the target.
-export function behindSince(a, p, now) {
+export function behindSince(a: Routine, p: PeriodProgress, now: ISODate): ISODate {
   if (!isFlexible(a)) return missedDays(a, p.from, addDays(now, -1)).at(-1) || '';
-  return daysBetween(p.from, now).find(d => {
-    const before = daysBetween(p.from, addDays(d, -1)).filter(x => checkedOn(a, x)).length;
-    return p.target - before > daysBetween(d, p.to).filter(x => runsOn(a, x)).length;
-  }) || '';
+  return (
+    daysBetween(p.from, now).find(d => {
+      const before = daysBetween(p.from, addDays(d, -1)).filter(x => checkedOn(a, x)).length;
+      return p.target - before > daysBetween(d, p.to).filter(x => runsOn(a, x)).length;
+    }) || ''
+  );
 }
 // Due days of a fixed routine between two dates that were not ticked (nor made up for).
-export function missedDays(a, from, to) {
+export function missedDays(a: Routine, from: ISODate, to: ISODate): ISODate[] {
   if (isFlexible(a)) return [];
   const kept = keptDay(a);
   return daysBetween(from, to).filter(d => runsOn(a, d) && isDueDay(a, d) && !kept(d));
@@ -76,7 +108,7 @@ export function missedDays(a, from, to) {
 // What today asks of a running routine: 'done' (ticked), 'due' (a set day, or a flexible routine that
 // needs every day left), 'any' (a flexible one that can wait), 'met' (the period is done) or 'rest'
 // (not one of its days); null when it does not run today.
-export function routineToday(a) {
+export function routineToday(a: Routine): TodayAsk | null {
   const now = today();
   if (!runsOn(a, now)) return null;
   if (checkedOn(a, now)) return 'done';
@@ -93,8 +125,9 @@ export function routineToday(a) {
 
 // Periods met in a row (flexible) or due days ticked in a row (fixed); the current period or today
 // counts once done, and does not break the streak before that.
-export function routineStreak(a) {
-  const now = today(), start = routineStart(a);
+export function routineStreak(a: Routine): Streak {
+  const now = today(),
+    start = routineStart(a);
   let n = 0;
   if (!isFlexible(a)) {
     const kept = keptDay(a);
@@ -118,19 +151,22 @@ export function routineStreak(a) {
 // Share (0–1) of periods met (flexible) or due days ticked (fixed) since `from`, or null when there is
 // nothing to judge yet. The running period – and a first period cut short by the start – count
 // only once met; today counts only once ticked.
-export function consistency(a, from = '') {
+export function consistency(a: Routine, from: ISODate = ''): number | null {
   const now = today();
   const start = from > routineStart(a) ? from : routineStart(a);
   const end = a.dueDate && a.dueDate < now ? a.dueDate : now;
   if (start > end) return null;
-  let kept = 0, total = 0;
+  let kept = 0,
+    total = 0;
   if (!isFlexible(a)) {
     const keptOn = keptDay(a);
-    daysBetween(start, end).filter(d => isDueDay(a, d)).forEach(d => {
-      if (d === now && !checkedOn(a, d)) return;
-      total++;
-      if (keptOn(d)) kept++;
-    });
+    daysBetween(start, end)
+      .filter(d => isDueDay(a, d))
+      .forEach(d => {
+        if (d === now && !checkedOn(a, d)) return;
+        total++;
+        if (keptOn(d)) kept++;
+      });
   } else {
     for (let p = periodOf(a, start); p.from <= end; p = periodOf(a, addDays(p.to, 1))) {
       const { met } = periodProgress(a, p.from);
