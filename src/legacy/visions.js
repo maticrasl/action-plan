@@ -5,6 +5,7 @@ import { scheduleSync } from './drive.js';
 import { currentPlan, plans, readPlan, safeId, toast } from './app.js';
 import { t } from '../i18n/index';
 import { db, setVisions, visions } from '../core/state';
+import { findVision } from '../core/visions';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")
@@ -61,7 +62,6 @@ export function saveVisions() {
 
 /* ---------- The vision tree ---------- */
 
-export const findVision = id => visions.list.find(v => v.id === id);
 export const visionParents = v => (v.parents || []).filter(p => p !== v.id && findVision(p));
 export const visionRoots = () => visions.list.filter(v => !visionParents(v).length);
 export const visionChildren = id => visions.list.filter(v => visionParents(v).includes(id));
