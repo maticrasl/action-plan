@@ -1,24 +1,30 @@
 /** The app: data model, storage, views, forms and event wiring. */
-import { TEMPLATES, TPL_AREAS, TPL_LANGS } from './templates.js';
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
-import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from './sync.js';
 import { saveUsers, userStorage, users } from './users.js';
-import { canParent, contributingIds, deleteVision, findVision, goalsReaching, loadVisions, ownVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion, visionAncestors, visionParents, visionRoots, visions } from './visions.js';
+import { deleteVision, goalsReaching, loadVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion } from './visions.js';
 import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
 import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
 import { dateInput, daysUntil, fmtDate, fmtDay, fmtRel, fmtSpan, isoDate, parseDateInput, today } from '../core/dates';
-import { ACTIVITY_STATUS, ACYCLIC, GOAL_STATUS, KINDS, NODE_STATES, PARENT_REL, REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
+import { ACTIVITY_STATUS, GOAL_STATUS, KINDS, NODE_STATES, REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
+import { db, setDb, visions } from '../core/state';
+import { canParent, contributingIds, findVision, ownVisions, visionAncestors, visionParents, visionRoots } from '../core/visions';
+import { addRelation, ancestors, canRelate, collection, descendants, findEntity, kindList, possibleTypes, reaches, relLabel, relSignature, relsFrom, relsTo } from '../core/relations';
+import { addDays, daysBetween, isDueDay, isFlexible, isRoutine, lastOccurrence, monthDay, monthRule, nextDueDay, nthInMonth, periodOf, periodUnit, routineStart, runsOn, sched, weekday } from '../core/routines/schedule';
+import { checkedOn, dayItemsDone, followList, isList, isListRoutine, itemOn, listDone, setCheckin, setDayItems, tickable } from '../core/routines/checkins';
+import { DAY_MS, dayNum, dayStr, isoOf } from '../core/days';
+import { PERIODS, SCALES, addEntry, calPeriod, convertState, deleteEntry, dropRoutineEntries, entriesOf, followLatest, goalPeriod, graphEntries, graphScale, improvedStates, isCumulative, lastPeriodTotal, periodTotals, refreshTotal, stateDate, stateScale, stateTotal, sumOf } from '../core/cumulative';
+import { consistency, keptDay, makesUp, periodProgress, routineState, routineStreak, routineToday } from '../core/routines/keeping';
+import { activityState, blockers, byActivities, byRoutines, countedActivities, goalActivities, goalCurrent, goalProgress, goalReached, goalRoutines, goalScope, goalState, isComplete, measuringState, ownMetric, smartCheck, startDueActivities } from '../core/progress';
+import { PLAN_FORMAT, PLAN_VERSION, dropRoutineDeps, hasProgress, normalize, parsePlanFile, progressCounts, resetProgress } from '../core/normalize';
+import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
+import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/index';
 
 export const STORAGE_KEY = 'actionplan.v1';
 
-export const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type) : type);
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
-// main.ts starts it as an empty plan before boot reads the user's own.
-export let db;
-export function setDb(v) { db = v; }
 // What the views show; each user starts from these (enterUser), then their remembered preferences.
 export const freshUi = () => ({
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
@@ -66,7 +72,7 @@ export function load() {
   if (plans.list.length) {
     if (!currentPlan()) plans.current = plans.list[0].id;
     takePlanSnapshot(plans);
-    db = readPlan(plans.current);
+    setDb(readPlan(plans.current));
     takeSnapshot(db);
     return;
   }
@@ -78,7 +84,7 @@ export function load() {
   const id = uid();
   plans = { current: id, list: [{ id, name: t('plan.defaultName') }] };
   takePlanSnapshot({ list: [] }); // a brand-new plan list: nothing in it was deleted
-  db = legacy;
+  setDb(legacy);
   takeSnapshot(db);
   save();
 }
@@ -99,7 +105,7 @@ export function save() {
 
 export function openPlan(id) {
   plans.current = id;
-  db = readPlan(id);
+  setDb(readPlan(id));
   takeSnapshot(db);
   Object.assign(ui, { category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', mapSelected: null, mapRel: null, search: '', mapRefocus: true, rtWeek: {} });
   save();
@@ -127,7 +133,7 @@ export function createPlan(name, data = emptyDb()) {
   const id = uid();
   plans.list.push({ id, name });
   plans.current = id;
-  db = data;
+  setDb(data);
   takeSnapshot(db); // what a new plan starts with is not an edit
   save();
   openPlan(id);
@@ -168,33 +174,6 @@ export function mergePlanInto(fromId, toId, remove = false) {
   render();
 }
 
-// Ids go into the page's HTML unescaped, so only items with a plain id are kept (a shared file could
-// hide markup in one); relationships need plain ids at both ends too.
-export const safeId = id => typeof id === 'string' && /^[\w-]{1,64}$/.test(id);
-
-// Nothing may depend on a routine; older plans, and edits meeting in sync, can hold such links.
-export const dropRoutineDeps = (rels, activities) => {
-  const routines = new Set(activities.filter(isRoutine).map(a => a.id));
-  return rels.filter(r => !(r.type === 'depends' && routines.has(r.to)));
-};
-
-export function normalize(data) {
-  const d = emptyDb();
-  for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k].filter(x => x && typeof x === 'object' && safeId(x.id));
-  // "Is related to" links were dropped from the app; old plans and synced copies lose theirs here.
-  d.relations = d.relations.filter(r => safeId(r.from) && safeId(r.to) && r.type !== 'related');
-  d.relations = dropRoutineDeps(d.relations, d.activities);
-  if (data?.deleted && typeof data.deleted === 'object' && !Array.isArray(data.deleted)) d.deleted = data.deleted;
-  d.activities.forEach(a => {
-    if (Array.isArray(a.list)) a.list = a.list.filter(i => i && safeId(i.id) && typeof i.text === 'string');
-    else delete a.list;
-    if (!a.list || !a.droppedItems || typeof a.droppedItems !== 'object' || Array.isArray(a.droppedItems)) delete a.droppedItems;
-    if (!a.list || !a.listDays || typeof a.listDays !== 'object' || Array.isArray(a.listDays)) delete a.listDays;
-  });
-  migrateCumulative(d);
-  return d;
-}
-
 /* ---------- Utilities ---------- */
 
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -203,120 +182,7 @@ export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 
 export const itemCount = () => db.goals.length + db.states.length + db.activities.length;
 
-export function collection(kind) {
-  return { goal: db.goals, state: db.states, activity: db.activities }[kind];
-}
-export function findEntity(id) {
-  for (const kind of KINDS) {
-    const item = collection(kind).find(x => x.id === id);
-    if (item) return { kind, item };
-  }
-  const vision = findVision(id);
-  return vision ? { kind: 'vision', item: vision } : null;
-}
-
 /* ---------- Relations ---------- */
-
-export const relsFrom = (id, type) => db.relations.filter(r => r.from === id && (!type || r.type === type));
-export const relsTo = (id, type) => db.relations.filter(r => r.to === id && (!type || r.type === type));
-
-// True if `target` is reachable from `start` following edges of `type`.
-export function reaches(start, target, type, seen = new Set()) {
-  if (start === target) return true;
-  if (seen.has(start)) return false;
-  seen.add(start);
-  return relsFrom(start, type).some(r => reaches(r.to, target, type, seen));
-}
-
-// Parent chain (nearest first) following a parent relation such as 'subactivity'.
-export function ancestors(id, type) {
-  const out = [];
-  for (let r = relsFrom(id, type)[0]; r && !out.includes(r.to); r = relsFrom(r.to, type)[0]) out.push(r.to);
-  return out;
-}
-export function descendants(id, type) {
-  const out = [];
-  const queue = [id];
-  while (queue.length) {
-    relsTo(queue.shift(), type).forEach(r => {
-      if (!out.includes(r.from)) { out.push(r.from); queue.push(r.from); }
-    });
-  }
-  return out;
-}
-
-export const kindList = kinds => kinds.map(k => t('kindLower.' + k)).join(' / ');
-// Human-readable allowed direction, e.g. "activity → activity, goal → goal".
-export function relSignature(type) {
-  const d = REL_TYPES[type];
-  return d.from.map(f => `${kindList([f])} → ${kindList(d.to === 'same' ? [f] : d.to)}`).join(', ');
-}
-
-export function canRelate(from, to, type) {
-  const def = REL_TYPES[type];
-  const a = findEntity(from), b = findEntity(to);
-  if (!def || !a || !b) return t('err.unknown');
-  if (from === to) return t('err.self');
-  if (!def.from.includes(a.kind)) return t('err.relFrom', { rel: relLabel(type), kind: kindList(def.from) });
-  if (def.to === 'same' && b.kind !== a.kind) return t('err.relTo', { rel: relLabel(type), kind: kindList([a.kind]) });
-  if (Array.isArray(def.to) && !def.to.includes(b.kind)) return t('err.relTo', { rel: relLabel(type), kind: kindList(def.to) });
-  if (type === 'depends' && isRoutine(b.item)) return t('err.dependsRoutine');
-  if (db.relations.some(r => r.from === from && r.to === to && r.type === type)) return t('err.relExists');
-  if (Object.values(PARENT_REL).includes(type) && relsFrom(from, type).length) return t('err.oneParent');
-  if (ACYCLIC.has(type) && reaches(to, from, type)) return t('err.cycle');
-  const parentRel = PARENT_REL[a.kind];
-  if (parentRel && (type === 'depends' || type === parentRel)) {
-    if (dependsInLine(from, to, type, a.kind)) return t('err.lineDep');
-    if (wouldSelfBlock(from, to, type, a.kind)) return t('err.selfBlock');
-  }
-  return null;
-}
-
-// True if the link would leave an item depending on its own parent or sub-item, in either direction:
-// directly for a new dependency, or through the new parent line for a new sub-activity or sub-goal.
-export function dependsInLine(from, to, type, kind) {
-  const parentRel = PARENT_REL[kind];
-  if (type === 'depends') return [...ancestors(from, parentRel), ...descendants(from, parentRel)].includes(to);
-  const below = new Set([from, ...descendants(from, parentRel)]), above = new Set([to, ...ancestors(to, parentRel)]);
-  return db.relations.some(r => r.type === 'depends'
-    && ((below.has(r.from) && above.has(r.to)) || (above.has(r.from) && below.has(r.to))));
-}
-
-// Items `id` waits for: its own prerequisites plus those of every parent above it (see blockers).
-export const effectiveDeps = (id, kind) => [id, ...ancestors(id, PARENT_REL[kind])].flatMap(x => relsFrom(x, 'depends')).map(r => r.to);
-
-// True if adding the link would make an item wait for itself, e.g. a parent depending on its
-// own sub-activity: the sub-activity inherits that prerequisite, so both stay blocked for good.
-export function wouldSelfBlock(from, to, type, kind) {
-  const rel = { id: '', from, to, type };
-  db.relations.push(rel);
-  try {
-    const waitsForSelf = id => {
-      const seen = new Set(), queue = effectiveDeps(id, kind);
-      while (queue.length) {
-        const x = queue.shift();
-        if (x === id) return true;
-        if (!seen.has(x)) { seen.add(x); queue.push(...effectiveDeps(x, kind)); }
-      }
-      return false;
-    };
-    return [from, ...descendants(from, PARENT_REL[kind])].some(waitsForSelf);
-  } finally { db.relations.splice(db.relations.indexOf(rel), 1); }
-}
-
-export function addRelation(from, to, type) {
-  const err = canRelate(from, to, type);
-  if (err) return err;
-  db.relations.push({ id: uid(), from, to, type });
-  return null;
-}
-
-// Relationship types that can link `from` → `to`; an edited relationship (`ignoreId`) does not count against itself.
-export function possibleTypes(from, to, ignoreId) {
-  const all = db.relations;
-  db.relations = all.filter(r => r.id !== ignoreId);
-  try { return Object.keys(REL_TYPES).filter(k => !canRelate(from, to, k)); } finally { db.relations = all; }
-}
 
 // Replace all outgoing links of one type from an entity.
 export function setLinks(fromId, type, toIds) {
@@ -343,214 +209,6 @@ export function removeEntity(kind, id) {
   if (ui.mapSelected === id) ui.mapSelected = null;
 }
 
-/* ---------- SMART & progress ---------- */
-
-export function smartCheck(g) {
-  const errs = {};
-  if (!g.title || g.title.trim().length < 4) errs.title = t('err.title');
-  if (!g.specific || g.specific.trim().length < 15) errs.specific = t('err.specific');
-  // A goal measured by its activities or routines needs no metric or target of its own.
-  if (ownMetric(g)) {
-    if (!g.metric || !g.metric.trim()) errs.metric = t('err.metric');
-    if (!isNum(g.target)) errs.target = t('err.target');
-    else if (isNum(g.baseline) && Number(g.baseline) === Number(g.target)) errs.target = t('err.targetSame');
-  }
-  if (!g.achievable || g.achievable.trim().length < 10) errs.achievable = t('err.achievable');
-  if (!g.relevant || g.relevant.trim().length < 10) errs.relevant = t('err.relevant');
-  if (!g.deadline) errs.deadline = t('err.deadline');
-  else if (g.startDate && g.deadline <= g.startDate) errs.deadline = t('err.deadlineOrder');
-  return {
-    S: !errs.title && !errs.specific,
-    M: !errs.metric && !errs.target,
-    A: !errs.achievable,
-    R: !errs.relevant,
-    T: !errs.deadline,
-    errs,
-  };
-}
-
-// Latest numeric current-state linked via "measures" wins; otherwise the goal's own value.
-export function measuringState(g) {
-  return relsTo(g.id, 'measures')
-    .map(r => db.states.find(s => s.id === r.from))
-    .filter(s => s && isNum(stateValue(s)))
-    .sort((a, b) => (stateDate(b) || '').localeCompare(stateDate(a) || ''))[0] || null;
-}
-// What a state says about a goal: its value, or for a state that adds up and a goal counting it per
-// period the higher of this period's total and the last complete one's – so progress does not drop
-// when a period starts, and a period still under way counts once it is past the last one (for
-// better or worse). When lower is better (spend less), nothing counts before entries reach back into a
-// complete period: the first period under way, or an empty one before it, would look well under target.
-export const lowerBetter = g => Number(g.target) < (isNum(g.baseline) ? Number(g.baseline) : 0);
-export const lastPeriodLogged = (s, period) => entriesOf(s).some(e => e.date < calPeriod(period, today()).from);
-export function goalMeasure(s, g) {
-  const period = goalPeriod(g);
-  if (!isCumulative(s) || period === 'total') return Number(stateValue(s));
-  if (lowerBetter(g) && !lastPeriodLogged(s, period)) return null;
-  return Math.max(stateTotal(s, period), lastPeriodTotal(s, period));
-}
-export function goalCurrent(g) {
-  if (byRoutines(g)) return Math.round(goalProgress(g));
-  if (byActivities(g)) return countedActivities(g).filter(a => a.status === 'done').length;
-  const st = measuringState(g), v = st && goalMeasure(st, g);
-  if (st && v !== null) return v;
-  if (isNum(g.current)) return Number(g.current);
-  return isNum(g.baseline) ? Number(g.baseline) : 0;
-}
-export function goalProgress(g) {
-  if (g.status === 'achieved') return 100;
-  if (byRoutines(g)) {
-    const kept = goalRoutines(g).map(a => consistency(a, g.startDate)).filter(v => v !== null);
-    return kept.length ? (kept.reduce((sum, v) => sum + v, 0) / kept.length) * 100 : 0;
-  }
-  if (byActivities(g)) {
-    const total = countedActivities(g).length;
-    return total ? (goalCurrent(g) / total) * 100 : 0;
-  }
-  return metricProgress(g, goalCurrent(g));
-}
-export function metricProgress(g, current) {
-  const b = isNum(g.baseline) ? Number(g.baseline) : 0;
-  const target = Number(g.target);
-  if (!isNum(g.target) || target === b) return 0;
-  return clamp(((current - b) / (target - b)) * 100, 0, 100);
-}
-
-// Whether a goal has reached its target. For a goal counting a state that adds up per period,
-// only a complete period counts: one strong Wednesday does not reach "30 km a week". Consistency
-// has no target to reach (it is 100 % after the first tick).
-export function goalReached(g) {
-  if (g.status !== 'active' || byRoutines(g)) return false;
-  const st = ownMetric(g) ? measuringState(g) : null;
-  if (isCumulative(st) && goalPeriod(g) !== 'total') return (!lowerBetter(g) || lastPeriodLogged(st, goalPeriod(g))) && metricProgress(g, lastPeriodTotal(st, goalPeriod(g))) >= 100;
-  return goalProgress(g) >= 100;
-}
-
-// Activities working toward a goal: direct contributors plus all their sub-activities.
-export function goalActivities(g) {
-  const ids = new Set();
-  relsTo(g.id, 'contributes').forEach(r => [r.from, ...descendants(r.from, 'subactivity')].forEach(id => ids.add(id)));
-  return db.activities.filter(a => ids.has(a.id));
-}
-
-// Goals can measure progress by their activities instead of a metric (`progress: 'activities'`).
-export const byActivities = g => g.progress === 'activities';
-// The activities such a goal counts: the actual pieces of work (activities without sub-activities
-// of their own) under the goal and its sub-goals.
-export function countedActivities(g) {
-  return treeActivities(g).filter(a => !isRoutine(a) && !relsTo(a.id, 'subactivity').length);
-}
-
-// The activities working toward a goal and its sub-goals.
-export function treeActivities(g) {
-  const goals = [g, ...descendants(g.id, 'subgoal').map(id => db.goals.find(x => x.id === id)).filter(Boolean)];
-  const ids = new Set(goals.flatMap(x => goalActivities(x).map(a => a.id)));
-  return db.activities.filter(a => ids.has(a.id));
-}
-
-// Goals can also measure progress by how consistently their routines are kept (`progress: 'routines'`):
-// the routines working toward the goal and its sub-goals.
-export const byRoutines = g => g.progress === 'routines';
-// Measured by its own metric and target (form values say 'measure', stored goals leave it out).
-export const ownMetric = g => !g.progress || g.progress === 'measure';
-export const goalRoutines = g => treeActivities(g).filter(isRoutine);
-
-// A routine is complete once it has ended.
-export const isComplete = (kind, item) => (kind === 'goal' ? item.status === 'achieved'
-  : isRoutine(item) ? !!item.dueDate && item.dueDate < today() : item.status === 'done');
-
-// Unfinished items this one waits for – its own dependencies and those inherited from its parents.
-export function blockers(item, kind = 'activity') {
-  return [item.id, ...ancestors(item.id, PARENT_REL[kind])]
-    .flatMap(id => relsFrom(id, 'depends'))
-    .map(r => findEntity(r.to))
-    .filter(e => e && e.kind === kind && !isComplete(kind, e.item))
-    .map(e => e.item);
-}
-
-export function activityState(a) {
-  if (isRoutine(a)) return routineState(a);
-  if (a.status === 'done') return 'done';
-  if (blockers(a).length) return 'blocked';
-  if (a.dueDate && daysUntil(a.dueDate) < 0) return 'late';
-  return a.status === 'doing' ? 'doing' : 'todo';
-}
-// When its start date comes, an activity still to do is in progress. This happens once per start date
-// (`autoStarted` remembers which), so setting it back to "To do" sticks until the start date changes.
-export function startDueActivities() {
-  const now = today();
-  const due = db.activities.filter(a => !isRoutine(a) && a.status === 'todo' && a.startDate && a.startDate <= now && a.autoStarted !== a.startDate);
-  due.forEach(a => Object.assign(a, { status: 'doing', autoStarted: a.startDate }));
-  return due.length;
-}
-export function goalState(g) {
-  if (g.status === 'achieved') return 'done';
-  if (blockers(g, 'goal').length) return 'blocked';
-  if (g.deadline && daysUntil(g.deadline) < 0) return 'late';
-  if (g.status === 'paused') return 'todo';
-  return (g.startDate && g.startDate <= today()) || goalProgress(g) > 0 ? 'doing' : 'todo';
-}
-
-// Everything relevant to one goal: its sub-goals and prerequisite goals, the activity trees
-// working toward them (with their prerequisite chains), the activities waiting for those,
-// and the related current states.
-export function goalScope(goalId) {
-  const goal = new Set([goalId, ...descendants(goalId, 'subgoal')]);
-  [...goal].forEach(id => relsFrom(id, 'depends').forEach(r => goal.add(r.to)));
-
-  const activity = new Set();
-  const addActivity = id => {
-    if (activity.has(id)) return;
-    activity.add(id);
-    [...ancestors(id, 'subactivity'), ...descendants(id, 'subactivity')].forEach(addActivity);
-    relsFrom(id, 'depends').forEach(r => addActivity(r.to));
-  };
-  db.relations.filter(r => r.type === 'contributes' && goal.has(r.to)).forEach(r => addActivity(r.from));
-  // Activities that wait for this work belong here too (with their sub-activities), e.g. a former
-  // sub-activity turned into a dependency – but without pulling in the rest of their own trees.
-  const addWaiting = id => {
-    if (activity.has(id)) return;
-    [id, ...descendants(id, 'subactivity')].forEach(x => activity.add(x));
-    relsTo(id, 'depends').forEach(r => addWaiting(r.from));
-  };
-  [...activity].forEach(id => relsTo(id, 'depends').forEach(r => addWaiting(r.from)));
-
-  const state = new Set();
-  db.relations.forEach(r => {
-    if (r.type === 'measures' && goal.has(r.to)) state.add(r.from);
-    if (r.type === 'improves' && activity.has(r.from)) state.add(r.to);
-  });
-  return { goal, activity, state };
-}
-
-/* ---------- Routines: activities that repeat ----------
-   `repeat` is { every, unit: 'day' | 'week' | 'month' | 'year', ... }, like a calendar's custom
-   recurrence: every `every` days, weeks, months or years, counted from the start date.
-   - week: `days` (Monday = 0) it falls on, or `times`: any that many days per period;
-   - month: `on` 'day' (`day` of the month, or the start's; 29–31 fall on the last day of shorter
-     months), 'lastDay', 'nth' (the `nth` – 1 to 5, or -1 for the last – `weekday` of the month),
-     or `times`: any that many days per period. Older routines store 'weekday' or 'last', which
-     meant the start's n-th or last weekday; `sched` reads them as 'nth';
-   - year: on the start's day and month;
-   - `count`: it ends after that many occurrences (the due date is set to the last one).
-   Older plans store { times, per: 'week' | 'month' } or { days }; `sched` reads both.
-   `checkins` maps a date to 1 (done) or 0 (unticked, kept so sync can merge it). A routine runs
-   from its start date to its due date, if any. Weeks start on Monday. */
-
-export const isRoutine = a => !!a?.repeat;
-
-/* A list is a one-off activity with `list`: items ({ id, text, done, at }) to tick off. It is done once
-   every item is ticked; unticking one puts a done list back in progress. `at` is when the item was
-   last ticked or renamed, and `droppedItems` keeps the ids of removed items, so sync can merge two
-   copies item by item. */
-export const isList = a => !isRoutine(a) && Array.isArray(a?.list);
-export const listDone = a => a.list.filter(i => i.done).length;
-export function followList(a) {
-  const n = listDone(a);
-  if (a.list.length && n === a.list.length) a.status = 'done';
-  else if (a.status === 'done' || (n && a.status === 'todo')) a.status = 'doing';
-}
-
 export function tickListItem(id, itemId, iso = today()) {
   const a = db.activities.find(x => x.id === id);
   if (a && isListRoutine(a)) return tickRoutineItem(a, itemId, iso);
@@ -566,14 +224,6 @@ export function tickListItem(id, itemId, iso = today()) {
   // The card is drawn anew (perhaps in another column): keep the keyboard on the item.
   justTicked($(`[data-li-tick="${id}"][data-li="${itemId}"]`))?.focus();
 }
-
-/* A list routine is a routine with a `list`: each day it is done, its items are ticked off anew.
-   `listDays` maps a date to { itemId: 1 | 0 } (0 kept so sync can merge an untick). Ticking the last
-   item ticks the day off; unticking one unticks it again. Ticking the day itself ticks every item. */
-export const isListRoutine = a => isRoutine(a) && Array.isArray(a?.list);
-export const itemOn = (a, iso, itemId) => a.listDays?.[iso]?.[itemId] === 1;
-export const dayItemsDone = (a, iso) => a.list.filter(i => itemOn(a, iso, i.id)).length;
-export const setDayItems = (a, iso, ticks) => { a.listDays = { ...a.listDays, [iso]: { ...a.listDays?.[iso], ...ticks } }; };
 
 export function tickRoutineItem(a, itemId, iso) {
   if (!tickable(a, iso) || !a.list.some(i => i.id === itemId)) return;
@@ -594,170 +244,7 @@ export function tickRoutineItem(a, itemId, iso) {
 }
 // A ticked item's box pops once; the class is only added here, so a later render does not replay it.
 export const justTicked = el => { if (el?.matches('.done')) el.classList.add('just'); return el; };
-// Monday = 0 (day 0 of the epoch, 1 January 1970, was a Thursday).
-export const weekday = iso => (dayNum(iso) + 3) % 7;
-export const addDays = (iso, n) => dayStr(dayNum(iso) + n);
-export const daysBetween = (from, to) => Array.from({ length: Math.max(0, dayNum(to) - dayNum(from) + 1) }, (_, i) => addDays(from, i));
-export const routineStart = a => a.startDate || a.createdAt || today();
-export const checkedOn = (a, iso) => a.checkins?.[iso] === 1;
-export const runsOn = (a, iso) => iso >= routineStart(a) && !(a.dueDate && iso > a.dueDate);
-export const monthDay = iso => Number(iso.slice(8));
-export const monthLength = iso => monthDay(isoOf(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0));
-export const nthInMonth = iso => Math.ceil(monthDay(iso) / 7);
-export const lastInMonth = iso => monthDay(iso) + 7 > monthLength(iso);
 
-export function sched(a) {
-  const r = a.repeat;
-  if (r.unit) return r.unit === 'month' && !r.times ? monthRule({ every: 1, ...r }, routineStart(a)) : { every: 1, ...r };
-  return r.days ? { every: 1, unit: 'week', days: r.days } : { every: 1, unit: r.per === 'month' ? 'month' : 'week', times: r.times };
-}
-// A monthly rule with everything it falls on spelled out (older ones took it from the start date).
-export function monthRule(s, start) {
-  if (s.on === 'lastDay') return s;
-  if (s.on === 'weekday' || s.on === 'last') return { ...s, on: 'nth', nth: s.on === 'last' ? -1 : nthInMonth(start), weekday: weekday(start) };
-  if (s.on === 'nth') return { ...s, nth: s.nth ?? nthInMonth(start), weekday: s.weekday ?? weekday(start) };
-  return { ...s, on: 'day', day: s.day || monthDay(start) };
-}
-
-// Flexible routines ask for a number of days per period; fixed ones fall on set days.
-export const isFlexible = a => !!sched(a).times;
-
-// Number of the day, week, month or year a date falls in, and the first day of one.
-export function unitIndex(iso, unit) {
-  const [y, m] = iso.split('-').map(Number);
-  return { day: dayNum(iso), week: Math.floor((dayNum(iso) + 3) / 7), month: y * 12 + m - 1, year: y }[unit];
-}
-export function unitFrom(i, unit) {
-  return { day: () => dayStr(i), week: () => dayStr(i * 7 - 3), month: () => isoOf(Math.floor(i / 12), i % 12, 1), year: () => isoOf(i, 0, 1) }[unit]();
-}
-
-// Whether a fixed routine falls on a date (a flexible one may be done on any day).
-export function isDueDay(a, iso) {
-  const s = sched(a);
-  if (s.times) return true;
-  const start = routineStart(a);
-  if ((unitIndex(iso, s.unit) - unitIndex(start, s.unit)) % s.every) return false;
-  if (s.unit === 'week') return (s.days || [weekday(start)]).includes(weekday(iso));
-  if (s.unit === 'month') {
-    if (s.on === 'lastDay') return monthDay(iso) === monthLength(iso);
-    if (s.on === 'nth') return weekday(iso) === s.weekday && (s.nth < 0 ? lastInMonth(iso) : nthInMonth(iso) === s.nth);
-    return monthDay(iso) === Math.min(s.day, monthLength(iso));
-  }
-  if (s.unit === 'year') return iso.slice(5) === start.slice(5);
-  return true;
-}
-
-// The period progress is shown for: a flexible routine's own (every 2 weeks: two weeks from the
-// start's week), or a fixed routine's calendar week (daily and weekly), month or year.
-export const periodUnit = a => { const s = sched(a); return s.times ? s.unit : s.unit === 'day' ? 'week' : s.unit; };
-
-export function periodOf(a, iso) {
-  const s = sched(a), unit = periodUnit(a);
-  const span = s.times ? s.every : 1;
-  const first = unitIndex(routineStart(a), unit);
-  const i = first + Math.floor((unitIndex(iso, unit) - first) / span) * span;
-  return { from: unitFrom(i, unit), to: addDays(unitFrom(i + span, unit), -1) };
-}
-
-// The date of the `count`-th occurrence: the last due day, or the end of the last period needed.
-export function lastOccurrence(a, count) {
-  const s = sched(a);
-  if (s.times) {
-    let p = periodOf(a, routineStart(a));
-    for (let k = 1; k < Math.ceil(count / s.times); k++) p = periodOf(a, addDays(p.to, 1));
-    return p.to;
-  }
-  let n = 0;
-  for (let d = routineStart(a), i = 0; i < 36600; d = addDays(d, 1), i++) if (isDueDay(a, d) && ++n >= count) return d;
-  return '';
-}
-
-/* Set days are strict: only a tick on a due day counts. With `repeat.makeUp` a tick on another day of
-   the period counts too – it makes up for a missed due day (the earliest first) or counts ahead. */
-export const makesUp = a => !isFlexible(a) && !!a.repeat?.makeUp;
-// The due days, up to yesterday, in the period around `iso` that ticks on other days made up for.
-export function madeUpDays(a, iso) {
-  if (!makesUp(a)) return new Set();
-  const { from, to } = periodOf(a, iso), now = today();
-  const days = daysBetween(from, to < now ? to : now).filter(d => runsOn(a, d));
-  const extra = days.filter(d => !isDueDay(a, d) && checkedOn(a, d)).length;
-  return new Set(days.filter(d => d < now && isDueDay(a, d) && !checkedOn(a, d)).slice(0, extra));
-}
-// Whether a due day was kept: ticked, or made up for; the made-up days are worked out once per period.
-export function keptDay(a) {
-  const byPeriod = new Map();
-  return d => {
-    if (checkedOn(a, d)) return true;
-    if (!makesUp(a)) return false;
-    const k = periodOf(a, d).from;
-    if (!byPeriod.has(k)) byPeriod.set(k, madeUpDays(a, d));
-    return byPeriod.get(k).has(d);
-  };
-}
-
-// Check-ins in the period around `iso` against what the period asks for. Specific days count only
-// when they are due (unless they can be made up); days before the start or after the end do not count.
-export function periodProgress(a, iso = today()) {
-  const { from, to } = periodOf(a, iso);
-  const days = daysBetween(from, to).filter(d => runsOn(a, d));
-  if (!isFlexible(a)) {
-    const due = days.filter(d => isDueDay(a, d));
-    const done = makesUp(a) ? Math.min(due.length, days.filter(d => checkedOn(a, d)).length) : due.filter(d => checkedOn(a, d)).length;
-    return { from, to, done, target: due.length, met: due.length > 0 && done >= due.length };
-  }
-  const done = days.filter(d => checkedOn(a, d)).length;
-  const { times } = sched(a);
-  return { from, to, done, target: times, met: done >= times };
-}
-
-export function routineState(a) {
-  const now = today();
-  if (a.dueDate && a.dueDate < now) return 'done';
-  if (routineStart(a) > now) return 'todo';
-  if (blockers(a).length) return 'blocked';
-  const p = periodProgress(a, now);
-  if (p.met) return 'done';
-  // Late from the day it fell behind until it is ticked again: a tick after missed days puts it
-  // back on track, however many were missed.
-  const behind = behindSince(a, p, now);
-  if (behind && !daysBetween(behind, now).some(d => checkedOn(a, d))) return 'late';
-  return p.done ? 'doing' : 'todo';
-}
-
-// The day in this period from which a routine is behind, or '': a fixed routine's last missed due
-// day before today (ticks after it count), a flexible one's first day on which the days left could
-// no longer reach the target.
-export function behindSince(a, p, now) {
-  if (!isFlexible(a)) return missedDays(a, p.from, addDays(now, -1)).at(-1) || '';
-  return daysBetween(p.from, now).find(d => {
-    const before = daysBetween(p.from, addDays(d, -1)).filter(x => checkedOn(a, x)).length;
-    return p.target - before > daysBetween(d, p.to).filter(x => runsOn(a, x)).length;
-  }) || '';
-}
-// Due days of a fixed routine between two dates that were not ticked (nor made up for).
-export function missedDays(a, from, to) {
-  if (isFlexible(a)) return [];
-  const kept = keptDay(a);
-  return daysBetween(from, to).filter(d => runsOn(a, d) && isDueDay(a, d) && !kept(d));
-}
-
-// What today asks of a running routine: 'done' (ticked), 'due' (a set day, or a flexible routine that
-// needs every day left), 'any' (a flexible one that can wait), 'met' (the period is done) or 'rest'
-// (not one of its days); null when it does not run today.
-export function routineToday(a) {
-  const now = today();
-  if (!runsOn(a, now)) return null;
-  if (checkedOn(a, now)) return 'done';
-  const p = periodProgress(a, now);
-  if (!isFlexible(a)) {
-    // A routine whose days can be made up is done once the period is met, and says when one is missing.
-    if (isDueDay(a, now)) return makesUp(a) && p.met ? 'met' : 'due';
-    return makesUp(a) && !p.met && missedDays(a, p.from, addDays(now, -1)).length ? 'makeUp' : 'rest';
-  }
-  if (p.met) return 'met';
-  const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
-  return p.target - p.done >= left ? 'due' : 'any';
-}
 export const TODAY_TAG = { done: 'ok', due: 'warn', makeUp: 'warn', any: '', met: 'ok', rest: '' };
 export function todayTag(a) {
   const k = routineToday(a);
@@ -765,57 +252,6 @@ export function todayTag(a) {
   const next = k === 'rest' && nextDueDay(a, addDays(today(), 1));
   const text = next ? t('rt.today.restNext', { date: fmtDay(next, { weekday: 'short', day: 'numeric', month: 'short' }) }) : t('rt.today.' + k);
   return `<span class="tag rt-today ${TODAY_TAG[k]}" data-today="${k}">${esc(text)}</span>`;
-}
-
-// Periods met in a row (flexible) or due days ticked in a row (fixed); the current period or today
-// counts once done, and does not break the streak before that.
-export function routineStreak(a) {
-  const now = today(), start = routineStart(a);
-  let n = 0;
-  if (!isFlexible(a)) {
-    const kept = keptDay(a);
-    for (let d = now; d >= start && n < 3660; d = addDays(d, -1)) {
-      if (!isDueDay(a, d) || (a.dueDate && d > a.dueDate)) continue;
-      if (kept(d)) n++;
-      else if (d !== now) break;
-    }
-    return { n, unit: 'day' };
-  }
-  let p = periodOf(a, now);
-  if (!periodProgress(a, now).met) p = periodOf(a, addDays(p.from, -1));
-  while (p.to >= start && periodProgress(a, p.from).met && n < 600) {
-    n++;
-    p = periodOf(a, addDays(p.from, -1));
-  }
-  // Periods of several weeks or months are counted as times.
-  return { n, unit: sched(a).every > 1 ? 'day' : periodUnit(a) };
-}
-
-// Share (0–1) of periods met (flexible) or due days ticked (fixed) since `from`, or null when there is
-// nothing to judge yet. The running period – and a first period cut short by the start – count
-// only once met; today counts only once ticked.
-export function consistency(a, from = '') {
-  const now = today();
-  const start = from > routineStart(a) ? from : routineStart(a);
-  const end = a.dueDate && a.dueDate < now ? a.dueDate : now;
-  if (start > end) return null;
-  let kept = 0, total = 0;
-  if (!isFlexible(a)) {
-    const keptOn = keptDay(a);
-    daysBetween(start, end).filter(d => isDueDay(a, d)).forEach(d => {
-      if (d === now && !checkedOn(a, d)) return;
-      total++;
-      if (keptOn(d)) kept++;
-    });
-  } else {
-    for (let p = periodOf(a, start); p.from <= end; p = periodOf(a, addDays(p.to, 1))) {
-      const { met } = periodProgress(a, p.from);
-      if (!met && (p.to >= now || p.from < start)) continue;
-      total++;
-      if (met) kept++;
-    }
-  }
-  return total ? kept / total : null;
 }
 
 // 1 January 2024 was a Monday.
@@ -863,12 +299,6 @@ export function shortBase(a) {
   }
   if (s.unit === 'month') return on(s.on === 'lastDay' ? t('rt.short.monthLast') : s.on === 'nth' ? `${nthWord(s.nth, s.weekday)} ${weekdayName(s.weekday)}` : t('rt.monthDay', { d: s.day }));
   return on(fmtDay(start, { day: 'numeric', month: 'short' }));
-}
-// The first day from `from` on which a fixed routine is due, or '' when it is not due again.
-export function nextDueDay(a, from = today()) {
-  const start = routineStart(a) > from ? routineStart(a) : from;
-  for (let d = start, i = 0; i < 36600 && runsOn(a, d); d = addDays(d, 1), i++) if (isDueDay(a, d)) return d;
-  return '';
 }
 
 // This period's progress; when nothing is due in it (an off week of every 2 weeks, before the
@@ -1013,160 +443,6 @@ export function routineRow(a) {
     <span class="tag ${p.met ? 'ok' : ''}">${esc(periodText(a, p))}</span>
     ${streak.n ? `<span class="tag">${esc(streakText(streak))}</span>` : ''}
   </div>`;
-}
-
-/* ---------- Cumulative states: amounts that add up ----------
-   A state with `cumulative: true` keeps `entries` ({ id, date, amount, routine? }) that add up,
-   several a day if need be, instead of one value per date. `routine` is the routine whose tick the
-   entry belongs to. How the sums are looked at is not the state's: its graph shows them per
-   calendar 'day', 'week' (Monday to Sunday), 'month' or 'year', or in total, as last chosen
-   (`scale`), and each goal it measures counts them by its own `period`.
-   Deleted entry ids stay in `droppedEntries`, so syncing with an older copy does not bring them
-   back. `value` and `date` keep a copy of the total for older readers.
-   A routine that improves a cumulative state and the state keep in step: ticking a day can add
-   an amount, an amount added on the state ticks the routine, unticking removes the routine's
-   amounts that day, and deleting its last amount that day unticks it. */
-
-export const PERIODS = ['day', 'week', 'month', 'year'];
-export const SCALES = [...PERIODS, 'total'];
-export const isCumulative = s => !!s?.cumulative;
-export const stateScale = s => (SCALES.includes(s?.scale) ? s.scale : 'total');
-// A routine's graph shows its own periods (with what each asks for) until another scale is picked.
-export const graphScale = item => (!isRoutine(item) ? stateScale(item) : SCALES.includes(item.scale) ? item.scale : periodUnit(item));
-export const goalPeriod = g => (PERIODS.includes(g?.period) ? g.period : 'total');
-
-// Before, a state added up per period itself (`cumulative: 'week'`, or 'none' for in total): the
-// period becomes its graph's scale and the period of the goals it measures that have none yet.
-export function migrateCumulative(d) {
-  for (const s of d.states) {
-    if (typeof s.cumulative !== 'string') continue;
-    const was = s.cumulative === 'none' ? 'total' : s.cumulative;
-    Object.assign(s, { cumulative: true, scale: SCALES.includes(was) ? was : 'total' });
-    refreshTotal(s); // the stored copy was the period's total
-    d.relations.filter(r => r.type === 'measures' && r.from === s.id).forEach(r => {
-      const g = d.goals.find(x => x.id === r.to);
-      if (g && !g.period) g.period = s.scale;
-    });
-  }
-}
-
-// The calendar day, week, month or year around a date.
-export function calPeriod(unit, iso) {
-  const i = unitIndex(iso, unit);
-  return { from: unitFrom(i, unit), to: addDays(unitFrom(i + 1, unit), -1) };
-}
-
-export const entriesOf = s => (s.entries || []).filter(e => e.date && isNum(e.amount));
-// Rounded, so 0.1 + 0.2 adds up to 0.3.
-export const sumOf = list => Number(list.reduce((n, e) => n + Number(e.amount), 0).toFixed(9));
-
-// The total of the `period` around `iso`, or in total of everything up to it.
-export function stateTotal(s, period = 'total', iso = today()) {
-  if (period === 'total') return sumOf(entriesOf(s).filter(e => e.date <= iso));
-  const { from, to } = calPeriod(period, iso);
-  return sumOf(entriesOf(s).filter(e => e.date >= from && e.date <= to));
-}
-// The previous period's total.
-export const lastPeriodTotal = (s, period, iso = today()) => stateTotal(s, period, addDays(calPeriod(period, iso).from, -1));
-
-// A state's value and date: the latest measurement, or a cumulative state's total ('' with no entries yet).
-export function stateValue(s) {
-  if (!isCumulative(s)) return s.value;
-  return entriesOf(s).length ? stateTotal(s) : '';
-}
-export function stateDate(s) {
-  if (!isCumulative(s)) return s.date;
-  return entriesOf(s).reduce((d, e) => (e.date > d ? e.date : d), '');
-}
-export function refreshTotal(s) {
-  const v = stateValue(s);
-  Object.assign(s, { value: v === '' ? '' : String(v), date: stateDate(s) });
-}
-
-// What a graph adds up: a state's amounts, or a routine's check-ins, one each.
-export const graphEntries = item => (!isRoutine(item) ? entriesOf(item)
-  : Object.keys(item.checkins || {}).filter(d => item.checkins[d] === 1).sort().map(date => ({ id: date, date, amount: '1' })));
-
-// Each `period` from the first entry's to today's (or the latest entry's), empty ones included.
-export function periodTotals(s, period) {
-  const list = graphEntries(s);
-  if (!list.length || !PERIODS.includes(period)) return [];
-  const dates = list.map(e => e.date).sort();
-  const end = dates.at(-1) > today() ? dates.at(-1) : today();
-  // Entries sorted into their periods in one pass: years of daily periods would each scan them all.
-  const byPeriod = new Map();
-  list.forEach(e => {
-    const i = unitIndex(e.date, period);
-    byPeriod.has(i) ? byPeriod.get(i).push(e) : byPeriod.set(i, [e]);
-  });
-  const out = [];
-  for (let p = calPeriod(period, dates[0]); p.from <= end && out.length < 5000; p = calPeriod(period, addDays(p.to, 1))) {
-    const entries = byPeriod.get(unitIndex(p.from, period)) || [];
-    out.push({ ...p, total: sumOf(entries), entries });
-  }
-  return out;
-}
-
-export const improvedStates = a => relsFrom(a.id, 'improves').map(r => db.states.find(s => s.id === r.to)).filter(isCumulative);
-export const feedingRoutines = s => relsTo(s.id, 'improves').map(r => db.activities.find(a => a.id === r.from)).filter(isRoutine);
-export const tickable = (a, iso) => runsOn(a, iso) && iso <= today();
-export const setCheckin = (a, iso, on) => { a.checkins = { ...a.checkins, [iso]: on ? 1 : 0 }; };
-
-// Adds an amount. From a routine's tick it is tagged with the routine; added on the state, it ticks
-// the routines that feed the state that day, tagged when there is just one.
-export function addEntry(s, date, amount, routine = null) {
-  const e = { id: uid(), date, amount: String(amount) };
-  if (routine) e.routine = routine.id;
-  else {
-    const feeds = feedingRoutines(s);
-    feeds.filter(a => tickable(a, date)).forEach(a => setCheckin(a, date, true));
-    if (feeds.length === 1 && tickable(feeds[0], date)) e.routine = feeds[0].id;
-  }
-  (s.entries ||= []).push(e);
-  refreshTotal(s);
-  return e;
-}
-
-export function dropEntry(s, id) {
-  s.entries = (s.entries || []).filter(e => e.id !== id);
-  s.droppedEntries = { ...s.droppedEntries, [id]: 1 };
-  refreshTotal(s);
-}
-
-// Deleting a routine's last amount on a day unticks the routine that day.
-export function deleteEntry(s, id) {
-  const e = (s.entries || []).find(x => x.id === id);
-  if (!e) return;
-  dropEntry(s, id);
-  const a = e.routine && db.activities.find(x => x.id === e.routine);
-  if (a && isRoutine(a) && !db.states.some(st => (st.entries || []).some(x => x.routine === a.id && x.date === e.date))) setCheckin(a, e.date, false);
-}
-
-// Unticking a routine's day removes the amounts its tick added that day.
-export function dropRoutineEntries(a, iso) {
-  db.states.forEach(s => (s.entries || []).filter(e => e.routine === a.id && e.date === iso).forEach(e => dropEntry(s, e.id)));
-}
-
-// Plain → cumulative: each measurement becomes an entry. Cumulative → plain: each day's entries add
-// up to that day's measurement. The graph's scale is kept either way.
-export function convertState(s, addsUp) {
-  if (!addsUp) {
-    if (!isCumulative(s)) return;
-    const days = {};
-    entriesOf(s).forEach(e => (days[e.date] = (days[e.date] || 0) + Number(e.amount)));
-    s.history = Object.entries(days).sort().map(([date, v]) => ({ date, value: String(Number(v.toFixed(9))) }));
-    s.history.forEach(h => delete s.dropped?.[h.date]);
-    if (s.dropped && !Object.keys(s.dropped).length) delete s.dropped;
-    delete s.cumulative;
-    followLatest(s);
-    return;
-  }
-  if (!isCumulative(s)) {
-    (s.entries || []).forEach(e => (s.droppedEntries = { ...s.droppedEntries, [e.id]: 1 }));
-    s.entries = (s.history || []).filter(h => h.date && isNum(h.value)).map(h => ({ id: uid(), date: h.date, amount: String(h.value) }));
-  }
-  s.cumulative = true;
-  refreshTotal(s);
 }
 
 // "€2,450 in total".
@@ -2326,9 +1602,6 @@ export function askDeleteItem(id) {
 
 // ZOOM presets and the MIN–MAX range for free zooming are in pixels per day.
 export const TL = { ROW: 40, ZOOM: { week: 30, month: 8, quarter: 2.6 }, MIN: 1.5, MAX: 80 };
-export const DAY_MS = 86400000;
-export const dayNum = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / DAY_MS; };
-export const dayStr = n => new Date(n * DAY_MS).toISOString().slice(0, 10);
 export const endOf = (kind, item) => (kind === 'goal' ? item.deadline : item.dueDate);
 // A routine that runs a set number of times ends where its start puts it: only the whole bar moves.
 export const fixedEnd = item => isRoutine(item) && !!item.repeat.count;
@@ -2597,11 +1870,6 @@ export function deleteMeasurement(s, date) {
   s.history = (s.history || []).filter(h => h.date !== date);
   s.dropped = { ...s.dropped, [date]: 1 };
   followLatest(s);
-}
-
-export function followLatest(s) {
-  const last = s.history.reduce((a, h) => (!a || h.date > a.date ? h : a), null);
-  Object.assign(s, last ? { value: last.value, date: last.date } : { value: '' });
 }
 
 export function removeMeasurement(id, iso) {
@@ -4302,7 +3570,6 @@ $('#modalForm').addEventListener('input', e => {
    Opens below the field on the field's date, else (for an end date) on the form's start date, else today. */
 
 export let cal = null; // { field, box, y, m, focus: 'yyyy-mm-dd' }
-export const isoOf = (y, m, d) => new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
 
 export function openCalendar(field) {
   closeCalendar();
@@ -4445,61 +3712,10 @@ $('#deleteBtn').addEventListener('click', () => {
 
 /* ---------- Import / export / sample ---------- */
 
-/* A plan file is { format, version, kind, name, exportedAt, goals, states, activities, relations }.
-   kind 'full' is an exact copy (a backup); 'template' is the same plan without progress, its dates
-   moved to start now, for sharing. Files exported before the header are read as full copies. */
-export const PLAN_FORMAT = 'actionplan-plan';
-export const PLAN_VERSION = 1;
-export const PLAN_DATES = ['startDate', 'deadline', 'dueDate'];
-
-// A copy of plan data with the progress taken out: goals active again with no current value, no
-// measurements, activities to do, no check-ins, no sync bookkeeping. With `shift`, every date moves
-// by the same whole number of weeks (so weekly routines keep their days) to put the earliest one this week.
-export function resetProgress(data, { shift = false } = {}) {
-  const d = normalize(JSON.parse(JSON.stringify(data)));
-  d.deleted = {};
-  const dated = [...d.goals, ...d.activities];
-  const first = dated.flatMap(x => PLAN_DATES.map(k => x[k])).filter(Boolean).sort()[0];
-  const by = shift && first ? Math.ceil((dayNum(today()) - dayNum(first)) / 7) * 7 : 0;
-  for (const x of [...dated, ...d.states, ...d.relations]) delete x.updatedAt;
-  for (const x of dated) for (const k of [...PLAN_DATES, 'createdAt']) if (by && x[k]) x[k] = addDays(x[k], by);
-  d.goals.forEach(g => { g.current = ''; if (g.status === 'achieved') g.status = 'active'; delete g.offeredAt; });
-  d.states.forEach(s => { Object.assign(s, { value: '', date: '', history: [] }); delete s.dropped; if (s.entries) s.entries = []; delete s.droppedEntries; });
-  d.activities.forEach(a => { a.status = 'todo'; delete a.checkins; delete a.autoStarted; a.list?.forEach(i => { i.done = false; delete i.at; }); delete a.droppedItems; delete a.listDays; });
-  return d;
-}
-
-// How much progress plan data holds, as the import question lists it.
-export function progressCounts(data) {
-  const ticks = a => Object.values(a.checkins || {}).filter(v => v === 1).length;
-  return {
-    checkins: data.activities.reduce((n, a) => n + ticks(a), 0),
-    measurements: data.states.reduce((n, s) => n + (s.cumulative ? (s.entries || []).length : (s.history || []).length || (isNum(s.value) ? 1 : 0)), 0)
-      + data.goals.filter(g => isNum(g.current)).length,
-    done: data.activities.filter(a => a.status === 'done').length + data.goals.filter(g => g.status === 'achieved').length,
-    // Those started by their start date alone (see startDueActivities) are not progress.
-    started: data.activities.filter(a => a.status === 'doing' && !(a.autoStarted && a.autoStarted === a.startDate)).length,
-  };
-}
-export const hasProgress = data => Object.values(progressCounts(data)).some(Boolean);
-
 export function planFile(kind) {
   const data = kind === 'template' ? resetProgress(db, { shift: true }) : db;
   const { goals, states, activities, relations } = data;
   return { format: PLAN_FORMAT, version: PLAN_VERSION, kind, name: currentPlan().name, exportedAt: new Date().toISOString(), goals, states, activities, relations };
-}
-
-// Reads a plan file; throws an error with code 'invalid' (not a plan) or 'version' (from a newer app).
-export function parsePlanFile(text, fileName) {
-  const fail = code => Object.assign(new Error(code), { code });
-  let raw;
-  try { raw = JSON.parse(text); } catch (e) { throw fail('invalid'); }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw fail('invalid');
-  if (raw.format !== undefined && raw.format !== PLAN_FORMAT) throw fail('invalid');
-  if (raw.format && raw.version > PLAN_VERSION) throw fail('version');
-  if (!SYNC_COLLS.some(k => Array.isArray(raw[k]))) throw fail('invalid');
-  const name = (typeof raw.name === 'string' && raw.name.trim()) || fileName.replace(/\.json$/i, '');
-  return { name, kind: raw.kind === 'template' ? 'template' : 'full', data: normalize(raw) };
 }
 
 export const planFileName = kind => {
@@ -4717,42 +3933,7 @@ export function loadSample() {
   toast(t('toast.sample'));
 }
 
-/* ---------- Templates (templates.js): ready-made plans to start from ---------- */
-
-// A template's text in the active language: a pair [English, Slovene], or a plain string such as 'km'.
-export const tplText = v => (Array.isArray(v) ? v[TPL_LANGS.indexOf(lang)] ?? v[0] : v);
-
-// Plan data from a template: dates counted from today, nothing done yet, no measurements.
-export function templateData(tpl) {
-  const ids = {};
-  const id = k => (ids[k] ??= uid());
-  const day = n => addDays(today(), n);
-  const texts = (x, fields) => Object.fromEntries(fields.filter(f => x[f] !== undefined).map(f => [f, tplText(x[f])]));
-  const category = t('tpl.area.' + tpl.area);
-  const data = emptyDb();
-  const rel = (from, type, to) => data.relations.push({ id: uid(), from: id(from), to: id(to), type });
-  for (const g of tpl.goals) {
-    const measure = g.progress ? { progress: g.progress } : { baseline: String(g.baseline), current: '', target: String(g.target) };
-    data.goals.push({ id: id(g.k), category, ...texts(g, ['title', 'specific', 'metric', 'unit', 'achievable', 'relevant']),
-      ...measure, ...(g.period && { period: g.period }), startDate: day(g.start || 0), deadline: day(g.end), status: 'active' });
-    if (g.sub) rel(g.k, 'subgoal', g.sub);
-    (g.deps || []).forEach(x => rel(g.k, 'depends', x));
-  }
-  for (const s of tpl.states) {
-    data.states.push({ id: id(s.k), ...texts(s, ['title', 'description', 'unit']), value: '', date: '', history: [], ...(s.cumulative && { cumulative: true, scale: s.scale || 'total', entries: [] }) });
-    (s.measures || []).forEach(x => rel(s.k, 'measures', x));
-  }
-  for (const a of tpl.activities) {
-    data.activities.push({ id: id(a.k), ...texts(a, ['title', 'description']), status: 'todo', startDate: day(a.start),
-      ...(a.end !== undefined && { dueDate: day(a.end) }), ...(a.repeat && { repeat: { ...a.repeat } }),
-      ...(a.list && { list: a.list.map(x => ({ id: uid(), text: tplText(x), done: false })) }) });
-    if (a.parent) rel(a.k, 'subactivity', a.parent);
-    (a.goals || []).forEach(x => rel(a.k, 'contributes', x));
-    (a.improves || []).forEach(x => rel(a.k, 'improves', x));
-    (a.deps || []).forEach(x => rel(a.k, 'depends', x));
-  }
-  return data;
-}
+/* ---------- Templates (core/templates): ready-made plans to start from ---------- */
 
 export function useTemplate(tpl) {
   const name = uniqueName(tplText(tpl.name));
@@ -5689,7 +4870,7 @@ export const PLAN_ICONS = {
 // 'today' when something still has to be done today, else 'ok'. Paused goals and finished work don't count.
 export function planHealth(data) {
   const keep = db;
-  db = data;
+  setDb(data);
   try {
     const now = today();
     let health = 'ok';
@@ -5704,7 +4885,7 @@ export function planHealth(data) {
       if (routineToday(a) === 'due') flag('today');
     });
     return health;
-  } finally { db = keep; }
+  } finally { setDb(keep); }
 }
 export const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
 
@@ -6018,7 +5199,7 @@ export function enterUser(id) {
   storedHealth.clear();
   setOtherPlansCache({ key: '', list: [] });
   plans = { current: null, list: [] };
-  db = emptyDb();
+  setDb(emptyDb());
   const firstVisit = bootUser();
   renderSettings();
   renderSync();

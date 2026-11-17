@@ -1,20 +1,23 @@
 /** Google Drive sync: sign-in, the sync file, merging and status. */
 import { GOOGLE_CLIENT_ID } from './config.js';
 import { offerTour, tour } from './tutorial.js';
-import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from './sync.js';
 import { USERS_KEY, addUser, currentUser, readUsers, saveUsers, setUsers, userKeys, userSession, userStorage, users } from './users.js';
-import { applyVisions, normalizeVisions, plansVersion, setPlansVersion, visions } from './visions.js';
-import { $, PLANS_KEY, db, enterUser, esc, normalize, planKey, plans, prefs, readPlan, render, renderPlanSwitch, safeId, setDb, setPlans, toast } from './app.js';
+import { applyVisions, plansVersion, setPlansVersion } from './visions.js';
+import { $, PLANS_KEY, enterUser, esc, planKey, plans, prefs, readPlan, render, renderPlanSwitch, setPlans, toast } from './app.js';
 import { I18N, locale, t } from '../i18n/index';
 import { uid } from '../core/util';
 import { emptyDb } from '../core/model';
+import { db, setDb, visions } from '../core/state';
+import { normalize, safeId } from '../core/normalize';
+import { normalizeVisions } from '../core/visions';
+import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from '../core/merge';
 
 /* =========================================================
    Google Drive sync
    ---------------------------------------------------------
    All plans and the plan list live in one hidden file in the user's Drive app folder
    (scope drive.appdata: only this app can see that folder). A sync reads the file, merges
-   it with this device's plans item by item (sync.js → mergeStores), stores the result
+   it with this device's plans item by item (core/merge.ts → mergeStores), stores the result
    locally and writes it back.
    There is no server, so Google's access token lasts about an hour and can only be renewed
    from a click; after that, sync pauses until the user clicks the sync button.

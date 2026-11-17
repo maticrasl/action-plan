@@ -110,7 +110,7 @@ export interface Entry {
 export interface State extends Item {
   title: string;
   description: string;
-  unit: string;
+  unit?: string; // states made from a template without one have none
   // The latest measurement (or, adding up, the total), kept for older readers.
   value: string;
   date?: ISODate;
@@ -150,7 +150,7 @@ export interface ListItem {
 
 export interface Activity extends Item {
   title: string;
-  description: string;
+  description?: string; // activities made from a template without one have none
   status: ActivityStatus;
   startDate?: ISODate;
   dueDate?: ISODate;

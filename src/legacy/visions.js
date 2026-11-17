@@ -1,9 +1,11 @@
 /** Visions: the global list above goals, stored apart from plans. */
-import { TOMBSTONE_DAYS, itemContent, mergeDeleted, newerOf, newestFirst, stamp } from './sync.js';
 import { userStorage } from './users.js';
 import { scheduleSync } from './drive.js';
-import { currentPlan, db, plans, readPlan, safeId, toast } from './app.js';
+import { currentPlan, plans, readPlan, toast } from './app.js';
 import { t } from '../i18n/index';
+import { db, setVisions, visions } from '../core/state';
+import { normalizeVisions, ownVisions, purposeOf, visionAncestors } from '../core/visions';
+import { TOMBSTONE_DAYS, itemContent } from '../core/merge';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")
@@ -14,31 +16,19 @@ import { t } from '../i18n/index';
    (deleted, or not synced here yet) are ignored wherever they are read.
    When every vision meets in one at the top and every active goal, in every plan, serves a vision,
    that top vision is the user's Purpose.
-   Loaded after sync.js and before app.js; uses their helpers only when called.
+   The pure part (the tree, Purpose, merging two lists) is in core/visions.ts.
    ========================================================= */
 
 export const VISIONS_KEY = 'actionplan.visions';
-export let visions = { list: [], deleted: {} };
-export function setVisions(v) { visions = v; }
 export let visionsVersion = 0; // bumped on every change to the list, so cached answers know to start over
 export let plansVersion = 0;   // bumped whenever plans are saved or synced (other plans' goals are cached)
 export function setPlansVersion(v) { plansVersion = v; }
 export let visionSnapshot = new Map();
 
-export function normalizeVisions(raw) {
-  const out = { list: [], deleted: {} };
-  if (Array.isArray(raw?.list)) out.list = raw.list
-    .filter(v => v && typeof v === 'object' && safeId(v.id) && typeof v.title === 'string')
-    .map(v => ({ ...v, parents: Array.isArray(v.parents) ? v.parents.filter(safeId) : [] }));
-  if (raw?.deleted && typeof raw.deleted === 'object' && !Array.isArray(raw.deleted)) out.deleted = raw.deleted;
-  if (typeof raw?.purposeFound === 'string') out.purposeFound = raw.purposeFound;
-  return out;
-}
-
 export const takeVisionSnapshot = () => { visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)])); };
 
 export function loadVisions() {
-  try { visions = normalizeVisions(JSON.parse(userStorage.getItem(VISIONS_KEY))); } catch (e) { visions = normalizeVisions(null); }
+  try { setVisions(normalizeVisions(JSON.parse(userStorage.getItem(VISIONS_KEY)))); } catch (e) { setVisions(normalizeVisions(null)); }
   takeVisionSnapshot();
   visionsVersion++;
 }
@@ -62,30 +52,6 @@ export function saveVisions() {
 
 /* ---------- The vision tree ---------- */
 
-export const findVision = id => visions.list.find(v => v.id === id);
-export const visionParents = v => (v.parents || []).filter(p => p !== v.id && findVision(p));
-export const visionRoots = () => visions.list.filter(v => !visionParents(v).length);
-export const visionChildren = id => visions.list.filter(v => visionParents(v).includes(id));
-
-// Every vision above `id`, however far.
-export function visionAncestors(id) {
-  const out = new Set(), stack = [id];
-  while (stack.length) {
-    const v = findVision(stack.pop());
-    if (v) visionParents(v).forEach(p => { if (!out.has(p)) { out.add(p); stack.push(p); } });
-  }
-  return out;
-}
-
-// Why `parentId` cannot become a parent of `childId` (an i18n key), or null if it can.
-export function canParent(childId, parentId) {
-  if (!findVision(parentId)) return 'err.unknown';
-  if (childId === parentId) return 'err.self';
-  if (childId && visionAncestors(parentId).has(childId)) return 'err.visionLoop';
-  if (findVision(childId)?.parents.includes(parentId)) return 'err.relExists';
-  return null;
-}
-
 export function deleteVision(id) {
   visions.list = visions.list.filter(v => v.id !== id);
   visions.list.forEach(v => { if (v.parents.includes(id)) v.parents = v.parents.filter(p => p !== id); });
@@ -93,22 +59,6 @@ export function deleteVision(id) {
 }
 
 /* ---------- Goals serving visions ---------- */
-
-export const ownVisions = g => (Array.isArray(g?.visions) ? g.visions.filter(findVision) : []);
-
-// The visions a goal serves: its own, and those of the goals it is part of.
-export function goalVisionIds(g, data = db) {
-  const out = new Set(), seen = new Set();
-  for (let cur = g; cur && !seen.has(cur.id);) {
-    seen.add(cur.id);
-    ownVisions(cur).forEach(id => out.add(id));
-    const up = data.relations.find(r => r.from === cur.id && r.type === 'subgoal');
-    cur = up && data.goals.find(x => x.id === up.to);
-  }
-  return [...out];
-}
-
-export const isActiveGoal = g => !g.status || g.status === 'active';
 
 // Every plan's data: the open one as it is now, the others as stored (read once per change).
 export let otherPlansCache = { key: '', list: [] };
@@ -139,81 +89,13 @@ export function goalsReaching(id) {
 // The goals (from every plan) that serve a vision directly, as { plan, goal }.
 export const servingGoals = id => allPlansData().flatMap(({ plan, data }) => data.goals.filter(g => ownVisions(g).includes(id)).map(goal => ({ plan, goal })));
 
-// Ids of the items in a plan that work toward a vision: goals serving one (sub-goals through their
-// parent), the activities contributing to them with their sub-activities, the states measuring them
-// and the activities improving those states. Waiting for something (depends) does not carry it.
-export function contributingIds(data = db) {
-  const out = new Set(), rels = data.relations;
-  if (!visions.list.length) return out;
-  data.goals.forEach(g => { if (goalVisionIds(g, data).length) out.add(g.id); });
-  const withSubs = ids => {
-    const queue = [...ids];
-    while (queue.length) {
-      const id = queue.shift();
-      if (out.has(id)) continue;
-      out.add(id);
-      rels.forEach(r => { if (r.type === 'subactivity' && r.to === id) queue.push(r.from); });
-    }
-  };
-  const goals = new Set(out);
-  withSubs(rels.filter(r => r.type === 'contributes' && goals.has(r.to)).map(r => r.from));
-  const states = new Set(rels.filter(r => r.type === 'measures' && goals.has(r.to)).map(r => r.from));
-  states.forEach(id => out.add(id));
-  withSubs(rels.filter(r => r.type === 'improves' && states.has(r.to)).map(r => r.from));
-  return out;
-}
-
-// Purpose: one vision at the top, at least one active goal, and every active goal (in every plan)
-// serving a vision. `unlinked` lists the active goals that serve none, as { plan, goal }.
-export function purposeState() {
-  const roots = visionRoots(), unlinked = [];
-  let active = 0;
-  allPlansData().forEach(({ plan, data }) => data.goals.forEach(g => {
-    if (!isActiveGoal(g)) return;
-    active++;
-    if (!goalVisionIds(g, data).length) unlinked.push({ plan, goal: g });
-  }));
-  const on = visions.list.length > 0 && roots.length === 1 && active > 0 && !unlinked.length;
-  return { on, root: on ? roots[0] : null, roots, unlinked, active };
-}
+export const purposeState = () => purposeOf(allPlansData());
 
 /* ---------- Sync ---------- */
 
-// Two copies of the list: the newer version of each vision wins, deletions as for plans, and the
-// Purpose found first stays found. Then links that two edits made into a loop, or that point at a
-// vision that is gone, are dropped: the newer vision's links are kept first.
-export function mergeVisions(a, b) {
-  a = normalizeVisions(a); b = normalizeVisions(b);
-  const deleted = mergeDeleted(a.deleted, b.deleted), byId = new Map();
-  [...a.list, ...b.list].forEach(v => { const cur = byId.get(v.id); byId.set(v.id, cur ? newerOf(cur, v) : v); });
-  const list = [...byId.values()].filter(v => !(deleted[v.id] && deleted[v.id] >= stamp(v)));
-  const ids = new Set(list.map(v => v.id)), kept = new Map();
-  const reachesUp = (from, target) => {
-    const stack = [from], seen = new Set();
-    while (stack.length) {
-      const id = stack.pop();
-      if (id === target) return true;
-      if (!seen.has(id)) { seen.add(id); stack.push(...(kept.get(id) || [])); }
-    }
-    return false;
-  };
-  [...list].sort(newestFirst).forEach(v => {
-    const ps = [];
-    kept.set(v.id, ps);
-    v.parents.forEach(p => { if (ids.has(p) && p !== v.id && !ps.includes(p) && !reachesUp(p, v.id)) ps.push(p); });
-  });
-  const out = {
-    list: list.map(v => (kept.get(v.id).length === v.parents.length ? v : { ...v, parents: kept.get(v.id) })),
-    deleted: Object.fromEntries(Object.entries(deleted).filter(([id]) => !ids.has(id))),
-  };
-  const found = [a.purposeFound, b.purposeFound].filter(Boolean).sort()[0];
-  if (found) out.purposeFound = found;
-  return out;
-}
-
 // Makes a merged list this device's.
 export function applyVisions(merged) {
-  visions = normalizeVisions(merged);
+  setVisions(normalizeVisions(merged));
   try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { /* the plans' write reports it */ }
   takeVisionSnapshot();
   visionsVersion++;

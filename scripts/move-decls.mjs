@@ -4,6 +4,9 @@
 //   <name>        a top-level declaration, with the comments directly above it and the rest of its last line
 //   Obj.prop      a property of the top-level object literal Obj: becomes `export const prop = <value>;`
 //                 in <to>, and the property in Obj becomes the shorthand `prop`
+//   Arr[Title]:NAME  the elements under the header /* ---------- Title ---------- */ inside the
+//                 top-level array literal Arr: become `export const NAME = [ … ];` in <to>, the header
+//                 above it, and Arr holds `...NAME,` in their place
 //   comment:<n>   the comment that starts on line n and stands alone between statements (a banner)
 //   --section     everything under one /* ---------- header ---------- */ up to the next header, header included
 //   --fix-imports rewrite the import lines of <from>, <to> and every file that imports a moved name;
@@ -17,7 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import ts from 'typescript';
-import { chunkOf, declNames, parse, propertyAsDecl, propertyChunk, readText, SECTION, writeText } from './lib/ast.mjs';
+import { arrayAsDecl, arrayChunk, arraySections, chunkOf, declNames, parse, propertyAsDecl, propertyChunk, readText, SECTION, writeText } from './lib/ast.mjs';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const args = process.argv.slice(2);
@@ -54,22 +57,24 @@ function move() {
   if (!sf) throw new Error(`${rel(FROM)} is not in tsconfig.json's program`);
   const text = sf.text;
 
-  // What moves: whole-statement chunks, or object properties.
-  const chunks = [], props = [];
+  // What moves: whole-statement chunks, object properties, or sections of an array literal.
+  const chunks = [], props = [], arrs = [];
   const byName = new Map();
   for (const stmt of sf.statements) for (const n of declNames(stmt)) byName.set(n, stmt);
   if (section !== undefined) chunks.push(...sectionChunks(sf, section));
   for (const n of names) {
     const [obj, prop] = n.split('.');
+    const arr = n.match(/^([\w$]+)\[(.+)\]:([\w$]+)$/);
     if (n.startsWith('comment:')) chunks.push(looseComment(sf, Number(n.slice(8))));
+    else if (arr) arrs.push({ name: arr[3], ...arrayChunk(sf, arr[1], arr[2]) });
     else if (prop) props.push({ name: prop, ...propertyChunk(sf, obj, prop) });
     else if (!byName.has(n)) throw new Error(`${rel(FROM)} has no top-level ${n}`);
     else if (!chunks.some(c => c.stmt === byName.get(n))) chunks.push(chunkOf(sf, byName.get(n)));
   }
   chunks.sort((a, b) => a.start - b.start);
   const movedStmts = new Set(chunks.flatMap(c => c.stmts ?? [c.stmt]));
-  const movedNodes = [...movedStmts, ...props.map(p => p.node)];
-  const movedNames = new Set([...[...movedStmts].flatMap(declNames), ...props.map(p => p.name)]);
+  const movedNodes = [...movedStmts, ...props.map(p => p.node), ...arrs.flatMap(a => a.nodes)];
+  const movedNames = new Set([...[...movedStmts].flatMap(declNames), ...props.map(p => p.name), ...arrs.map(a => a.name)]);
   for (const s of movedStmts) {
     const partial = ts.isVariableStatement(s) && declNames(s).some(n => !names.includes(n)) && section === undefined;
     if (partial) console.log(`note: ${declNames(s).join(', ')} are one statement and move together`);
@@ -122,7 +127,7 @@ function move() {
       if (r.imp) stillUsed.add(r.key);
     });
   }
-  for (const p of props) fromNeeds.add(TO, p.name); // the shorthand left in the object literal
+  for (const p of [...props, ...arrs]) fromNeeds.add(TO, p.name); // the shorthand or spread left behind
   const fromDrops = new Needs();
   for (const key of usedByMoved) if (!stillUsed.has(key)) fromDrops.add(imports.get(key).file, importName(imports.get(key)));
 
@@ -149,11 +154,18 @@ function move() {
 
   // Cut from <from> (back to front, so positions stay valid) and append to <to>.
   let out = text;
-  const cuts = [...chunks.map(c => ({ ...c, put: '' })), ...props.map(p => ({ ...p, put: p.indent + p.name }))].sort((a, b) => b.start - a.start);
+  const cuts = [
+    ...chunks.map(c => ({ ...c, put: '' })),
+    ...props.map(p => ({ ...p, put: p.indent + p.name })),
+    ...arrs.map(a => ({ ...a, put: `${a.indent}...${a.name},\n${text.slice(a.bodyEnd, a.end)}` })),
+  ].sort((a, b) => b.start - a.start);
   for (const c of cuts) out = out.slice(0, c.start) + c.put + out.slice(c.end);
   out = out.replace(/\n{3,}/g, m => (text.includes(m) ? m : '\n\n'));
-  const pieces = [...chunks.map(c => ({ start: c.start, end: c.end, text: c.text })), ...props.map(p => ({ start: p.start, end: p.end, text: propertyAsDecl(p.name, p) }))]
-    .sort((a, b) => a.start - b.start);
+  const pieces = [
+    ...chunks.map(c => ({ start: c.start, end: c.end, text: c.text })),
+    ...props.map(p => ({ start: p.start, end: p.end, text: propertyAsDecl(p.name, p) })),
+    ...arrs.map(a => ({ start: a.start, end: a.end, text: `${a.head}\n${arrayAsDecl(a.name, a)}` })),
+  ].sort((a, b) => a.start - b.start);
   let added = '';
   pieces.forEach((p, i) => {
     const t = p.text.endsWith('\n') ? p.text : p.text + '\n';
@@ -356,6 +368,10 @@ function checkMove() {
     if (how === 'kept') kept++;
     if (how === 'moved') moved++;
     if (how) continue;
+    if (c.names.length === 1 && arrayCandidates(hf, c.names[0]).includes(c.text)) {
+      moved++;
+      continue;
+    }
     const want = expected(hf, c.names[0]);
     if (want === null) {
       if (c.names.length === 1 && /^set[A-Z]/.test(c.names[0])) console.log(`added by hand: ${c.names[0]} (a setter)`);
@@ -394,6 +410,19 @@ function expected(hf, name) {
     }
   }
   return null;
+}
+
+// The ways `text` (an `export const name = [ … ];` in <to>) can have come from an array section of
+// the old <from>: one per section header inside a top-level array literal.
+function arrayCandidates(hf, name) {
+  const out = [];
+  for (const stmt of hf.statements) {
+    if (!ts.isVariableStatement(stmt)) continue;
+    for (const d of stmt.declarationList.declarations)
+      if (ts.isIdentifier(d.name) && d.initializer && ts.isArrayLiteralExpression(d.initializer))
+        for (const h of arraySections(hf, d.initializer)) out.push(arrayAsDecl(name, arrayChunk(hf, d.name.text, h.title)));
+  }
+  return out;
 }
 
 // '' when `now` is `old` with only `x = v;` turned into `setX(v);`; else the differing lines.

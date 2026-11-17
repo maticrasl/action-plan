@@ -27,6 +27,7 @@ export default tseslint.config(
     // As for the legacy code it is moved from.
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none', ignoreRestSiblings: true }],
+      '@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true, allowTernary: true }],
       'no-irregular-whitespace': ['error', { skipRegExps: true }],
     },
   },
