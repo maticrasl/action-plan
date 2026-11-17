@@ -4,6 +4,7 @@
 //   <name>        a top-level declaration, with the comments directly above it and the rest of its last line
 //   Obj.prop      a property of the top-level object literal Obj: becomes `export const prop = <value>;`
 //                 in <to>, and the property in Obj becomes the shorthand `prop`
+//   comment:<n>   the comment that starts on line n and stands alone between statements (a banner)
 //   --section     everything under one /* ---------- header ---------- */ up to the next header, header included
 //   --fix-imports rewrite the import lines of <from>, <to> and every file that imports a moved name;
 //                 without it the tool only prints what has to change
@@ -58,7 +59,8 @@ function move() {
   if (section !== undefined) chunks.push(...sectionChunks(sf, section));
   for (const n of names) {
     const [obj, prop] = n.split('.');
-    if (prop) props.push({ name: prop, ...propertyChunk(sf, obj, prop) });
+    if (n.startsWith('comment:')) chunks.push(looseComment(sf, Number(n.slice(8))));
+    else if (prop) props.push({ name: prop, ...propertyChunk(sf, obj, prop) });
     else if (!byName.has(n)) throw new Error(`${rel(FROM)} has no top-level ${n}`);
     else if (!chunks.some(c => c.stmt === byName.get(n))) chunks.push(chunkOf(sf, byName.get(n)));
   }
@@ -201,6 +203,18 @@ function sectionChunks(sf, title) {
   if (stmts.some(s => s.end > end)) throw new Error(`section "${title}" ends inside a statement`);
   if (stmts.some(ts.isImportDeclaration)) throw new Error(`section "${title}" holds an import`);
   return [{ stmts, start, end, text: sf.text.slice(start, end) }];
+}
+
+// A comment between top-level statements that starts on line `n` (1-based), as whole lines.
+function looseComment(sf, n) {
+  for (const node of [...sf.statements, sf.endOfFileToken])
+    for (const r of ts.getLeadingCommentRanges(sf.text, node.pos) ?? []) {
+      if (sf.getLineAndCharacterOfPosition(r.pos).line + 1 !== n) continue;
+      const start = sf.text.lastIndexOf('\n', r.pos - 1) + 1, end = lineEndOf(sf.text, r.end);
+      if (sf.text.slice(start, r.pos).trim() || sf.text.slice(r.end, end).trim()) throw new Error(`comment on line ${n} shares its lines with code`);
+      return { stmts: [], start, end, text: sf.text.slice(start, end) };
+    }
+  throw new Error(`no comment between top-level statements starts on line ${n}`);
 }
 
 // A Map of file -> Set of import names.
