@@ -4,7 +4,7 @@
 |---|---|
 | 00 baseline | merged (PR #1); CI skip list in PR from `restructure/phase-00-ci`; known flake accepted |
 | 01 modules and build | merged (PR #3) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-01` |
-| 02 core leaves | done on `restructure/phase-02` (not pushed); waiting for the owner check |
+| 02 core leaves | merged (PR #6) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-02` |
 | 03 core domain | not started |
 | 04 store and sync | not started |
 | 05 shared UI | not started |
