@@ -3,7 +3,7 @@
 | Phase | State |
 |---|---|
 | 00 baseline | merged (PR #1); CI skip list in PR from `restructure/phase-00-ci`; known flake accepted |
-| 01 modules and build | done on `restructure/phase-01`, not pushed; waits for owner check, Pages switch, "ship it" |
+| 01 modules and build | shipped (owner said "ship it" 2026-11-17); PR from `restructure/phase-01` |
 | 02 core leaves | not started |
 | 03 core domain | not started |
 | 04 store and sync | not started |
@@ -70,7 +70,7 @@ A `NO RESULT` run is this flake, not a broken change: run `npm run check` again.
 - `test-bridge.ts` finds setters by name: export `x` is assignable from tests iff its module exports `setX`.
   Tests assign `today`, `offerTour` (functions: setter reassigns the declaration) and `lastNodeClick` too.
 - Owner approved `@types/node` (used only by `tsconfig.node.json` for `vite.config.ts`; `src/` stays without Node types).
-  `@eslint/js` and `globals` were added for ESLint's recommended set and browser globals (owner asked).
+  Owner approved `@eslint/js` and `globals` (ESLint's recommended set and browser globals).
 - Pages source is set to GitHub Actions (owner, 2026-11-17).
 - ESLint options set for legacy code: unused caught errors and rest siblings allowed, NBSP allowed in regexes.
 - `check.yml` no longer runs on pushes to `main`; `deploy.yml` calls it, then builds and publishes `dist/`.
