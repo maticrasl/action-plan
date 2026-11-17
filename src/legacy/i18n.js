@@ -1815,8 +1815,13 @@ export const I18N = {
 };
 
 export const LANG_KEY = 'actionplan.lang';
-export let lang = detectLang();
+// main.ts sets the language found by detectLang() before anything is drawn.
+export let lang = 'en';
 export let pluralRules = new Intl.PluralRules(I18N[lang].locale);
+export function setLang(code) {
+  lang = code;
+  pluralRules = new Intl.PluralRules(I18N[code].locale);
+}
 
 export function detectLang() {
   try {
@@ -1829,8 +1834,7 @@ export function detectLang() {
 
 export function setLanguage(code) {
   if (!I18N[code]) return;
-  lang = code;
-  pluralRules = new Intl.PluralRules(I18N[code].locale);
+  setLang(code);
   try { localStorage.setItem(LANG_KEY, code); } catch (e) { /* ignore */ }
 }
 
