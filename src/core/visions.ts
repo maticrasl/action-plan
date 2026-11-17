@@ -23,7 +23,8 @@ export type RawVisions = { list?: unknown; deleted?: unknown; purposeFound?: unk
 
 export const findVision = (id: string | null | undefined): Vision | undefined => visions.list.find(v => v.id === id);
 
-export function normalizeVisions(raw: RawVisions): VisionList {
+export function normalizeVisions(input: unknown): VisionList {
+  const raw = input as RawVisions;
   const out: VisionList = { list: [], deleted: {} };
   if (Array.isArray(raw?.list))
     out.list = raw.list

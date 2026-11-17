@@ -235,7 +235,7 @@ export function repairRelations(data: Db): Relation[] {
   const ids = new Set((['goals', 'states', 'activities'] as const).flatMap(c => data[c].map(x => x.id)));
   const key = (r: Relation) => `${r.from}|${r.type}|${r.to}`;
   const rels = dropRoutineDeps(data.relations, data.activities)
-    .filter((r: Relation) => ids.has(r.from) && ids.has(r.to))
+    .filter(r => ids.has(r.from) && ids.has(r.to))
     .sort(newestFirst);
   const kept: Relation[] = [],
     seen = new Set<string>(),
