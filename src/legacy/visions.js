@@ -162,12 +162,15 @@ export function contributingIds(data = db) {
   return out;
 }
 
-// Purpose: one vision at the top, at least one active goal, and every active goal (in every plan)
-// serving a vision. `unlinked` lists the active goals that serve none, as { plan, goal }.
-export function purposeState() {
+export const purposeState = () => purposeOf(allPlansData());
+
+// Purpose: one vision at the top, at least one active goal, and every active goal (in every plan,
+// `all` as allPlansData gives them) serving a vision. `unlinked` lists the active goals that serve
+// none, as { plan, goal }.
+export function purposeOf(all) {
   const roots = visionRoots(), unlinked = [];
   let active = 0;
-  allPlansData().forEach(({ plan, data }) => data.goals.forEach(g => {
+  all.forEach(({ plan, data }) => data.goals.forEach(g => {
     if (!isActiveGoal(g)) return;
     active++;
     if (!goalVisionIds(g, data).length) unlinked.push({ plan, goal: g });
