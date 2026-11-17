@@ -49,7 +49,8 @@ export const NODE_STATES = ['todo', 'doing', 'late', 'blocked', 'done'];
 export const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type) : type);
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
-export let db = emptyDb();
+// main.ts starts it as an empty plan before boot reads the user's own.
+export let db;
 export function setDb(v) { db = v; }
 // What the views show; each user starts from these (enterUser), then their remembered preferences.
 export const freshUi = () => ({

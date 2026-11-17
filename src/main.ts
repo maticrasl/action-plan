@@ -9,9 +9,10 @@ import './legacy/users.js';
 import './legacy/visions.js';
 import { initSync } from './legacy/drive.js';
 import './legacy/backup.js';
-import { bootUser, renderInstall, renderLangSwitch } from './legacy/app.js';
+import { bootUser, emptyDb, renderInstall, renderLangSwitch, setDb } from './legacy/app.js';
 
 setLang(detectLang());
+setDb(emptyDb());
 applyStaticI18n();
 renderLangSwitch();
 const firstVisit = bootUser();
