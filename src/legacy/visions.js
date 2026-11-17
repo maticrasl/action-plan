@@ -16,7 +16,7 @@ import { TOMBSTONE_DAYS, itemContent } from '../core/merge';
    (deleted, or not synced here yet) are ignored wherever they are read.
    When every vision meets in one at the top and every active goal, in every plan, serves a vision,
    that top vision is the user's Purpose.
-   Loaded after sync.js and before app.js; uses their helpers only when called.
+   The pure part (the tree, Purpose, merging two lists) is in core/visions.ts.
    ========================================================= */
 
 export const VISIONS_KEY = 'actionplan.visions';

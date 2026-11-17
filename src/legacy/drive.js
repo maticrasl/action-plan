@@ -17,7 +17,7 @@ import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from '../core
    ---------------------------------------------------------
    All plans and the plan list live in one hidden file in the user's Drive app folder
    (scope drive.appdata: only this app can see that folder). A sync reads the file, merges
-   it with this device's plans item by item (sync.js → mergeStores), stores the result
+   it with this device's plans item by item (core/merge.ts → mergeStores), stores the result
    locally and writes it back.
    There is no server, so Google's access token lasts about an hour and can only be renewed
    from a click; after that, sync pauses until the user clicks the sync button.
