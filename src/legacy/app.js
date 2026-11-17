@@ -3933,7 +3933,7 @@ export function loadSample() {
   toast(t('toast.sample'));
 }
 
-/* ---------- Templates (templates.js): ready-made plans to start from ---------- */
+/* ---------- Templates (core/templates): ready-made plans to start from ---------- */
 
 export function useTemplate(tpl) {
   const name = uniqueName(tplText(tpl.name));
