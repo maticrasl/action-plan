@@ -3,12 +3,10 @@
    and from the cache when offline. Fonts are kept once loaded. Everything else (Google sign-in
    and Drive) goes straight to the network. */
 
-const CACHE = 'actionplan-v1';
-const SHELL = [
-  './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
-  'js/i18n.js', 'js/config.js', 'js/templates.js', 'js/tutorial.js', 'js/sync.js', 'js/users.js', 'js/visions.js', 'js/drive.js', 'js/backup.js', 'js/app.js',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-192.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
-];
+// Both are filled in at build time (vite.config.ts, serviceWorker()): the cache name changes with
+// every build, and the shell lists the built files, whose names hold a hash.
+const CACHE = __SW_CACHE__;
+const SHELL = __SW_SHELL__;
 const FONTS = ['https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
 
 self.addEventListener('install', e => {

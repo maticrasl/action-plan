@@ -2,9 +2,9 @@
 // usage: node scripts/fixtures.mjs [--generate] [app dir]
 //   default     load each fixture into storage, boot, open every view, save, compare (npm run test:fixtures)
 //   --generate  write the fixtures from the current code (only before anything moves; never to make a test pass)
-import { copyFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ROOT, dumpDom, injectedPage, readPre, stageApp, writePage } from './lib/chrome.mjs';
+import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
 
 const FIX = join(ROOT, 'tests', 'fixtures');
 const PRIVATE = join(FIX, 'private');
@@ -16,13 +16,13 @@ const args = process.argv.slice(2);
 const generate = args.includes('--generate');
 const src = resolve(args.find(a => !a.startsWith('--')) || ROOT); // the app to test; fixtures stay this repo's
 
-const { dir, cleanup } = stageApp(src);
+const { dir, url, profiles, close } = await serveTestBuild(src);
 
 // One page load: storage set to `storage`, then `mode` runs (see tests/fixtures/fixture-page.js).
 let runs = 0;
 async function run(mode, storage = {}, extra = {}) {
-  writeFileSync(join(dir, 'js', 'fixture-config.js'), `window.__FX = ${JSON.stringify({ mode, storage, clock: CLOCK, ...extra })};\n`);
-  const text = readPre(await dumpDom(dir, 'fx.html', { virtualTime: 10000, profile: `profile-${++runs}`, offline: true }), 'FX');
+  writeFileSync(join(dir, 'fixture-config.js'), `window.__FX = ${JSON.stringify({ mode, storage, clock: CLOCK, ...extra })};\n`);
+  const text = readPre(await dumpDom(url + 'fx.html', profiles, { virtualTime: 10000, profile: `profile-${++runs}`, offline: true }), 'FX');
   if (text === null) throw new Error(`${mode}: no result (page did not finish)`);
   const out = JSON.parse(text);
   if (out.crash) throw new Error(`${mode}: ${out.crash}`);
@@ -99,10 +99,7 @@ function firstDiff(want, got, path = '$') {
 }
 
 try {
-  copyFileSync(join(FIX, 'fixture-pre.js'), join(dir, 'js', 'fixture-pre.js'));
-  copyFileSync(join(FIX, 'fixture-page.js'), join(dir, 'js', 'fixture-page.js'));
-  writePage(dir, 'fx.html', injectedPage(dir, { before: ['fixture-config.js', 'fixture-pre.js'], after: ['fixture-page.js'] }));
   process.exitCode = generate ? await generateAll() : await checkAll();
 } finally {
-  cleanup();
+  close();
 }

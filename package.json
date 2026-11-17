@@ -3,10 +3,25 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "npm run test:fixtures && npm run test:browser",
+    "check": "npm run typecheck && npm run lint && npm run test:fixtures && npm run test:browser",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "lint": "eslint .",
     "test:fixtures": "node scripts/fixtures.mjs",
     "test:browser": "node scripts/run-suite.mjs",
     "perf": "node scripts/run-suite.mjs --perf",
     "outline": "node scripts/outline.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vite": "^8.3.8"
   }
 }

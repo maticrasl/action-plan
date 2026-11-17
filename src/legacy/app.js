@@ -1,4 +1,11 @@
-'use strict';
+/** The app: data model, storage, views, forms and event wiring. */
+import { I18N, applyStaticI18n, lang, locale, setLanguage, t, tp } from './i18n.js';
+import { TEMPLATES, TPL_AREAS, TPL_LANGS } from './templates.js';
+import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
+import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from './sync.js';
+import { saveUsers, userStorage, users } from './users.js';
+import { canParent, contributingIds, deleteVision, findVision, goalsReaching, loadVisions, ownVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion, visionAncestors, visionParents, visionRoots, visions } from './visions.js';
+import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
 
 /* =========================================================
    Data model
@@ -9,13 +16,13 @@
    relations  – typed links between any two of the above
    ========================================================= */
 
-const STORAGE_KEY = 'actionplan.v1';
+export const STORAGE_KEY = 'actionplan.v1';
 
 // Labels for kinds, relation types and statuses live in i18n.js (kind.*, rel.*, activity.*, goal.*).
-const KINDS = ['goal', 'state', 'activity'];
+export const KINDS = ['goal', 'state', 'activity'];
 
 // `from` lists the allowed source kinds; `to: 'same'` means the target must be the same kind as the source.
-const REL_TYPES = {
+export const REL_TYPES = {
   contributes: { from: ['activity'],         to: ['goal'],     color: 'var(--contrib)' },
   subgoal:     { from: ['goal'],             to: ['goal'],     color: 'var(--goal)', width: 1.6 },
   subactivity: { from: ['activity'],         to: ['activity'], color: 'var(--activity)', width: 1.6 },
@@ -23,35 +30,36 @@ const REL_TYPES = {
   measures:    { from: ['state'],            to: ['goal'],     color: 'var(--rel-state)' },
   improves:    { from: ['activity'],         to: ['state'],    color: 'var(--rel-state)', dash: true },
 };
-const ACYCLIC = new Set(['depends', 'subgoal', 'subactivity']);
+export const ACYCLIC = new Set(['depends', 'subgoal', 'subactivity']);
 // Links to visions, drawn on the map but kept on the goal (`visions`) and the vision (`parents`), not as relationships.
-const VISION_RELS = {
+export const VISION_RELS = {
   serves:    { from: ['goal'],   to: ['vision'], color: 'var(--vision-ink)' },
   subvision: { from: ['vision'], to: ['vision'], color: 'var(--vision-ink)', width: 1.6 },
 };
-const PARENT_REL = { goal: 'subgoal', activity: 'subactivity' };
+export const PARENT_REL = { goal: 'subgoal', activity: 'subactivity' };
 
-const ACTIVITY_STATUS = ['todo', 'doing', 'done'];
-const GOAL_STATUS = ['active', 'achieved', 'paused'];
+export const ACTIVITY_STATUS = ['todo', 'doing', 'done'];
+export const GOAL_STATUS = ['active', 'achieved', 'paused'];
 // Visual state used to color goals and activities on the map.
-const NODE_STATES = ['todo', 'doing', 'late', 'blocked', 'done'];
+export const NODE_STATES = ['todo', 'doing', 'late', 'blocked', 'done'];
 
-const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type) : type);
-const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
+export const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type) : type);
+export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
-let db = emptyDb();
+export let db = emptyDb();
+export function setDb(v) { db = v; }
 // What the views show; each user starts from these (enterUser), then their remembered preferences.
-const freshUi = () => ({
+export const freshUi = () => ({
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
   mapHidden: new Set(), hideDone: false, hideVisions: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
   tlDates: null, // the selected timeline item whose dates can be dragged: its bar was clicked, not just its row
   rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
   grZoom: {}, // how far each graph is zoomed: 1 fits the card
 });
-const ui = freshUi();
+export const ui = freshUi();
 
 // Small per-device preferences (view, hidden relation types, hide-done, theme).
-const prefs = {
+export const prefs = {
   get(key, fallback) {
     try { const v = userStorage.getItem(`${STORAGE_KEY}.${key}`); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
   },
@@ -60,19 +68,20 @@ const prefs = {
   },
 };
 
-function emptyDb() {
+export function emptyDb() {
   return { goals: [], states: [], activities: [], relations: [], deleted: {} };
 }
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.
    Data from the single-plan version (STORAGE_KEY) is migrated into the first plan. */
-const PLANS_KEY = 'actionplan.plans';
-const planKey = id => `actionplan.plan.${id}`;
-let plans = { current: null, list: [] };
-const currentPlan = () => plans.list.find(p => p.id === plans.current);
+export const PLANS_KEY = 'actionplan.plans';
+export const planKey = id => `actionplan.plan.${id}`;
+export let plans = { current: null, list: [] };
+export function setPlans(v) { plans = v; }
+export const currentPlan = () => plans.list.find(p => p.id === plans.current);
 
-function readPlan(id) {
+export function readPlan(id) {
   try {
     const raw = userStorage.getItem(planKey(id));
     return raw ? normalize(JSON.parse(raw)) : emptyDb();
@@ -81,7 +90,7 @@ function readPlan(id) {
   }
 }
 
-function load() {
+export function load() {
   loadVisions();
   try {
     const saved = JSON.parse(userStorage.getItem(PLANS_KEY));
@@ -107,11 +116,11 @@ function load() {
   save();
 }
 
-function save() {
+export function save() {
   offerReached();
   stampChanges(db);
   stampPlanChanges(plans);
-  plansVersion++;
+  setPlansVersion(plansVersion + 1);
   try {
     userStorage.setItem(planKey(plans.current), JSON.stringify(db));
     userStorage.setItem(PLANS_KEY, JSON.stringify(plans));
@@ -121,7 +130,7 @@ function save() {
   scheduleSync();
 }
 
-function openPlan(id) {
+export function openPlan(id) {
   plans.current = id;
   db = readPlan(id);
   takeSnapshot(db);
@@ -132,22 +141,22 @@ function openPlan(id) {
 }
 
 // Plan names are unique, ignoring case and spaces around them.
-const nameTaken = (name, exceptId) => plans.list.some(p => p.id !== exceptId && p.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
+export const nameTaken = (name, exceptId) => plans.list.some(p => p.id !== exceptId && p.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
 // The name itself if it is free, else with the first free number added: "Sample plan 2".
-function uniqueName(name) {
+export function uniqueName(name) {
   let candidate = name, n = 1;
   while (nameTaken(candidate)) candidate = `${name} ${++n}`;
   return candidate;
 }
 
 // Asks for a plan name until it is free (or the user cancels); `exceptId` is the plan being renamed.
-function askPlanName(question, suggestion, exceptId) {
+export function askPlanName(question, suggestion, exceptId) {
   let name = prompt(question, suggestion)?.trim();
   while (name && nameTaken(name, exceptId)) name = prompt(`${t('plan.nameTaken', { name })}\n${question}`, name)?.trim();
   return name;
 }
 
-function createPlan(name, data = emptyDb()) {
+export function createPlan(name, data = emptyDb()) {
   const id = uid();
   plans.list.push({ id, name });
   plans.current = id;
@@ -157,7 +166,7 @@ function createPlan(name, data = emptyDb()) {
   openPlan(id);
 }
 
-function deletePlan(id) {
+export function deletePlan(id) {
   try { userStorage.removeItem(planKey(id)); } catch (e) { /* ignore */ }
   plans.list = plans.list.filter(p => p.id !== id);
   if (!plans.list.length) return createPlan(t('plan.defaultName'));
@@ -167,7 +176,7 @@ function deletePlan(id) {
 // Moves everything in one plan into another and opens that one. Items keep their ids unless the
 // target already has (or once deleted) that id; then they get new ones and their relations follow.
 // The moved items are saved as changes, so sync carries them; `remove` deletes the source afterwards.
-function mergePlanInto(fromId, toId, remove = false) {
+export function mergePlanInto(fromId, toId, remove = false) {
   if (fromId === toId) return;
   const source = fromId === plans.current ? JSON.parse(JSON.stringify(db)) : readPlan(fromId);
   if (plans.current !== toId) openPlan(toId);
@@ -194,15 +203,15 @@ function mergePlanInto(fromId, toId, remove = false) {
 
 // Ids go into the page's HTML unescaped, so only items with a plain id are kept (a shared file could
 // hide markup in one); relationships need plain ids at both ends too.
-const safeId = id => typeof id === 'string' && /^[\w-]{1,64}$/.test(id);
+export const safeId = id => typeof id === 'string' && /^[\w-]{1,64}$/.test(id);
 
 // Nothing may depend on a routine; older plans, and edits meeting in sync, can hold such links.
-const dropRoutineDeps = (rels, activities) => {
+export const dropRoutineDeps = (rels, activities) => {
   const routines = new Set(activities.filter(isRoutine).map(a => a.id));
   return rels.filter(r => !(r.type === 'depends' && routines.has(r.to)));
 };
 
-function normalize(data) {
+export function normalize(data) {
   const d = emptyDb();
   for (const k of SYNC_COLLS) if (Array.isArray(data?.[k])) d[k] = data[k].filter(x => x && typeof x === 'object' && safeId(x.id));
   // "Is related to" links were dropped from the app; old plans and synced copies lose theirs here.
@@ -221,53 +230,56 @@ function normalize(data) {
 
 /* ---------- Utilities ---------- */
 
-const $ = (sel, root = document) => root.querySelector(sel);
-const viewEl = $('#view');
-const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
+export const $ = (sel, root = document) => root.querySelector(sel);
+export const viewEl = $('#view');
+export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+export const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
 
 // Local calendar date as YYYY-MM-DD.
-function isoDate(d) {
+export function isoDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-function today() {
+export function today() {
   return isoDate(new Date());
 }
-function daysUntil(date) {
+// Tests replace today; callers see the replacement through the live binding.
+// eslint-disable-next-line no-func-assign
+export function setToday(f) { today = f; }
+export function daysUntil(date) {
   if (!date) return null;
   return Math.round((new Date(date + 'T00:00') - new Date(today() + 'T00:00')) / 86400000);
 }
 // A date or number formatter for the app's language. Making one is slow (toLocaleString makes one on
 // every call), and a long table formats thousands of values, so each is made once and kept.
-const formatters = new Map();
-function formatter(Kind, opts) {
+export const formatters = new Map();
+export function formatter(Kind, opts) {
   const key = `${Kind.name} ${locale()} ${JSON.stringify(opts)}`;
   if (!formatters.has(key)) formatters.set(key, new Kind(locale(), opts));
   return formatters.get(key);
 }
-function fmtDate(date) {
+export function fmtDate(date) {
   if (!date) return '';
   return formatter(Intl.DateTimeFormat, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(date + 'T00:00'));
 }
 // "today", "tomorrow" or "yesterday" for those days, else the date (`other` formats it); `cap` for one
 // that stands alone, such as a tag or a table cell.
-function fmtRel(date, cap = false, other = fmtDate) {
+export function fmtRel(date, cap = false, other = fmtDate) {
   const word = date && { '-1': 'yesterday', 0: 'today', 1: 'tomorrow' }[daysUntil(date)];
   if (!word) return other(date);
   const s = t('day.' + word);
   return cap ? s.charAt(0).toLocaleUpperCase(locale()) + s.slice(1) : s;
 }
 // "3 Mar 2026 – tomorrow", or the one date there is.
-const fmtSpan = (s, e, cap = false) => (s && e ? `${fmtRel(s, cap)} – ${fmtRel(e)}` : fmtRel(s || e, cap));
+export const fmtSpan = (s, e, cap = false) => (s && e ? `${fmtRel(s, cap)} – ${fmtRel(e)}` : fmtRel(s || e, cap));
 // A yyyy-mm-dd date in the app's language, read as a calendar day (no time zone shift).
-const fmtDay = (iso, opts) => formatter(Intl.DateTimeFormat, { ...opts, timeZone: 'UTC' }).format(new Date(iso + 'T00:00Z'));
-function fmtNum(n) {
+export const fmtDay = (iso, opts) => formatter(Intl.DateTimeFormat, { ...opts, timeZone: 'UTC' }).format(new Date(iso + 'T00:00Z'));
+export function fmtNum(n) {
   return formatter(Intl.NumberFormat, { maximumFractionDigits: 2 }).format(Number(n));
 }
 // A number typed with a decimal dot or comma ("78.5", "78,5", "1 234,5", "1,234.5"); NaN if it isn't one.
-function parseNum(s) {
+export function parseNum(s) {
   let v = String(s ?? '').trim().replace(/[\s  ']/g, '').replace(/^−/, '-');
   const dot = v.lastIndexOf('.'), comma = v.lastIndexOf(',');
   // With both, the last one is the decimal separator and the other groups thousands.
@@ -276,9 +288,9 @@ function parseNum(s) {
   return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(v) ? Number(v) : NaN;
 }
 // A stored number ("78.5") as typed in the current language ("78,5" in Slovenian).
-const numInput = v => (isNum(v) ? String(v).replace('.', (1.5).toLocaleString(locale()).charAt(1)) : v ?? '');
+export const numInput = v => (isNum(v) ? String(v).replace('.', (1.5).toLocaleString(locale()).charAt(1)) : v ?? '');
 // Dates are typed as dd/mm/yyyy (also accepting dots, dashes or spaces, and yyyy-mm-dd) and stored as yyyy-mm-dd.
-function parseDateInput(s) {
+export function parseDateInput(s) {
   s = String(s ?? '').trim();
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/), d, mo, y;
   if (m) [, y, mo, d] = m.map(Number);
@@ -288,14 +300,14 @@ function parseDateInput(s) {
   if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
   return dt.toISOString().slice(0, 10);
 }
-const dateInput = iso => (iso ? iso.split('-').reverse().join('/') : '');
+export const dateInput = iso => (iso ? iso.split('-').reverse().join('/') : '');
 
-const itemCount = () => db.goals.length + db.states.length + db.activities.length;
+export const itemCount = () => db.goals.length + db.states.length + db.activities.length;
 
-function collection(kind) {
+export function collection(kind) {
   return { goal: db.goals, state: db.states, activity: db.activities }[kind];
 }
-function findEntity(id) {
+export function findEntity(id) {
   for (const kind of KINDS) {
     const item = collection(kind).find(x => x.id === id);
     if (item) return { kind, item };
@@ -306,11 +318,11 @@ function findEntity(id) {
 
 /* ---------- Relations ---------- */
 
-const relsFrom = (id, type) => db.relations.filter(r => r.from === id && (!type || r.type === type));
-const relsTo = (id, type) => db.relations.filter(r => r.to === id && (!type || r.type === type));
+export const relsFrom = (id, type) => db.relations.filter(r => r.from === id && (!type || r.type === type));
+export const relsTo = (id, type) => db.relations.filter(r => r.to === id && (!type || r.type === type));
 
 // True if `target` is reachable from `start` following edges of `type`.
-function reaches(start, target, type, seen = new Set()) {
+export function reaches(start, target, type, seen = new Set()) {
   if (start === target) return true;
   if (seen.has(start)) return false;
   seen.add(start);
@@ -318,12 +330,12 @@ function reaches(start, target, type, seen = new Set()) {
 }
 
 // Parent chain (nearest first) following a parent relation such as 'subactivity'.
-function ancestors(id, type) {
+export function ancestors(id, type) {
   const out = [];
   for (let r = relsFrom(id, type)[0]; r && !out.includes(r.to); r = relsFrom(r.to, type)[0]) out.push(r.to);
   return out;
 }
-function descendants(id, type) {
+export function descendants(id, type) {
   const out = [];
   const queue = [id];
   while (queue.length) {
@@ -334,14 +346,14 @@ function descendants(id, type) {
   return out;
 }
 
-const kindList = kinds => kinds.map(k => t('kindLower.' + k)).join(' / ');
+export const kindList = kinds => kinds.map(k => t('kindLower.' + k)).join(' / ');
 // Human-readable allowed direction, e.g. "activity → activity, goal → goal".
-function relSignature(type) {
+export function relSignature(type) {
   const d = REL_TYPES[type];
   return d.from.map(f => `${kindList([f])} → ${kindList(d.to === 'same' ? [f] : d.to)}`).join(', ');
 }
 
-function canRelate(from, to, type) {
+export function canRelate(from, to, type) {
   const def = REL_TYPES[type];
   const a = findEntity(from), b = findEntity(to);
   if (!def || !a || !b) return t('err.unknown');
@@ -363,7 +375,7 @@ function canRelate(from, to, type) {
 
 // True if the link would leave an item depending on its own parent or sub-item, in either direction:
 // directly for a new dependency, or through the new parent line for a new sub-activity or sub-goal.
-function dependsInLine(from, to, type, kind) {
+export function dependsInLine(from, to, type, kind) {
   const parentRel = PARENT_REL[kind];
   if (type === 'depends') return [...ancestors(from, parentRel), ...descendants(from, parentRel)].includes(to);
   const below = new Set([from, ...descendants(from, parentRel)]), above = new Set([to, ...ancestors(to, parentRel)]);
@@ -372,11 +384,11 @@ function dependsInLine(from, to, type, kind) {
 }
 
 // Items `id` waits for: its own prerequisites plus those of every parent above it (see blockers).
-const effectiveDeps = (id, kind) => [id, ...ancestors(id, PARENT_REL[kind])].flatMap(x => relsFrom(x, 'depends')).map(r => r.to);
+export const effectiveDeps = (id, kind) => [id, ...ancestors(id, PARENT_REL[kind])].flatMap(x => relsFrom(x, 'depends')).map(r => r.to);
 
 // True if adding the link would make an item wait for itself, e.g. a parent depending on its
 // own sub-activity: the sub-activity inherits that prerequisite, so both stay blocked for good.
-function wouldSelfBlock(from, to, type, kind) {
+export function wouldSelfBlock(from, to, type, kind) {
   const rel = { id: '', from, to, type };
   db.relations.push(rel);
   try {
@@ -393,7 +405,7 @@ function wouldSelfBlock(from, to, type, kind) {
   } finally { db.relations.splice(db.relations.indexOf(rel), 1); }
 }
 
-function addRelation(from, to, type) {
+export function addRelation(from, to, type) {
   const err = canRelate(from, to, type);
   if (err) return err;
   db.relations.push({ id: uid(), from, to, type });
@@ -401,27 +413,27 @@ function addRelation(from, to, type) {
 }
 
 // Relationship types that can link `from` → `to`; an edited relationship (`ignoreId`) does not count against itself.
-function possibleTypes(from, to, ignoreId) {
+export function possibleTypes(from, to, ignoreId) {
   const all = db.relations;
   db.relations = all.filter(r => r.id !== ignoreId);
   try { return Object.keys(REL_TYPES).filter(k => !canRelate(from, to, k)); } finally { db.relations = all; }
 }
 
 // Replace all outgoing links of one type from an entity.
-function setLinks(fromId, type, toIds) {
+export function setLinks(fromId, type, toIds) {
   db.relations = db.relations.filter(r => !(r.from === fromId && r.type === type));
   const errors = toIds.map(to => addRelation(fromId, to, type)).filter(Boolean);
   if (errors.length) toast(errors[0]);
 }
 
 // Replace all incoming links of one type to an entity, e.g. the activities that contribute to a goal.
-function setIncoming(toId, type, fromIds) {
+export function setIncoming(toId, type, fromIds) {
   db.relations = db.relations.filter(r => !(r.to === toId && r.type === type));
   const errors = fromIds.map(from => addRelation(from, toId, type)).filter(Boolean);
   if (errors.length) toast(errors[0]);
 }
 
-function removeEntity(kind, id) {
+export function removeEntity(kind, id) {
   if (kind === 'vision') {
     if (ui.mapSelected === id) ui.mapSelected = null;
     return deleteVision(id);
@@ -434,7 +446,7 @@ function removeEntity(kind, id) {
 
 /* ---------- SMART & progress ---------- */
 
-function smartCheck(g) {
+export function smartCheck(g) {
   const errs = {};
   if (!g.title || g.title.trim().length < 4) errs.title = t('err.title');
   if (!g.specific || g.specific.trim().length < 15) errs.specific = t('err.specific');
@@ -459,7 +471,7 @@ function smartCheck(g) {
 }
 
 // Latest numeric current-state linked via "measures" wins; otherwise the goal's own value.
-function measuringState(g) {
+export function measuringState(g) {
   return relsTo(g.id, 'measures')
     .map(r => db.states.find(s => s.id === r.from))
     .filter(s => s && isNum(stateValue(s)))
@@ -470,15 +482,15 @@ function measuringState(g) {
 // when a period starts, and a period still under way counts once it is past the last one (for
 // better or worse). When lower is better (spend less), nothing counts before entries reach back into a
 // complete period: the first period under way, or an empty one before it, would look well under target.
-const lowerBetter = g => Number(g.target) < (isNum(g.baseline) ? Number(g.baseline) : 0);
-const lastPeriodLogged = (s, period) => entriesOf(s).some(e => e.date < calPeriod(period, today()).from);
-function goalMeasure(s, g) {
+export const lowerBetter = g => Number(g.target) < (isNum(g.baseline) ? Number(g.baseline) : 0);
+export const lastPeriodLogged = (s, period) => entriesOf(s).some(e => e.date < calPeriod(period, today()).from);
+export function goalMeasure(s, g) {
   const period = goalPeriod(g);
   if (!isCumulative(s) || period === 'total') return Number(stateValue(s));
   if (lowerBetter(g) && !lastPeriodLogged(s, period)) return null;
   return Math.max(stateTotal(s, period), lastPeriodTotal(s, period));
 }
-function goalCurrent(g) {
+export function goalCurrent(g) {
   if (byRoutines(g)) return Math.round(goalProgress(g));
   if (byActivities(g)) return countedActivities(g).filter(a => a.status === 'done').length;
   const st = measuringState(g), v = st && goalMeasure(st, g);
@@ -486,7 +498,7 @@ function goalCurrent(g) {
   if (isNum(g.current)) return Number(g.current);
   return isNum(g.baseline) ? Number(g.baseline) : 0;
 }
-function goalProgress(g) {
+export function goalProgress(g) {
   if (g.status === 'achieved') return 100;
   if (byRoutines(g)) {
     const kept = goalRoutines(g).map(a => consistency(a, g.startDate)).filter(v => v !== null);
@@ -498,7 +510,7 @@ function goalProgress(g) {
   }
   return metricProgress(g, goalCurrent(g));
 }
-function metricProgress(g, current) {
+export function metricProgress(g, current) {
   const b = isNum(g.baseline) ? Number(g.baseline) : 0;
   const target = Number(g.target);
   if (!isNum(g.target) || target === b) return 0;
@@ -508,7 +520,7 @@ function metricProgress(g, current) {
 // Whether a goal has reached its target. For a goal counting a state that adds up per period,
 // only a complete period counts: one strong Wednesday does not reach "30 km a week". Consistency
 // has no target to reach (it is 100 % after the first tick).
-function goalReached(g) {
+export function goalReached(g) {
   if (g.status !== 'active' || byRoutines(g)) return false;
   const st = ownMetric(g) ? measuringState(g) : null;
   if (isCumulative(st) && goalPeriod(g) !== 'total') return (!lowerBetter(g) || lastPeriodLogged(st, goalPeriod(g))) && metricProgress(g, lastPeriodTotal(st, goalPeriod(g))) >= 100;
@@ -516,22 +528,22 @@ function goalReached(g) {
 }
 
 // Activities working toward a goal: direct contributors plus all their sub-activities.
-function goalActivities(g) {
+export function goalActivities(g) {
   const ids = new Set();
   relsTo(g.id, 'contributes').forEach(r => [r.from, ...descendants(r.from, 'subactivity')].forEach(id => ids.add(id)));
   return db.activities.filter(a => ids.has(a.id));
 }
 
 // Goals can measure progress by their activities instead of a metric (`progress: 'activities'`).
-const byActivities = g => g.progress === 'activities';
+export const byActivities = g => g.progress === 'activities';
 // The activities such a goal counts: the actual pieces of work (activities without sub-activities
 // of their own) under the goal and its sub-goals.
-function countedActivities(g) {
+export function countedActivities(g) {
   return treeActivities(g).filter(a => !isRoutine(a) && !relsTo(a.id, 'subactivity').length);
 }
 
 // The activities working toward a goal and its sub-goals.
-function treeActivities(g) {
+export function treeActivities(g) {
   const goals = [g, ...descendants(g.id, 'subgoal').map(id => db.goals.find(x => x.id === id)).filter(Boolean)];
   const ids = new Set(goals.flatMap(x => goalActivities(x).map(a => a.id)));
   return db.activities.filter(a => ids.has(a.id));
@@ -539,17 +551,17 @@ function treeActivities(g) {
 
 // Goals can also measure progress by how consistently their routines are kept (`progress: 'routines'`):
 // the routines working toward the goal and its sub-goals.
-const byRoutines = g => g.progress === 'routines';
+export const byRoutines = g => g.progress === 'routines';
 // Measured by its own metric and target (form values say 'measure', stored goals leave it out).
-const ownMetric = g => !g.progress || g.progress === 'measure';
-const goalRoutines = g => treeActivities(g).filter(isRoutine);
+export const ownMetric = g => !g.progress || g.progress === 'measure';
+export const goalRoutines = g => treeActivities(g).filter(isRoutine);
 
 // A routine is complete once it has ended.
-const isComplete = (kind, item) => (kind === 'goal' ? item.status === 'achieved'
+export const isComplete = (kind, item) => (kind === 'goal' ? item.status === 'achieved'
   : isRoutine(item) ? !!item.dueDate && item.dueDate < today() : item.status === 'done');
 
 // Unfinished items this one waits for – its own dependencies and those inherited from its parents.
-function blockers(item, kind = 'activity') {
+export function blockers(item, kind = 'activity') {
   return [item.id, ...ancestors(item.id, PARENT_REL[kind])]
     .flatMap(id => relsFrom(id, 'depends'))
     .map(r => findEntity(r.to))
@@ -557,7 +569,7 @@ function blockers(item, kind = 'activity') {
     .map(e => e.item);
 }
 
-function activityState(a) {
+export function activityState(a) {
   if (isRoutine(a)) return routineState(a);
   if (a.status === 'done') return 'done';
   if (blockers(a).length) return 'blocked';
@@ -566,13 +578,13 @@ function activityState(a) {
 }
 // When its start date comes, an activity still to do is in progress. This happens once per start date
 // (`autoStarted` remembers which), so setting it back to "To do" sticks until the start date changes.
-function startDueActivities() {
+export function startDueActivities() {
   const now = today();
   const due = db.activities.filter(a => !isRoutine(a) && a.status === 'todo' && a.startDate && a.startDate <= now && a.autoStarted !== a.startDate);
   due.forEach(a => Object.assign(a, { status: 'doing', autoStarted: a.startDate }));
   return due.length;
 }
-function goalState(g) {
+export function goalState(g) {
   if (g.status === 'achieved') return 'done';
   if (blockers(g, 'goal').length) return 'blocked';
   if (g.deadline && daysUntil(g.deadline) < 0) return 'late';
@@ -583,7 +595,7 @@ function goalState(g) {
 // Everything relevant to one goal: its sub-goals and prerequisite goals, the activity trees
 // working toward them (with their prerequisite chains), the activities waiting for those,
 // and the related current states.
-function goalScope(goalId) {
+export function goalScope(goalId) {
   const goal = new Set([goalId, ...descendants(goalId, 'subgoal')]);
   [...goal].forEach(id => relsFrom(id, 'depends').forEach(r => goal.add(r.to)));
 
@@ -626,21 +638,21 @@ function goalScope(goalId) {
    `checkins` maps a date to 1 (done) or 0 (unticked, kept so sync can merge it). A routine runs
    from its start date to its due date, if any. Weeks start on Monday. */
 
-const isRoutine = a => !!a?.repeat;
+export const isRoutine = a => !!a?.repeat;
 
 /* A list is a one-off activity with `list`: items ({ id, text, done, at }) to tick off. It is done once
    every item is ticked; unticking one puts a done list back in progress. `at` is when the item was
    last ticked or renamed, and `droppedItems` keeps the ids of removed items, so sync can merge two
    copies item by item. */
-const isList = a => !isRoutine(a) && Array.isArray(a?.list);
-const listDone = a => a.list.filter(i => i.done).length;
-function followList(a) {
+export const isList = a => !isRoutine(a) && Array.isArray(a?.list);
+export const listDone = a => a.list.filter(i => i.done).length;
+export function followList(a) {
   const n = listDone(a);
   if (a.list.length && n === a.list.length) a.status = 'done';
   else if (a.status === 'done' || (n && a.status === 'todo')) a.status = 'doing';
 }
 
-function tickListItem(id, itemId, iso = today()) {
+export function tickListItem(id, itemId, iso = today()) {
   const a = db.activities.find(x => x.id === id);
   if (a && isListRoutine(a)) return tickRoutineItem(a, itemId, iso);
   const it = a && isList(a) && a.list.find(i => i.id === itemId);
@@ -659,12 +671,12 @@ function tickListItem(id, itemId, iso = today()) {
 /* A list routine is a routine with a `list`: each day it is done, its items are ticked off anew.
    `listDays` maps a date to { itemId: 1 | 0 } (0 kept so sync can merge an untick). Ticking the last
    item ticks the day off; unticking one unticks it again. Ticking the day itself ticks every item. */
-const isListRoutine = a => isRoutine(a) && Array.isArray(a?.list);
-const itemOn = (a, iso, itemId) => a.listDays?.[iso]?.[itemId] === 1;
-const dayItemsDone = (a, iso) => a.list.filter(i => itemOn(a, iso, i.id)).length;
-const setDayItems = (a, iso, ticks) => { a.listDays = { ...a.listDays, [iso]: { ...a.listDays?.[iso], ...ticks } }; };
+export const isListRoutine = a => isRoutine(a) && Array.isArray(a?.list);
+export const itemOn = (a, iso, itemId) => a.listDays?.[iso]?.[itemId] === 1;
+export const dayItemsDone = (a, iso) => a.list.filter(i => itemOn(a, iso, i.id)).length;
+export const setDayItems = (a, iso, ticks) => { a.listDays = { ...a.listDays, [iso]: { ...a.listDays?.[iso], ...ticks } }; };
 
-function tickRoutineItem(a, itemId, iso) {
+export function tickRoutineItem(a, itemId, iso) {
   if (!tickable(a, iso) || !a.list.some(i => i.id === itemId)) return;
   const on = !itemOn(a, iso, itemId);
   const all = on && dayItemsDone(a, iso) === a.list.length - 1;
@@ -682,26 +694,26 @@ function tickRoutineItem(a, itemId, iso) {
   justTicked(item())?.focus();
 }
 // A ticked item's box pops once; the class is only added here, so a later render does not replay it.
-const justTicked = el => { if (el?.matches('.done')) el.classList.add('just'); return el; };
+export const justTicked = el => { if (el?.matches('.done')) el.classList.add('just'); return el; };
 // Monday = 0 (day 0 of the epoch, 1 January 1970, was a Thursday).
-const weekday = iso => (dayNum(iso) + 3) % 7;
-const addDays = (iso, n) => dayStr(dayNum(iso) + n);
-const daysBetween = (from, to) => Array.from({ length: Math.max(0, dayNum(to) - dayNum(from) + 1) }, (_, i) => addDays(from, i));
-const routineStart = a => a.startDate || a.createdAt || today();
-const checkedOn = (a, iso) => a.checkins?.[iso] === 1;
-const runsOn = (a, iso) => iso >= routineStart(a) && !(a.dueDate && iso > a.dueDate);
-const monthDay = iso => Number(iso.slice(8));
-const monthLength = iso => monthDay(isoOf(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0));
-const nthInMonth = iso => Math.ceil(monthDay(iso) / 7);
-const lastInMonth = iso => monthDay(iso) + 7 > monthLength(iso);
+export const weekday = iso => (dayNum(iso) + 3) % 7;
+export const addDays = (iso, n) => dayStr(dayNum(iso) + n);
+export const daysBetween = (from, to) => Array.from({ length: Math.max(0, dayNum(to) - dayNum(from) + 1) }, (_, i) => addDays(from, i));
+export const routineStart = a => a.startDate || a.createdAt || today();
+export const checkedOn = (a, iso) => a.checkins?.[iso] === 1;
+export const runsOn = (a, iso) => iso >= routineStart(a) && !(a.dueDate && iso > a.dueDate);
+export const monthDay = iso => Number(iso.slice(8));
+export const monthLength = iso => monthDay(isoOf(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0));
+export const nthInMonth = iso => Math.ceil(monthDay(iso) / 7);
+export const lastInMonth = iso => monthDay(iso) + 7 > monthLength(iso);
 
-function sched(a) {
+export function sched(a) {
   const r = a.repeat;
   if (r.unit) return r.unit === 'month' && !r.times ? monthRule({ every: 1, ...r }, routineStart(a)) : { every: 1, ...r };
   return r.days ? { every: 1, unit: 'week', days: r.days } : { every: 1, unit: r.per === 'month' ? 'month' : 'week', times: r.times };
 }
 // A monthly rule with everything it falls on spelled out (older ones took it from the start date).
-function monthRule(s, start) {
+export function monthRule(s, start) {
   if (s.on === 'lastDay') return s;
   if (s.on === 'weekday' || s.on === 'last') return { ...s, on: 'nth', nth: s.on === 'last' ? -1 : nthInMonth(start), weekday: weekday(start) };
   if (s.on === 'nth') return { ...s, nth: s.nth ?? nthInMonth(start), weekday: s.weekday ?? weekday(start) };
@@ -709,19 +721,19 @@ function monthRule(s, start) {
 }
 
 // Flexible routines ask for a number of days per period; fixed ones fall on set days.
-const isFlexible = a => !!sched(a).times;
+export const isFlexible = a => !!sched(a).times;
 
 // Number of the day, week, month or year a date falls in, and the first day of one.
-function unitIndex(iso, unit) {
+export function unitIndex(iso, unit) {
   const [y, m] = iso.split('-').map(Number);
   return { day: dayNum(iso), week: Math.floor((dayNum(iso) + 3) / 7), month: y * 12 + m - 1, year: y }[unit];
 }
-function unitFrom(i, unit) {
+export function unitFrom(i, unit) {
   return { day: () => dayStr(i), week: () => dayStr(i * 7 - 3), month: () => isoOf(Math.floor(i / 12), i % 12, 1), year: () => isoOf(i, 0, 1) }[unit]();
 }
 
 // Whether a fixed routine falls on a date (a flexible one may be done on any day).
-function isDueDay(a, iso) {
+export function isDueDay(a, iso) {
   const s = sched(a);
   if (s.times) return true;
   const start = routineStart(a);
@@ -738,9 +750,9 @@ function isDueDay(a, iso) {
 
 // The period progress is shown for: a flexible routine's own (every 2 weeks: two weeks from the
 // start's week), or a fixed routine's calendar week (daily and weekly), month or year.
-const periodUnit = a => { const s = sched(a); return s.times ? s.unit : s.unit === 'day' ? 'week' : s.unit; };
+export const periodUnit = a => { const s = sched(a); return s.times ? s.unit : s.unit === 'day' ? 'week' : s.unit; };
 
-function periodOf(a, iso) {
+export function periodOf(a, iso) {
   const s = sched(a), unit = periodUnit(a);
   const span = s.times ? s.every : 1;
   const first = unitIndex(routineStart(a), unit);
@@ -749,7 +761,7 @@ function periodOf(a, iso) {
 }
 
 // The date of the `count`-th occurrence: the last due day, or the end of the last period needed.
-function lastOccurrence(a, count) {
+export function lastOccurrence(a, count) {
   const s = sched(a);
   if (s.times) {
     let p = periodOf(a, routineStart(a));
@@ -763,9 +775,9 @@ function lastOccurrence(a, count) {
 
 /* Set days are strict: only a tick on a due day counts. With `repeat.makeUp` a tick on another day of
    the period counts too – it makes up for a missed due day (the earliest first) or counts ahead. */
-const makesUp = a => !isFlexible(a) && !!a.repeat?.makeUp;
+export const makesUp = a => !isFlexible(a) && !!a.repeat?.makeUp;
 // The due days, up to yesterday, in the period around `iso` that ticks on other days made up for.
-function madeUpDays(a, iso) {
+export function madeUpDays(a, iso) {
   if (!makesUp(a)) return new Set();
   const { from, to } = periodOf(a, iso), now = today();
   const days = daysBetween(from, to < now ? to : now).filter(d => runsOn(a, d));
@@ -773,7 +785,7 @@ function madeUpDays(a, iso) {
   return new Set(days.filter(d => d < now && isDueDay(a, d) && !checkedOn(a, d)).slice(0, extra));
 }
 // Whether a due day was kept: ticked, or made up for; the made-up days are worked out once per period.
-function keptDay(a) {
+export function keptDay(a) {
   const byPeriod = new Map();
   return d => {
     if (checkedOn(a, d)) return true;
@@ -786,7 +798,7 @@ function keptDay(a) {
 
 // Check-ins in the period around `iso` against what the period asks for. Specific days count only
 // when they are due (unless they can be made up); days before the start or after the end do not count.
-function periodProgress(a, iso = today()) {
+export function periodProgress(a, iso = today()) {
   const { from, to } = periodOf(a, iso);
   const days = daysBetween(from, to).filter(d => runsOn(a, d));
   if (!isFlexible(a)) {
@@ -799,7 +811,7 @@ function periodProgress(a, iso = today()) {
   return { from, to, done, target: times, met: done >= times };
 }
 
-function routineState(a) {
+export function routineState(a) {
   const now = today();
   if (a.dueDate && a.dueDate < now) return 'done';
   if (routineStart(a) > now) return 'todo';
@@ -816,7 +828,7 @@ function routineState(a) {
 // The day in this period from which a routine is behind, or '': a fixed routine's last missed due
 // day before today (ticks after it count), a flexible one's first day on which the days left could
 // no longer reach the target.
-function behindSince(a, p, now) {
+export function behindSince(a, p, now) {
   if (!isFlexible(a)) return missedDays(a, p.from, addDays(now, -1)).at(-1) || '';
   return daysBetween(p.from, now).find(d => {
     const before = daysBetween(p.from, addDays(d, -1)).filter(x => checkedOn(a, x)).length;
@@ -824,7 +836,7 @@ function behindSince(a, p, now) {
   }) || '';
 }
 // Due days of a fixed routine between two dates that were not ticked (nor made up for).
-function missedDays(a, from, to) {
+export function missedDays(a, from, to) {
   if (isFlexible(a)) return [];
   const kept = keptDay(a);
   return daysBetween(from, to).filter(d => runsOn(a, d) && isDueDay(a, d) && !kept(d));
@@ -833,7 +845,7 @@ function missedDays(a, from, to) {
 // What today asks of a running routine: 'done' (ticked), 'due' (a set day, or a flexible routine that
 // needs every day left), 'any' (a flexible one that can wait), 'met' (the period is done) or 'rest'
 // (not one of its days); null when it does not run today.
-function routineToday(a) {
+export function routineToday(a) {
   const now = today();
   if (!runsOn(a, now)) return null;
   if (checkedOn(a, now)) return 'done';
@@ -847,8 +859,8 @@ function routineToday(a) {
   const left = daysBetween(now, p.to).filter(d => runsOn(a, d) && !checkedOn(a, d)).length;
   return p.target - p.done >= left ? 'due' : 'any';
 }
-const TODAY_TAG = { done: 'ok', due: 'warn', makeUp: 'warn', any: '', met: 'ok', rest: '' };
-function todayTag(a) {
+export const TODAY_TAG = { done: 'ok', due: 'warn', makeUp: 'warn', any: '', met: 'ok', rest: '' };
+export function todayTag(a) {
   const k = routineToday(a);
   if (!k) return '';
   const next = k === 'rest' && nextDueDay(a, addDays(today(), 1));
@@ -858,7 +870,7 @@ function todayTag(a) {
 
 // Periods met in a row (flexible) or due days ticked in a row (fixed); the current period or today
 // counts once done, and does not break the streak before that.
-function routineStreak(a) {
+export function routineStreak(a) {
   const now = today(), start = routineStart(a);
   let n = 0;
   if (!isFlexible(a)) {
@@ -883,7 +895,7 @@ function routineStreak(a) {
 // Share (0–1) of periods met (flexible) or due days ticked (fixed) since `from`, or null when there is
 // nothing to judge yet. The running period – and a first period cut short by the start – count
 // only once met; today counts only once ticked.
-function consistency(a, from = '') {
+export function consistency(a, from = '') {
   const now = today();
   const start = from > routineStart(a) ? from : routineStart(a);
   const end = a.dueDate && a.dueDate < now ? a.dueDate : now;
@@ -908,17 +920,17 @@ function consistency(a, from = '') {
 }
 
 // 1 January 2024 was a Monday.
-const weekdayName = (i, style = 'short') => fmtDay(isoOf(2024, 0, 1 + i), { weekday: style });
+export const weekdayName = (i, style = 'short') => fmtDay(isoOf(2024, 0, 1 + i), { weekday: style });
 // "first" … "fifth" or "last" (-1); in Slovenian it follows the weekday's gender (sreda, sobota and
 // nedelja are feminine).
-const nthWord = (nth, day) => t(`rt.nth.${nth < 0 ? 'last' : nth}${[2, 5, 6].includes(day) ? 'F' : ''}`);
+export const nthWord = (nth, day) => t(`rt.nth.${nth < 0 ? 'last' : nth}${[2, 5, 6].includes(day) ? 'F' : ''}`);
 // "the second Friday" or "the last Wednesday" of a month.
-const nthWeekdayText = (nth, day) => t('rt.monthNth', { nth: nthWord(nth, day), day: weekdayName(day, 'long') });
+export const nthWeekdayText = (nth, day) => t('rt.monthNth', { nth: nthWord(nth, day), day: weekdayName(day, 'long') });
 
 // A short summary, like a calendar's: every day, every Mon, Thu, every 2 weeks on Mon, 3× a week;
 // days that can be made up add "or another day".
-const scheduleText = a => (makesUp(a) ? t('rt.orAnotherDay', { text: baseSchedule(a) }) : baseSchedule(a));
-function baseSchedule(a) {
+export const scheduleText = a => (makesUp(a) ? t('rt.orAnotherDay', { text: baseSchedule(a) }) : baseSchedule(a));
+export function baseSchedule(a) {
   const s = sched(a), start = routineStart(a);
   const every = tp('rt.every.' + s.unit, s.every);
   if (s.times) return s.every === 1 ? tp(s.unit === 'month' ? 'rt.perMonth' : 'rt.perWeek', s.times) : t('rt.timesEvery', { times: tp('rt.times', s.times), every });
@@ -933,8 +945,8 @@ function baseSchedule(a) {
 }
 // The same, compact for a routine card's tag (the full text is its tooltip): Mon–Fri, Mon, Wed, Sat,
 // monthly: last day; days that can be made up add a mark.
-const shortSchedule = a => (makesUp(a) ? t('rt.short.makeUp', { text: shortBase(a) }) : shortBase(a));
-function shortBase(a) {
+export const shortSchedule = a => (makesUp(a) ? t('rt.short.makeUp', { text: shortBase(a) }) : shortBase(a));
+export function shortBase(a) {
   const s = sched(a), start = routineStart(a);
   if (s.times || s.unit === 'day') return baseSchedule(a);
   const on = what => t('rt.short.on', { every: s.every === 1 ? t('rt.short.' + s.unit) : tp('rt.every.' + s.unit, s.every), what });
@@ -954,7 +966,7 @@ function shortBase(a) {
   return on(fmtDay(start, { day: 'numeric', month: 'short' }));
 }
 // The first day from `from` on which a fixed routine is due, or '' when it is not due again.
-function nextDueDay(a, from = today()) {
+export function nextDueDay(a, from = today()) {
   const start = routineStart(a) > from ? routineStart(a) : from;
   for (let d = start, i = 0; i < 36600 && runsOn(a, d); d = addDays(d, 1), i++) if (isDueDay(a, d)) return d;
   return '';
@@ -962,16 +974,16 @@ function nextDueDay(a, from = today()) {
 
 // This period's progress; when nothing is due in it (an off week of every 2 weeks, before the
 // start), the next due day instead.
-function periodText(a, p = periodProgress(a)) {
+export function periodText(a, p = periodProgress(a)) {
   if (p.target) return t('rt.' + periodUnit(a), { done: p.done, target: p.target });
   const next = nextDueDay(a);
   return next ? t('rt.next', { date: fmtRel(next, false, d => fmtDay(d, { weekday: 'short', day: 'numeric', month: 'short' })) }) : t('rt.ended');
 }
-const streakText = ({ n, unit }) => tp('rt.streak.' + unit, n);
+export const streakText = ({ n, unit }) => tp('rt.streak.' + unit, n);
 
 // Ticking a day of a routine that improves states that add up first asks how much (from `anchor`,
 // the button that was clicked); unticking also removes the amounts its tick added that day.
-function toggleCheckin(id, iso, anchor = null) {
+export function toggleCheckin(id, iso, anchor = null) {
   const a = db.activities.find(x => x.id === id);
   if (!a || !isRoutine(a) || !tickable(a, iso)) return;
   if (anchor && !checkedOn(a, iso) && improvedStates(a).length) return openTickAmount(a, iso, anchor);
@@ -979,7 +991,7 @@ function toggleCheckin(id, iso, anchor = null) {
 }
 
 // `amounts`: [state, amount] pairs to add to the states, tagged with the routine.
-function setRoutineDay(a, iso, on, amounts = []) {
+export function setRoutineDay(a, iso, on, amounts = []) {
   const id = a.id;
   const wasMet = periodProgress(a, iso).met;
   setCheckin(a, iso, on);
@@ -997,25 +1009,25 @@ function setRoutineDay(a, iso, on, amounts = []) {
   return met;
 }
 
-const mondayOf = iso => addDays(iso, -weekday(iso));
+export const mondayOf = iso => addDays(iso, -weekday(iso));
 // "13–19 Oct" in the app's language.
-const fmtRange = (from, to) => formatter(Intl.DateTimeFormat, { day: 'numeric', month: 'short', timeZone: 'UTC' })
+export const fmtRange = (from, to) => formatter(Intl.DateTimeFormat, { day: 'numeric', month: 'short', timeZone: 'UTC' })
   .formatRange(new Date(from + 'T00:00Z'), new Date(to + 'T00:00Z'));
 
 // The weeks a routine's strip can show: from the week it started in to the week of its end date or
 // today, whichever comes first (a routine that has not started stays on this week).
-function routineWeeks(a) {
+export function routineWeeks(a) {
   const now = today(), end = a.dueDate && a.dueDate < now ? a.dueDate : now;
   const last = mondayOf(end), first = mondayOf(routineStart(a));
   return { first: first < last ? first : last, last, end };
 }
 // The week the strip shows (`w`, or else this one), kept within those weeks.
-function shownWeek(a, w = ui.rtWeek[a.id]) {
+export function shownWeek(a, w = ui.rtWeek[a.id]) {
   const { first, last } = routineWeeks(a);
   if (!w || w > last) return last;
   return w < first ? first : w;
 }
-function shiftRoutineWeek(id, dir) {
+export function shiftRoutineWeek(id, dir) {
   const a = db.activities.find(x => x.id === id);
   if (!a) return;
   ui.rtWeek[id] = shownWeek(a, addDays(shownWeek(a), dir * 7));
@@ -1027,7 +1039,7 @@ function shiftRoutineWeek(id, dir) {
 
 // A week, Monday to Sunday, between arrows to earlier and later weeks: tap a day the routine runs
 // on, up to today, to tick or untick it. Every day names its date on hover.
-function routineWeek(a, from = shownWeek(a)) {
+export function routineWeek(a, from = shownWeek(a)) {
   const now = today(), { first, last } = routineWeeks(a);
   const fmt = iso => fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const arrow = (dir, off, tip = esc(t(dir < 0 ? 'rt.prevWeek' : 'rt.nextWeek'))) => `<button type="button" class="icon-btn rt-arrow" data-rt-week="${a.id}" data-dir="${dir}" title="${tip}" aria-label="${tip}" ${off ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${dir < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg></button>`;
@@ -1047,7 +1059,7 @@ function routineWeek(a, from = shownWeek(a)) {
   return `<div class="rt-nav">${arrow(-1, from <= first)}<div class="rt-week" role="group" aria-label="${esc(from === mondayOf(now) ? t('rt.weekLabel') : fmtRange(from, addDays(from, 6)))}">${strip}</div>${arrow(1, from >= last)}</div>`;
 }
 
-function routineCard(a) {
+export function routineCard(a) {
   // The bar follows the week on the strip: this period as usual, or an earlier one with its dates.
   const week = shownWeek(a), { end } = routineWeeks(a), lastDay = addDays(week, 6) < end ? addDays(week, 6) : end;
   const p = periodProgress(a, lastDay), streak = routineStreak(a), st = activityState(a);
@@ -1074,7 +1086,7 @@ function routineCard(a) {
 }
 
 // A list routine's items for a day, ticked off one by one under how many are done.
-function routineItems(a, iso) {
+export function routineItems(a, iso) {
   const n = dayItemsDone(a, iso);
   const pips = a.list.map((_, k) => `<i${k < n ? ' class="on"' : ''}></i>`).join('');
   return `<div class="rt-items"><div class="rt-items-head"><span class="label">${esc(t('list.today', { done: n, total: a.list.length }))}</span><span class="li-pips" aria-hidden="true">${pips}</span></div>
@@ -1085,7 +1097,7 @@ function routineItems(a, iso) {
 }
 
 // What the week strip's days mean; due, missed and not-due days only when some routine falls on set days.
-function routineLegend(routines) {
+export function routineLegend(routines) {
   const fixed = routines.some(a => !isFlexible(a)), made = routines.some(makesUp);
   const keys = ['on', ...(fixed ? ['due', 'missed', ...(made ? ['made'] : []), 'rest'] : []), 'today'];
   const look = { today: 'rest today', missed: 'due missed', made: 'due made' };
@@ -1093,7 +1105,7 @@ function routineLegend(routines) {
 }
 
 // A routine on the overview: tick today off and see this period at a glance.
-function routineRow(a) {
+export function routineRow(a) {
   const now = today(), on = checkedOn(a, now), p = periodProgress(a), streak = routineStreak(a);
   return `<div class="row glass routine-row st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
     <button type="button" class="check ${on ? 'done' : ''}" data-checkin="${a.id}" data-date="${now}" aria-pressed="${on}" aria-label="${esc(t('rt.doneToday', { name: a.title }))}" title="${esc(t('rt.doneToday', { name: a.title }))}">${on ? '✓' : ''}</button>
@@ -1116,17 +1128,17 @@ function routineRow(a) {
    an amount, an amount added on the state ticks the routine, unticking removes the routine's
    amounts that day, and deleting its last amount that day unticks it. */
 
-const PERIODS = ['day', 'week', 'month', 'year'];
-const SCALES = [...PERIODS, 'total'];
-const isCumulative = s => !!s?.cumulative;
-const stateScale = s => (SCALES.includes(s?.scale) ? s.scale : 'total');
+export const PERIODS = ['day', 'week', 'month', 'year'];
+export const SCALES = [...PERIODS, 'total'];
+export const isCumulative = s => !!s?.cumulative;
+export const stateScale = s => (SCALES.includes(s?.scale) ? s.scale : 'total');
 // A routine's graph shows its own periods (with what each asks for) until another scale is picked.
-const graphScale = item => (!isRoutine(item) ? stateScale(item) : SCALES.includes(item.scale) ? item.scale : periodUnit(item));
-const goalPeriod = g => (PERIODS.includes(g?.period) ? g.period : 'total');
+export const graphScale = item => (!isRoutine(item) ? stateScale(item) : SCALES.includes(item.scale) ? item.scale : periodUnit(item));
+export const goalPeriod = g => (PERIODS.includes(g?.period) ? g.period : 'total');
 
 // Before, a state added up per period itself (`cumulative: 'week'`, or 'none' for in total): the
 // period becomes its graph's scale and the period of the goals it measures that have none yet.
-function migrateCumulative(d) {
+export function migrateCumulative(d) {
   for (const s of d.states) {
     if (typeof s.cumulative !== 'string') continue;
     const was = s.cumulative === 'none' ? 'total' : s.cumulative;
@@ -1140,44 +1152,44 @@ function migrateCumulative(d) {
 }
 
 // The calendar day, week, month or year around a date.
-function calPeriod(unit, iso) {
+export function calPeriod(unit, iso) {
   const i = unitIndex(iso, unit);
   return { from: unitFrom(i, unit), to: addDays(unitFrom(i + 1, unit), -1) };
 }
 
-const entriesOf = s => (s.entries || []).filter(e => e.date && isNum(e.amount));
+export const entriesOf = s => (s.entries || []).filter(e => e.date && isNum(e.amount));
 // Rounded, so 0.1 + 0.2 adds up to 0.3.
-const sumOf = list => Number(list.reduce((n, e) => n + Number(e.amount), 0).toFixed(9));
+export const sumOf = list => Number(list.reduce((n, e) => n + Number(e.amount), 0).toFixed(9));
 
 // The total of the `period` around `iso`, or in total of everything up to it.
-function stateTotal(s, period = 'total', iso = today()) {
+export function stateTotal(s, period = 'total', iso = today()) {
   if (period === 'total') return sumOf(entriesOf(s).filter(e => e.date <= iso));
   const { from, to } = calPeriod(period, iso);
   return sumOf(entriesOf(s).filter(e => e.date >= from && e.date <= to));
 }
 // The previous period's total.
-const lastPeriodTotal = (s, period, iso = today()) => stateTotal(s, period, addDays(calPeriod(period, iso).from, -1));
+export const lastPeriodTotal = (s, period, iso = today()) => stateTotal(s, period, addDays(calPeriod(period, iso).from, -1));
 
 // A state's value and date: the latest measurement, or a cumulative state's total ('' with no entries yet).
-function stateValue(s) {
+export function stateValue(s) {
   if (!isCumulative(s)) return s.value;
   return entriesOf(s).length ? stateTotal(s) : '';
 }
-function stateDate(s) {
+export function stateDate(s) {
   if (!isCumulative(s)) return s.date;
   return entriesOf(s).reduce((d, e) => (e.date > d ? e.date : d), '');
 }
-function refreshTotal(s) {
+export function refreshTotal(s) {
   const v = stateValue(s);
   Object.assign(s, { value: v === '' ? '' : String(v), date: stateDate(s) });
 }
 
 // What a graph adds up: a state's amounts, or a routine's check-ins, one each.
-const graphEntries = item => (!isRoutine(item) ? entriesOf(item)
+export const graphEntries = item => (!isRoutine(item) ? entriesOf(item)
   : Object.keys(item.checkins || {}).filter(d => item.checkins[d] === 1).sort().map(date => ({ id: date, date, amount: '1' })));
 
 // Each `period` from the first entry's to today's (or the latest entry's), empty ones included.
-function periodTotals(s, period) {
+export function periodTotals(s, period) {
   const list = graphEntries(s);
   if (!list.length || !PERIODS.includes(period)) return [];
   const dates = list.map(e => e.date).sort();
@@ -1196,14 +1208,14 @@ function periodTotals(s, period) {
   return out;
 }
 
-const improvedStates = a => relsFrom(a.id, 'improves').map(r => db.states.find(s => s.id === r.to)).filter(isCumulative);
-const feedingRoutines = s => relsTo(s.id, 'improves').map(r => db.activities.find(a => a.id === r.from)).filter(isRoutine);
-const tickable = (a, iso) => runsOn(a, iso) && iso <= today();
-const setCheckin = (a, iso, on) => { a.checkins = { ...a.checkins, [iso]: on ? 1 : 0 }; };
+export const improvedStates = a => relsFrom(a.id, 'improves').map(r => db.states.find(s => s.id === r.to)).filter(isCumulative);
+export const feedingRoutines = s => relsTo(s.id, 'improves').map(r => db.activities.find(a => a.id === r.from)).filter(isRoutine);
+export const tickable = (a, iso) => runsOn(a, iso) && iso <= today();
+export const setCheckin = (a, iso, on) => { a.checkins = { ...a.checkins, [iso]: on ? 1 : 0 }; };
 
 // Adds an amount. From a routine's tick it is tagged with the routine; added on the state, it ticks
 // the routines that feed the state that day, tagged when there is just one.
-function addEntry(s, date, amount, routine = null) {
+export function addEntry(s, date, amount, routine = null) {
   const e = { id: uid(), date, amount: String(amount) };
   if (routine) e.routine = routine.id;
   else {
@@ -1216,14 +1228,14 @@ function addEntry(s, date, amount, routine = null) {
   return e;
 }
 
-function dropEntry(s, id) {
+export function dropEntry(s, id) {
   s.entries = (s.entries || []).filter(e => e.id !== id);
   s.droppedEntries = { ...s.droppedEntries, [id]: 1 };
   refreshTotal(s);
 }
 
 // Deleting a routine's last amount on a day unticks the routine that day.
-function deleteEntry(s, id) {
+export function deleteEntry(s, id) {
   const e = (s.entries || []).find(x => x.id === id);
   if (!e) return;
   dropEntry(s, id);
@@ -1232,13 +1244,13 @@ function deleteEntry(s, id) {
 }
 
 // Unticking a routine's day removes the amounts its tick added that day.
-function dropRoutineEntries(a, iso) {
+export function dropRoutineEntries(a, iso) {
   db.states.forEach(s => (s.entries || []).filter(e => e.routine === a.id && e.date === iso).forEach(e => dropEntry(s, e.id)));
 }
 
 // Plain → cumulative: each measurement becomes an entry. Cumulative → plain: each day's entries add
 // up to that day's measurement. The graph's scale is kept either way.
-function convertState(s, addsUp) {
+export function convertState(s, addsUp) {
   if (!addsUp) {
     if (!isCumulative(s)) return;
     const days = {};
@@ -1259,18 +1271,18 @@ function convertState(s, addsUp) {
 }
 
 // "€2,450 in total".
-const totalText = s => t('cu.inTotal', { value: withUnit(fmtNum(stateTotal(s)), s.unit || '') });
+export const totalText = s => t('cu.inTotal', { value: withUnit(fmtNum(stateTotal(s)), s.unit || '') });
 // "18 km this week": the sum of the period around `iso`.
-const scaleText = (s, period, iso = today()) => t('cu.now.' + period, { value: withUnit(fmtNum(stateTotal(s, period, iso)), s.unit || '') });
+export const scaleText = (s, period, iso = today()) => t('cu.now.' + period, { value: withUnit(fmtNum(stateTotal(s, period, iso)), s.unit || '') });
 
 /* ---------- Small render helpers ---------- */
 
-function smartBadge(g) {
+export function smartBadge(g) {
   const c = smartCheck(g);
   return `<span class="smart" aria-label="SMART">${'SMART'.split('').map(l => `<b class="${c[l] ? 'on' : ''}" title="${esc(t('smart.' + l))}">${l}</b>`).join('')}</span>`;
 }
 
-function deadlineTag(date, done) {
+export function deadlineTag(date, done) {
   if (!date) return '';
   const d = daysUntil(date);
   if (done) return `<span class="tag">${fmtRel(date, true)}</span>`;
@@ -1280,66 +1292,66 @@ function deadlineTag(date, done) {
   return `<span class="tag">${fmtDate(date)}</span>`;
 }
 
-function progressBar(pct, label) {
+export function progressBar(pct, label) {
   return `<div class="progress-row"><div class="progress"><i style="width:${pct.toFixed(1)}%"></i></div><span>${label ?? Math.round(pct) + '%'}</span></div>`;
 }
 
 // Goal progress as a trail from the starting value to the target, with a blaze where you are now.
-function trail(pct, from, to) {
+export function trail(pct, from, to) {
   return `<div class="trail" role="img" aria-label="${Math.round(pct)}%">
     <div class="trail-line"><i style="width:${pct.toFixed(1)}%"></i><b class="blaze" style="left:${pct.toFixed(1)}%"></b></div>
     <div class="trail-ends"><span>${from}</span><strong>${Math.round(pct)}%</strong><span>${to}</span></div>
   </div>`;
 }
 
-function hideDoneToggle() {
+export function hideDoneToggle() {
   return `<button class="chip" data-hide-done aria-pressed="${ui.hideDone}">${t('acts.hideDone')}</button>`;
 }
 
 // "waits for n" tag listing the unfinished items something waits for.
-function waitsForTag(waits) {
+export function waitsForTag(waits) {
   return `<span class="tag bad" title="${esc(waits.map(w => w.title).join(', '))}">${t('acts.waitsFor', { n: waits.length })}</span>`;
 }
 
-function statusLegend() {
+export function statusLegend() {
   return NODE_STATES.map(s => `<span><i class="swatch st-${s}"></i>${esc(t('nodeState.' + s))}</span>`).join('');
 }
 
 // The selected item and everything directly linked to it.
-function neighbourhood(sel, rels) {
+export function neighbourhood(sel, rels) {
   const near = new Set(sel ? [sel] : []);
   if (sel) rels.forEach(r => { if (r.from === sel) near.add(r.to); if (r.to === sel) near.add(r.from); });
   return near;
 }
 
-function linkTag(id) {
+export function linkTag(id) {
   const e = findEntity(id);
   if (!e) return '';
   return `<span class="tag ${e.kind}" data-open="${e.item.id}">${esc(e.item.title)}</span>`;
 }
 
-function statusCheck(a) {
+export function statusCheck(a) {
   const cls = a.status === 'done' || a.status === 'doing' ? a.status : '';
   const label = t('activity.' + a.status);
   return `<button class="check ${cls}" data-cycle="${a.id}" aria-label="${esc(t('status.aria', { s: label }))}" title="${esc(t('status.title', { s: label }))}">${a.status === 'done' ? '✓' : ''}</button>`;
 }
 
-function emptyState(title, text, kind) {
+export function emptyState(title, text, kind) {
   return `<div class="empty"><h3>${title}</h3><div>${text}</div>
     <button class="btn primary" data-new="${kind}"><span aria-hidden="true">+</span> ${t('add.' + kind)}</button>
     ${itemCount() === 0 ? `<div class="empty-alt"><button class="btn ghost" data-templates>${t('btn.templatesAlt')}</button><button class="btn ghost" data-sample>${t('btn.sampleAlt')}</button></div>` : ''}</div>`;
 }
 
-const byDueDate = (a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
+export const byDueDate = (a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
 // Goals everywhere: the nearest deadline first, those without one last.
-const byDeadline = (a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999');
-const matchesSearch = item => !ui.search || [item.title, item.description || item.specific || '', ...(item.list || []).map(i => i.text)].join(' ').toLowerCase().includes(ui.search.toLowerCase());
+export const byDeadline = (a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999');
+export const matchesSearch = item => !ui.search || [item.title, item.description || item.specific || '', ...(item.list || []).map(i => i.text)].join(' ').toLowerCase().includes(ui.search.toLowerCase());
 
 /* =========================================================
    Views
    ========================================================= */
 
-const VIEWS = {
+export const VIEWS = {
   dashboard: { add: 'goal', render: renderDashboard },
   goals: { add: 'goal', render: renderGoals },
   activities: { add: 'activity', render: renderActivities },
@@ -1350,7 +1362,7 @@ const VIEWS = {
   graphs: { add: 'state', render: renderGraphs },
 };
 
-function render() {
+export function render() {
   // A period ending can reach a goal without any edit.
   if (startDueActivities() + offerReached()) save();
   const v = VIEWS[ui.view];
@@ -1396,7 +1408,7 @@ document.addEventListener('visibilitychange', () => {
   render();
 });
 
-function renderDashboard() {
+export function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
 
   const active = db.goals.filter(g => g.status !== 'achieved' && g.status !== 'paused').sort(byDeadline);
@@ -1442,7 +1454,7 @@ function renderDashboard() {
   `;
 }
 
-function activityRow(a) {
+export function activityRow(a) {
   const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
   const blocked = blockers(a).length;
   return `<div class="row glass st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
@@ -1455,7 +1467,7 @@ function activityRow(a) {
   </div>`;
 }
 
-function goalCard(g) {
+export function goalCard(g) {
   const pct = goalProgress(g);
   const linked = goalActivities(g);
   const acts = linked.filter(a => !isRoutine(a));
@@ -1491,7 +1503,7 @@ function goalCard(g) {
   </article>`;
 }
 
-function renderGoals() {
+export function renderGoals() {
   if (!db.goals.length) return emptyState(t('goals.emptyTitle'), t('goals.emptyText'), 'goal');
   const filters = statusLabels(['all', ...GOAL_STATUS], 'goal.');
   const inCat = db.goals.filter(inCategory);
@@ -1508,11 +1520,11 @@ function renderGoals() {
     ${list.length ? `<div class="grid">${list.map(goalCard).join('')}</div>` : `<div class="empty">${t('goals.noMatch')}</div>`}`;
 }
 
-function searchBox() {
+export function searchBox() {
   return `<input type="search" class="search" placeholder="${esc(t('search'))}" value="${esc(ui.search)}" data-search>`;
 }
 
-function renderStates() {
+export function renderStates() {
   if (!db.states.length) return emptyState(t('states.emptyTitle'), t('states.emptyText'), 'state');
   const list = db.states.filter(matchesSearch).sort((a, b) => (stateDate(b) || '').localeCompare(stateDate(a) || ''));
   return `<div class="toolbar">${searchBox()}</div>
@@ -1535,7 +1547,7 @@ function renderStates() {
     }).join('')}</div>`;
 }
 
-function renderActivities() {
+export function renderActivities() {
   if (!db.activities.length) return emptyState(t('acts.emptyTitle'), t('acts.emptyText'), 'activity');
   const scope = scopeFor(ui.activityGoal);
   const all = db.activities.filter(matchesSearch).filter(a => !scope || scope.activity.has(a.id));
@@ -1560,13 +1572,13 @@ function renderActivities() {
 
 /* ---------- Goal categories & shared filters ---------- */
 
-const categories = () => [...new Set(db.goals.map(g => g.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, locale()));
-const categorySuggestions = () => [...new Set([...categories(), ...t('cat.suggestions').split(',').map(s => s.trim())])];
-const inCategory = g => !ui.category || g.category === ui.category;
+export const categories = () => [...new Set(db.goals.map(g => g.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, locale()));
+export const categorySuggestions = () => [...new Set([...categories(), ...t('cat.suggestions').split(',').map(s => s.trim())])];
+export const inCategory = g => !ui.category || g.category === ui.category;
 
 // What a view shows: one goal's scope if a goal is picked, otherwise everything under
 // the selected category (null means no filter at all).
-function scopeFor(goalId) {
+export function scopeFor(goalId) {
   const goal = db.goals.find(g => g.id === goalId);
   if (goal && inCategory(goal)) return goalScope(goal.id);
   if (!ui.category) return null;
@@ -1578,7 +1590,7 @@ function scopeFor(goalId) {
   return scope;
 }
 
-function categoryChips() {
+export function categoryChips() {
   const cats = categories();
   if (!cats.length) return '';
   const chip = (value, label, count) =>
@@ -1587,10 +1599,10 @@ function categoryChips() {
 }
 
 // The ui field holding each view's goal filter, by the goal picker's data-goal-select value.
-const GOAL_FILTERS = { activity: 'activityGoal', map: 'mapGoal', timeline: 'timelineGoal', graphs: 'graphGoal' };
+export const GOAL_FILTERS = { activity: 'activityGoal', map: 'mapGoal', timeline: 'timelineGoal', graphs: 'graphGoal' };
 
 // Goal picker limited to the selected category, grouped by category otherwise.
-function goalSelect(target, value) {
+export function goalSelect(target, value) {
   const option = g => `<option value="${g.id}" ${value === g.id ? 'selected' : ''}>${esc(g.title)}</option>`;
   const goals = db.goals.filter(inCategory).sort(byDeadline);
   const groups = ui.category || !categories().length
@@ -1606,15 +1618,15 @@ function goalSelect(target, value) {
 
 // A list's items on its card, each ticked off with a tap, under how many are done.
 // Ticked items go below the ones still to do, each group in the list's own order.
-const doneLast = (list, done = i => i.done) => [...list.filter(i => !done(i)), ...list.filter(done)];
+export const doneLast = (list, done = i => i.done) => [...list.filter(i => !done(i)), ...list.filter(done)];
 
-function listTicks(a) {
+export function listTicks(a) {
   const n = listDone(a);
   return `${a.list.length ? progressBar(n / a.list.length * 100, t('list.done', { done: n, total: a.list.length })) : ''}
     <div class="li-ticks">${doneLast(a.list).map(i => `<button type="button" class="li-tick${i.done ? ' done' : ''}" role="checkbox" aria-checked="${!!i.done}" data-li-tick="${a.id}" data-li="${i.id}"><span class="li-box" aria-hidden="true">${i.done ? '✓' : ''}</span><span class="li-text">${esc(i.text)}</span></button>`).join('')}</div>`;
 }
 
-function activityCard(a) {
+export function activityCard(a) {
   const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
   const blocked = blockers(a);
   const parent = relsFrom(a.id, 'subactivity')[0];
@@ -1637,7 +1649,7 @@ function activityCard(a) {
 /* ---------- Visions ---------- */
 
 // Visions top down: each one under its first parent, children by title; one with more parents names the others.
-function visionOrder() {
+export function visionOrder() {
   const out = [], seen = new Set(), byTitle = (a, b) => a.title.localeCompare(b.title, locale());
   const walk = (v, depth) => {
     if (seen.has(v.id)) return;
@@ -1651,7 +1663,7 @@ function visionOrder() {
 }
 
 // How far the visions are from a Purpose, or that it is found.
-function purposeStatus(ps) {
+export function purposeStatus(ps) {
   if (ps.on) return `<div class="vis-status found" role="status">${esc(t('vis.found', { name: ps.root.title }))}</div>`;
   const lines = [];
   if (ps.roots.length > 1) lines.push(tp('vis.manyRoots', ps.roots.length, { names: ps.roots.map(v => `“${v.title}”`).join(', ') }));
@@ -1660,9 +1672,9 @@ function purposeStatus(ps) {
   return lines.length ? `<div class="vis-status">${lines.map(l => `<p>${esc(l)}</p>`).join('')}</div>` : '';
 }
 
-const purposeTag = () => `<span class="tag purpose">${esc(t('vis.purpose'))}</span>`;
+export const purposeTag = () => `<span class="tag purpose">${esc(t('vis.purpose'))}</span>`;
 
-function visionCard(v, depth, ps, reached) {
+export function visionCard(v, depth, ps, reached) {
   const also = visionParents(v).slice(1).map(findVision);
   const goals = servingGoals(v.id).map(({ plan, goal }) => plan.id === plans.current ? linkTag(goal.id)
     : `<span class="tag goal other-plan" title="${esc(plan.name)}">${esc(t('vis.goalInPlan', { goal: goal.title, plan: plan.name }))}</span>`).join('');
@@ -1674,7 +1686,7 @@ function visionCard(v, depth, ps, reached) {
   </article>`;
 }
 
-function renderVisions() {
+export function renderVisions() {
   const note = `<p class="meta vis-note">${t('vis.shared')}</p>`;
   if (!visions.list.length) return `<div class="empty"><h3>${t('vis.emptyTitle')}</h3><div>${t('vis.emptyText')}</div>
     <button class="btn primary" data-new="vision"><span aria-hidden="true">+</span> ${t('add.vision')}</button></div>${note}`;
@@ -1682,7 +1694,7 @@ function renderVisions() {
   return `${note}${purposeStatus(ps)}<div class="vision-tree">${visionOrder().map(({ v, depth }) => visionCard(v, depth, ps, reached)).join('')}</div>`;
 }
 
-function visionForm(v) {
+export function visionForm(v) {
   const parents = v.id ? v.parents : v.links?.parents || [];
   // Not itself, nor any vision below it: that would make a loop.
   const options = visions.list.filter(x => x.id !== v.id && !(v.id && visionAncestors(x.id).has(v.id)));
@@ -1695,7 +1707,7 @@ function visionForm(v) {
 }
 
 // A goal's own links to visions, without those that are gone; none is no field at all.
-function setGoalVisions(g, ids) {
+export function setGoalVisions(g, ids) {
   const keep = ids.filter(findVision);
   if (keep.length) g.visions = [...new Set(keep)];
   else delete g.visions;
@@ -1714,29 +1726,29 @@ function setGoalVisions(g, ids) {
    4. Placement  – every box is pulled toward the median of its neighbours while keeping the order
                    and spacing (weighted isotonic regression), which keeps edges short and straight. */
 // On the map, lines are fine and their colours muted toward grey, so they stay quieter than the glass boxes.
-const mapLineColour = color => `color-mix(in srgb, ${color} 72%, var(--ink-3))`;
+export const mapLineColour = color => `color-mix(in srgb, ${color} 72%, var(--ink-3))`;
 // LEAD: the straight stretch each line ends with, a little longer than its arrowhead (10). TIP: how far short
 // of where it points a line stops; its arrowhead covers the rest, so even a thick line ends inside the head's wide back.
-const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, LEAD: 14, TIP: 8, MIN_SCALE: 0.25, MAX_SCALE: 3, VISION_LINE: 6 };
+export const MAP = { NW: 172, NH: 56, HG: 18, DG: 8, DW: 10, VG: 62, PAD: 20, HEAD: 34, BAND_GAP: 12, LEAD: 14, TIP: 8, MIN_SCALE: 0.25, MAX_SCALE: 3, VISION_LINE: 6 };
 
 // Map boxes are slabs of milk glass, lit by a broad light (a panel, like a window) to the left of and a little
 // above the map. Their side, along the bottom and the right and round the corners, is cut into slivers, each
 // shaded by the way it faces the light and how far it is from it; the face shows the light's soft reflection.
 // Goals are cut from thicker glass. The face's tint and clarity are in the CSS (--glass-tint, --glass-alpha).
-const GLASS = {
+export const GLASS = {
   R: 6, DEPTH: { goal: 6, other: 3.5 }, LIGHT: [-77, -11, 60], EYE: [86, 28, 300], GLOSS: 25,
   // quiet: the side of grey boxes still to do or waiting, as --glass-side-quiet does for cards (by night it matches sideTint).
   day: { sideTint: .26, quiet: .5, deepen: 0, ambient: .97, reflect: .55, spec: .75, faceShade: .03 },
   // By night only the brightness changes (on the dark base more tint would look lighter), and states take more colour.
   night: { sideTint: .38, stateTint: .46, deepen: 0, ambient: .75, reflect: .14, spec: .16, faceShade: .08 },
 };
-const glassThickness = n => n.kind === 'goal' ? 'goal' : 'other';
-const glassDepth = n => GLASS.DEPTH[glassThickness(n)];
+export const glassThickness = n => n.kind === 'goal' ? 'goal' : 'other';
+export const glassDepth = n => GLASS.DEPTH[glassThickness(n)];
 
 // What the light does, worked out once: how lit each sliver of the side is, for each thickness,
 // and the face's reflection and shading in rings round the reflection's brightest point.
-let glassLight;
-function glassLighting() {
+export let glassLight;
+export function glassLighting() {
   if (glassLight) return glassLight;
   const { NW, NH } = MAP, { R, LIGHT, EYE, GLOSS } = GLASS;
   const unit = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
@@ -1790,14 +1802,14 @@ function glassLighting() {
 
 // The soft glow round a selected box, kept outside its face so the see-through glass stays clear, and round a
 // selected line. Lines span the map in its own units: a straight line's box has no height for the filter to grow from.
-const lineGlow = (W, H) => `<filter id="line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+export const lineGlow = (W, H) => `<filter id="line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
 // An arrowhead, its tip TIP past where its line stops, one size whatever the line's width.
-const arrowMarker = (id, color, orient = 'auto-start-reverse') => `<marker id="${id}" viewBox="0 0 10 10" refX="${10 - MAP.TIP}" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="${orient}"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${mapLineColour(color)}"/></marker>`;
-const glowDefs = (W, H) => `<filter id="node-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/></feMerge><feComposite in2="SourceGraphic" operator="out"/></filter>`
+export const arrowMarker = (id, color, orient = 'auto-start-reverse') => `<marker id="${id}" viewBox="0 0 10 10" refX="${10 - MAP.TIP}" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="${orient}"><path d="M1,1.5 L10,5 L1,8.5 L3,5 z" style="fill:${mapLineColour(color)}"/></marker>`;
+export const glowDefs = (W, H) => `<filter id="node-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/></feMerge><feComposite in2="SourceGraphic" operator="out"/></filter>`
   + lineGlow(W, H);
 
 // The slab under each box and the light on its face, defined once per colour and thickness used.
-function glassDefs(used) {
+export function glassDefs(used) {
   const root = getComputedStyle(document.documentElement), night = root.colorScheme === 'dark', g = GLASS[night ? 'night' : 'day'];
   const rgb = name => { const h = root.getPropertyValue(name).trim(); return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); };
   const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
@@ -1823,11 +1835,11 @@ function glassDefs(used) {
   const ring = (id, color, of) => `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${peak[0]}" cy="${peak[1]}" r="${+far.toFixed(1)}">${rings.map((x, k) => `<stop offset="${+(k / 24).toFixed(3)}" stop-color="${color}" stop-opacity="${+of(x).toFixed(3)}"/>`).join('')}</radialGradient>`;
   return slabs + ring('glass-spec', '#fff', x => g.spec * x.spec) + ring('glass-shade', '#000', x => g.faceShade * x.shade);
 }
-const glassKey = key => key.replace('--', '').replace('|', '-');
+export const glassKey = key => key.replace('--', '').replace('|', '-');
 // The colour a box takes, as in the CSS: its status's, or else its kind's.
-const glassTint = (kind, st) => ({ done: '--ok', doing: '--warn', late: '--bad', blocked: '--grey' })[st] || '--' + kind;
+export const glassTint = (kind, st) => ({ done: '--ok', doing: '--warn', late: '--bad', blocked: '--grey' })[st] || '--' + kind;
 
-function layoutMap(items, rels) {
+export function layoutMap(items, rels) {
   const { NW, NH, HG, DG, DW, VG, PAD, HEAD, BAND_GAP, LEAD, TIP, VISION_LINE } = MAP;
   const kindOf = {};
   Object.entries(items).forEach(([k, list]) => list.forEach(x => (kindOf[x.id] = k)));
@@ -2098,8 +2110,8 @@ function layoutMap(items, rels) {
 
 // Box text is cut to fit its box, ending in "…": measured on a canvas in the fonts the map's CSS sets,
 // with 4 % to spare, as SVG text can come out a little wider than the canvas measures it.
-let fitCtx;
-function fitText(text, font, max) {
+export let fitCtx;
+export function fitText(text, font, max) {
   fitCtx ||= document.createElement('canvas').getContext('2d');
   fitCtx.font = font;
   const fits = s => fitCtx.measureText(s).width * 1.04 <= max;
@@ -2112,14 +2124,14 @@ function fitText(text, font, max) {
 document.fonts?.addEventListener('loadingdone', () => { if (ui.view === 'map' && ctxMenu.hidden && !modal.open) render(); });
 
 // A rounded rectangle from x0, y0 to x1, y1 as a path.
-const roundedRect = (x0, y0, x1, y1, r) =>
+export const roundedRect = (x0, y0, x1, y1, r) =>
   `M${x0 + r},${y0} H${x1 - r} A${r},${r} 0 0 1 ${x1},${y0 + r} V${y1 - r} A${r},${r} 0 0 1 ${x1 - r},${y1} H${x0 + r} A${r},${r} 0 0 1 ${x0},${y1 - r} V${y0 + r} A${r},${r} 0 0 1 ${x0 + r},${y0} Z`;
 
 /* ---------- Visions on the map ----------
    Links to visions are not stored relationships: a goal keeps the visions it serves, a vision its
    parents. On the map they are drawn as lines with ids of their own, vl~<from>~<to>. */
-const visionRelId = (from, to) => `vl~${from}~${to}`;
-function visionRel(id) {
+export const visionRelId = (from, to) => `vl~${from}~${to}`;
+export function visionRel(id) {
   const [pre, from, to] = String(id || '').split('~');
   if (pre !== 'vl') return null;
   const child = findVision(from);
@@ -2129,7 +2141,7 @@ function visionRel(id) {
 }
 
 // Why two boxes can't be linked through a vision (an i18n key), or null. Two visions: the first serves the second.
-function visionLinkError(a, b) {
+export function visionLinkError(a, b) {
   const A = findEntity(a), B = findEntity(b);
   if (!A || !B) return 'err.unknown';
   if (A.kind === 'vision' && B.kind === 'vision') return canParent(a, b);
@@ -2138,7 +2150,7 @@ function visionLinkError(a, b) {
   return ownVisions(goal).includes(A.kind === 'vision' ? a : b) ? 'err.relExists' : null;
 }
 
-function linkVision(a, b) {
+export function linkVision(a, b) {
   const err = visionLinkError(a, b);
   if (err) return toast(t(err));
   const A = findEntity(a).item, B = findEntity(b).item;
@@ -2149,7 +2161,7 @@ function linkVision(a, b) {
   toast(t('map.visionLinked', { a: x.title, b: y.title }));
 }
 
-function unlinkVision(r) {
+export function unlinkVision(r) {
   if (r.type === 'subvision') {
     const v = findVision(r.from);
     v.parents = v.parents.filter(p => p !== r.to);
@@ -2164,12 +2176,12 @@ function unlinkVision(r) {
   toast(t('map.visionUnlinked'));
 }
 
-const hideVisionsToggle = () => `<button class="chip" data-hide-visions aria-pressed="${ui.hideVisions}">${t('map.hideVisions')}</button>`;
+export const hideVisionsToggle = () => `<button class="chip" data-hide-visions aria-pressed="${ui.hideVisions}">${t('map.hideVisions')}</button>`;
 
 // A vision is not glass but a cloud: the box's shape in silver with soft, blurred edges (gold for the Purpose,
 // brighter once some goal serves it). Its line under the title counts the goals serving it, directly or through
 // narrower visions, in all plans.
-function visionNode(n, v, { font, textW, face, sel, dim, purpose, reached, y }) {
+export function visionNode(n, v, { font, textW, face, sel, dim, purpose, reached, y }) {
   const { NW, NH } = MAP, count = goalsReaching(v.id);
   const goals = count ? tp('vis.goals', count) : t('vis.noGoalsShort');
   const sub = purpose ? `${t('vis.purpose')} · ${goals}` : goals;
@@ -2187,7 +2199,7 @@ function visionNode(n, v, { font, textW, face, sel, dim, purpose, reached, y }) 
 
 // The cloud's soft edge and haze, and the faint wide glow round whatever works toward a vision
 // (wider and fainter than the glow round a selected box).
-const visionDefs = (W, H) => `<linearGradient id="vision-sheen" x1="0" y1="0" x2=".35" y2="1"><stop class="vision-sheen-top" offset="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></linearGradient>`
+export const visionDefs = (W, H) => `<linearGradient id="vision-sheen" x1="0" y1="0" x2=".35" y2="1"><stop class="vision-sheen-top" offset="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></linearGradient>`
   + `<filter id="vision-cloud" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>`
   + `<filter id="vision-haze" x="-40%" y="-110%" width="180%" height="320%"><feGaussianBlur stdDeviation="9"/></filter>`
   + `<filter id="vision-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="12" result="b"/><feComposite in="b" in2="SourceGraphic" operator="out"/></filter>`
@@ -2195,7 +2207,7 @@ const visionDefs = (W, H) => `<linearGradient id="vision-sheen" x1="0" y1="0" x2
 
 // Items working toward a vision glow in every view. With a Purpose everything turns gold, the logo
 // at the top left too, and the first time it is found the user is congratulated (once, on any device).
-function markVisions() {
+export function markVisions() {
   const ps = purposeState(), contrib = contributingIds();
   document.documentElement.classList.toggle('purpose', ps.on);
   viewEl.querySelectorAll('.glass[data-ctx-item], .tl-row[data-tl-node]').forEach(el => el.classList.toggle('vglow', contrib.has(el.dataset.ctxItem || el.dataset.tlNode)));
@@ -2206,7 +2218,7 @@ function markVisions() {
   if (!$('#purposeDlg').open) $('#purposeDlg').showModal();
 }
 
-function renderMap() {
+export function renderMap() {
   if (!itemCount() && !visions.list.length) return emptyState(t('map.emptyTitle'), t('map.emptyText'), 'goal');
 
   const scope = scopeFor(ui.mapGoal);
@@ -2340,12 +2352,12 @@ function renderMap() {
 }
 
 // Shown while linking by tapping: the next box tapped becomes the other end.
-function mapLinkBar(id) {
+export function mapLinkBar(id) {
   return `<div class="link-bar" role="status"><span class="grow">${esc(t('map.linkPick', { name: findEntity(id).item.title }))}</span>
     <button type="button" class="btn small ghost" data-map-link-cancel>${t('btn.cancel')}</button></div>`;
 }
 
-function mapSelection(id) {
+export function mapSelection(id) {
   const { kind, item } = findEntity(id);
   return `<div class="row" style="margin-top:12px;cursor:default">
     <span class="tag ${kind}">${t('kind.' + kind)}</span>
@@ -2356,9 +2368,9 @@ function mapSelection(id) {
 }
 
 // The ▸/▾ button that folds a goal (or the 'rest' group) in the timeline.
-const foldBtn = (key, name, folded, tip = esc(t(folded ? 'tl.expand' : 'tl.collapse', { name }))) => `<button type="button" class="tl-fold" data-tl-fold="${key}" aria-expanded="${!folded}" aria-label="${tip}" title="${tip}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${folded ? 'M9 6l6 6-6 6' : 'M6 9l6 6 6-6'}"/></svg></button>`;
+export const foldBtn = (key, name, folded, tip = esc(t(folded ? 'tl.expand' : 'tl.collapse', { name }))) => `<button type="button" class="tl-fold" data-tl-fold="${key}" aria-expanded="${!folded}" aria-label="${tip}" title="${tip}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${folded ? 'M9 6l6 6-6 6' : 'M6 9l6 6 6-6'}"/></svg></button>`;
 
-function toggleTlFold(key) {
+export function toggleTlFold(key) {
   const set = tlCollapsed();
   set.has(key) ? set.delete(key) : set.add(key);
   setTlCollapsed(set);
@@ -2366,22 +2378,22 @@ function toggleTlFold(key) {
   $(`[data-tl-fold="${key}"]`)?.focus();
 }
 // What can fold: every goal with something under it, and the 'rest' group.
-const tlFoldKeys = () => timelineRows(scopeFor(ui.timelineGoal)).filter(r => r.fold || r.kind === 'group').map(r => r.kind === 'group' ? 'rest' : r.item.id);
+export const tlFoldKeys = () => timelineRows(scopeFor(ui.timelineGoal)).filter(r => r.fold || r.kind === 'group').map(r => r.kind === 'group' ? 'rest' : r.item.id);
 // The one button reads Expand all once everything is folded, and Collapse all otherwise.
-function tlAllFolded() {
+export function tlAllFolded() {
   const keys = tlFoldKeys(), set = tlCollapsed();
   return keys.length > 0 && keys.every(k => set.has(k));
 }
-function foldAllTl(collapse) {
+export function foldAllTl(collapse) {
   setTlCollapsed(new Set(collapse ? tlFoldKeys() : []));
   render();
   $('[data-tl-fold-all]')?.focus();
 }
 
-const relText = r => `${findEntity(r.from).item.title} ${relLabel(r.type)} ${findEntity(r.to).item.title}`;
+export const relText = r => `${findEntity(r.from).item.title} ${relLabel(r.type)} ${findEntity(r.to).item.title}`;
 
 // The selected line, with buttons for touch screens (no Delete key there).
-function mapRelSelection(r) {
+export function mapRelSelection(r) {
   return `<div class="row map-rel-selection" style="margin-top:12px;cursor:default">
     <span class="tag">${t('kind.relation')}</span>
     <span class="grow"><strong>${esc(relText(r))}</strong></span>
@@ -2391,7 +2403,7 @@ function mapRelSelection(r) {
   </div>`;
 }
 
-function removeRelation(id) {
+export function removeRelation(id) {
   const vr = visionRel(id);
   if (vr) return unlinkVision(vr);
   db.relations = db.relations.filter(r => r.id !== id);
@@ -2402,7 +2414,7 @@ function removeRelation(id) {
 }
 
 // Deleting an item from the map asks first, like the form's Delete button.
-function askDeleteItem(id) {
+export function askDeleteItem(id) {
   const ent = findEntity(id);
   if (!ent || !confirm(t('confirm.delete', { name: ent.item.title }))) return;
   removeEntity(ent.kind, id);
@@ -2414,15 +2426,15 @@ function askDeleteItem(id) {
 /* ---------- Timeline (Gantt chart of goals and activities) ---------- */
 
 // ZOOM presets and the MIN–MAX range for free zooming are in pixels per day.
-const TL = { ROW: 40, ZOOM: { week: 30, month: 8, quarter: 2.6 }, MIN: 1.5, MAX: 80 };
-const DAY_MS = 86400000;
-const dayNum = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / DAY_MS; };
-const dayStr = n => new Date(n * DAY_MS).toISOString().slice(0, 10);
-const endOf = (kind, item) => (kind === 'goal' ? item.deadline : item.dueDate);
+export const TL = { ROW: 40, ZOOM: { week: 30, month: 8, quarter: 2.6 }, MIN: 1.5, MAX: 80 };
+export const DAY_MS = 86400000;
+export const dayNum = s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / DAY_MS; };
+export const dayStr = n => new Date(n * DAY_MS).toISOString().slice(0, 10);
+export const endOf = (kind, item) => (kind === 'goal' ? item.deadline : item.dueDate);
 // A routine that runs a set number of times ends where its start puts it: only the whole bar moves.
-const fixedEnd = item => isRoutine(item) && !!item.repeat.count;
+export const fixedEnd = item => isRoutine(item) && !!item.repeat.count;
 // The grips at the ends of the selected bar reach a little past it, so even a thin bar has room to grab.
-const tlGrip = (edge, left, width) => {
+export const tlGrip = (edge, left, width) => {
   const inner = Math.min(6, width / 4);
   return `left:${edge === 'start' ? left - 12 : left + width - inner}px;width:${12 + inner}px`;
 };
@@ -2430,7 +2442,7 @@ const tlGrip = (edge, left, width) => {
 // A routine that falls on set days marks each of them along the bottom of its bar: done, missed, or
 // still to come (today too, until it is ticked). One without an end marks them to the timeline's end.
 // Narrow days merge into one band of colour.
-function tlRoutineDays(a, from, to, x, px) {
+export function tlRoutineDays(a, from, to, x, px) {
   if (!isRoutine(a) || isFlexible(a)) return '';
   const now = today(), w = px > 4 ? px - 2 : px, out = [], kept = keptDay(a);
   const last = Math.min(to, a.dueDate ? dayNum(a.dueDate) : to);
@@ -2450,7 +2462,7 @@ function tlRoutineDays(a, from, to, x, px) {
 // other goals it is under). A goal in `collapsed` keeps its own row but hides what is under it;
 // what it hides still counts as placed. Activities under no shown goal come last in their own
 // group ('rest', which can be collapsed too).
-function timelineRows(scope, collapsed = new Set()) {
+export function timelineRows(scope, collapsed = new Set()) {
   const rows = [], placedGoals = new Set(), placed = new Set(), under = new Map(); // activity → goals it is listed under
   const visible = (kind, x) => !scope || scope[kind].has(x.id);
   const startKey = x => x.startDate || x.dueDate || x.deadline || '9999';
@@ -2507,10 +2519,10 @@ function timelineRows(scope, collapsed = new Set()) {
 }
 
 // Goals (and the 'rest' group) folded in the timeline: per plan, on this device.
-const tlCollapsed = () => new Set(prefs.get('tlCollapsed.' + plans.current, []));
-const setTlCollapsed = set => prefs.set('tlCollapsed.' + plans.current, [...set]);
+export const tlCollapsed = () => new Set(prefs.get('tlCollapsed.' + plans.current, []));
+export const setTlCollapsed = set => prefs.set('tlCollapsed.' + plans.current, [...set]);
 
-function renderTimeline() {
+export function renderTimeline() {
   if (!db.goals.length && !db.activities.length) return emptyState(t('tl.emptyTitle'), t('tl.emptyText'), 'goal');
   const rows = timelineRows(scopeFor(ui.timelineGoal), tlCollapsed());
   const { ROW } = TL;
@@ -2650,12 +2662,12 @@ function renderTimeline() {
    One line chart per current state: its measurements over time, a target line for every goal it
    measures (running to the goal's deadline), and the change since the first measurement. */
 
-const GR = { H: 210, L: 48, R: 14, T: 14, B: 26, MIN_W: 280, MAX_W: 960 };
-const grCharts = {}; // state id → points and scales, for the hover layer
+export const GR = { H: 210, L: 48, R: 14, T: 14, B: 26, MIN_W: 280, MAX_W: 960 };
+export const grCharts = {}; // state id → points and scales, for the hover layer
 
 // About `count` clean steps (1, 2 or 5 × 10ⁿ) covering lo–hi.
 // `whole`: counts, so no step smaller than 1.
-function niceTicks(lo, hi, count = 4, whole = false) {
+export function niceTicks(lo, hi, count = 4, whole = false) {
   if (lo === hi) { lo -= Math.abs(lo) * 0.1 || 1; hi += Math.abs(hi) * 0.1 || 1; }
   const raw = whole ? Math.max((hi - lo) / count, 1) : (hi - lo) / count;
   const mag = 10 ** Math.floor(Math.log10(raw));
@@ -2668,32 +2680,32 @@ function niceTicks(lo, hi, count = 4, whole = false) {
   return ticks;
 }
 
-function stateSeries(s) {
+export function stateSeries(s) {
   return (s.history || []).filter(h => h.date && isNum(h.value))
     .map(h => ({ day: dayNum(h.date), date: h.date, value: Number(h.value) }))
     .sort((a, b) => a.day - b.day);
 }
 
 // One measurement per date: a new value for a date replaces the old one. The state's value is its latest measurement.
-function recordMeasurement(s, date, value) {
+export function recordMeasurement(s, date, value) {
   s.history = (s.history || []).filter(h => h.date !== date).concat({ date, value }).sort((a, b) => a.date.localeCompare(b.date));
   if (s.dropped) { delete s.dropped[date]; if (!Object.keys(s.dropped).length) delete s.dropped; }
   followLatest(s);
 }
 
 // A deleted date is remembered, so syncing with an older copy does not bring the measurement back.
-function deleteMeasurement(s, date) {
+export function deleteMeasurement(s, date) {
   s.history = (s.history || []).filter(h => h.date !== date);
   s.dropped = { ...s.dropped, [date]: 1 };
   followLatest(s);
 }
 
-function followLatest(s) {
+export function followLatest(s) {
   const last = s.history.reduce((a, h) => (!a || h.date > a.date ? h : a), null);
   Object.assign(s, last ? { value: last.value, date: last.date } : { value: '' });
 }
 
-function removeMeasurement(id, iso) {
+export function removeMeasurement(id, iso) {
   const s = db.states.find(x => x.id === id);
   const h = s?.history?.find(x => x.date === iso);
   if (!h || !confirm(t('confirm.deleteMeasurement', { value: withUnit(fmtNum(h.value), s.unit || ''), date: fmtDate(iso) }))) return;
@@ -2708,7 +2720,7 @@ function removeMeasurement(id, iso) {
 }
 
 // Change from the first to the latest measurement; `good` is null when no goal says which way is better.
-function stateChange(s, points, targets) {
+export function stateChange(s, points, targets) {
   if (points.length < 2) return null;
   const first = points[0], last = points[points.length - 1];
   const delta = last.value - first.value;
@@ -2717,15 +2729,15 @@ function stateChange(s, points, targets) {
   return { first, delta, pct, good: aim && delta ? Math.sign(delta) === aim : null };
 }
 
-function signed(n) {
+export function signed(n) {
   let sign = '±';
   if (n > 0) sign = '+';
   else if (n < 0) sign = '−';
   return sign + fmtNum(Math.abs(n));
 }
-const withUnit = (n, unit) => (unit ? `${n} ${unit}` : n);
+export const withUnit = (n, unit) => (unit ? `${n} ${unit}` : n);
 
-function changeTag(s, change) {
+export function changeTag(s, change) {
   if (!change) return `<span class="tag">${t('gr.oneMeasurement')}</span>`;
   const { delta, pct, good, first } = change;
   const arrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '→';
@@ -2735,7 +2747,7 @@ function changeTag(s, change) {
     <span class="meta">${t('gr.since', { date: fmtRel(first.date) })}</span>`;
 }
 
-function graphCard(s, width) {
+export function graphCard(s, width) {
   const points = stateSeries(s);
   const targets = relsFrom(s.id, 'measures').map(r => db.goals.find(g => g.id === r.to))
     .filter(g => g && !byActivities(g) && isNum(g.target))
@@ -2834,21 +2846,21 @@ function graphCard(s, width) {
 
 // A routine's graph adds up its check-ins like a state's amounts, but on its own period's scale it
 // shows what each period asks for.
-const graphFor = (item, width) => (isRoutine(item) && graphScale(item) === periodUnit(item) ? routineGraphCard(item, width)
+export const graphFor = (item, width) => (isRoutine(item) && graphScale(item) === periodUnit(item) ? routineGraphCard(item, width)
   : !isRoutine(item) && !isCumulative(item) ? graphCard(item, width)
   : graphScale(item) === 'total' ? totalGraphCard(item, width) : periodGraphCard(item, width));
-let grDrawW = 0; // the width graphs were last drawn to fit
+export let grDrawW = 0; // the width graphs were last drawn to fit
 
 // Zoomed in, a graph is drawn wider and scrolls sideways; zoomed out, it is never narrower than the card,
 // nor stretched past the timeline's closest zoom. `base` is its width unzoomed; `zoom` the range allowed.
-function zoomedWidth(id, base, width, days) {
+export function zoomedWidth(id, base, width, days) {
   const zoom = [Math.min(width / base, 1), Math.max((GR.L + GR.R + days * TL.MAX) / base, 1)];
   return { W: Math.round(base * clamp(ui.grZoom[id] || 1, ...zoom)), zoom };
 }
 
 // Today is a faint column as wide as the day (never thinner than 3 px), a line down its middle, behind the data. `from` is where the day
 // starts on the axis: a bar's day starts at its number, a measurement sits in the middle of its day.
-function todayCol(px, from, x0, x1, W, over = false) {
+export function todayCol(px, from, x0, x1, W, over = false) {
   if (from + 1 <= x0 || from >= x1) return null;
   // Over bars, the day keeps the bars' thin gap, so on a period's first or last day it stays inside the bar.
   const gap = over ? 1 : 0;
@@ -2859,17 +2871,17 @@ function todayCol(px, from, x0, x1, W, over = false) {
 }
 
 // The value grid, its bottom line a little stronger, with the values beside it.
-const gridLines = (ticks, py, W) => ticks.map((v, i) => `<line class="gr-grid${i ? '' : ' base'}" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`).join('') + yLabels(ticks, py);
+export const gridLines = (ticks, py, W) => ticks.map((v, i) => `<line class="gr-grid${i ? '' : ' base'}" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`).join('') + yLabels(ticks, py);
 // A point's dot on a line; the latest is larger.
-const grDot = (x, y, last) => `<circle class="gr-dot${last ? ' last' : ''}" cx="${x}" cy="${y}" r="${last ? 5 : 3.5}"/>`;
-const yLabels = (ticks, py) => ticks.map(v => `<text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`).join('');
+export const grDot = (x, y, last) => `<circle class="gr-dot${last ? ' last' : ''}" cx="${x}" cy="${y}" r="${last ? 5 : 3.5}"/>`;
+export const yLabels = (ticks, py) => ticks.map(v => `<text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`).join('');
 // A graph wider than the card scrolls under its values, which stay at the left like the timeline's labels.
-const yAxisPinned = (ticks, py) => `<svg class="gr-yaxis" width="${GR.L}" height="${GR.H}" style="margin-top:-${GR.H}px" aria-hidden="true">${yLabels(ticks, py)}</svg>`;
+export const yAxisPinned = (ticks, py) => `<svg class="gr-yaxis" width="${GR.L}" height="${GR.H}" style="margin-top:-${GR.H}px" aria-hidden="true">${yLabels(ticks, py)}</svg>`;
 
 // Dates under a graph: where it starts and ends, and today when there is room. One wider than the card
 // (zoomed in, or a long history of bars) also marks days, Mondays, months, quarters or years, about
 // every 110 px – the first of these steps that leaves that much room.
-function dateAxis(px, x0, x1, wide, withToday) {
+export function dateAxis(px, x0, x1, wide, withToday) {
   const todayN = dayNum(today()), perDay = (px(x1) - px(x0)) / (x1 - x0);
   const ticks = [[x0, 'start', fmtDate(dayStr(x0))], [x1, 'end', fmtDate(dayStr(x1))]];
   const room = n => ticks.every(([m]) => Math.abs(px(m) - px(n)) > 80);
@@ -2887,10 +2899,10 @@ function dateAxis(px, x0, x1, wide, withToday) {
 }
 
 // States with measurements or amounts, and routines with check-ins, have a graph.
-const hasGraph = item => (isRoutine(item) ? Object.values(item.checkins || {}).includes(1)
+export const hasGraph = item => (isRoutine(item) ? Object.values(item.checkins || {}).includes(1)
   : isCumulative(item) ? entriesOf(item).length > 0 : stateSeries(item).length > 0);
 
-function renderGraphs() {
+export function renderGraphs() {
   const routines = db.activities.filter(hasGraph);
   if (!db.states.length && !routines.length) return emptyState(t('states.emptyTitle'), t('states.emptyText'), 'state');
   const scope = scopeFor(ui.graphGoal);
@@ -2917,19 +2929,19 @@ function renderGraphs() {
    point has its `day` (where the crosshair snaps) and its own tooltip rows (`tip`). */
 
 // A soft wash under a line, fading to the bottom of the plot.
-const areaFill = (id, d) => `<defs><linearGradient id="gr-fill-${id}" x1="0" y1="0" x2="0" y2="1"><stop class="gr-fill-stop" offset="0"/><stop class="gr-fill-stop" offset="1" style="stop-opacity: 0"/></linearGradient></defs>
+export const areaFill = (id, d) => `<defs><linearGradient id="gr-fill-${id}" x1="0" y1="0" x2="0" y2="1"><stop class="gr-fill-stop" offset="0"/><stop class="gr-fill-stop" offset="1" style="stop-opacity: 0"/></linearGradient></defs>
   <path class="gr-area" d="${d}" fill="url(#gr-fill-${id})"/>`;
 
-const GR_SLOT = 12; // the narrowest a period's bar gets; longer histories scroll sideways
+export const GR_SLOT = 12; // the narrowest a period's bar gets; longer histories scroll sideways
 // A bar's left edge and width in a period running from day `a` to day `b`: it fills the period, with
 // a thin gap between neighbours, so the bars sit side by side.
-function barBox(px, a, b) {
+export function barBox(px, a, b) {
   const slot = px(b) - px(a), w = Math.max(slot - 2, 1);
   return { x: px(a) + (slot - w) / 2, w };
 }
 
 // "Week of 20 Oct", "October 2026", "2026", "20 Oct 2026", or a range for longer periods.
-function periodLabel(unit, from, to) {
+export function periodLabel(unit, from, to) {
   if (calPeriod(unit, from).to !== to) return fmtRange(from, to);
   if (unit === 'week') return t('cu.weekOf', { date: fmtDay(from, { day: 'numeric', month: 'short' }) });
   if (unit === 'month') return fmtDay(from, { month: 'long', year: 'numeric' });
@@ -2939,13 +2951,13 @@ function periodLabel(unit, from, to) {
 
 // Goals a state measures with a target, for target lines. On a state that adds up, only those
 // counting it as the graph shows it: a weekly target on monthly bars would mislead.
-const stateTargets = (s, scale) => relsFrom(s.id, 'measures').map(r => db.goals.find(g => g.id === r.to))
+export const stateTargets = (s, scale) => relsFrom(s.id, 'measures').map(r => db.goals.find(g => g.id === r.to))
   .filter(g => g && ownMetric(g) && isNum(g.target) && (!scale || goalPeriod(g) === scale))
   .map(g => ({ goal: g, value: Number(g.target), end: g.deadline ? dayNum(g.deadline) : null }));
 
 // The plot shared by bar and step graphs: grid, date axis, today, target lines and labels, and the
 // hover layer. `marks` draws the data with the scales; `bars` widens a long history so it scrolls.
-function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, tip, aria, ys = [], whole = false }, width) {
+export function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, tip, aria, ys = [], whole = false }, width) {
   const todayN = dayNum(today());
   // Bars end with the period under way: weeks to a far deadline would only squeeze them.
   let x0 = from, x1 = bars ? to : Math.max(to, ...targets.map(tg => tg.end || 0));
@@ -2980,10 +2992,10 @@ function plotSvg(id, { points, targets = [], unit, from, to, bars = 0, marks, ti
     </div>`;
 }
 
-const grLegend = items => `<div class="gr-legend">${items.map(([cls, text]) => `<span><i class="key ${cls}"></i>${esc(text)}</span>`).join('')}</div>`;
-const targetKey = targets => ['key-target', targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title })];
+export const grLegend = items => `<div class="gr-legend">${items.map(([cls, text]) => `<span><i class="key ${cls}"></i>${esc(text)}</span>`).join('')}</div>`;
+export const targetKey = targets => ['key-target', targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title })];
 
-function grCardHtml(item, stats, legend, plot, table, scales = '') {
+export function grCardHtml(item, stats, legend, plot, table, scales = '') {
   return `<article class="card glass gr-card" data-gr="${item.id}" data-ctx-item="${item.id}">
     <div class="card-head"><h3>${esc(item.title)}</h3><button class="btn small ghost" data-open="${item.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats">${stats}</div>
@@ -2995,17 +3007,17 @@ function grCardHtml(item, stats, legend, plot, table, scales = '') {
 }
 
 // Sums per day, week, month or year, or the running total, for a state that adds up or a routine.
-const scaleSwitch = s => `<div class="chips gr-scale" role="group" aria-label="${esc(t(isRoutine(s) ? 'cu.scaleLabelRoutine' : 'cu.scaleLabel'))}">${SCALES.map(k =>
+export const scaleSwitch = s => `<div class="chips gr-scale" role="group" aria-label="${esc(t(isRoutine(s) ? 'cu.scaleLabelRoutine' : 'cu.scaleLabel'))}">${SCALES.map(k =>
   `<button class="chip ${k === graphScale(s) ? 'active' : ''}" data-gr-scale="${k}" data-state="${s.id}" aria-pressed="${k === graphScale(s)}">${t('cu.scale.' + k)}</button>`).join('')}</div>`;
 
-const entryDel = (s, e) => {
+export const entryDel = (s, e) => {
   const del = t('cu.deleteEntry', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(e.date) });
   return `<td class="gr-del"><button type="button" class="btn small ghost" data-del-entry="${s.id}" data-entry="${e.id}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td>`;
 };
 
 // A bar for each period; the change tag compares the last complete period with the one before.
 // A routine's bars count its check-ins.
-function periodGraphCard(s, width) {
+export function periodGraphCard(s, width) {
   const rt = isRoutine(s), unit = s.unit || '', now = today(), scale = graphScale(s), periods = periodTotals(s, scale), targets = rt ? [] : stateTargets(s, scale);
   const amount = n => (rt ? tp('rt.checkins', n) : withUnit(fmtNum(n), unit));
   const points = periods.map(p => {
@@ -3046,7 +3058,7 @@ function periodGraphCard(s, width) {
 }
 
 // A step line of the running total; the tag shows what was added in the last 30 days.
-function totalGraphCard(s, width) {
+export function totalGraphCard(s, width) {
   const rt = isRoutine(s), unit = s.unit || '', targets = rt ? [] : stateTargets(s, 'total'), entries = graphEntries(s).slice().sort((a, b) => a.date.localeCompare(b.date));
   const amount = n => (rt ? tp('rt.checkins', n) : withUnit(fmtNum(n), unit));
   const byDay = {};
@@ -3083,7 +3095,7 @@ function totalGraphCard(s, width) {
 }
 
 // Check-ins in each of a routine's periods, against what the period asks for (met: filled in).
-function routineGraphCard(a, width) {
+export function routineGraphCard(a, width) {
   const now = today(), end = a.dueDate && a.dueDate < now ? a.dueDate : now;
   const ticked = Object.keys(a.checkins || {}).filter(d => a.checkins[d] === 1).sort();
   const first = ticked[0] < routineStart(a) ? ticked[0] : routineStart(a);
@@ -3112,7 +3124,7 @@ function routineGraphCard(a, width) {
 }
 
 // Hover / touch / keyboard: a crosshair snaps to the nearest measurement and a tooltip lists its values.
-function showGraphPoint(plot, i) {
+export function showGraphPoint(plot, i) {
   const c = grCharts[plot.closest('[data-gr]').dataset.gr];
   const p = c.points[clamp(i, 0, c.points.length - 1)];
   plot.dataset.i = c.points.indexOf(p);
@@ -3140,12 +3152,12 @@ function showGraphPoint(plot, i) {
   if (cx < plot.scrollLeft + GR.L || cx > plot.scrollLeft + plot.clientWidth - GR.R) plot.scrollLeft = cx - plot.clientWidth / 2;
 }
 
-function hideGraphPoint(plot) {
+export function hideGraphPoint(plot) {
   plot.querySelectorAll('.gr-cross, .gr-focus, .gr-tip').forEach(el => (el.hidden = true));
   delete plot.dataset.i;
 }
 
-function nearestPoint(plot, clientX) {
+export function nearestPoint(plot, clientX) {
   const c = grCharts[plot.closest('[data-gr]').dataset.gr];
   const x = clientX - plot.querySelector('svg').getBoundingClientRect().left;
   let best = 0;
@@ -3184,7 +3196,7 @@ viewEl.addEventListener('keydown', e => {
   showGraphPoint(plot, next);
 });
 // Charts are drawn at the view's pixel width, so redraw them when it changes.
-let grResize = null;
+export let grResize = null;
 addEventListener('resize', () => {
   clearTimeout(grResize);
   grResize = setTimeout(() => { if (ui.view === 'graphs' && !modal.open) render(); }, 150);
@@ -3194,27 +3206,27 @@ addEventListener('resize', () => {
    Forms
    ========================================================= */
 
-const modal = $('#modal');
-let formCtx = null; // { kind, id }
+export const modal = $('#modal');
+export let formCtx = null; // { kind, id }
 
-function field(name, label, input, hint = '') {
+export function field(name, label, input, hint = '') {
   return `<div class="field" data-field="${name}"><label for="f-${name}">${label}</label>${input}${hint ? `<div class="hint">${hint}</div>` : ''}<div class="err"></div></div>`;
 }
-const text = (name, v, ph = '') => `<input type="text" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}">`;
+export const text = (name, v, ph = '') => `<input type="text" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}">`;
 // A text field rather than type="number", so both a decimal dot and comma work in every browser.
-const num = (name, v, ph = '') => `<input type="text" data-num id="f-${name}" name="${name}" value="${esc(numInput(v))}" placeholder="${esc(ph)}" inputmode="decimal" autocomplete="off">`;
+export const num = (name, v, ph = '') => `<input type="text" data-num id="f-${name}" name="${name}" value="${esc(numInput(v))}" placeholder="${esc(ph)}" inputmode="decimal" autocomplete="off">`;
 // A dd/mm/yyyy text field in every language, with the app's own calendar (weeks start on Monday);
 // the browser's date field and picker follow the browser's language instead.
-const date = (name, v) => `<div class="date-field">
+export const date = (name, v) => `<div class="date-field">
   <input type="text" data-date id="f-${name}" name="${name}" value="${esc(dateInput(v))}" placeholder="${esc(t('f.datePh'))}" inputmode="numeric" autocomplete="off" maxlength="10">
   <button type="button" class="date-pick" data-cal-open title="${esc(t('f.pickDate'))}" aria-label="${esc(t('f.pickDate'))}" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></button>
 </div>`;
-const area = (name, v, ph = '') => `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
-const select = (name, opts, v) => `<select id="f-${name}" name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+export const area = (name, v, ph = '') => `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
+export const select = (name, opts, v) => `<select id="f-${name}" name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
 
 // A link list: the chosen items are shown as removable tags; the search box below them opens
 // a list of the other items (goals grouped by category) that typing filters and a click adds.
-function checklist(name, label, kind, items, selected, hint = '') {
+export function checklist(name, label, kind, items, selected, hint = '') {
   if (!items.length) return '';
   if (kind === 'goal') items = [...items].sort(byDeadline);
   const opt = i => `<button type="button" class="pick-opt" role="option" data-pick="${i.id}" data-pick-title="${esc(fold(i.title))}" ${selected.includes(i.id) ? 'data-picked' : ''}>${esc(i.title)}</button>`;
@@ -3230,14 +3242,14 @@ function checklist(name, label, kind, items, selected, hint = '') {
 }
 
 // A chosen item: its hidden input carries the link when the form is saved.
-const pickedTag = (name, kind, item) =>
+export const pickedTag = (name, kind, item) =>
   `<span class="tag ${kind}" data-picked-id="${item.id}"><input type="hidden" name="${name}" value="${item.id}">${esc(item.title)}<button type="button" data-unpick="${item.id}" title="${esc(t('pick.remove', { name: item.title }))}" aria-label="${esc(t('pick.remove', { name: item.title }))}">×</button></span>`;
 
 // Lower case without accents, so "zivljenje" finds "Življenje".
-const fold = s => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+export const fold = s => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 // Shows the items that match the search and are not chosen yet, and empty groups not at all.
-function filterPicker(picker) {
+export function filterPicker(picker) {
   const q = fold(picker.querySelector('.picker-search').value.trim());
   const opts = [...picker.querySelectorAll('.pick-opt')];
   opts.forEach(o => (o.hidden = o.hasAttribute('data-picked') || (!!q && !o.dataset.pickTitle.includes(q))));
@@ -3247,14 +3259,14 @@ function filterPicker(picker) {
   empty.textContent = opts.every(o => o.hasAttribute('data-picked')) ? t('pick.allChosen') : t('pick.noMatch');
 }
 
-function showPickList(picker, open) {
+export function showPickList(picker, open) {
   const list = picker.querySelector('.pick-list');
   if (open) filterPicker(picker);
   list.hidden = !open;
   picker.querySelector('.picker-search').setAttribute('aria-expanded', open);
 }
 
-function pickItem(opt) {
+export function pickItem(opt) {
   const picker = opt.closest('[data-picker]');
   const { item } = findEntity(opt.dataset.pick);
   opt.setAttribute('data-picked', '');
@@ -3262,20 +3274,20 @@ function pickItem(opt) {
   filterPicker(picker);
 }
 
-function unpickItem(picker, id) {
+export function unpickItem(picker, id) {
   picker.querySelector(`[data-picked-id="${id}"]`).remove();
   picker.querySelector(`.pick-opt[data-pick="${id}"]`).removeAttribute('data-picked');
   filterPicker(picker);
 }
 
-function smartSection(letter, body) {
+export function smartSection(letter, body) {
   return `<fieldset class="smart-block" data-smart="${letter}"><legend><span class="letter">${letter}</span>${t('smart.' + letter)}</legend>${body}</fieldset>`;
 }
 
 // `links` pre-fills a new item's relations by type, e.g. { subactivity: [parentId] };
 // for a new relationship, { from: id } pre-selects its source.
 // A new activity first asks whether it is done once or repeats; `links.repeat` carries the answer.
-function openForm(kind, id = null, links = {}) {
+export function openForm(kind, id = null, links = {}) {
   // A line to a vision opens the vision that holds the link: the one served by a goal, or the narrower of two.
   const vr = kind === 'relation' && visionRel(id);
   if (vr) return openForm('vision', vr.type === 'serves' ? vr.to : vr.from);
@@ -3309,11 +3321,11 @@ function openForm(kind, id = null, links = {}) {
 }
 
 // Targets an item links to by relation type – stored relations, or the presets of a new item.
-const linksOf = (item, type) => (item.id ? relsFrom(item.id, type).map(r => r.to) : item.links?.[type] || []);
+export const linksOf = (item, type) => (item.id ? relsFrom(item.id, type).map(r => r.to) : item.links?.[type] || []);
 // Sources that link to an item by relation type, e.g. the activities contributing to a goal.
-const linkedFrom = (item, type) => (item.id ? relsTo(item.id, type).map(r => r.from) : []);
+export const linkedFrom = (item, type) => (item.id ? relsTo(item.id, type).map(r => r.from) : []);
 
-function goalForm(g) {
+export function goalForm(g) {
   const parent = linksOf(g, 'subgoal')[0] || '';
   const parents = { '': t('f.none') };
   db.goals.filter(x => x.id !== g.id && !(g.id && reaches(x.id, g.id, 'subgoal'))).forEach(x => (parents[x.id] = x.title));
@@ -3361,7 +3373,7 @@ function goalForm(g) {
     ${checklist('depends', t('f.goalDepends'), 'goal', db.goals.filter(x => x.id !== g.id), linksOf(g, 'depends'))}`;
 }
 
-function stateForm(s) {
+export function stateForm(s) {
   const linked = s.id ? relsFrom(s.id, 'measures').map(r => r.to) : [];
   const history = (s.history || []).slice().sort((a, b) => b.date.localeCompare(a.date));
   // The value field records a new measurement, so it starts empty and dated today.
@@ -3384,7 +3396,7 @@ function stateForm(s) {
 }
 
 // A cumulative state's entries, newest day first; × marks one to delete when the form is saved.
-function entryList(s) {
+export function entryList(s) {
   const days = {};
   entriesOf(s).forEach(e => (days[e.date] ||= []).push(e));
   const rows = Object.keys(days).sort().reverse().map(d => `<div class="entry-day"><span>${fmtRel(d, true)}</span><span class="entry-amounts">${days[d].map(e => {
@@ -3396,7 +3408,7 @@ function entryList(s) {
 
 // The labels and hints that follow "Adds up": a new amount or a new measurement, and what switching
 // between the two does to what is there.
-function updateStateFields() {
+export function updateStateFields() {
   const sel = $('#f-addsUp');
   if (!sel || formCtx?.kind !== 'state') return;
   const s = formCtx.id ? db.states.find(x => x.id === formCtx.id) : null;
@@ -3412,7 +3424,7 @@ function updateStateFields() {
   $('#entryList')?.toggleAttribute('hidden', !addsUp);
 }
 
-function activityForm(a) {
+export function activityForm(a) {
   const pick = type => linksOf(a, type);
   const others = db.activities.filter(x => x.id !== a.id);
   // An activity cannot be placed under itself or one of its own sub-activities.
@@ -3441,18 +3453,18 @@ function activityForm(a) {
 
 // A list's items in its form: tick, rename or remove each; Enter in one adds the next below it.
 // `pos` is the item's place in the list, so an unticked row can go back to it.
-const listRow = (i = { id: '', text: '', done: false }, pos = '') => `<div class="li-row" data-li-row="${i.id}" data-pos="${pos}">
+export const listRow = (i = { id: '', text: '', done: false }, pos = '') => `<div class="li-row" data-li-row="${i.id}" data-pos="${pos}">
   <input type="checkbox" class="li-check" ${i.done ? 'checked' : ''} aria-label="${esc(t('list.tick'))}">
   <input type="text" class="li-input" enterkeyhint="enter" value="${esc(i.text)}" placeholder="${esc(t('list.itemPh'))}" aria-label="${esc(t('list.item'))}">
   <button type="button" class="icon-btn li-del" data-li-del aria-label="${esc(t('list.remove'))}" title="${esc(t('list.remove'))}">×</button></div>`;
-function listEditor(list) {
+export function listEditor(list) {
   return `<div class="field" data-field="list"><span class="label">${t('list.items')}</span>
     <div class="li-rows" id="listRows">${(list.length ? doneLast(list) : [undefined]).map(i => listRow(i, list.indexOf(i))).join('')}</div>
     <button type="button" class="btn ghost li-add" data-li-add><span aria-hidden="true">+</span> ${t('list.add')}</button>
     <div class="err"></div><div class="hint">${t('list.hint')}</div></div>`;
 }
 // New rows go above the ticked ones; `focus` puts the cursor in the new row.
-function addListRow(after = null, focus = true) {
+export function addListRow(after = null, focus = true) {
   const rows = $('#listRows'), firstDone = [...rows.children].find(r => r.querySelector('.li-check').checked);
   if (after) after.insertAdjacentHTML('afterend', listRow());
   else if (firstDone) firstDone.insertAdjacentHTML('beforebegin', listRow());
@@ -3461,7 +3473,7 @@ function addListRow(after = null, focus = true) {
   if (focus) row.querySelector('.li-input').focus();
 }
 // Ticking an item in the form moves it below the ones still to do; unticking moves it back above them.
-function placeListRow(row) {
+export function placeListRow(row) {
   const rows = $('#listRows'), done = row.querySelector('.li-check').checked;
   row.remove();
   const firstDone = [...rows.children].find(r => r.querySelector('.li-check').checked);
@@ -3475,21 +3487,21 @@ function placeListRow(row) {
 
 // The first step of a new activity: one done once, a list to tick off, a routine, or a list ticked off each time.
 // Each kind has an icon: a tick, ticked lines, arrows going round, or ticked lines going round.
-const ACT_KIND_ICONS = {
+export const ACT_KIND_ICONS = {
   once: '<circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.4l2.6 2.6 5-5.4"/>',
   list: '<path d="M3.5 6.5l1.5 1.5 2.5-3M3.5 12.5l1.5 1.5 2.5-3M3.5 18.5l1.5 1.5 2.5-3M11 6.5h9.5M11 12.5h9.5M11 18.5h9.5"/>',
   routine: '<path d="M19.5 9.5A8 8 0 0 0 5 7.5M4.5 14.5A8 8 0 0 0 19 16.5"/><path d="M5 3.5v4h4M19 20.5v-4h-4"/>',
   listRoutine: '<path d="M3 5.5l1.5 1.5 2.5-3M3 11.5l1.5 1.5 2.5-3M10 5.5h10M10 11.5h4M3 17.5h7"/><path d="M21.5 17.5a4 4 0 1 1-1.4-3.1"/><path d="M20.6 11.6v2.9h-2.9"/>',
 };
-const activityChoice = () => `<div class="act-choice" role="group" aria-label="${esc(t('f.actKind'))}">${['once', 'list', 'routine', 'listRoutine'].map(k =>
+export const activityChoice = () => `<div class="act-choice" role="group" aria-label="${esc(t('f.actKind'))}">${['once', 'list', 'routine', 'listRoutine'].map(k =>
   `<button type="button" class="act-choice-btn kind-${k}" data-act-kind="${k}"><svg class="act-choice-icon" viewBox="0 0 24 24" aria-hidden="true">${ACT_KIND_ICONS[k]}</svg><strong>${esc(t('f.actKind.' + k))}</strong><span>${esc(t('f.actKind.' + k + 'Hint'))}</span></button>`).join('')}</div>`;
 
 // Whether and how an activity repeats; a repeating activity is a routine. The common kinds – a number
 // of times a week or month, or specific weekdays – or a custom recurrence, and when it ends.
 // Each common kind is a unit and what it falls on, as in the custom recurrence.
-const REPEAT_PRESETS = { week: { unit: 'week', on: 'times' }, month: { unit: 'month', on: 'times' }, days: { unit: 'week', on: 'days' } };
+export const REPEAT_PRESETS = { week: { unit: 'week', on: 'times' }, month: { unit: 'month', on: 'times' }, days: { unit: 'week', on: 'days' } };
 
-function repeatPreset(r) {
+export function repeatPreset(r) {
   if (!r) return 'none';
   if (r.every !== 1) return 'custom';
   if (r.times) return r.unit;
@@ -3497,17 +3509,17 @@ function repeatPreset(r) {
 }
 
 // What a custom recurrence falls on, for its unit: weekdays, a day or weekday of the month, or any days a number of times.
-function repeatOnOptions(unit) {
+export function repeatOnOptions(unit) {
   if (unit === 'week') return { days: t('f.onDays'), times: t('f.onTimes') };
   if (unit !== 'month') return {};
   return { day: t('f.onMonthDay'), lastDay: t('f.onLastDay'), nth: t('f.onNth'), times: t('f.onTimes') };
 }
 // The n-th choices for a monthly weekday; a fifth only for older routines that use one.
-const nthOptions = nth => Object.fromEntries([1, 2, 3, 4, ...(nth === 5 ? [5] : []), -1].map(n => [n, nthWord(n, 0)]));
+export const nthOptions = nth => Object.fromEntries([1, 2, 3, 4, ...(nth === 5 ? [5] : []), -1].map(n => [n, nthWord(n, 0)]));
 
-const formStart = () => parseDateInput($('#f-startDate')?.value || '') || today();
+export const formStart = () => parseDateInput($('#f-startDate')?.value || '') || today();
 
-function repeatFields(a) {
+export function repeatFields(a) {
   const r = isRoutine(a) ? sched(a) : null;
   const start = a.startDate || today();
   // A new routine starts as a number of times a week.
@@ -3559,7 +3571,7 @@ function repeatFields(a) {
 }
 
 // The metric fields, or the hint for measuring by activities or routines.
-function updateProgressFields() {
+export function updateProgressFields() {
   const by = $('#f-progress').value;
   $('#measureFields').hidden = by !== 'measure';
   $('#actsHint').hidden = by !== 'activities';
@@ -3568,7 +3580,7 @@ function updateProgressFields() {
 
 // A routine has no status or due date (when it ends takes its place); only the fields its kind of
 // repeat needs show, and the labels follow the start date and the interval.
-function updateRepeatFields(e) {
+export function updateRepeatFields(e) {
   const sel = $('#f-repeat');
   if (!sel) return;
   const unitSel = $('#f-unit'), onSel = $('#f-on');
@@ -3617,7 +3629,7 @@ function updateRepeatFields(e) {
 }
 
 // The recurrence the form describes, or an error for one of its fields.
-function readRepeat(v, start) {
+export function readRepeat(v, start) {
   if (v.repeat === 'none') return {};
   const int = (x, max) => { const n = Number(x); return Number.isInteger(n) && n >= 1 && n <= max ? n : 0; };
   const { unit, on } = REPEAT_PRESETS[v.repeat] || v;
@@ -3656,7 +3668,7 @@ function readRepeat(v, start) {
   return { repeat, dueDate };
 }
 
-function relationForm() {
+export function relationForm() {
   const groups = KINDS.map(k => {
     const items = collection(k);
     return items.length ? `<optgroup label="${esc(t('kinds.' + k))}">${items.map(i => `<option value="${i.id}">${esc(i.title)}</option>`).join('')}</optgroup>` : '';
@@ -3669,7 +3681,7 @@ function relationForm() {
 
 // Only the relationship types that fit the chosen items are offered: those from → to, and under
 // a second heading those to → from (picking one of these swaps the two items when saved).
-function fillRelTypes(keep = $('#f-type').value) {
+export function fillRelTypes(keep = $('#f-type').value) {
   const from = $('#f-from').value, to = $('#f-to').value;
   const title = id => findEntity(id)?.item.title || '';
   const group = (a, b, types, pre) => types.length
@@ -3684,7 +3696,7 @@ function fillRelTypes(keep = $('#f-type').value) {
   f.querySelector('.err').textContent = box.value ? '' : from === to ? t('err.self') : t('rel.noneBetween');
 }
 
-function formValues() {
+export function formValues() {
   const fd = new FormData($('#modalForm'));
   const v = {};
   for (const [k, val] of fd.entries()) {
@@ -3707,7 +3719,7 @@ function formValues() {
   return { v, arr, bad };
 }
 
-function showErrors(errs) {
+export function showErrors(errs) {
   modal.querySelectorAll('.field[data-field]').forEach(f => {
     const e = errs[f.dataset.field];
     f.classList.toggle('invalid', !!e);
@@ -3717,7 +3729,7 @@ function showErrors(errs) {
   first?.focus();
 }
 
-function updateSmartLive() {
+export function updateSmartLive() {
   if (formCtx?.kind !== 'goal') return;
   const { v } = formValues();
   const c = smartCheck(v);
@@ -3727,7 +3739,7 @@ function updateSmartLive() {
   $('#smartLiveText').textContent = okCount === 5 ? t('smart.ok') : t('smart.partial', { n: okCount });
 }
 
-function submitForm() {
+export function submitForm() {
   const { kind, id } = formCtx;
   const { v, arr, bad } = formValues();
   const existing = id ? findEntity(id)?.item : null;
@@ -3858,21 +3870,22 @@ function submitForm() {
   }
 }
 
-function finish(msg) {
+export function finish(msg) {
   save();
   modal.close();
   render();
   toast(msg);
 }
 
-let lastNodeClick = { id: null, t: 0 };
+export let lastNodeClick = { id: null, t: 0 };
+export function setLastNodeClick(v) { lastNodeClick = v; }
 
 /* =========================================================
    Events
    ========================================================= */
 
 // `action` ({ label, run }) adds a button, and the toast stays longer so there is time to use it.
-function toast(msg, action = null) {
+export function toast(msg, action = null) {
   const box = $('#toast');
   box.textContent = msg;
   box.classList.toggle('has-action', !!action);
@@ -3888,7 +3901,7 @@ function toast(msg, action = null) {
   clearTimeout(toast.timer);
   toast.timer = setTimeout(hideToast, action ? 8000 : 2200);
 }
-function hideToast() {
+export function hideToast() {
   clearTimeout(toast.timer);
   $('#toast').classList.remove('show', 'has-action');
   $('#toast').replaceChildren();
@@ -3902,9 +3915,9 @@ function hideToast() {
    until the goal drops below its target again. The first check of a plan on a device only notes
    which goals are there already, so an existing plan does not greet you with a row of toasts. */
 
-const reachedQueue = [];
+export const reachedQueue = [];
 
-function offerReached() {
+export function offerReached() {
   const key = 'reachedChecked.' + plans.current, quiet = !prefs.get(key, false);
   let changed = false;
   db.goals.forEach(g => {
@@ -3923,7 +3936,7 @@ function offerReached() {
   return changed;
 }
 
-function showReached() {
+export function showReached() {
   if ($('#toast').classList.contains('has-action')) return;
   let g;
   while (reachedQueue.length && !(g = db.goals.find(x => x.id === reachedQueue[0] && goalReached(x)))) reachedQueue.shift();
@@ -3937,7 +3950,7 @@ function showReached() {
   } });
 }
 
-function cycleStatus(id) {
+export function cycleStatus(id) {
   const a = db.activities.find(x => x.id === id);
   if (!a) return;
   const next = ACTIVITY_STATUS[(ACTIVITY_STATUS.indexOf(a.status) + 1) % ACTIVITY_STATUS.length];
@@ -3953,9 +3966,9 @@ function cycleStatus(id) {
    asks for an amount for each (empty adds nothing). Enter adds. Escape or "Tick only" still ticks
    the day; a click elsewhere leaves everything as it was. */
 
-let amountPop = null; // { el, anchor, skip }
+export let amountPop = null; // { el, anchor, skip }
 
-function openAmountPop(anchor, { title, hint, fields, withDate, okLabel, skipLabel }, submit, skip = null) {
+export function openAmountPop(anchor, { title, hint, fields, withDate, okLabel, skipLabel }, submit, skip = null) {
   closeAmountPop();
   const el = document.createElement('form');
   el.className = 'amount-pop';
@@ -3994,20 +4007,20 @@ function openAmountPop(anchor, { title, hint, fields, withDate, okLabel, skipLab
   });
 }
 
-function skipAmount() {
+export function skipAmount() {
   const { skip, anchor } = amountPop;
   closeAmountPop();
   if (skip) skip();
   else anchor.focus();
 }
 
-function closeAmountPop() {
+export function closeAmountPop() {
   amountPop?.el.remove();
   amountPop = null;
 }
 document.addEventListener('pointerdown', e => { if (amountPop && !amountPop.el.contains(e.target) && e.target !== amountPop.anchor) closeAmountPop(); });
 
-function openStateAmount(id, anchor) {
+export function openStateAmount(id, anchor) {
   const s = db.states.find(x => x.id === id);
   if (!s) return;
   openAmountPop(anchor, { title: t('cu.addTo', { name: s.title }), fields: [{ label: t('cu.amount'), unit: s.unit }], withDate: true, okLabel: t('cu.add') }, ([n], date) => {
@@ -4022,7 +4035,7 @@ function openStateAmount(id, anchor) {
 
 // A click on a state's card asks for a new measured value, dated today unless changed (one that adds
 // up asks for an amount instead); editing the state is in the card's menu.
-function openStateValue(id, anchor) {
+export function openStateValue(id, anchor) {
   const s = db.states.find(x => x.id === id);
   if (!s) return;
   if (isCumulative(s)) return openStateAmount(id, anchor);
@@ -4036,7 +4049,7 @@ function openStateValue(id, anchor) {
   });
 }
 
-function openTickAmount(a, iso, anchor) {
+export function openTickAmount(a, iso, anchor) {
   const states = improvedStates(a);
   const title = iso === today() ? t('cu.howMuch', { name: a.title }) : t('cu.howMuchOn', { name: a.title, date: fmtDay(iso, { weekday: 'short', day: 'numeric', month: 'short' }) });
   openAmountPop(anchor, { title, fields: states.map(s => ({ label: s.title, unit: s.unit })), okLabel: t('cu.add'), skipLabel: t('cu.tickOnly') },
@@ -4045,7 +4058,7 @@ function openTickAmount(a, iso, anchor) {
 }
 
 // The graph of a state that adds up, or of a routine, shows another scale; it is kept on the item.
-function setGraphScale(id, scale) {
+export function setGraphScale(id, scale) {
   const s = db.states.find(x => x.id === id) || db.activities.find(x => x.id === id && isRoutine(x));
   if (!s || !SCALES.includes(scale)) return;
   s.scale = scale;
@@ -4054,7 +4067,7 @@ function setGraphScale(id, scale) {
   $(`[data-gr="${id}"] [data-gr-scale="${scale}"]`)?.focus();
 }
 
-function removeEntry(id, entryId) {
+export function removeEntry(id, entryId) {
   const s = db.states.find(x => x.id === id);
   const e = s?.entries?.find(x => x.id === entryId);
   if (!e || !confirm(t('confirm.deleteMeasurement', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(e.date) }))) return;
@@ -4067,7 +4080,7 @@ function removeEntry(id, entryId) {
   if (card) { card.querySelector('.gr-table').open = true; card.querySelector('.gr-table summary').focus(); }
 }
 
-function setView(view) {
+export function setView(view) {
   ui.view = view;
   ui.mapLinkFrom = null;
   ui.search = '';
@@ -4081,7 +4094,7 @@ document.querySelectorAll('.nav-item[data-view]').forEach(b => b.addEventListene
 
 /* ---------- "More" menu of the phone tab bar ---------- */
 
-function openNavSheet() {
+export function openNavSheet() {
   const sheet = $('#navSheet');
   sheet.innerHTML = [...document.querySelectorAll('.nav-extra')].map(b =>
     `<button type="button" role="menuitem" class="${b.dataset.view === ui.view ? 'active' : ''}" data-sheet-view="${b.dataset.view}">${b.innerHTML}</button>`).join('');
@@ -4090,7 +4103,7 @@ function openNavSheet() {
   (sheet.querySelector('.active') || sheet.querySelector('button')).focus();
 }
 
-function closeNavSheet(refocus = false) {
+export function closeNavSheet(refocus = false) {
   const sheet = $('#navSheet');
   if (sheet.hidden) return;
   sheet.hidden = true;
@@ -4123,7 +4136,7 @@ matchMedia('(max-width: 720px)').addEventListener('change', e => { if (!e.matche
 
 // On the map and the timeline (where links are drawn between kinds), what to add: under the Add button, or at x, y
 // for a right-click on the map's empty space.
-function openAddMenu(x, y, byKey) {
+export function openAddMenu(x, y, byKey) {
   Object.assign(ctxMenu.dataset, { id: '', rel: '', add: '1' });
   ctxMenu.setAttribute('aria-label', t('add.item'));
   showCtxMenu('', '', '', ['goal', 'activity', 'state', ...(ui.view === 'map' ? ['vision'] : [])].map(k => ({ act: 'new:' + k, label: t('add.' + k) })), x, y, byKey);
@@ -4253,7 +4266,7 @@ viewEl.addEventListener('change', e => {
   }
 });
 
-function bindDragDrop() {
+export function bindDragDrop() {
   document.querySelectorAll('[data-drag]').forEach(card => {
     // Cards are dragged with the mouse; on touch screens a long-press opens their menu instead.
     card.addEventListener('pointerdown', e => { card.draggable = e.pointerType === 'mouse'; });
@@ -4330,7 +4343,7 @@ $('#modalForm').addEventListener('click', e => {
 
 // Link lists: the list opens while the search box (or one of its items) has focus, typing filters it,
 // a click on an item adds it and a chosen item's × removes it.
-const shownOpts = picker => [...picker.querySelectorAll('.pick-opt:not([hidden])')];
+export const shownOpts = picker => [...picker.querySelectorAll('.pick-opt:not([hidden])')];
 ['focusin', 'input'].forEach(type => $('#modalForm').addEventListener(type, e => {
   if (e.target.matches('.picker-search')) showPickList(e.target.closest('[data-picker]'), true);
 }));
@@ -4389,10 +4402,10 @@ $('#modalForm').addEventListener('input', e => {
 /* ---------- Calendar for date fields ----------
    Opens below the field on the field's date, else (for an end date) on the form's start date, else today. */
 
-let cal = null; // { field, box, y, m, focus: 'yyyy-mm-dd' }
-const isoOf = (y, m, d) => new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+export let cal = null; // { field, box, y, m, focus: 'yyyy-mm-dd' }
+export const isoOf = (y, m, d) => new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
 
-function openCalendar(field) {
+export function openCalendar(field) {
   closeCalendar();
   const box = field.querySelector('[data-date]');
   const start = box.id === 'f-startDate' ? null : parseDateInput($('#f-startDate')?.value);
@@ -4409,7 +4422,7 @@ function openCalendar(field) {
   el.scrollIntoView({ block: 'nearest' });
 }
 
-function drawCalendar() {
+export function drawCalendar() {
   const { y, m, box } = cal;
   const lead = weekday(isoOf(y, m, 1)); // Monday first
   const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
@@ -4432,16 +4445,16 @@ function drawCalendar() {
     </div>`;
 }
 
-const focusDay = () => cal.field.querySelector(`.cal-grid [data-cal-day="${cal.focus}"]`).focus();
+export const focusDay = () => cal.field.querySelector(`.cal-grid [data-cal-day="${cal.focus}"]`).focus();
 
 // Show the month of `iso` with that day focused.
-function moveCalendar(iso) {
+export function moveCalendar(iso) {
   const [y, m] = iso.split('-').map(Number);
   Object.assign(cal, { y, m: m - 1, focus: iso });
   drawCalendar();
 }
 
-function closeCalendar(refocus = false) {
+export function closeCalendar(refocus = false) {
   if (!cal) return;
   const { field } = cal;
   cal = null;
@@ -4451,7 +4464,7 @@ function closeCalendar(refocus = false) {
 }
 
 // Focus goes back to the calendar button, not the text box: on a phone that would bring up the keyboard.
-function pickDate(iso) {
+export function pickDate(iso) {
   const { box } = cal;
   box.value = dateInput(iso);
   closeCalendar(true);
@@ -4510,7 +4523,7 @@ modal.addEventListener('cancel', e => {
 document.addEventListener('pointerdown', e => { if (cal && !cal.field.contains(e.target)) closeCalendar(); });
 // A press that starts inside a dialog (selecting text) and ends on its backdrop
 // fires a click on the dialog itself; swallow it so the dialog stays open.
-let pressTarget = null;
+export let pressTarget = null;
 document.addEventListener('pointerdown', e => { pressTarget = e.target; }, true);
 document.addEventListener('click', e => {
   if (e.target instanceof HTMLDialogElement && pressTarget && pressTarget !== e.target) e.stopImmediatePropagation();
@@ -4536,14 +4549,14 @@ $('#deleteBtn').addEventListener('click', () => {
 /* A plan file is { format, version, kind, name, exportedAt, goals, states, activities, relations }.
    kind 'full' is an exact copy (a backup); 'template' is the same plan without progress, its dates
    moved to start now, for sharing. Files exported before the header are read as full copies. */
-const PLAN_FORMAT = 'actionplan-plan';
-const PLAN_VERSION = 1;
-const PLAN_DATES = ['startDate', 'deadline', 'dueDate'];
+export const PLAN_FORMAT = 'actionplan-plan';
+export const PLAN_VERSION = 1;
+export const PLAN_DATES = ['startDate', 'deadline', 'dueDate'];
 
 // A copy of plan data with the progress taken out: goals active again with no current value, no
 // measurements, activities to do, no check-ins, no sync bookkeeping. With `shift`, every date moves
 // by the same whole number of weeks (so weekly routines keep their days) to put the earliest one this week.
-function resetProgress(data, { shift = false } = {}) {
+export function resetProgress(data, { shift = false } = {}) {
   const d = normalize(JSON.parse(JSON.stringify(data)));
   d.deleted = {};
   const dated = [...d.goals, ...d.activities];
@@ -4558,7 +4571,7 @@ function resetProgress(data, { shift = false } = {}) {
 }
 
 // How much progress plan data holds, as the import question lists it.
-function progressCounts(data) {
+export function progressCounts(data) {
   const ticks = a => Object.values(a.checkins || {}).filter(v => v === 1).length;
   return {
     checkins: data.activities.reduce((n, a) => n + ticks(a), 0),
@@ -4569,16 +4582,16 @@ function progressCounts(data) {
     started: data.activities.filter(a => a.status === 'doing' && !(a.autoStarted && a.autoStarted === a.startDate)).length,
   };
 }
-const hasProgress = data => Object.values(progressCounts(data)).some(Boolean);
+export const hasProgress = data => Object.values(progressCounts(data)).some(Boolean);
 
-function planFile(kind) {
+export function planFile(kind) {
   const data = kind === 'template' ? resetProgress(db, { shift: true }) : db;
   const { goals, states, activities, relations } = data;
   return { format: PLAN_FORMAT, version: PLAN_VERSION, kind, name: currentPlan().name, exportedAt: new Date().toISOString(), goals, states, activities, relations };
 }
 
 // Reads a plan file; throws an error with code 'invalid' (not a plan) or 'version' (from a newer app).
-function parsePlanFile(text, fileName) {
+export function parsePlanFile(text, fileName) {
   const fail = code => Object.assign(new Error(code), { code });
   let raw;
   try { raw = JSON.parse(text); } catch (e) { throw fail('invalid'); }
@@ -4590,12 +4603,12 @@ function parsePlanFile(text, fileName) {
   return { name, kind: raw.kind === 'template' ? 'template' : 'full', data: normalize(raw) };
 }
 
-const planFileName = kind => {
+export const planFileName = kind => {
   const name = currentPlan().name.replace(/[\\/:*?"<>|]+/g, '').trim() || t('app.file');
   return `${name}${kind === 'template' ? '-' + t('export.templateFile') : ''}-${today()}.json`;
 };
 
-function download(blob, name) {
+export function download(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
@@ -4605,7 +4618,7 @@ function download(blob, name) {
 
 // Downloads the plan, or hands it to the system share sheet where files can be shared (phones).
 // A cancelled share does nothing; a failed one falls back to a download.
-async function exportPlan(kind, share = false) {
+export async function exportPlan(kind, share = false) {
   const blob = new Blob([JSON.stringify(planFile(kind), null, 2)], { type: 'application/json' });
   const name = planFileName(kind);
   if (share) {
@@ -4618,14 +4631,14 @@ async function exportPlan(kind, share = false) {
   }
   download(blob, name);
 }
-const exportJson = () => exportPlan('full');
-const canShareFiles = () => {
+export const exportJson = () => exportPlan('full');
+export const canShareFiles = () => {
   try { return !!navigator.canShare?.({ files: [new File(['{}'], 'plan.json', { type: 'application/json' })] }); } catch (e) { return false; }
 };
 
-const planExp = $('#planExport');
+export const planExp = $('#planExport');
 
-function openExport() {
+export function openExport() {
   closeCtxMenu();
   $('#planExportName').textContent = currentPlan().name;
   planExp.querySelector('input[name="exportKind"][value="full"]').checked = true;
@@ -4643,15 +4656,15 @@ planExp.addEventListener('click', e => {
 
 // Imports always become a new plan, so nothing is overwritten. A full copy that holds progress asks
 // first whether to keep it or start fresh (someone may have shared their own plan).
-const planImp = $('#planImport');
-let pendingImport = null;
+export const planImp = $('#planImport');
+export let pendingImport = null;
 
-function addImported(name, data, msg = 'toast.imported') {
+export function addImported(name, data, msg = 'toast.imported') {
   createPlan(uniqueName(name), data);
   toast(t(msg));
 }
 
-async function importJson(file) {
+export async function importJson(file) {
   let plan;
   try {
     plan = parsePlanFile(await file.text(), file.name);
@@ -4682,7 +4695,7 @@ planImp.addEventListener('click', e => {
 // A plan that exercises every feature: all relationship types, sub-goals, three levels of
 // sub-activities, dependency chains, and every status (not started, in progress, late, waiting, done).
 // The sample plan's data (also used by the guided tour in tutorial.js).
-function sampleData() {
+export function sampleData() {
   const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
   const [halfMarathon, fund, tenK, weight, course, spanish, sell, trip, bathroom, heating, exercise, weeklyKm] = Array.from({ length: 12 }, uid);
   const [fitness, savings, spending, bodyWeight, itemsSold, heatingBill, distance] = Array.from({ length: 7 }, uid);
@@ -4800,7 +4813,7 @@ function sampleData() {
   return data;
 }
 
-function loadSample() {
+export function loadSample() {
   createPlan(uniqueName(t('plan.sampleName')), sampleData());
   toast(t('toast.sample'));
 }
@@ -4808,10 +4821,10 @@ function loadSample() {
 /* ---------- Templates (templates.js): ready-made plans to start from ---------- */
 
 // A template's text in the active language: a pair [English, Slovene], or a plain string such as 'km'.
-const tplText = v => (Array.isArray(v) ? v[TPL_LANGS.indexOf(lang)] ?? v[0] : v);
+export const tplText = v => (Array.isArray(v) ? v[TPL_LANGS.indexOf(lang)] ?? v[0] : v);
 
 // Plan data from a template: dates counted from today, nothing done yet, no measurements.
-function templateData(tpl) {
+export function templateData(tpl) {
   const ids = {};
   const id = k => (ids[k] ??= uid());
   const day = n => addDays(today(), n);
@@ -4842,24 +4855,24 @@ function templateData(tpl) {
   return data;
 }
 
-function useTemplate(tpl) {
+export function useTemplate(tpl) {
   const name = uniqueName(tplText(tpl.name));
   createPlan(name, templateData(tpl));
   toast(t('toast.template', { name }));
 }
 
 // How long a template runs: weeks up to three months, then months, then whole years.
-function tplSpan(tpl) {
+export function tplSpan(tpl) {
   const days = Math.max(...tpl.goals.map(g => g.end));
   if (days <= 91) return tp('tpl.weeks', Math.round(days / 7));
   const months = Math.round(days / 30.44);
   return months % 12 ? tp('tpl.months', months) : tp('tpl.years', months / 12);
 }
 
-const tplDialog = $('#templates');
-let tplArea = '';
+export const tplDialog = $('#templates');
+export let tplArea = '';
 
-function tplCard(tpl) {
+export function tplCard(tpl) {
   const routines = tpl.activities.filter(a => a.repeat);
   const steps = tpl.activities.filter(a => !a.repeat && !a.parent);
   const counts = [tp('tpl.goals', tpl.goals.length), tpl.states.length && tp('tpl.states', tpl.states.length),
@@ -4876,7 +4889,7 @@ function tplCard(tpl) {
 }
 
 // Templates by area (starter ones first), with chips to show a single area.
-function renderTemplates() {
+export function renderTemplates() {
   const chip = (area, label) => `<button type="button" class="chip ${tplArea === area ? 'active' : ''}" data-tpl-area="${area}" aria-pressed="${tplArea === area}">${label}</button>`;
   $('#templateAreas').innerHTML = chip('', t('tpl.area.all')) + TPL_AREAS.map(a => chip(a, t('tpl.area.' + a))).join('');
   const levels = ['starter', 'ambitious'];
@@ -4886,7 +4899,7 @@ function renderTemplates() {
   }).join('');
 }
 
-function openTemplates() {
+export function openTemplates() {
   closeCtxMenu();
   if (settings.open) settings.close();
   renderTemplates();
@@ -4905,10 +4918,10 @@ tplDialog.addEventListener('click', e => {
 
 /* ---------- Settings (gear, top right): plan, language, theme, display options, data, help ---------- */
 
-const settings = $('#settings');
+export const settings = $('#settings');
 
 // Display options shown as switches: how to read each one and what changing it does.
-const SETTINGS = {
+export const SETTINGS = {
   help: { get: () => ui.help, set: v => setHelp(v) },
   hideDone: { get: () => ui.hideDone, set: v => setToggle('hideDone', v) },
   tlDeps: { get: () => ui.tlDeps, set: v => setToggle('tlDeps', v) },
@@ -4917,13 +4930,13 @@ const SETTINGS = {
 };
 
 // A remembered on/off display option (hideDone, tlDeps, planBadges).
-function setToggle(key, on) {
+export function setToggle(key, on) {
   ui[key] = on;
   prefs.set(key, on);
   render();
 }
 
-function renderSettings() {
+export function renderSettings() {
   settings.querySelectorAll('[data-setting]').forEach(box => (box.checked = SETTINGS[box.dataset.setting].get()));
   renderThemeSetting();
 }
@@ -4950,14 +4963,14 @@ $('#templatesBtn').addEventListener('click', openTemplates);
 
 /* ---------- Collapsible sidebar (desktop): only the icons stay visible ---------- */
 
-function setNavCollapsed(on) {
+export function setNavCollapsed(on) {
   ui.navCollapsed = on;
   prefs.set('navCollapsed', on);
   applyNavCollapsed();
   render(); // graphs are drawn at the view's width
 }
 
-function applyNavCollapsed() {
+export function applyNavCollapsed() {
   const on = ui.navCollapsed;
   $('.app').classList.toggle('nav-collapsed', on);
   const b = $('#navToggle');
@@ -4970,15 +4983,15 @@ $('#navToggle').addEventListener('click', () => setNavCollapsed(!ui.navCollapsed
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 
-const ctxMenu = $('#ctxMenu');
+export const ctxMenu = $('#ctxMenu');
 // Map boxes and timeline rows both act as item "nodes".
-const NODE_SEL = '[data-map-node],[data-tl-node]';
+export const NODE_SEL = '[data-map-node],[data-tl-node]';
 // The menu also opens on the cards and rows of the other views (on a chart, only on its heading).
-const MENU_SEL = `${NODE_SEL},[data-ctx-item]`;
-const nodeId = el => el?.dataset.mapNode || el?.dataset.tlNode || el?.dataset.ctxItem;
-const LONG_PRESS_MS = 500;
+export const MENU_SEL = `${NODE_SEL},[data-ctx-item]`;
+export const nodeId = el => el?.dataset.mapNode || el?.dataset.tlNode || el?.dataset.ctxItem;
+export const LONG_PRESS_MS = 500;
 
-function ctxOptions(kind, item) {
+export function ctxOptions(kind, item) {
   const opt = (act, label, extra = {}) => ({ act, label, ...extra });
   if (kind === 'vision') return [
     opt('edit', t('btn.edit')), ...(ui.view === 'map' ? [opt('highlight', t('ctx.highlight'))] : []), '-', opt('add:vision:parents', t('ctx.addSubvision')),
@@ -5020,11 +5033,11 @@ function ctxOptions(kind, item) {
 
 // The views each kind of item appears in (graphs: only states with measurements or amounts, and
 // routines with check-ins).
-const SHOW_IN = { vision: ['visions', 'map'], goal: ['goals', 'map', 'timeline'], activity: ['activities', 'map', 'timeline', 'graphs'], state: ['states', 'map', 'graphs'] };
+export const SHOW_IN = { vision: ['visions', 'map'], goal: ['goals', 'map', 'timeline'], activity: ['activities', 'map', 'timeline', 'graphs'], state: ['states', 'map', 'graphs'] };
 
 // Switches to another view with the item selected there (map, timeline) or its card brought into
 // view, first changing the filters there that would hide it (setView clears the search).
-function showIn(view, id) {
+export function showIn(view, id) {
   const { kind, item } = findEntity(id);
   revealIn(view, kind, item);
   prefs.set('category', ui.category);
@@ -5045,7 +5058,7 @@ function showIn(view, id) {
 // items hidden (shown again), the goal picked (to all), the category (to one the item belongs to –
 // a goal's own, then those of the goals it is linked to – or else to all) and, in the timeline,
 // the folded goals it is under.
-function revealIn(view, kind, item) {
+export function revealIn(view, kind, item) {
   // On the map every vision shows once no goal or category is picked and none are hidden.
   if (kind === 'vision') {
     if (view === 'map') { Object.assign(ui, { mapGoal: '', category: '' }); if (ui.hideVisions) { ui.hideVisions = false; prefs.set('hideVisions', false); } }
@@ -5074,7 +5087,7 @@ function revealIn(view, kind, item) {
   if (!shown(folded) && shown(new Set())) setTlCollapsed([...folded].reduce((keep, k) => (shown(new Set([...keep, k])) ? keep.add(k) : keep), new Set()));
 }
 
-function openCtxMenu(id, x, y, byKey = false) {
+export function openCtxMenu(id, x, y, byKey = false) {
   const ent = findEntity(id);
   if (!ent) return;
   Object.assign(ctxMenu.dataset, { id, rel: '', add: '' });
@@ -5082,13 +5095,13 @@ function openCtxMenu(id, x, y, byKey = false) {
   showCtxMenu(ent.kind, t('kind.' + ent.kind), ent.item.title, ctxOptions(ent.kind, ent.item), x, y, byKey);
 }
 
-let ctxOpenedAt = 0;
+export let ctxOpenedAt = 0;
 
 // Fills the menu – a heading with a tag and a name (none without a title), then its options – and shows it at x, y, kept on screen.
 // An option with a sub list is a parent that opens its items in place, below it (see toggleCtxSub).
 // Opened from the keyboard, its first item takes focus; opened by a finger or the mouse, the menu itself
 // does, so no item is marked under the finger (the arrow keys still reach them).
-function showCtxMenu(tagClass, tag, title, options, x, y, byKey = false) {
+export function showCtxMenu(tagClass, tag, title, options, x, y, byKey = false) {
   ctxOpenedAt = performance.now();
   ctxMenu.innerHTML = (title ? `<div class="ctx-head"><span class="tag ${tagClass}">${tag}</span><strong title="${esc(title)}">${esc(title)}</strong></div>` : '') +
     options.map(o => o === '-' ? '<hr>' : o.sub ?
@@ -5102,14 +5115,14 @@ function showCtxMenu(tagClass, tag, title, options, x, y, byKey = false) {
 }
 
 // One item; a view's icon goes before its name in the "Show in…" list, after the words otherwise.
-const ctxButton = o => {
+export const ctxButton = o => {
   const icon = o.icon ? $(`.nav-item[data-view="${o.icon}"] svg`).outerHTML : '';
   return `<button type="button" tabindex="-1" data-ctx="${o.act}" class="${o.danger ? 'danger' : ''}" role="${o.checked === undefined ? 'menuitem' : 'menuitemradio'}"${o.checked === undefined ? '' : ` aria-checked="${o.checked}"`}${o.name ? ` aria-label="${esc(o.name)}" title="${esc(o.name)}"` : ''}>${o.name ? icon : ''}${esc(o.label)}${o.name ? '' : icon}</button>`;
 };
 
 // Opens (or closes) the parent's items in place; the menu then moves up as far as it needs to stay
 // on screen, and scrolls to the opened items when it is taller than the screen.
-function toggleCtxSub(open) {
+export function toggleCtxSub(open) {
   const parent = ctxMenu.querySelector('[data-ctx-sub]'), sub = $('#ctxSub');
   sub.hidden = !open;
   parent.setAttribute('aria-expanded', open);
@@ -5119,7 +5132,7 @@ function toggleCtxSub(open) {
   if (open && below > 0) ctxMenu.scrollTop += below;
 }
 
-function closeCtxMenu(refocus = false) {
+export function closeCtxMenu(refocus = false) {
   if (ctxMenu.hidden) return;
   ctxMenu.hidden = true;
   if (refocus) $(ctxMenu.dataset.add ? '#addBtn' : ctxMenu.dataset.rel ? `[data-rel-edit="${ctxMenu.dataset.rel}"]` : `[data-map-node="${ctxMenu.dataset.id}"], [data-tl-node="${ctxMenu.dataset.id}"]`)?.focus();
@@ -5127,7 +5140,7 @@ function closeCtxMenu(refocus = false) {
 
 // A relationship line's menu (long-press, right-click or the menu key): it selects the line and
 // offers what the selection row below offers.
-function openRelMenu(relId, x, y, byKey = false) {
+export function openRelMenu(relId, x, y, byKey = false) {
   const r = db.relations.find(x => x.id === relId) || visionRel(relId);
   if (!r) return;
   Object.assign(ui, { mapRel: relId, mapSelected: null });
@@ -5140,9 +5153,9 @@ function openRelMenu(relId, x, y, byKey = false) {
 }
 
 // The menu of a relationship line, or else of an item.
-const openMenuAt = (line, node, x, y) => (line ? openRelMenu(line.dataset.relEdit, x, y) : openCtxMenu(nodeId(node), x, y));
+export const openMenuAt = (line, node, x, y) => (line ? openRelMenu(line.dataset.relEdit, x, y) : openCtxMenu(nodeId(node), x, y));
 
-function runRelAction(act, relId) {
+export function runRelAction(act, relId) {
   closeCtxMenu();
   if (act === 'rel-edit') return openForm('relation', relId);
   if (act === 'rel-remove') return removeRelation(relId);
@@ -5150,7 +5163,7 @@ function runRelAction(act, relId) {
   render();
 }
 
-function runCtxAction(act, id) {
+export function runCtxAction(act, id) {
   const ent = findEntity(id);
   closeCtxMenu();
   if (!ent) return;
@@ -5199,7 +5212,7 @@ viewEl.addEventListener('contextmenu', e => {
 });
 
 // Long-press for touch screens (iOS Safari never fires contextmenu).
-let press = null;
+export let press = null;
 viewEl.addEventListener('pointerdown', e => {
   const node = e.target.closest(MENU_SEL), line = e.target.closest('[data-rel-edit]');
   if ((!node && !line) || e.pointerType === 'mouse' || e.target.closest('[data-tl-drag]')) return;
@@ -5226,7 +5239,7 @@ document.addEventListener('pointerdown', () => { if (press?.fired) press = null;
 // The map scales as a whole; the timeline and the graphs only stretch their time axis. All keep the point
 // under the pointer (or between the fingers) in place.
 
-function zoomMap(scale, cx, cy) {
+export function zoomMap(scale, cx, cy) {
   const wrap = $('.map-wrap'), svg = wrap?.querySelector('svg');
   const s0 = ui.mapScale, s = clamp(scale, MAP.MIN_SCALE, MAP.MAX_SCALE);
   if (!svg || s === s0) return;
@@ -5243,7 +5256,7 @@ function zoomMap(scale, cx, cy) {
   $('.zoom-pct').textContent = `${Math.round(s * 100)} %`;
 }
 
-function zoomTimeline(factor, cx) {
+export function zoomTimeline(factor, cx) {
   const p0 = ui.tlPx, p = clamp(p0 * factor, TL.MIN, TL.MAX);
   if (!$('.tl-scale') || p === p0) return;
   // Anchor on the day under the pointer, but never on the sticky label column.
@@ -5258,7 +5271,7 @@ function zoomTimeline(factor, cx) {
 }
 
 // Only that graph is redrawn, into the same element, so a pinch that started on it keeps going.
-function zoomGraph(plot, factor, cx) {
+export function zoomGraph(plot, factor, cx) {
   const id = plot.closest('[data-gr]')?.dataset.gr, c = grCharts[id], item = id && findEntity(id)?.item;
   if (!c || !item) return;
   const z0 = clamp(ui.grZoom[id] || 1, ...c.zoom), z = clamp(z0 * factor, ...c.zoom);
@@ -5276,8 +5289,8 @@ function zoomGraph(plot, factor, cx) {
 }
 
 // Coalesce bursts of wheel / touch events into one zoom per frame.
-let zoomQueue = null;
-function queueZoom(wrap, factor, cx, cy) {
+export let zoomQueue = null;
+export function queueZoom(wrap, factor, cx, cy) {
   if (zoomQueue) return Object.assign(zoomQueue, { factor: zoomQueue.factor * factor, cx, cy });
   zoomQueue = { wrap, factor, cx, cy };
   requestAnimationFrame(() => {
@@ -5288,7 +5301,7 @@ function queueZoom(wrap, factor, cx, cy) {
     else zoomTimeline(z.factor, z.cx);
   });
 }
-const ZOOM_SEL = '.map-wrap, .tl-scroll, .gr-plot';
+export const ZOOM_SEL = '.map-wrap, .tl-scroll, .gr-plot';
 
 // Ctrl + wheel; trackpad pinch in Chrome, Edge and Firefox also arrives as ctrl + wheel.
 viewEl.addEventListener('wheel', e => {
@@ -5301,16 +5314,16 @@ viewEl.addEventListener('wheel', e => {
 
 // Two-finger pinch on touch screens. Touch events keep going to the element each finger started on,
 // even after re-rendering the timeline detaches it, so the handlers are attached to those elements.
-let pinch = null;
-const touchGap = ([a, b]) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-function pinchMove(e) {
+export let pinch = null;
+export const touchGap = ([a, b]) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+export function pinchMove(e) {
   if (!pinch || e.touches.length !== 2) return;
   if (e.cancelable) e.preventDefault();
   const gap = touchGap(e.touches), [a, b] = e.touches;
   queueZoom(pinch.wrap, gap / pinch.gap, (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
   pinch.gap = gap;
 }
-function pinchEnd(e) {
+export function pinchEnd(e) {
   if (!pinch || e.touches.length >= 2) return;
   pinch.targets.forEach(el => {
     el.removeEventListener('touchmove', pinchMove);
@@ -5333,9 +5346,9 @@ viewEl.addEventListener('touchstart', e => {
 
 // One-finger zoom on touch screens: tap, then touch again and drag – down zooms in, up zooms out,
 // around the point first tapped. A second tap that doesn't move stays a double-tap (which edits).
-const TAP_ZOOM = { GAP_MS: 300, NEAR: 30, START: 8, RATE: 0.01 };
-let lastTap = null, tapZoom = null;
-function tapZoomMove(e) {
+export const TAP_ZOOM = { GAP_MS: 300, NEAR: 30, START: 8, RATE: 0.01 };
+export let lastTap = null, tapZoom = null;
+export function tapZoomMove(e) {
   if (!tapZoom || e.touches.length !== 1) return;
   // From the first move on, so the drag never starts scrolling the view instead.
   if (e.cancelable) e.preventDefault();
@@ -5349,7 +5362,7 @@ function tapZoomMove(e) {
   queueZoom(tapZoom.wrap, Math.exp((y - tapZoom.y) * TAP_ZOOM.RATE), tapZoom.x, tapZoom.y0);
   tapZoom.y = y;
 }
-function tapZoomEnd() {
+export function tapZoomEnd() {
   const z = tapZoom;
   if (!z) return;
   z.target.removeEventListener('touchmove', tapZoomMove);
@@ -5357,7 +5370,7 @@ function tapZoomEnd() {
   // Keep it until the click the lifted finger may produce has been swallowed (see below).
   setTimeout(() => { if (tapZoom === z) tapZoom = null; });
 }
-let touchDown = null; // where and when the current one-finger touch began
+export let touchDown = null; // where and when the current one-finger touch began
 viewEl.addEventListener('touchstart', e => {
   const t = e.touches.length === 1 && e.touches[0], prev = lastTap;
   touchDown = t && { x: t.clientX, y: t.clientY, t: e.timeStamp };
@@ -5377,7 +5390,7 @@ viewEl.addEventListener('touchend', e => {
 });
 
 // Click and drag with the mouse pans the map, the timeline and a zoomed graph (touch screens pan natively).
-let pan = null;
+export let pan = null;
 viewEl.addEventListener('pointerdown', e => {
   const wrap = e.pointerType === 'mouse' && e.button === 0 && !e.target.closest('[data-map-node],[data-tl-drag]') && e.target.closest(ZOOM_SEL);
   if (!wrap) return;
@@ -5415,26 +5428,26 @@ document.addEventListener('click', e => {
    On touch screens (where dragging scrolls), choose "Link to…" in a box's long-press menu, then tap
    the other box. Either way the relationship form opens with only the types that fit the two items. */
 
-function startMapLink(id) {
+export function startMapLink(id) {
   ui.mapLinkFrom = id;
   ui.mapSelected = null;
   render();
 }
 
 // Whether any relationship fits two items, in either direction.
-const canLink = (a, b) => (findVision(a) || findVision(b) ? !visionLinkError(a, b) : possibleTypes(a, b).length > 0 || possibleTypes(b, a).length > 0);
-const LINK_MARKS = ['link-source', 'link-target', 'link-bad'];
+export const canLink = (a, b) => (findVision(a) || findVision(b) ? !visionLinkError(a, b) : possibleTypes(a, b).length > 0 || possibleTypes(b, a).length > 0);
+export const LINK_MARKS = ['link-source', 'link-target', 'link-bad'];
 
-function linkItems(from, to) {
+export function linkItems(from, to) {
   if (findVision(from) || findVision(to)) return linkVision(from, to);
   if (!canLink(from, to))
     return toast(t('map.linkNone', { a: findEntity(from).item.title, b: findEntity(to).item.title }));
   openForm('relation', null, { from, to });
 }
 
-let linkDrag = null; // { from, id, x, y, moved, line, target }
+export let linkDrag = null; // { from, id, x, y, moved, line, target }
 // A point on the screen in the map's own coordinates.
-function mapPoint(svg, x, y) {
+export function mapPoint(svg, x, y) {
   const p = svg.createSVGPoint();
   Object.assign(p, { x, y });
   return p.matrixTransform(svg.getScreenCTM().inverse());
@@ -5468,7 +5481,7 @@ document.addEventListener('pointermove', e => {
   if (to) over.classList.add(canLink(linkDrag.from, to) ? 'link-target' : 'link-bad');
 });
 // Clears the drag's line and marks; the drag itself is kept until the click it may produce has been swallowed.
-function endLinkDrag() {
+export function endLinkDrag() {
   const done = linkDrag;
   if (!done) return {};
   done.ended = true;
@@ -5502,11 +5515,11 @@ document.addEventListener('keydown', e => {
    opens the menu. The bar follows whole days as it goes; the dates are saved when it is let go, and
    Esc puts it back. */
 
-let tlDrag = null; // { id, kind, edge, s0, e0, lo, hi, x, y, pointerId, touch, armed, moved, days, timer }
-let tlDragClick = false; // the click that ends a drag must not toggle the selection
+export let tlDrag = null; // { id, kind, edge, s0, e0, lo, hi, x, y, pointerId, touch, armed, moved, days, timer }
+export let tlDragClick = false; // the click that ends a drag must not toggle the selection
 
 // The dates the drag has reached: each end keeps at least the length the item's form asks for.
-function tlDragDates(d, days = d.days) {
+export function tlDragDates(d, days = d.days) {
   const min = d.kind === 'goal' ? 1 : 0;
   let s = d.s0, e = d.e0;
   if (d.edge === 'start') s = dayStr(Math.min(dayNum(d.s0) + days, dayNum(d.e0) - min));
@@ -5518,7 +5531,7 @@ function tlDragDates(d, days = d.days) {
 }
 
 // Redraws the dragged item's bar (in every row it is listed in) without redrawing the timeline.
-function previewTlDrag(d) {
+export function previewTlDrag(d) {
   const scroll = $('.tl-scroll');
   if (!scroll) return;
   const { s, e } = tlDragDates(d), px = ui.tlPx, from = Number(scroll.dataset.from);
@@ -5537,7 +5550,7 @@ function previewTlDrag(d) {
 
 // A label above the dragged bar with the date (or dates) it would get, over the end that moves.
 // On touch screens it stays clear of the finger.
-function showTlDragTip(d, s, e) {
+export function showTlDragTip(d, s, e) {
   const mark = $(`[data-tl-node="${d.id}"] :is(.tl-bar, .tl-milestone)`);
   if (!mark) return;
   let tip = $('.tl-drag-tip');
@@ -5556,14 +5569,14 @@ function showTlDragTip(d, s, e) {
   tip.style.top = `${Math.max(8, top)}px`;
 }
 
-function startTlDrag(d) {
+export function startTlDrag(d) {
   d.moved = true;
   $('.tl-scroll')?.classList.add('tl-dragging', d.edge ? 'tl-resizing' : 'tl-moving');
   getSelection().removeAllRanges();
 }
 
 // Saves the new dates (or, with `keep` false, puts the bar back) and redraws the timeline.
-function endTlDrag(keep) {
+export function endTlDrag(keep) {
   const d = tlDrag;
   if (!d) return;
   clearTimeout(d.timer);
@@ -5583,7 +5596,7 @@ function endTlDrag(keep) {
 }
 
 // Once a long-press has picked the bar up, moving the finger drags it instead of scrolling.
-function tlDragTouchMove(e) {
+export function tlDragTouchMove(e) {
   if (tlDrag?.armed && e.cancelable) e.preventDefault();
 }
 
@@ -5643,13 +5656,13 @@ document.addEventListener('click', e => {
 document.addEventListener('pointerdown', () => { tlDragClick = false; }, true);
 
 // Safari: trackpad pinch on macOS arrives as gesture events; on iOS they duplicate the touches above.
-let gesture = null;
-function gestureChange(e) {
+export let gesture = null;
+export function gestureChange(e) {
   e.preventDefault();
   if (!pinch) queueZoom(gesture.wrap, e.scale / gesture.scale, e.clientX, e.clientY);
   gesture.scale = e.scale;
 }
-function gestureEnd() {
+export function gestureEnd() {
   gesture.target.removeEventListener('gesturechange', gestureChange);
   gesture.target.removeEventListener('gestureend', gestureEnd);
   gesture = null;
@@ -5698,9 +5711,9 @@ viewEl.addEventListener('dblclick', e => {
 // In the map and the timeline, with nothing being typed and no dialog or menu open: Delete (or
 // Backspace, the Mac's delete key) removes the selected or focused line at once, or asks before
 // deleting the selected or focused item; Enter or Space opens what is selected.
-const selectsInView = () => ui.view === 'map' || ui.view === 'timeline';
-const relShown = id => !!id && !!$(`[data-rel-edit="${id}"]`);
-const itemShown = id => !!id && !!$(`[data-map-node="${id}"],[data-tl-node="${id}"]`);
+export const selectsInView = () => ui.view === 'map' || ui.view === 'timeline';
+export const relShown = id => !!id && !!$(`[data-rel-edit="${id}"]`);
+export const itemShown = id => !!id && !!$(`[data-map-node="${id}"],[data-tl-node="${id}"]`);
 document.addEventListener('keydown', e => {
   if (!selectsInView() || document.querySelector('dialog[open]') || !ctxMenu.hidden) return;
   if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
@@ -5764,7 +5777,7 @@ document.addEventListener('scroll', e => { if (e.target !== ctxMenu && performan
 
 /* ---------- Plan switcher (sidebar on desktop, menu on mobile) ---------- */
 
-const PLAN_ICONS = {
+export const PLAN_ICONS = {
   new: '<path d="M12 5v14M5 12h14"/>',
   rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   merge: '<path d="M6 3v4a6 6 0 0 0 12 0V3M12 13v8M8 17l4 4 4-4"/>',
@@ -5775,7 +5788,7 @@ const PLAN_ICONS = {
 
 // How a plan is doing, for the badge in the plan menus: 'late' when something is overdue,
 // 'today' when something still has to be done today, else 'ok'. Paused goals and finished work don't count.
-function planHealth(data) {
+export function planHealth(data) {
   const keep = db;
   db = data;
   try {
@@ -5794,12 +5807,12 @@ function planHealth(data) {
     return health;
   } finally { db = keep; }
 }
-const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
+export const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
 
 // Other plans change only through sync or the plan menu: their health is kept until the stored
 // copy or the day changes, so a render reads them from storage without parsing them again.
-const storedHealth = new Map(); // plan id → { key, health }
-function storedPlanHealth(id) {
+export const storedHealth = new Map(); // plan id → { key, health }
+export function storedPlanHealth(id) {
   let raw = null;
   try { raw = userStorage.getItem(planKey(id)); } catch (e) { /* ignore */ }
   const key = `${today()}|${raw}`;
@@ -5808,7 +5821,7 @@ function storedPlanHealth(id) {
 }
 
 // The plan menus show each plan's badge before its name (unless switched off in Settings).
-function updatePlanBadges() {
+export function updatePlanBadges() {
   const health = ui.planBadges ? Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? planHealth(db) : storedPlanHealth(p.id)])) : {};
   document.querySelectorAll('[data-plan-select] option').forEach(o => {
     const plan = plans.list.find(p => p.id === o.value), h = health[o.value];
@@ -5818,7 +5831,7 @@ function updatePlanBadges() {
   });
 }
 
-function renderPlanSwitch() {
+export function renderPlanSwitch() {
   const options = plans.list.map(p => `<option value="${p.id}" ${p.id === plans.current ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
   // Merging needs a second plan to merge into.
   const off = act => act === 'merge' && plans.list.length < 2;
@@ -5857,7 +5870,7 @@ document.addEventListener('click', e => {
 });
 
 // What a plan holds, as list items for the delete and merge dialogs ('' when it is empty).
-function planContents(data) {
+export function planContents(data) {
   const count = (key, n) => (n ? `<li>${esc(tp(key, n))}</li>` : '');
   const measured = data.states.reduce((sum, s) => sum + (s.cumulative ? s.entries || [] : s.history || []).length, 0);
   return count('planDel.goals', data.goals.length) + count('planDel.states', data.states.length) + count('planDel.measurements', measured)
@@ -5866,9 +5879,9 @@ function planContents(data) {
 
 /* ---------- Deleting a plan: spells out what is lost and asks for the plan's name ---------- */
 
-const planDel = $('#planDelete');
+export const planDel = $('#planDelete');
 
-function openPlanDelete(plan) {
+export function openPlanDelete(plan) {
   closeCtxMenu();
   planDel.dataset.id = plan.id;
   const contents = planContents(db);
@@ -5897,7 +5910,7 @@ function openPlanDelete(plan) {
   $('#planDeleteName').focus();
 }
 
-const planDelNameOk = () => $('#planDeleteName').value.trim() === plans.list.find(p => p.id === planDel.dataset.id)?.name;
+export const planDelNameOk = () => $('#planDeleteName').value.trim() === plans.list.find(p => p.id === planDel.dataset.id)?.name;
 planDel.addEventListener('input', () => ($('#planDeleteBtn').disabled = !planDelNameOk()));
 planDel.addEventListener('click', e => {
   if (e.target === planDel || e.target.closest('[data-plan-delete-close]')) planDel.close();
@@ -5917,9 +5930,9 @@ $('#planDeleteForm').addEventListener('submit', e => {
 
 /* ---------- Merging a plan into another (also offered instead of deleting it) ---------- */
 
-const planMerge = $('#planMerge');
+export const planMerge = $('#planMerge');
 
-function openMerge(plan, remove = false) {
+export function openMerge(plan, remove = false) {
   closeCtxMenu();
   const others = plans.list.filter(p => p.id !== plan.id);
   if (!others.length) return;
@@ -5950,14 +5963,14 @@ planMerge.addEventListener('click', e => {
 
 /* ---------- Language & theme (in Settings) ---------- */
 
-function renderLangSwitch() {
+export function renderLangSwitch() {
   document.querySelectorAll('.lang-switch').forEach(box => {
     box.innerHTML = Object.entries(I18N).map(([code, l]) =>
       `<button type="button" data-lang="${code}" lang="${code}" title="${esc(l.name)}" aria-pressed="${code === lang}">${code.toUpperCase()}</button>`).join('');
   });
 }
 
-function changeLanguage(code) {
+export function changeLanguage(code) {
   if (code === lang) return;
   setLanguage(code);
   applyStaticI18n();
@@ -5977,25 +5990,26 @@ document.addEventListener('click', e => {
 });
 
 // 'system' follows the device; 'light' / 'dark' pin the theme.
-const THEMES = ['system', 'light', 'dark'];
-const THEME_ICONS = {
+export const THEMES = ['system', 'light', 'dark'];
+export const THEME_ICONS = {
   system: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>',
   light: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="currentColor"/></svg>',
 };
-let theme = 'system'; // the current user's, read by bootUser
+export let theme = 'system'; // the current user's, read by bootUser
+export function setTheme(v) { theme = v; }
 
-function applyTheme() {
+export function applyTheme() {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.dataset.theme = theme;
   renderThemeSetting();
 }
-const darkScheme = matchMedia('(prefers-color-scheme: dark)');
+export const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 // The map writes its glass in the colours of the theme it was drawn in, so a change of theme redraws it;
 // other views follow the CSS, and keep an open popup.
-const redrawForTheme = () => { if (ui.view === 'map') render(); };
+export const redrawForTheme = () => { if (ui.view === 'map') render(); };
 darkScheme.addEventListener('change', () => { if (theme === 'system') redrawForTheme(); });
-function renderThemeSetting() {
+export function renderThemeSetting() {
   $('#themeSeg').innerHTML = THEMES.map(k =>
     `<button type="button" data-theme-set="${k}" aria-pressed="${k === theme}">${THEME_ICONS[k]}<span>${t('theme.' + k)}</span></button>`).join('');
 }
@@ -6013,21 +6027,21 @@ $('#themeSeg').addEventListener('click', e => {
    on iPhone and iPad it is Safari's Share → Add to Home Screen; Firefox on Android adds it from its
    menu, and Firefox on a computer cannot install it at all. */
 
-let installPrompt = null;
-const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const isFirefox = () => /Firefox\//.test(navigator.userAgent);
-const isAndroid = () => /Android/.test(navigator.userAgent);
+export let installPrompt = null;
+export const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+export const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const isFirefox = () => /Firefox\//.test(navigator.userAgent);
+export const isAndroid = () => /Android/.test(navigator.userAgent);
 
 // Without an install prompt, the browser's own way to install it, if there is a hint for it.
-function installHintKey() {
+export function installHintKey() {
   if (installPrompt) return 'install.hint';
   if (isIos()) return 'install.iosHint';
   if (isFirefox()) return isAndroid() ? 'install.firefoxAndroidHint' : 'install.firefoxHint';
   return '';
 }
 
-function renderInstall() {
+export function renderInstall() {
   const hint = installHintKey();
   $('#installSection').hidden = isInstalled() || !hint;
   $('#installHint').textContent = hint ? t(hint) : '';
@@ -6060,7 +6074,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 /* ---------- Boot ---------- */
 
 // Loads the current user's plans, visions and preferences and shows them; true on their first visit.
-function bootUser() {
+export function bootUser() {
   // First visit = nothing stored yet; load() creates the first plan, so check before it.
   let firstVisit = false;
   try { firstVisit = !userStorage.getItem(PLANS_KEY) && !userStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
@@ -6088,7 +6102,7 @@ function bootUser() {
 
 // Another user takes over this device: nothing of the one before stays in memory, on screen or
 // in a sync on its way (syncNow stops itself). Returns true on that user's first visit.
-function enterUser(id) {
+export function enterUser(id) {
   if (typeof tour !== 'undefined' && tour.step >= 0) endTour(false);
   closeCtxMenu();
   closeAmountPop();
@@ -6103,7 +6117,7 @@ function enterUser(id) {
   Object.keys(ui).forEach(k => delete ui[k]);
   Object.assign(ui, freshUi());
   storedHealth.clear();
-  otherPlansCache = { key: '', list: [] };
+  setOtherPlansCache({ key: '', list: [] });
   plans = { current: null, list: [] };
   db = emptyDb();
   const firstVisit = bootUser();
@@ -6111,11 +6125,3 @@ function enterUser(id) {
   renderSync();
   return firstVisit;
 }
-
-applyStaticI18n();
-renderLangSwitch();
-const firstVisit = bootUser();
-renderInstall();
-initTutorial();
-if (firstVisit) offerTour();
-initSync();

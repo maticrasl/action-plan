@@ -1,4 +1,6 @@
-'use strict';
+/** Change tracking and the per-item merge of plans and visions. */
+import { mergeVisions } from './visions.js';
+import { ACYCLIC, PARENT_REL, dropRoutineDeps, emptyDb, followList, isCumulative, refreshTotal } from './app.js';
 
 /* =========================================================
    Sync groundwork: change tracking and per-item merge
@@ -12,24 +14,24 @@
    Loaded before app.js; uses its helpers (emptyDb, PARENT_REL, ACYCLIC) only when called.
    ========================================================= */
 
-const SYNC_COLLS = ['goals', 'states', 'activities', 'relations'];
-const TOMBSTONE_DAYS = 365; // deletions older than this are forgotten
+export const SYNC_COLLS = ['goals', 'states', 'activities', 'relations'];
+export const TOMBSTONE_DAYS = 365; // deletions older than this are forgotten
 
 /* ---------- Change tracking ---------- */
 
-let syncSnapshot = new Map(); // item id → its content (without updatedAt) as last saved
+export let syncSnapshot = new Map(); // item id → its content (without updatedAt) as last saved
 
-const itemContent = item => {
+export const itemContent = item => {
   const { updatedAt, ...rest } = item;
   return JSON.stringify(rest);
 };
 
 // Call whenever `db` is replaced by stored data, so only later edits count as changes.
-function takeSnapshot(data) {
+export function takeSnapshot(data) {
   syncSnapshot = new Map(SYNC_COLLS.flatMap(c => data[c].map(x => [x.id, itemContent(x)])));
 }
 
-function stampChanges(data) {
+export function stampChanges(data) {
   const now = new Date().toISOString();
   const present = new Set();
   data.deleted ||= {};
@@ -46,13 +48,13 @@ function stampChanges(data) {
 
 /* ---------- Plan list: names and deleted plans are tracked the same way ---------- */
 
-let planSnapshot = new Map(); // plan id → name as last saved
+export let planSnapshot = new Map(); // plan id → name as last saved
 
-function takePlanSnapshot(index) {
+export function takePlanSnapshot(index) {
   planSnapshot = new Map(index.list.map(p => [p.id, p.name]));
 }
 
-function stampPlanChanges(index) {
+export function stampPlanChanges(index) {
   const now = new Date().toISOString();
   index.deleted ||= {};
   index.list.forEach(p => {
@@ -67,22 +69,22 @@ function stampPlanChanges(index) {
 /* ---------- Merge ---------- */
 
 // Items without a timestamp (saved before change tracking existed) count as oldest.
-const stamp = x => x.updatedAt || '';
+export const stamp = x => x.updatedAt || '';
 
 // Newer version wins; ties are broken by content so both devices pick the same one.
-function newerOf(x, y) {
+export function newerOf(x, y) {
   if (stamp(x) !== stamp(y)) return stamp(x) > stamp(y) ? x : y;
   return itemContent(x) >= itemContent(y) ? x : y;
 }
 
 // Newest first; ties are broken by id so every device keeps the same one.
-function newestFirst(p, q) {
+export function newestFirst(p, q) {
   if (stamp(p) !== stamp(q)) return stamp(q) > stamp(p) ? 1 : -1;
   return q.id.localeCompare(p.id);
 }
 
 // Tombstones from both sides: the later deletion of an id wins.
-function mergeDeleted(a, b) {
+export function mergeDeleted(a, b) {
   const deleted = { ...a };
   Object.entries(b).forEach(([id, at]) => { if (!deleted[id] || at > deleted[id]) deleted[id] = at; });
   return deleted;
@@ -91,7 +93,7 @@ function mergeDeleted(a, b) {
 // Current states: measurements from both versions are kept (one per date, the newer version's
 // value wins on a clash, so deleting a measurement carries over too), and the state's value
 // follows its latest measurement – or, for a state that adds up, its merged entries' total.
-function mergeState(x, y) {
+export function mergeState(x, y) {
   const newer = newerOf(x, y), older = newer === x ? y : x;
   const byDate = new Map((older.history || []).map(h => [h.date, h]));
   Object.keys(newer.dropped || {}).forEach(d => byDate.delete(d));
@@ -112,7 +114,7 @@ function mergeState(x, y) {
 
 // Amounts that add up: entries from both versions are kept by id (the newer version's copy wins on
 // a clash), except those deleted on either side.
-function mergeEntries(merged, newer, older) {
+export function mergeEntries(merged, newer, older) {
   const dropped = { ...older.droppedEntries, ...newer.droppedEntries };
   const byId = new Map((older.entries || []).map(e => [e.id, e]));
   (newer.entries || []).forEach(e => byId.set(e.id, e));
@@ -125,7 +127,7 @@ function mergeEntries(merged, newer, older) {
 // Routines: check-ins from both versions are kept per date (the newer version wins on a clash,
 // so un-ticking a day carries over too), and so are a list routine's item ticks per date and item.
 // Lists: items are merged by id (see mergeList).
-function mergeActivity(x, y) {
+export function mergeActivity(x, y) {
   const newer = newerOf(x, y), older = newer === x ? y : x;
   let merged = newer.checkins || older.checkins ? { ...newer, checkins: { ...older.checkins, ...newer.checkins } } : newer;
   if (newer.listDays || older.listDays) {
@@ -139,7 +141,7 @@ function mergeActivity(x, y) {
 // A list keeps the items of both copies: on a clash the one ticked or renamed later wins, an item
 // removed on either side stays removed, and the newer copy's order comes first. Its status then
 // follows the merged ticks.
-function mergeList(merged, newer, older) {
+export function mergeList(merged, newer, older) {
   const dropped = { ...older.droppedItems, ...newer.droppedItems };
   const theirs = new Map(older.list.map(i => [i.id, i]));
   const list = newer.list.map(i => ((theirs.get(i.id)?.at || '') > (i.at || '') ? theirs.get(i.id) : i));
@@ -151,9 +153,9 @@ function mergeList(merged, newer, older) {
   return merged;
 }
 
-const MERGE_ITEM = { states: mergeState, activities: mergeActivity };
+export const MERGE_ITEM = { states: mergeState, activities: mergeActivity };
 
-function mergePlans(a, b) {
+export function mergePlans(a, b) {
   const out = emptyDb();
   const deleted = mergeDeleted(a.deleted || {}, b.deleted || {});
 
@@ -176,7 +178,7 @@ function mergePlans(a, b) {
 // Relationships can break when two edits meet: an end was deleted, the same link was made
 // twice, an item got two parents, two new dependencies form a loop, or an activity something
 // depends on became a routine on another device. Newer links win.
-function repairRelations(data) {
+export function repairRelations(data) {
   const ids = new Set(['goals', 'states', 'activities'].flatMap(c => data[c].map(x => x.id)));
   const key = r => `${r.from}|${r.type}|${r.to}`;
   const rels = dropRoutineDeps(data.relations, data.activities)
@@ -215,12 +217,12 @@ function repairRelations(data) {
    renamed or edited after the deletion. */
 
 // When a plan was last touched: renamed, or any item in it edited or deleted.
-function lastTouched(entry, data) {
+export function lastTouched(entry, data) {
   const times = [stamp(entry), ...SYNC_COLLS.flatMap(c => (data?.[c] || []).map(stamp)), ...Object.values(data?.deleted || {})];
   return times.reduce((a, b) => (b > a ? b : a), '');
 }
 
-function mergeStores(a, b) {
+export function mergeStores(a, b) {
   const deleted = mergeDeleted(a.plans.deleted || {}, b.plans.deleted || {});
   const entries = new Map();
   [...a.plans.list, ...b.plans.list].forEach(p => {

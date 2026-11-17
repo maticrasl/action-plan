@@ -1,4 +1,9 @@
-'use strict';
+/** Visions: the global list above goals, stored apart from plans. */
+import { t } from './i18n.js';
+import { TOMBSTONE_DAYS, itemContent, mergeDeleted, newerOf, newestFirst, stamp } from './sync.js';
+import { userStorage } from './users.js';
+import { scheduleSync } from './drive.js';
+import { currentPlan, db, plans, readPlan, safeId, toast } from './app.js';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")
@@ -12,13 +17,15 @@
    Loaded after sync.js and before app.js; uses their helpers only when called.
    ========================================================= */
 
-const VISIONS_KEY = 'actionplan.visions';
-let visions = { list: [], deleted: {} };
-let visionsVersion = 0; // bumped on every change to the list, so cached answers know to start over
-let plansVersion = 0;   // bumped whenever plans are saved or synced (other plans' goals are cached)
-let visionSnapshot = new Map();
+export const VISIONS_KEY = 'actionplan.visions';
+export let visions = { list: [], deleted: {} };
+export function setVisions(v) { visions = v; }
+export let visionsVersion = 0; // bumped on every change to the list, so cached answers know to start over
+export let plansVersion = 0;   // bumped whenever plans are saved or synced (other plans' goals are cached)
+export function setPlansVersion(v) { plansVersion = v; }
+export let visionSnapshot = new Map();
 
-function normalizeVisions(raw) {
+export function normalizeVisions(raw) {
   const out = { list: [], deleted: {} };
   if (Array.isArray(raw?.list)) out.list = raw.list
     .filter(v => v && typeof v === 'object' && safeId(v.id) && typeof v.title === 'string')
@@ -28,16 +35,16 @@ function normalizeVisions(raw) {
   return out;
 }
 
-const takeVisionSnapshot = () => { visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)])); };
+export const takeVisionSnapshot = () => { visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)])); };
 
-function loadVisions() {
+export function loadVisions() {
   try { visions = normalizeVisions(JSON.parse(userStorage.getItem(VISIONS_KEY))); } catch (e) { visions = normalizeVisions(null); }
   takeVisionSnapshot();
   visionsVersion++;
 }
 
 // Stamps what changed since the last save, remembers deleted ids (as plans do), stores the list and syncs.
-function saveVisions() {
+export function saveVisions() {
   const now = new Date().toISOString(), present = new Set();
   visions.list.forEach(v => {
     present.add(v.id);
@@ -55,13 +62,13 @@ function saveVisions() {
 
 /* ---------- The vision tree ---------- */
 
-const findVision = id => visions.list.find(v => v.id === id);
-const visionParents = v => (v.parents || []).filter(p => p !== v.id && findVision(p));
-const visionRoots = () => visions.list.filter(v => !visionParents(v).length);
-const visionChildren = id => visions.list.filter(v => visionParents(v).includes(id));
+export const findVision = id => visions.list.find(v => v.id === id);
+export const visionParents = v => (v.parents || []).filter(p => p !== v.id && findVision(p));
+export const visionRoots = () => visions.list.filter(v => !visionParents(v).length);
+export const visionChildren = id => visions.list.filter(v => visionParents(v).includes(id));
 
 // Every vision above `id`, however far.
-function visionAncestors(id) {
+export function visionAncestors(id) {
   const out = new Set(), stack = [id];
   while (stack.length) {
     const v = findVision(stack.pop());
@@ -71,7 +78,7 @@ function visionAncestors(id) {
 }
 
 // Why `parentId` cannot become a parent of `childId` (an i18n key), or null if it can.
-function canParent(childId, parentId) {
+export function canParent(childId, parentId) {
   if (!findVision(parentId)) return 'err.unknown';
   if (childId === parentId) return 'err.self';
   if (childId && visionAncestors(parentId).has(childId)) return 'err.visionLoop';
@@ -79,7 +86,7 @@ function canParent(childId, parentId) {
   return null;
 }
 
-function deleteVision(id) {
+export function deleteVision(id) {
   visions.list = visions.list.filter(v => v.id !== id);
   visions.list.forEach(v => { if (v.parents.includes(id)) v.parents = v.parents.filter(p => p !== id); });
   saveVisions();
@@ -87,10 +94,10 @@ function deleteVision(id) {
 
 /* ---------- Goals serving visions ---------- */
 
-const ownVisions = g => (Array.isArray(g?.visions) ? g.visions.filter(findVision) : []);
+export const ownVisions = g => (Array.isArray(g?.visions) ? g.visions.filter(findVision) : []);
 
 // The visions a goal serves: its own, and those of the goals it is part of.
-function goalVisionIds(g, data = db) {
+export function goalVisionIds(g, data = db) {
   const out = new Set(), seen = new Set();
   for (let cur = g; cur && !seen.has(cur.id);) {
     seen.add(cur.id);
@@ -101,18 +108,19 @@ function goalVisionIds(g, data = db) {
   return [...out];
 }
 
-const isActiveGoal = g => !g.status || g.status === 'active';
+export const isActiveGoal = g => !g.status || g.status === 'active';
 
 // Every plan's data: the open one as it is now, the others as stored (read once per change).
-let otherPlansCache = { key: '', list: [] };
-function allPlansData() {
+export let otherPlansCache = { key: '', list: [] };
+export function setOtherPlansCache(v) { otherPlansCache = v; }
+export function allPlansData() {
   const key = `${plansVersion}|${plans.current}|${plans.list.map(p => p.id).join(',')}`;
   if (otherPlansCache.key !== key) otherPlansCache = { key, list: plans.list.filter(p => p.id !== plans.current).map(p => ({ plan: p, data: readPlan(p.id) })) };
   return [{ plan: currentPlan() || { id: plans.current, name: '' }, data: db }, ...otherPlansCache.list];
 }
 
 // Visions some goal (in any plan) serves, and every vision above them.
-function reachedVisions() {
+export function reachedVisions() {
   const out = new Set();
   allPlansData().forEach(({ data }) => data.goals.forEach(g => ownVisions(g).forEach(id => {
     out.add(id);
@@ -122,19 +130,19 @@ function reachedVisions() {
 }
 
 // How many goals (in every plan) serve a vision, directly or through a narrower one.
-function goalsReaching(id) {
+export function goalsReaching(id) {
   let n = 0;
   allPlansData().forEach(({ data }) => data.goals.forEach(g => { if (ownVisions(g).some(x => x === id || visionAncestors(x).has(id))) n++; }));
   return n;
 }
 
 // The goals (from every plan) that serve a vision directly, as { plan, goal }.
-const servingGoals = id => allPlansData().flatMap(({ plan, data }) => data.goals.filter(g => ownVisions(g).includes(id)).map(goal => ({ plan, goal })));
+export const servingGoals = id => allPlansData().flatMap(({ plan, data }) => data.goals.filter(g => ownVisions(g).includes(id)).map(goal => ({ plan, goal })));
 
 // Ids of the items in a plan that work toward a vision: goals serving one (sub-goals through their
 // parent), the activities contributing to them with their sub-activities, the states measuring them
 // and the activities improving those states. Waiting for something (depends) does not carry it.
-function contributingIds(data = db) {
+export function contributingIds(data = db) {
   const out = new Set(), rels = data.relations;
   if (!visions.list.length) return out;
   data.goals.forEach(g => { if (goalVisionIds(g, data).length) out.add(g.id); });
@@ -157,7 +165,7 @@ function contributingIds(data = db) {
 
 // Purpose: one vision at the top, at least one active goal, and every active goal (in every plan)
 // serving a vision. `unlinked` lists the active goals that serve none, as { plan, goal }.
-function purposeState() {
+export function purposeState() {
   const roots = visionRoots(), unlinked = [];
   let active = 0;
   allPlansData().forEach(({ plan, data }) => data.goals.forEach(g => {
@@ -174,7 +182,7 @@ function purposeState() {
 // Two copies of the list: the newer version of each vision wins, deletions as for plans, and the
 // Purpose found first stays found. Then links that two edits made into a loop, or that point at a
 // vision that is gone, are dropped: the newer vision's links are kept first.
-function mergeVisions(a, b) {
+export function mergeVisions(a, b) {
   a = normalizeVisions(a); b = normalizeVisions(b);
   const deleted = mergeDeleted(a.deleted, b.deleted), byId = new Map();
   [...a.list, ...b.list].forEach(v => { const cur = byId.get(v.id); byId.set(v.id, cur ? newerOf(cur, v) : v); });
@@ -204,7 +212,7 @@ function mergeVisions(a, b) {
 }
 
 // Makes a merged list this device's.
-function applyVisions(merged) {
+export function applyVisions(merged) {
   visions = normalizeVisions(merged);
   try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { /* the plans' write reports it */ }
   takeVisionSnapshot();
