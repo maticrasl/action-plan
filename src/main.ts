@@ -4,7 +4,6 @@ import { applyStaticI18n, detectLang } from './ui/i18n-dom';
 import './legacy/config.js';
 import './legacy/templates.js';
 import { initTutorial, offerTour } from './legacy/tutorial.js';
-import './legacy/sync.js';
 import './legacy/users.js';
 import './legacy/visions.js';
 import { initSync } from './legacy/drive.js';

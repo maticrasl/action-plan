@@ -1,11 +1,11 @@
 /** Visions: the global list above goals, stored apart from plans. */
-import { TOMBSTONE_DAYS, itemContent, mergeDeleted, newerOf, newestFirst, stamp } from './sync.js';
 import { userStorage } from './users.js';
 import { scheduleSync } from './drive.js';
 import { currentPlan, plans, readPlan, toast } from './app.js';
 import { t } from '../i18n/index';
 import { db, setVisions, visions } from '../core/state';
 import { normalizeVisions, ownVisions, purposeOf, visionAncestors } from '../core/visions';
+import { TOMBSTONE_DAYS, itemContent } from '../core/merge';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")
@@ -92,38 +92,6 @@ export const servingGoals = id => allPlansData().flatMap(({ plan, data }) => dat
 export const purposeState = () => purposeOf(allPlansData());
 
 /* ---------- Sync ---------- */
-
-// Two copies of the list: the newer version of each vision wins, deletions as for plans, and the
-// Purpose found first stays found. Then links that two edits made into a loop, or that point at a
-// vision that is gone, are dropped: the newer vision's links are kept first.
-export function mergeVisions(a, b) {
-  a = normalizeVisions(a); b = normalizeVisions(b);
-  const deleted = mergeDeleted(a.deleted, b.deleted), byId = new Map();
-  [...a.list, ...b.list].forEach(v => { const cur = byId.get(v.id); byId.set(v.id, cur ? newerOf(cur, v) : v); });
-  const list = [...byId.values()].filter(v => !(deleted[v.id] && deleted[v.id] >= stamp(v)));
-  const ids = new Set(list.map(v => v.id)), kept = new Map();
-  const reachesUp = (from, target) => {
-    const stack = [from], seen = new Set();
-    while (stack.length) {
-      const id = stack.pop();
-      if (id === target) return true;
-      if (!seen.has(id)) { seen.add(id); stack.push(...(kept.get(id) || [])); }
-    }
-    return false;
-  };
-  [...list].sort(newestFirst).forEach(v => {
-    const ps = [];
-    kept.set(v.id, ps);
-    v.parents.forEach(p => { if (ids.has(p) && p !== v.id && !ps.includes(p) && !reachesUp(p, v.id)) ps.push(p); });
-  });
-  const out = {
-    list: list.map(v => (kept.get(v.id).length === v.parents.length ? v : { ...v, parents: kept.get(v.id) })),
-    deleted: Object.fromEntries(Object.entries(deleted).filter(([id]) => !ids.has(id))),
-  };
-  const found = [a.purposeFound, b.purposeFound].filter(Boolean).sort()[0];
-  if (found) out.purposeFound = found;
-  return out;
-}
 
 // Makes a merged list this device's.
 export function applyVisions(merged) {

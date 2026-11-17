@@ -1,6 +1,7 @@
 /** Visions without the page: the tree, loops, goals serving them, Purpose, and merging two lists. */
 import { db, visions } from './state';
 import { safeId } from './normalize';
+import { mergeDeleted, newerOf, newestFirst, stamp } from './merge';
 
 export const findVision = id => visions.list.find(v => v.id === id);
 
@@ -90,4 +91,36 @@ export function purposeOf(all) {
   }));
   const on = visions.list.length > 0 && roots.length === 1 && active > 0 && !unlinked.length;
   return { on, root: on ? roots[0] : null, roots, unlinked, active };
+}
+
+// Two copies of the list: the newer version of each vision wins, deletions as for plans, and the
+// Purpose found first stays found. Then links that two edits made into a loop, or that point at a
+// vision that is gone, are dropped: the newer vision's links are kept first.
+export function mergeVisions(a, b) {
+  a = normalizeVisions(a); b = normalizeVisions(b);
+  const deleted = mergeDeleted(a.deleted, b.deleted), byId = new Map();
+  [...a.list, ...b.list].forEach(v => { const cur = byId.get(v.id); byId.set(v.id, cur ? newerOf(cur, v) : v); });
+  const list = [...byId.values()].filter(v => !(deleted[v.id] && deleted[v.id] >= stamp(v)));
+  const ids = new Set(list.map(v => v.id)), kept = new Map();
+  const reachesUp = (from, target) => {
+    const stack = [from], seen = new Set();
+    while (stack.length) {
+      const id = stack.pop();
+      if (id === target) return true;
+      if (!seen.has(id)) { seen.add(id); stack.push(...(kept.get(id) || [])); }
+    }
+    return false;
+  };
+  [...list].sort(newestFirst).forEach(v => {
+    const ps = [];
+    kept.set(v.id, ps);
+    v.parents.forEach(p => { if (ids.has(p) && p !== v.id && !ps.includes(p) && !reachesUp(p, v.id)) ps.push(p); });
+  });
+  const out = {
+    list: list.map(v => (kept.get(v.id).length === v.parents.length ? v : { ...v, parents: kept.get(v.id) })),
+    deleted: Object.fromEntries(Object.entries(deleted).filter(([id]) => !ids.has(id))),
+  };
+  const found = [a.purposeFound, b.purposeFound].filter(Boolean).sort()[0];
+  if (found) out.purposeFound = found;
+  return out;
 }

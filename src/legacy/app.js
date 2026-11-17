@@ -1,7 +1,6 @@
 /** The app: data model, storage, views, forms and event wiring. */
 import { TEMPLATES, TPL_AREAS, TPL_LANGS } from './templates.js';
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
-import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from './sync.js';
 import { saveUsers, userStorage, users } from './users.js';
 import { deleteVision, goalsReaching, loadVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion } from './visions.js';
 import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
@@ -19,7 +18,8 @@ import { DAY_MS, dayNum, dayStr, isoOf } from '../core/days';
 import { PERIODS, SCALES, addEntry, calPeriod, convertState, deleteEntry, dropRoutineEntries, entriesOf, followLatest, goalPeriod, graphEntries, graphScale, improvedStates, isCumulative, lastPeriodTotal, migrateCumulative, periodTotals, refreshTotal, stateDate, stateScale, stateTotal, sumOf } from '../core/cumulative';
 import { consistency, keptDay, makesUp, periodProgress, routineState, routineStreak, routineToday } from '../core/routines/keeping';
 import { activityState, blockers, byActivities, byRoutines, countedActivities, goalActivities, goalCurrent, goalProgress, goalReached, goalRoutines, goalScope, goalState, isComplete, measuringState, ownMetric, smartCheck, startDueActivities } from '../core/progress';
-import { safeId } from '../core/normalize';
+import { dropRoutineDeps, safeId } from '../core/normalize';
+import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
 
 export const STORAGE_KEY = 'actionplan.v1';
 
@@ -173,12 +173,6 @@ export function mergePlanInto(fromId, toId, remove = false) {
   renderPlanSwitch();
   render();
 }
-
-// Nothing may depend on a routine; older plans, and edits meeting in sync, can hold such links.
-export const dropRoutineDeps = (rels, activities) => {
-  const routines = new Set(activities.filter(isRoutine).map(a => a.id));
-  return rels.filter(r => !(r.type === 'depends' && routines.has(r.to)));
-};
 
 export function normalize(data) {
   const d = emptyDb();
