@@ -3,7 +3,7 @@
 | Phase | State |
 |---|---|
 | 00 baseline | merged (PR #1); CI skip list in PR from `restructure/phase-00-ci`; known flake accepted |
-| 01 modules and build | shipped (owner said "ship it" 2026-11-17); PR from `restructure/phase-01` |
+| 01 modules and build | merged (PR #3) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-01` |
 | 02 core leaves | not started |
 | 03 core domain | not started |
 | 04 store and sync | not started |
@@ -49,6 +49,9 @@ Phase 9 (tests) can make the first step restore English in `finally` and take th
 A `NO RESULT` run is this flake, not a broken change: run `npm run check` again. Any other failure counts.
 
 - About 1 run in 15–20 prints `NO RESULT`: Chrome dumps the page before the suite writes `<pre id="OK">`.
+- Since phase 1 (test build over HTTP), on CI: 3 of 6 runs on 2026-11-17 were `NO RESULT`, each dumped at ~11 s
+  where a passing suite takes ~20 s; each re-run passed. Locally 0 of 6. A `NO RESULT` on `main` blocks the deploy
+  until re-run (`gh run rerun <id> --failed`). Owner to decide whether to investigate now.
   `tests/run.sh` used the same Chrome flags and budget, so this predates phase 0. Fixtures never flaked (34 runs).
 - Caught once with the dump saved (the runner now saves it to `%TEMP%\actionplan-last-dom.html`): page loaded,
   Timeline view, toast "Plan imported", no `OK` block. That run finished ~8 s sooner than the others, so the
