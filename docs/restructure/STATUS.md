@@ -5,7 +5,7 @@
 | 00 baseline | merged (PR #1); CI skip list in PR from `restructure/phase-00-ci`; known flake accepted |
 | 01 modules and build | merged (PR #3) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-01` |
 | 02 core leaves | merged (PR #6) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-02` |
-| 03 core domain | not started |
+| 03 core domain | done on `restructure/phase-03` (not pushed), waiting for the owner's check |
 | 04 store and sync | not started |
 | 05 shared UI | not started |
 | 06 views and tutorial | not started |
@@ -17,7 +17,7 @@
 ## Perf baseline (`npm run perf`, 2026-11-16, owner's Windows PC, Chrome headless, real time)
 
 Compare against these after phases 7 and 8. Average ms per draw (budget in brackets). After phase 1: within
-the baseline; the largest, 300 items + 20 visions map, 229 ms (was 198).
+the baseline; the largest, 300 items + 20 visions map, 229 ms (was 198). After phase 3: the same (223 ms; state form 117).
 
 | Check | ms | | Check | ms |
 |---|---|---|---|---|
@@ -58,18 +58,18 @@ Phase 9 (tests) can make the first step restore English in `finally` and take th
 
 ## Notes for the next phase
 
-- Moving: `npm run move -- <from> <to> <names|Obj.prop|comment:<line>> [--section …] --fix-imports`, add the `/** … */` line,
-  `npm run move -- --check <from> <to>`, `npm run check`, commit; then `git mv` to .ts, types, Prettier, commit. A committed
-  move: `--check <from> <to> --commit <rev>`. New files start as .js; imports outside `src/legacy` have no extension.
-- `main.ts` sets `lang` (`setLang(detectLang())`) and `db` (`setDb(emptyDb())`) first: no module calls another while loading.
-- Deviation from phase 2's file: `setLanguage` writes `localStorage`, so it is in `src/ui/i18n-dom.ts`; `src/i18n` has `setLang`.
-- tsc projects: `tsconfig.json` (app, DOM, no tests), `tsconfig.core.json` (`src/core`, `src/i18n`; ES2022, no DOM),
-  `tsconfig.node.json` (configs and unit tests, Node types). `check:fast` takes about 10 s; three tsc runs dominate.
-- Unit tests sit beside their module (`*.test.ts`, Europe/Ljubljana time). `model.test.ts` type-checks every stored plan,
-  plan list and vision list in the fixtures: a new stored field goes into `src/core/model.ts`.
-- `src/test-modules.ts` globs every module for the test bridge, after `main.ts` (load order kept); a name exported twice
-  throws. Tests may assign `x` only if its module exports `setX` (they assign `today`, `offerTour`, `lastNodeClick`).
-- Fixtures come from tag `pre-restructure`; never regenerate them. Clock 2026-11-16T11:00Z, ids counted, network off.
-- Windows PowerShell's `Get-Content -Raw` mangles UTF-8 without BOM: edit with the Edit tool or Node. Node and `gh` may be
-  missing from an old shell's PATH (`C:\Program Files\nodejs`, `C:\Program Files\GitHub CLI`). Approved extra dev deps:
-  `@types/node`, `@eslint/js`, `globals`. Pages deploys from Actions (`deploy.yml` calls `check.yml`).
+- Moving: `npm run move -- <from> <to> <names|Obj.prop|Arr[Title]:NAME|comment:<line>> [--section …] --fix-imports`, the
+  `/** … */` line, `--check <from> <to>` (or `--commit <rev>`), `check`, commit; then `git mv` to .ts, types, Prettier, commit.
+  Untyped code cannot go into a .ts file in a move commit. `--section` runs to the next header still in the file.
+- `src/core` never imports `src/legacy`: tsc follows the import into app.js, which reaches DOM code in `src/ui`. Deviation from
+  phase 3's file: `db` and `visions` (with setters) moved to `src/core/state.ts`; `plans`, the version counters,
+  `otherPlansCache` and `allPlansData` stay in legacy (phase 4). Rows went in dependency order (progress with keeping).
+- Split: `purposeState()` (legacy) = `purposeOf(allPlansData())` (core). Left in legacy on purpose: routine tick handlers, the
+  week strip and cards, schedule and period texts, `totalText`/`scaleText`, `planFile`, and visions' storage and readers.
+- Template area files call `core/templates/schedules.ts` while loading (it imports only types). `model.ts`: `State.unit` and
+  `Activity.description` are optional (templates leave them out). ESLint lets TS files use ternary/`&&` statements.
+- Core unit tests (108) pin the clock and call `setDb(emptyDb())` where rules read the open plan.
+- Unchanged: `main.ts` sets `lang` and `db` first; tsc projects (app, core without DOM, node); fixtures from `pre-restructure`,
+  never regenerated; tests assign `x` only through `setX`; PowerShell mangles UTF-8 (use Edit or Node); Node/`gh` PATH.
+- A name exported twice throws in the test bridge; a new stored field goes into `model.ts` (`model.test.ts` checks fixtures).
+  Approved extra dev deps: `@types/node`, `@eslint/js`, `globals`. Pages deploys from Actions (`deploy.yml` calls `check.yml`).
