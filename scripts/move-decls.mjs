@@ -1,6 +1,6 @@
 /** Moves top-level declarations between modules byte for byte, fixes imports, and checks a move was verbatim. */
-// usage: npm run move -- <from> <to> <name> [<name> â€¦] [--section "<header text>"] [--fix-imports]
-//        npm run move -- --check <from> <to> [--ref <rev>]
+// usage: npm run move -- <from> <to> <name> [<name> …] [--section "<header text>"] [--fix-imports]
+//        npm run move -- --check <from> <to> [--ref <rev> | --commit <rev>]
 //   <name>        a top-level declaration, with the comments directly above it and the rest of its last line
 //   Obj.prop      a property of the top-level object literal Obj: becomes `export const prop = <value>;`
 //                 in <to>, and the property in Obj becomes the shorthand `prop`
@@ -9,7 +9,8 @@
 //   --fix-imports rewrite the import lines of <from>, <to> and every file that imports a moved name;
 //                 without it the tool only prints what has to change
 //   --check       every declaration and comment in <to> must be in <ref>:<from> (moved) or <ref>:<to>
-//                 (already there), byte for byte; only `x = v;` â†’ `setX(v);` may differ. Default ref HEAD.
+//                 (already there), byte for byte; only `x = v;` → `setX(v);` may differ. Default ref HEAD.
+//                 --commit <rev> checks a committed move: <rev>'s files against its parent's.
 // New files are .js until their type commit renames them; imports to files outside src/legacy are
 // written without an extension, so the rename needs no import change.
 import { execFileSync } from 'node:child_process';
@@ -31,12 +32,13 @@ const has = name => {
   return i >= 0 && args.splice(i, 1).length > 0;
 };
 const section = flag('--section');
-const ref = flag('--ref') ?? 'HEAD';
+const commit = flag('--commit');
+const ref = commit ? `${commit}~1` : (flag('--ref') ?? 'HEAD');
 const fix = has('--fix-imports');
 const check = has('--check');
 const [fromArg, toArg, ...names] = args;
 if (!fromArg || !toArg || (!check && !names.length && section === undefined)) {
-  console.error('usage: npm run move -- <from> <to> <name> [â€¦] [--section "<header>"] [--fix-imports] | --check <from> <to> [--ref <rev>]');
+  console.error('usage: npm run move -- <from> <to> <name> […] [--section "<header>"] [--fix-imports] | --check <from> <to> [--ref <rev>]');
   process.exit(2);
 }
 const FROM = resolve(fromArg), TO = resolve(toArg);
@@ -176,7 +178,7 @@ function move() {
       if (f !== TO) edit(f).add.add(TO, n);
     }
 
-  console.log(`moved ${pieces.length} chunk(s) to ${rel(TO)}${existed ? '' : ' (new file: give it its one-line /** â€¦ */ description)'}: ${[...movedNames].join(', ')}`);
+  console.log(`moved ${pieces.length} chunk(s) to ${rel(TO)}${existed ? '' : ' (new file: give it its one-line /** … */ description)'}: ${[...movedNames].join(', ')}`);
   for (const [f, { add, drop }] of edits) {
     for (const [file, set] of add) console.log(`${rel(f)}: import { ${[...set].join(', ')} } from ${rel(file)}`);
     for (const [file, set] of drop) console.log(`${rel(f)}: no longer import { ${[...set].join(', ')} } from ${rel(file)}`);
@@ -324,18 +326,21 @@ const line = (sf, node) => sf.getLineAndCharacterOfPosition(node.getStart()).lin
 /* ---------- Checking ---------- */
 
 function checkMove() {
-  const show = file => {
+  const show = (file, rev = ref) => {
     try {
-      return execFileSync('git', ['show', `${ref}:${rel(file)}`], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).replace(/\r\n/g, '\n');
+      return execFileSync('git', ['show', `${rev}:${rel(file)}`], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).replace(/\r\n/g, '\n');
     } catch {
       return '';
     }
   };
+  // The files after the move: the working tree, or the commit being checked.
+  const now = file => (commit ? show(file, commit) || null : existsSync(file) ? readText(file).text : null);
   const headFrom = show(FROM), headTo = show(TO);
   if (!headFrom) throw new Error(`${ref}:${rel(FROM)} does not exist`);
   const hf = parse(FROM, headFrom);
-  const to = parse(TO, readText(TO).text);
-  const nowFrom = existsSync(FROM) ? parse(FROM, readText(FROM).text) : null;
+  if (now(TO) === null) throw new Error(`${commit ?? 'the working tree'} has no ${rel(TO)}`);
+  const to = parse(TO, now(TO));
+  const nowFrom = now(FROM) === null ? null : parse(FROM, now(FROM));
   const fails = [];
   let moved = 0, kept = 0;
   const strip = s => s.replace(/\n$/, '');
