@@ -3,22 +3,20 @@ import { TEMPLATES, TPL_AREAS, TPL_LANGS } from './templates.js';
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from './sync.js';
 import { saveUsers, userStorage, users } from './users.js';
-import { canParent, contributingIds, deleteVision, findVision, goalsReaching, loadVisions, ownVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion, visionAncestors, visionParents, visionRoots, visions } from './visions.js';
+import { canParent, contributingIds, deleteVision, findVision, goalsReaching, loadVisions, ownVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion, visionAncestors, visionParents, visionRoots } from './visions.js';
 import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
 import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
 import { dateInput, daysUntil, fmtDate, fmtDay, fmtRel, fmtSpan, isoDate, parseDateInput, today } from '../core/dates';
 import { ACTIVITY_STATUS, ACYCLIC, GOAL_STATUS, KINDS, NODE_STATES, PARENT_REL, REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
+import { db, setDb, visions } from '../core/state';
 
 export const STORAGE_KEY = 'actionplan.v1';
 
 export const relLabel = type => (REL_TYPES[type] || VISION_RELS[type] ? t('rel.' + type) : type);
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
-// main.ts starts it as an empty plan before boot reads the user's own.
-export let db;
-export function setDb(v) { db = v; }
 // What the views show; each user starts from these (enterUser), then their remembered preferences.
 export const freshUi = () => ({
   view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
@@ -66,7 +64,7 @@ export function load() {
   if (plans.list.length) {
     if (!currentPlan()) plans.current = plans.list[0].id;
     takePlanSnapshot(plans);
-    db = readPlan(plans.current);
+    setDb(readPlan(plans.current));
     takeSnapshot(db);
     return;
   }
@@ -78,7 +76,7 @@ export function load() {
   const id = uid();
   plans = { current: id, list: [{ id, name: t('plan.defaultName') }] };
   takePlanSnapshot({ list: [] }); // a brand-new plan list: nothing in it was deleted
-  db = legacy;
+  setDb(legacy);
   takeSnapshot(db);
   save();
 }
@@ -99,7 +97,7 @@ export function save() {
 
 export function openPlan(id) {
   plans.current = id;
-  db = readPlan(id);
+  setDb(readPlan(id));
   takeSnapshot(db);
   Object.assign(ui, { category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', mapSelected: null, mapRel: null, search: '', mapRefocus: true, rtWeek: {} });
   save();
@@ -127,7 +125,7 @@ export function createPlan(name, data = emptyDb()) {
   const id = uid();
   plans.list.push({ id, name });
   plans.current = id;
-  db = data;
+  setDb(data);
   takeSnapshot(db); // what a new plan starts with is not an edit
   save();
   openPlan(id);
@@ -5689,7 +5687,7 @@ export const PLAN_ICONS = {
 // 'today' when something still has to be done today, else 'ok'. Paused goals and finished work don't count.
 export function planHealth(data) {
   const keep = db;
-  db = data;
+  setDb(data);
   try {
     const now = today();
     let health = 'ok';
@@ -5704,7 +5702,7 @@ export function planHealth(data) {
       if (routineToday(a) === 'due') flag('today');
     });
     return health;
-  } finally { db = keep; }
+  } finally { setDb(keep); }
 }
 export const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
 
@@ -6018,7 +6016,7 @@ export function enterUser(id) {
   storedHealth.clear();
   setOtherPlansCache({ key: '', list: [] });
   plans = { current: null, list: [] };
-  db = emptyDb();
+  setDb(emptyDb());
   const firstVisit = bootUser();
   renderSettings();
   renderSync();

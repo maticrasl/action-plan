@@ -1,12 +1,13 @@
 /** Full backup and restore of every plan and the visions. */
 import { SYNC_COLLS } from './sync.js';
 import { userStorage } from './users.js';
-import { saveVisions, visions } from './visions.js';
+import { saveVisions } from './visions.js';
 import { SYNC_FORMAT, localStore, parseStore, toFile } from './drive.js';
 import { PLAN_FORMAT, download, planKey, plans, render, renderPlanSwitch, save, settings, toast, uniqueName } from './app.js';
 import { t, tp } from '../i18n/index';
 import { uid } from '../core/util';
 import { fmtDate, isoDate, today } from '../core/dates';
+import { visions } from '../core/state';
 
 /* =========================================================
    Full backup: every plan and the visions in one file

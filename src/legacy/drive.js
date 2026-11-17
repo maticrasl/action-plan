@@ -3,11 +3,12 @@ import { GOOGLE_CLIENT_ID } from './config.js';
 import { offerTour, tour } from './tutorial.js';
 import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from './sync.js';
 import { USERS_KEY, addUser, currentUser, readUsers, saveUsers, setUsers, userKeys, userSession, userStorage, users } from './users.js';
-import { applyVisions, normalizeVisions, plansVersion, setPlansVersion, visions } from './visions.js';
-import { $, PLANS_KEY, db, enterUser, esc, normalize, planKey, plans, prefs, readPlan, render, renderPlanSwitch, safeId, setDb, setPlans, toast } from './app.js';
+import { applyVisions, normalizeVisions, plansVersion, setPlansVersion } from './visions.js';
+import { $, PLANS_KEY, enterUser, esc, normalize, planKey, plans, prefs, readPlan, render, renderPlanSwitch, safeId, setPlans, toast } from './app.js';
 import { I18N, locale, t } from '../i18n/index';
 import { uid } from '../core/util';
 import { emptyDb } from '../core/model';
+import { db, setDb, visions } from '../core/state';
 
 /* =========================================================
    Google Drive sync

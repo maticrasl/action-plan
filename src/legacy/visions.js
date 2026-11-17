@@ -2,8 +2,9 @@
 import { TOMBSTONE_DAYS, itemContent, mergeDeleted, newerOf, newestFirst, stamp } from './sync.js';
 import { userStorage } from './users.js';
 import { scheduleSync } from './drive.js';
-import { currentPlan, db, plans, readPlan, safeId, toast } from './app.js';
+import { currentPlan, plans, readPlan, safeId, toast } from './app.js';
 import { t } from '../i18n/index';
+import { db, setVisions, visions } from '../core/state';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")
@@ -18,8 +19,6 @@ import { t } from '../i18n/index';
    ========================================================= */
 
 export const VISIONS_KEY = 'actionplan.visions';
-export let visions = { list: [], deleted: {} };
-export function setVisions(v) { visions = v; }
 export let visionsVersion = 0; // bumped on every change to the list, so cached answers know to start over
 export let plansVersion = 0;   // bumped whenever plans are saved or synced (other plans' goals are cached)
 export function setPlansVersion(v) { plansVersion = v; }
@@ -38,7 +37,7 @@ export function normalizeVisions(raw) {
 export const takeVisionSnapshot = () => { visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)])); };
 
 export function loadVisions() {
-  try { visions = normalizeVisions(JSON.parse(userStorage.getItem(VISIONS_KEY))); } catch (e) { visions = normalizeVisions(null); }
+  try { setVisions(normalizeVisions(JSON.parse(userStorage.getItem(VISIONS_KEY)))); } catch (e) { setVisions(normalizeVisions(null)); }
   takeVisionSnapshot();
   visionsVersion++;
 }
@@ -213,7 +212,7 @@ export function mergeVisions(a, b) {
 
 // Makes a merged list this device's.
 export function applyVisions(merged) {
-  visions = normalizeVisions(merged);
+  setVisions(normalizeVisions(merged));
   try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { /* the plans' write reports it */ }
   takeVisionSnapshot();
   visionsVersion++;
