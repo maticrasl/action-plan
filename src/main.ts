@@ -9,7 +9,7 @@ import { initTutorial, isTourRunning, offerTour } from './tutorial/tour';
 import { decorateHelp } from './tutorial/help';
 import './store/users';
 import './store/visions';
-import { bootUser, enterUser } from './legacy/app.js';
+import { bootUser, enterUser, setTourRunning } from './legacy/app.js';
 import { onRendered, render } from './views/index';
 // Listen-only, like ui/forms/events (whose click listener must come first).
 import './views/events';
@@ -45,6 +45,7 @@ on('storeReplaced', changed => {
 on('storageError', () => toast(t('err.storage')));
 on('syncChanged', () => renderSync());
 setSyncPaused(isTourRunning);
+setTourRunning(isTourRunning);
 
 setLang(detectLang());
 setDb(emptyDb());

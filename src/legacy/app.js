@@ -520,13 +520,16 @@ export const visionDefs = (W, H) => `<linearGradient id="vision-sheen" x1="0" y1
   + `<filter id="vision-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="12" result="b"/><feComposite in="b" in2="SourceGraphic" operator="out"/></filter>`
   + `<filter id="vision-line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="8"/></filter>`;
 
+// Whether the tour is on, set from main.ts (the tutorial sits above the views): it holds back the congratulations.
+export let tourRunning = () => false;
+export function setTourRunning(v) { tourRunning = v; }
 // Items working toward a vision glow in every view. With a Purpose everything turns gold, the logo
 // at the top left too, and the first time it is found the user is congratulated (once, on any device).
 export function markVisions() {
   const ps = purposeState(), contrib = contributingIds();
   document.documentElement.classList.toggle('purpose', ps.on);
   viewEl.querySelectorAll('.glass[data-ctx-item], .tl-row[data-tl-node]').forEach(el => el.classList.toggle('vglow', contrib.has(el.dataset.ctxItem || el.dataset.tlNode)));
-  if (!ps.on || visions.purposeFound || isTourRunning()) return;
+  if (!ps.on || visions.purposeFound || tourRunning()) return;
   visions.purposeFound = today();
   saveVisions();
   $('#purposeText').textContent = t('purpose.text', { name: ps.root.title });
