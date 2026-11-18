@@ -99,7 +99,8 @@ export function emptyState(title: string, text: string, kind: string) {
 
 export const byDueDate = (a: Activity, b: Activity) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
 // Goals everywhere: the nearest deadline first, those without one last.
-export const byDeadline = (a: Goal, b: Goal) => (a.deadline || '9999').localeCompare(b.deadline || '9999');
+export const byDeadline = (a: { deadline?: ISODate }, b: { deadline?: ISODate }) =>
+  (a.deadline || '9999').localeCompare(b.deadline || '9999');
 export const matchesSearch = (
   item: Item & { title: string; description?: string; specific?: string; list?: { text: string }[] },
 ) =>
