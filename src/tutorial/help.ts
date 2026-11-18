@@ -1,7 +1,7 @@
 /** Help mode: a banner on each view and an ⓘ tip on the first of each key control. */
 import { ui } from '../store/state';
 import { $, esc } from '../ui/dom';
-import { I18N, t } from '../i18n/index';
+import { I18N, t, type TextKey } from '../i18n/index';
 import { clamp } from '../core/util';
 import { setHelp } from '../ui/settings';
 
@@ -11,7 +11,7 @@ export const EDGE = 16;
    While on, each view opens with a banner explaining what it is for, and the
    first instance of each key control gets an ⓘ button with a one-line tip. */
 
-export const HELP_TIPS = [
+export const HELP_TIPS: { sel: string; key: string; where?: InsertPosition }[] = [
   { sel: '.summary-line', key: 'summary', where: 'beforeend' },
   { sel: '.cat-chips', key: 'categories', where: 'beforeend' },
   { sel: '.card.goal .smart', key: 'smart' },
@@ -38,22 +38,30 @@ export function decorateHelp() {
   if (!ui.help) return;
   const view = $('#view');
   // A view without a help text of its own (Visions) shows no banner.
-  if (I18N.en.strings['help.view.' + ui.view]) view.insertAdjacentHTML('afterbegin', `<aside class="help-banner">
-    <span class="help-mark" aria-hidden="true">?</span><p>${t('help.view.' + ui.view)}</p>
-    <button type="button" class="btn ghost" data-help-off>${t('help.off')}</button></aside>`);
+  if (I18N.en.strings[('help.view.' + ui.view) as TextKey])
+    view.insertAdjacentHTML(
+      'afterbegin',
+      `<aside class="help-banner">
+    <span class="help-mark" aria-hidden="true">?</span><p>${t(('help.view.' + ui.view) as TextKey)}</p>
+    <button type="button" class="btn ghost" data-help-off>${t('help.off')}</button></aside>`,
+    );
   HELP_TIPS.forEach(({ sel, key, where = 'afterend' }) => {
-    view.querySelector(sel)?.insertAdjacentHTML(where,
-      `<button type="button" class="help-dot" data-help-tip="${key}" aria-expanded="false" aria-label="${esc(t('help.tipLabel'))}" title="${esc(t('help.tipLabel'))}">i</button>`);
+    view
+      .querySelector(sel)
+      ?.insertAdjacentHTML(
+        where,
+        `<button type="button" class="help-dot" data-help-tip="${key}" aria-expanded="false" aria-label="${esc(t('help.tipLabel'))}" title="${esc(t('help.tipLabel'))}">i</button>`,
+      );
   });
 }
 
-export function openHelpTip(dot) {
+export function openHelpTip(dot: HTMLElement) {
   closeHelpTip();
   const tip = document.createElement('div');
   tip.className = 'help-tip';
   tip.id = 'helpTip';
   tip.setAttribute('role', 'tooltip');
-  tip.textContent = t('help.tip.' + dot.dataset.helpTip);
+  tip.textContent = t(('help.tip.' + dot.dataset.helpTip) as TextKey);
   document.body.append(tip);
   dot.setAttribute('aria-expanded', 'true');
   dot.setAttribute('aria-describedby', 'helpTip');
@@ -73,19 +81,24 @@ export function closeHelpTip() {
 }
 
 // Capture phase: an ⓘ inside a card must not also open the card's edit form.
-document.addEventListener('click', e => {
-  const dot = e.target.closest('[data-help-tip]');
-  if (dot) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (dot.getAttribute('aria-expanded') === 'true') closeHelpTip();
-    else openHelpTip(dot);
-    return;
-  }
-  closeHelpTip();
-  if (e.target.closest('[data-help-off]')) setHelp(false);
-}, true);
-addEventListener('keydown', e => { if (e.key === 'Escape') closeHelpTip(); });
+document.addEventListener(
+  'click',
+  e => {
+    const dot = (e.target as HTMLElement).closest<HTMLElement>('[data-help-tip]');
+    if (dot) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (dot.getAttribute('aria-expanded') === 'true') closeHelpTip();
+      else openHelpTip(dot);
+      return;
+    }
+    closeHelpTip();
+    if ((e.target as HTMLElement).closest('[data-help-off]')) setHelp(false);
+  },
+  true,
+);
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeHelpTip();
+});
 addEventListener('resize', closeHelpTip);
 addEventListener('scroll', closeHelpTip, true);
-

@@ -1,5 +1,7 @@
 /** The guided tour on a sample plan, the language picker before it on a first visit, and the tutorial's buttons. */
-import { I18N, lang, t } from '../i18n/index';
+// In tutorial.js's import order, so the screen parts load as before; help mode after them.
+import { I18N, lang, t, type Lang, type TextKey } from '../i18n/index';
+import type { Db } from '../core/model';
 import { clamp } from '../core/util';
 import { prefs } from '../store/prefs';
 import { plans, ui } from '../store/state';
@@ -18,9 +20,9 @@ import { EDGE, closeHelpTip } from './help';
 /* =========================================================
    Tutorial mode: a guided tour and a help mode
    ---------------------------------------------------------
-   Loaded before app.js but only runs once app.js has booted:
-   initTutorial() is called from its boot section, and decorateHelp()
-   at the end of every render().
+   Loaded before the views but only runs once main.ts boots: it calls
+   initTutorial(), and has decorateHelp() (help.ts) run at the end of
+   every render() through onRendered().
    ========================================================= */
 
 /* ---------- Guided tour ----------
@@ -29,7 +31,15 @@ import { EDGE, closeHelpTip } from './help';
    steps without a visible target show a centred card. Optional steps are left out when their
    target is hidden at the start (the sidebar toggle on phones, upright or sideways, the sync button when sync is off). */
 
-export const TOUR_STEPS = [
+// A view to switch to, and selectors of what to spotlight: the first one visible.
+export interface TourStep {
+  key: string;
+  view?: string;
+  target?: string[];
+  optional?: boolean;
+}
+
+export const TOUR_STEPS: TourStep[] = [
   { key: 'about' },
   { key: 'welcome' },
   { key: 'dashboard', view: 'dashboard', target: ['.summary'] },
@@ -50,12 +60,20 @@ export const TOUR_STEPS = [
   { key: 'done' },
 ];
 
-export const tour = { step: -1, steps: TOUR_STEPS, planId: null, prevPlan: null, prevView: null };
+export const tour: {
+  step: number;
+  steps: TourStep[];
+  planId: string | null;
+  prevPlan: string | null;
+  prevView: string | null;
+} = { step: -1, steps: TOUR_STEPS, planId: null, prevPlan: null, prevView: null };
 export const isTourRunning = () => tour.step >= 0;
 export const SPOT_PAD = 6;
 
-export const isVisible = el => !!el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
-export const firstVisible = sels => (sels || []).map(s => document.querySelector(s)).find(isVisible) || null;
+export const isVisible = (el: Element | null | undefined): el is Element =>
+  !!el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
+export const firstVisible = (sels?: string[]) =>
+  (sels || []).map(s => document.querySelector(s)).find(isVisible) || null;
 
 export function startTour() {
   if (tour.step >= 0) return;
@@ -67,35 +85,41 @@ export function startTour() {
   tour.steps = TOUR_STEPS.filter(s => !s.optional || firstVisible(s.target));
   tour.prevPlan = plans.current;
   tour.prevView = ui.view;
-  createPlan(uniqueName(t('tour.planName')), sampleData());
+  createPlan(uniqueName(t('tour.planName')), sampleData() as Db);
   tour.planId = plans.current;
-  document.body.insertAdjacentHTML('beforeend', `
+  document.body.insertAdjacentHTML(
+    'beforeend',
+    `
     <div class="tour-block"></div>
     <div class="tour-spot" hidden></div>
-    <div class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourText"></div>`);
+    <div class="tour-card" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourText"></div>`,
+  );
   addEventListener('keydown', tourKeys, true);
   addEventListener('resize', placeTour);
   addEventListener('scroll', placeTour, true);
   showStep(0);
 }
 
-export function showStep(i) {
+export function showStep(i: number) {
   tour.step = clamp(i, 0, tour.steps.length - 1);
   const s = tour.steps[tour.step];
   if (s.view && ui.view !== s.view) setView(s.view);
   const first = tour.step === 0;
   const last = tour.step === tour.steps.length - 1;
-  const btn = (act, cls, label) => `<button type="button" class="btn ${cls}" data-tour="${act}">${label}</button>`;
+  const btn = (act: string, cls: string, label: string) =>
+    `<button type="button" class="btn ${cls}" data-tour="${act}">${label}</button>`;
   let actions;
-  if (last) actions = `${btn('keep', 'ghost', t('tour.keep'))}<span class="grow"></span>${btn('finish', 'primary', t('tour.finish'))}`;
+  if (last)
+    actions = `${btn('keep', 'ghost', t('tour.keep'))}<span class="grow"></span>${btn('finish', 'primary', t('tour.finish'))}`;
   else {
-    actions = `${btn('skip', 'ghost', t('tour.skip'))}<span class="grow"></span>` +
+    actions =
+      `${btn('skip', 'ghost', t('tour.skip'))}<span class="grow"></span>` +
       `${first ? '' : btn('back', 'ghost', t('tour.back'))}${btn('next', 'primary', t(s.key === 'welcome' ? 'tour.start' : 'tour.next'))}`;
   }
   $('.tour-card').innerHTML = `
     <p class="tour-count">${t('tour.count', { n: tour.step + 1, total: tour.steps.length })}</p>
-    <h2 id="tourTitle">${t(`tour.${s.key}.title`)}</h2>
-    <p id="tourText">${t(`tour.${s.key}.text`)}</p>
+    <h2 id="tourTitle">${t(`tour.${s.key}.title` as TextKey)}</h2>
+    <p id="tourText">${t(`tour.${s.key}.text` as TextKey)}</p>
     <div class="tour-actions">${actions}
     </div>`;
   bringIntoView(firstVisible(s.target));
@@ -105,15 +129,16 @@ export function showStep(i) {
 
 // The map and timeline scroll on their own; a target inside them (a map box) is only partly on screen.
 export const SCROLLER = '.map-wrap, .tl-scroll';
-export const scrollerOf = el => el.parentElement?.closest(SCROLLER) || null;
+export const scrollerOf = (el: Element) => el.parentElement?.closest(SCROLLER) || null;
 
 // Scroll so the target's top sits just under the (sticky) top bar; a target inside the map or
 // timeline is first scrolled to the middle of it.
-export function bringIntoView(el) {
+export function bringIntoView(el: Element | null) {
   if (!el || el.closest('.topbar, .nav') || getComputedStyle(el).position === 'fixed') return;
   const wrap = scrollerOf(el);
   if (wrap) {
-    const r = el.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    const r = el.getBoundingClientRect(),
+      w = wrap.getBoundingClientRect();
     wrap.scrollLeft += r.left + r.width / 2 - (w.left + wrap.clientLeft + wrap.clientWidth / 2);
     wrap.scrollTop += r.top + r.height / 2 - (w.top + wrap.clientTop + wrap.clientHeight / 2);
   }
@@ -137,15 +162,27 @@ export function placeTour() {
   const vh = innerHeight;
   // ... and to the map or timeline it sits in, so the spotlight never lands beside it.
   const r = target.getBoundingClientRect();
-  const w = scrollerOf(target)?.getBoundingClientRect() || { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+  const w = scrollerOf(target)?.getBoundingClientRect() || {
+    left: -Infinity,
+    top: -Infinity,
+    right: Infinity,
+    bottom: Infinity,
+  };
   const box = {
-    left: Math.max(r.left - SPOT_PAD, w.left, 4), top: Math.max(r.top - SPOT_PAD, w.top, 4),
-    right: Math.min(r.right + SPOT_PAD, w.right, vw - 4), bottom: Math.min(r.bottom + SPOT_PAD, w.bottom, vh - 4),
+    left: Math.max(r.left - SPOT_PAD, w.left, 4),
+    top: Math.max(r.top - SPOT_PAD, w.top, 4),
+    right: Math.min(r.right + SPOT_PAD, w.right, vw - 4),
+    bottom: Math.min(r.bottom + SPOT_PAD, w.bottom, vh - 4),
   };
   // A target taller than the screen (the board on a phone) is cut off to leave room for the card below it.
   const room = vh - card.offsetHeight - EDGE - 12;
   if (box.bottom > room && room - box.top > 80) box.bottom = room;
-  Object.assign(spot.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.right - box.left}px`, height: `${box.bottom - box.top}px` });
+  Object.assign(spot.style, {
+    left: `${box.left}px`,
+    top: `${box.top}px`,
+    width: `${box.right - box.left}px`,
+    height: `${box.bottom - box.top}px`,
+  });
 
   // The card goes below the target, else above, else beside it, else at the bottom of the screen.
   const cw = card.offsetWidth;
@@ -154,12 +191,14 @@ export function placeTour() {
   let top;
   if (box.bottom + 12 + ch <= vh - EDGE) top = box.bottom + 12;
   else if (box.top - 12 - ch >= EDGE) top = box.top - 12 - ch;
-  else if (box.right + 12 + cw <= vw - EDGE) { left = box.right + 12; top = clamp(box.top, EDGE, vh - ch - EDGE); }
-  else top = vh - ch - EDGE;
+  else if (box.right + 12 + cw <= vw - EDGE) {
+    left = box.right + 12;
+    top = clamp(box.top, EDGE, vh - ch - EDGE);
+  } else top = vh - ch - EDGE;
   Object.assign(card.style, { left: `${left}px`, top: `${top}px` });
 }
 
-export function endTour(keep) {
+export function endTour(keep: boolean) {
   if (tour.step < 0) return;
   tour.step = -1;
   removeEventListener('keydown', tourKeys, true);
@@ -172,19 +211,19 @@ export function endTour(keep) {
     toast(t('tour.kept'));
     return;
   }
-  if (plans.list.some(p => p.id === tour.planId)) deletePlan(tour.planId);
-  if (plans.list.some(p => p.id === tour.prevPlan)) openPlan(tour.prevPlan);
-  setView(tour.prevView);
+  if (plans.list.some(p => p.id === tour.planId)) deletePlan(tour.planId!);
+  if (plans.list.some(p => p.id === tour.prevPlan)) openPlan(tour.prevPlan!);
+  setView(tour.prevView!);
 }
 
-export function tourKeys(e) {
+export function tourKeys(e: KeyboardEvent) {
   if (e.key === 'Escape') endTour(false);
   else if (e.key === 'ArrowRight' && tour.step < tour.steps.length - 1) showStep(tour.step + 1);
   else if (e.key === 'ArrowLeft' && tour.step > 0) showStep(tour.step - 1);
   else if (e.key === 'Tab') {
     // Keep focus inside the tour card.
-    const btns = [...document.querySelectorAll('.tour-card button')];
-    const i = btns.indexOf(document.activeElement);
+    const btns = [...document.querySelectorAll<HTMLElement>('.tour-card button')];
+    const i = btns.indexOf(document.activeElement as HTMLElement);
     btns[(i + (e.shiftKey ? -1 : 1) + btns.length) % btns.length].focus();
   } else return;
   e.preventDefault();
@@ -192,7 +231,7 @@ export function tourKeys(e) {
 }
 
 document.addEventListener('click', e => {
-  const act = e.target.closest('[data-tour]')?.dataset.tour;
+  const act = (e.target as HTMLElement).closest<HTMLElement>('[data-tour]')?.dataset.tour;
   if (act === 'next') showStep(tour.step + 1);
   else if (act === 'back') showStep(tour.step - 1);
   else if (act === 'skip' || act === 'finish') endTour(false);
@@ -202,7 +241,7 @@ document.addEventListener('click', e => {
 /* ---------- First visit: choose a language before the tour ---------- */
 
 // Switch language; the still-empty starter plan takes the new language's default name.
-export function pickLanguage(code) {
+export function pickLanguage(code: Lang) {
   const starter = plans.list.length === 1 && !itemCount() && plans.list[0].name === t('plan.defaultName');
   changeLanguage(code);
   if (!starter) return;
@@ -211,25 +250,32 @@ export function pickLanguage(code) {
   renderPlanSwitch();
 }
 
-export function chooseLanguage(done) {
-  document.body.insertAdjacentHTML('beforeend', `
+export function chooseLanguage(done: () => void) {
+  document.body.insertAdjacentHTML(
+    'beforeend',
+    `
     <div class="tour-block dim lang-pick-block"></div>
-    <div class="tour-card centered lang-pick" role="dialog" aria-modal="true" aria-labelledby="langPickTitle" aria-describedby="langPickText"></div>`);
+    <div class="tour-card centered lang-pick" role="dialog" aria-modal="true" aria-labelledby="langPickTitle" aria-describedby="langPickText"></div>`,
+  );
   const card = $('.lang-pick');
   const draw = () => {
     card.innerHTML = `
       <h2 id="langPickTitle">${t('langPick.title')}</h2>
       <p id="langPickText">${t('langPick.text')}</p>
-      <div class="lang-options" role="group" aria-labelledby="langPickTitle">${Object.entries(I18N).map(([code, l]) =>
-        `<button type="button" class="btn" data-lang-pick="${code}" lang="${code}" aria-pressed="${code === lang}">${esc(l.name)}</button>`).join('')}</div>
+      <div class="lang-options" role="group" aria-labelledby="langPickTitle">${Object.entries(I18N)
+        .map(
+          ([code, l]) =>
+            `<button type="button" class="btn" data-lang-pick="${code}" lang="${code}" aria-pressed="${code === lang}">${esc(l.name)}</button>`,
+        )
+        .join('')}</div>
       <div class="tour-actions"><span class="grow"></span><button type="button" class="btn primary" data-lang-done>${t('langPick.continue')}</button></div>`;
   };
-  const keys = e => {
+  const keys = (e: KeyboardEvent) => {
     if (e.key === 'Escape') close();
     else if (e.key === 'Tab') {
       // Keep focus inside the card.
       const btns = [...card.querySelectorAll('button')];
-      const i = btns.indexOf(document.activeElement);
+      const i = btns.indexOf(document.activeElement as HTMLButtonElement);
       btns[(i + (e.shiftKey ? -1 : 1) + btns.length) % btns.length].focus();
     } else return;
     e.preventDefault();
@@ -241,19 +287,20 @@ export function chooseLanguage(done) {
     done();
   };
   card.addEventListener('click', e => {
-    const code = e.target.closest('[data-lang-pick]')?.dataset.langPick;
+    const code = (e.target as HTMLElement).closest<HTMLElement>('[data-lang-pick]')?.dataset.langPick as
+      Lang | undefined;
     if (code) {
       pickLanguage(code);
       draw();
-      card.querySelector(`[data-lang-pick="${code}"]`).focus();
-    } else if (e.target.closest('[data-lang-done]')) close();
+      card.querySelector<HTMLElement>(`[data-lang-pick="${code}"]`)!.focus();
+    } else if ((e.target as HTMLElement).closest('[data-lang-done]')) close();
   });
   addEventListener('keydown', keys, true);
   draw();
-  card.querySelector('[data-lang-done]').focus();
+  card.querySelector<HTMLElement>('[data-lang-done]')!.focus();
 }
 
-/* ---------- Boot (called from app.js) ---------- */
+/* ---------- Boot (called from main.ts) ---------- */
 
 export function initTutorial() {
   $('#helpBtn').addEventListener('click', () => setHelp(!ui.help));
@@ -261,9 +308,10 @@ export function initTutorial() {
 }
 
 // On a first visit (also a new user's first sign-in), the language picker, then the tour.
-export function offerTour() {
+export let offerTour = () => {
   if (!prefs.get('tourSeen', false)) requestAnimationFrame(() => chooseLanguage(startTour));
-}
+};
 // Tests replace offerTour; callers see the replacement through the live import.
-// eslint-disable-next-line no-func-assign
-export function setOfferTour(f) { offerTour = f; }
+export function setOfferTour(f: () => void) {
+  offerTour = f;
+}
