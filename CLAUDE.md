@@ -3,11 +3,12 @@
 ## Restructuring in progress — feature freeze
 Follow `docs/restructure/RULES.md`. No features until `docs/restructure/STATUS.md` says done.
 Commands: `npm run check` (all checks, quiet), `npm run check:fast` (tsc, eslint, unit tests),
+`npm run test:browser -- <feature>` (one feature's page tests), `npm run test:e2e` (Playwright),
+`npm run shot -- <view> [--phone] [--dark]` (a PNG to look at), `npm run perf` (against the baseline),
 `npm run outline -- <file>`, `npm run map` (each file's purpose), `npm run move -- …` (moves
-declarations verbatim; usage at the top of `scripts/move-decls.mjs`), `npm run perf`,
-`npm run dev` (dev server), `npm run build` (into `dist/`), `npm run preview` (serves `dist/`).
-Sources: `src/main.ts` boots `src/legacy/*.js` (ES modules); `src/test-bridge.ts` exposes them to the suite.
-Never read `src/legacy/app.js` or `tests/more.js` whole.
+declarations verbatim; usage at the top of `scripts/move-decls.mjs`), `npm run move-steps -- …` (moves
+page-test steps), `npm run dev` (dev server), `npm run build` (into `dist/`), `npm run preview` (serves `dist/`).
+Tests: `tests/README.md`. `src/test-bridge.ts` exposes the modules to the page tests.
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
