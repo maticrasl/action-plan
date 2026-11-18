@@ -255,6 +255,24 @@ suite(async () => {
     modal.close();
     return `${a1.repeat.day} | ${a2.repeat.on} | ${scheduleText(a3)}`;
   });
+  await step('monthly routines: a new one on a fifth weekday offers no fifth, but the last', () => {
+    const nthOn = day => {
+      setToday(() => day);
+      try {
+        openForm('activity', null, { repeat: 'once' });
+        change('#f-repeat', 'custom');
+        change('#f-unit', 'month');
+        change('#f-on', 'nth');
+        const got = [$('#f-nth').value, $('#f-weekday').value, [...$('#f-nth').options].map(o => o.value)];
+        modal.close();
+        return got;
+      } finally {
+        setToday(() => isoDate(new Date()));
+      }
+    };
+    eq(nthOn('2026-12-30'), ['-1', '2', ['1', '2', '3', '4', '-1']], 'the fifth Wednesday: last Wednesday');
+    eq(nthOn('2026-10-28'), ['4', '2', ['1', '2', '3', '4', '-1']], 'a fourth Wednesday stays the fourth');
+  });
   await step('monthly routines: check-ins, streaks and the week strip', () => {
     const now = today(),
       lastDay = lastOfMonth(now);

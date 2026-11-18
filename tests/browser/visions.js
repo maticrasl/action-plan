@@ -243,9 +243,12 @@ suite(async () => {
       C = mkV('Narrowest of them all', [B]),
       D = mkV('Deeper still', [C]);
     mk('goal', { title: 'G', visions: [D.id] });
+    // A goal that serves no vision is named in the status line; a long word there wraps too.
+    mk('goal', { title: 'WWWWWWWWWWWWWWWWWWWWWWWWWWWW' });
     save();
     saveVisions();
     setView('visions');
+    assert($('#view .vis-status').textContent.includes('WWWW'), 'the goal is named in the status line');
     const frame = document.createElement('iframe');
     Object.assign(frame.style, {
       width: '390px',

@@ -89,5 +89,5 @@ still fails there, put it back on the list with its message.
 
 - The suite passes on any day, not only the pinned Wednesday: checked by pinning `tests/pre.js` to 15
   Sundays of 2026 and to 1 Mar, 31 Mar, 1 Jan, 29 Feb (map, menu, routines, visions; the whole suite on
-  22 Nov and 14 Jun). One step still depends on the day: see `found-bugs.md` (a fifth weekday).
+  22 Nov and 14 Jun). The two app bugs that check found are fixed too (`found-bugs.md`).
 - The font files add ~124 KB to the first load and the offline cache; the Google request is gone.

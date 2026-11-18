@@ -92,5 +92,5 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   1–10) has moved the code since: find files with `npm run map`, not by the paths in the plans.
 - Next open line: Guidance 1, the Guide page. `feedback-link` may come first (see above).
 - Done 2026-11-18 outside the list: the typeface ships with the app (findings 12; the Guide's privacy
-  article in `docs/guidance/guide-content.en.md` already says so), and the page tests pass on any
-  day. Open from that check: `docs/restructure/found-bugs.md`.
+  article in `docs/guidance/guide-content.en.md` already says so), the page tests pass on any
+  day, and two small bugs found on the way are fixed (`docs/restructure/found-bugs.md`).
