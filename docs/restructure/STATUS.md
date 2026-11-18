@@ -8,7 +8,7 @@
 | 03 core domain | merged (PR #8) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-03` |
 | 04 store and sync | merged (PR #10) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-04` |
 | 05 shared UI | merged (PR #12) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-05` |
-| 06 views and tutorial | done on branch `restructure/phase-06` (not pushed); waiting for the owner check |
+| 06 views and tutorial | merged (PR #14) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-06` |
 | 07 map, timeline, graphs | not started |
 | 08 close-out | not started |
 | 09 tests | not started |
