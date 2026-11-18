@@ -87,3 +87,5 @@ if (location.pathname.endsWith('/browser.html')) {
     writeResult(out.join('\n'));
   })().catch(e => writeResult('HARNESS CRASH ' + e.stack));
 }
+
+const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs'];

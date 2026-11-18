@@ -10,8 +10,8 @@
 //              suite body's indent; <to> must exist
 //   --list     every statement in the suite body: its lines, the step name or the names it declares, and
 //              the names it uses that other statements of the body declare
-// The suite body is the function whose body holds the `await step(…)` calls (more.js: moreTests;
-// test.js: the async IIFE; a browser file: the function passed to suite()).
+// The suite body is the function passed to suite() in a browser file; elsewhere the function whose body
+// holds the `await step(…)` calls (more.js: moreTests; test.js: the async IIFE).
 import { existsSync } from 'node:fs';
 import ts from 'typescript';
 import { chunkOf, declNames, line, parse, readText, writeText } from './lib/ast.mjs';
@@ -23,13 +23,18 @@ function suiteOf(file) {
   const { text } = readText(file);
   const sf = parse(file, text);
   let body = null;
+  const isFn = n => (ts.isArrowFunction(n) || ts.isFunctionExpression(n)) && n.body && ts.isBlock(n.body);
   const visit = node => {
     if (body) return;
-    if ((ts.isArrowFunction(node) || ts.isFunctionExpression(node)) && node.body && ts.isBlock(node.body)) {
-      if (node.body.statements.some(stepName)) return void (body = node.body);
-    }
+    if (isFn(node) && node.body.statements.some(stepName)) return void (body = node.body);
     ts.forEachChild(node, visit);
   };
+  // A browser file: the function passed to suite(); otherwise the one that holds the steps.
+  for (const s of sf.statements) {
+    const call = ts.isExpressionStatement(s) && s.expression;
+    if (call && ts.isCallExpression(call) && call.expression.getText() === 'suite' && isFn(call.arguments[0]))
+      body = call.arguments[0].body;
+  }
   visit(sf);
   if (!body) throw new Error(`${file}: no suite body (a function with await step(…) calls)`);
   const chunks = body.statements.map(stmt => {
