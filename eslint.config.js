@@ -50,7 +50,21 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [{ group: ['**/legacy/**', '**/views/**'], message: 'ui/ must not import the views or legacy code.' }] },
+        {
+          patterns: [
+            { group: ['**/legacy/**', '**/views/**', '**/tutorial/**'], message: 'ui/ must not import the views, tutorial or legacy code.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The tutorial sits above the views: render() reaches help mode only through onRendered (main.ts).
+    files: ['src/views/**/*.{js,ts}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['**/tutorial/**'], message: 'views/ must not import the tutorial.' }] },
       ],
     },
   },
