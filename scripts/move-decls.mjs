@@ -16,7 +16,8 @@
 //   --fix-imports rewrite the import lines of <from>, <to> and every file that imports a moved name;
 //                 without it the tool only prints what has to change
 //   --check       every declaration and comment in <to> must be in <ref>:<from> (moved) or <ref>:<to>
-//                 (already there), byte for byte; only `x = v;` → `setX(v);` may differ. Default ref HEAD.
+//                 (already there), byte for byte; only `x = v;` → `setX(v);` and a leading `export `
+//                 added or dropped may differ. Default ref HEAD.
 //                 A function without parameters passes when each statement in its body does (--wrap's).
 //                 --commit <rev> checks a committed move: <rev>'s files against its parent's.
 // New files are .js until their type commit renames them; imports to files outside src/legacy are
@@ -467,13 +468,16 @@ function hadStatement(hf, text) {
   return hf.statements.some(s => !ts.isImportDeclaration(s) && !setterDiff(chunkOf(hf, s).text.replace(/\n$/, ''), now));
 }
 
-// '' when `now` is `old` with only `x = v;` turned into `setX(v);`; else the differing lines.
+// '' when `now` is `old` with only `x = v;` turned into `setX(v);`, or `export ` added to or dropped
+// from a line's start (a declaration another file now uses, or no longer); else the differing lines.
 function setterDiff(old, now) {
   const a = old.split('\n'), b = now.split('\n');
   const toSetter = l => l.replace(/\b([A-Za-z_$][\w$]*)\s*=\s*([^=;][^;]*);/g, (m, n, v) => `set${cap(n)}(${v});`);
+  const unexported = l => l.replace(/^export /, '');
   const bad = [];
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     if (a[i] === b[i] || (a[i] !== undefined && toSetter(a[i]) === b[i])) continue;
+    if (a[i] !== undefined && b[i] !== undefined && unexported(a[i]) === unexported(b[i])) continue;
     bad.push(`  line ${i + 1}: was ${JSON.stringify(a[i] ?? '')}`, `  line ${i + 1}: now ${JSON.stringify(b[i] ?? '')}`);
     if (bad.length >= 6) break;
   }
