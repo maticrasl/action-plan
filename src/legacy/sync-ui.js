@@ -2,13 +2,14 @@
 import { locale, t } from '../i18n/index';
 import { USERS_KEY, addUser, currentUser, readUsers, removeUserKeys, saveUsers, setUsers, users } from '../store/users';
 import { drive, loadGis } from '../sync/drive';
-import { $, enterUser, esc, toast } from './app.js';
+import { enterUser, toast } from './app.js';
 import { prefs } from '../store/prefs';
 import { SYNC_EVERY, setSyncStatus, syncConfigured, syncConnected, syncNow, syncState } from '../sync/sync';
 import { plans } from '../store/state';
 import { SYNC_COLLS } from '../core/merge';
 import { db } from '../core/state';
 import { offerTour } from './tutorial.js';
+import { $, esc } from '../ui/dom';
 
 /* ---------- Signing in and out: one user per Google account (users.js) ---------- */
 
