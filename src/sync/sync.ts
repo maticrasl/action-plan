@@ -22,7 +22,7 @@ import { prefs } from '../store/prefs';
    locally and writes it back.
    There is no server, so Google's access token lasts about an hour and can only be renewed
    from a click; after that, sync pauses until the user clicks the sync button.
-   main.ts starts it with initSync() (legacy/sync-ui.js, the screen part).
+   main.ts starts it with initSync() (ui/sync-ui, the screen part).
    ========================================================= */
 
 export const SYNC_DELAY = 3000; // after a change

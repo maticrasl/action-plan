@@ -200,3 +200,23 @@ export function followLatest(s: State): void {
   const last = s.history.reduce<Measurement | null>((a, h) => (!a || h.date > a.date ? h : a), null);
   Object.assign(s, last ? { value: last.value, date: last.date } : { value: '' });
 }
+
+// One measurement per date: a new value for a date replaces the old one. The state's value is its latest measurement.
+export function recordMeasurement(s: State, date: ISODate, value: string) {
+  s.history = (s.history || [])
+    .filter(h => h.date !== date)
+    .concat({ date, value })
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (s.dropped) {
+    delete s.dropped[date];
+    if (!Object.keys(s.dropped).length) delete s.dropped;
+  }
+  followLatest(s);
+}
+
+// A deleted date is remembered, so syncing with an older copy does not bring the measurement back.
+export function deleteMeasurement(s: State, date: ISODate) {
+  s.history = (s.history || []).filter(h => h.date !== date);
+  s.dropped = { ...s.dropped, [date]: 1 };
+  followLatest(s);
+}

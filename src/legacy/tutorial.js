@@ -1,11 +1,18 @@
 /** The guided tour and help mode. */
-import { $, changeLanguage, closeCtxMenu, esc, itemCount, modal, render, renderPlanSwitch, sampleData, setView, settings, toast } from './app.js';
 import { I18N, lang, t } from '../i18n/index';
 import { clamp } from '../core/util';
 import { prefs } from '../store/prefs';
 import { plans, ui } from '../store/state';
 import { createPlan, deletePlan, openPlan, save, uniqueName } from '../store/plans';
 import { scheduleSync } from '../sync/sync';
+import { $, esc, itemCount } from '../ui/dom';
+import { closeCtxMenu } from '../ui/menu';
+import { setView } from '../ui/nav';
+import { toast } from '../ui/toast';
+import { modal } from '../ui/forms/form';
+import { changeLanguage, setHelp, settings } from '../ui/settings';
+import { renderPlanSwitch } from '../ui/plan-switcher';
+import { sampleData } from '../ui/sample';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode
@@ -229,13 +236,6 @@ export function decorateHelp() {
     view.querySelector(sel)?.insertAdjacentHTML(where,
       `<button type="button" class="help-dot" data-help-tip="${key}" aria-expanded="false" aria-label="${esc(t('help.tipLabel'))}" title="${esc(t('help.tipLabel'))}">i</button>`);
   });
-}
-
-export function setHelp(on) {
-  ui.help = on;
-  prefs.set('help', on);
-  $('#helpBtn').setAttribute('aria-pressed', on);
-  render();
 }
 
 export function openHelpTip(dot) {

@@ -2,25 +2,29 @@
 import { setLang, t } from './i18n/index';
 import { applyStaticI18n, detectLang } from './ui/i18n-dom';
 import './sync/config';
+// Only listen on the page, so nothing else imports them; before the views, whose click listeners the first must precede.
+import './ui/dialog';
+import './ui/forms/events';
 import { initTutorial, offerTour, tour } from './legacy/tutorial.js';
 import './store/users';
 import './store/visions';
-import './legacy/backup.js';
-import {
-  bootUser,
-  offerReached,
-  render,
-  renderInstall,
-  renderLangSwitch,
-  renderPlanSwitch,
-  toast,
-} from './legacy/app.js';
+import { bootUser, enterUser, render } from './legacy/app.js';
 import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { on } from './store/events';
 import { scheduleSync, setSyncPaused } from './sync/sync';
-import { initSync, renderSync } from './legacy/sync-ui.js';
+import { connectSync, initSync, renderSync } from './ui/sync-ui';
+import { setRenderer } from './ui/render';
+import { offerReached } from './ui/reached';
+import { toast } from './ui/toast';
+import { renderInstall } from './ui/install';
+import { renderLangSwitch } from './ui/settings';
+import { renderPlanSwitch } from './ui/plan-switcher';
 
+// Screen parts below the views redraw, switch users and offer the tour through these.
+setRenderer(render);
+// Through the live bindings: offerTour can be replaced (setOfferTour), as the suite does.
+connectSync({ enterUser: (id: string) => enterUser(id), offerTour: () => offerTour() });
 // Storage and sync reach the screen only through these.
 on('saving', () => offerReached());
 on('saved', () => scheduleSync());

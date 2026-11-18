@@ -43,4 +43,15 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // The screen parts sit below the views: they reach them only through what main.ts connects
+    // (ui/render.ts, connectSync in ui/sync-ui.ts).
+    files: ['src/ui/**/*.{js,ts}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['**/legacy/**', '**/views/**'], message: 'ui/ must not import the views or legacy code.' }] },
+      ],
+    },
+  },
 );
