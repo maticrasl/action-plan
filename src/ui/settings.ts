@@ -12,7 +12,8 @@ import { prefs } from '../store/prefs';
 import { renderPlanSwitch } from './plan-switcher';
 import { closeCtxMenu } from './menu';
 import { openTemplates } from './templates-dialog';
-import { importJson, loadSample, openExport } from './plan-io';
+import { importJson, openExport } from './plan-io';
+import { loadSample } from './sample';
 
 /* ---------- Language & theme (in Settings) ---------- */
 

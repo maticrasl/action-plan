@@ -33,7 +33,7 @@ import { modal, openForm } from '../ui/forms/form';
 import { THEMES, applyTheme, renderSettings, setTheme, setToggle, settings } from '../ui/settings';
 import { renderPlanSwitch, storedHealth, updatePlanBadges } from '../ui/plan-switcher';
 import { openTemplates } from '../ui/templates-dialog';
-import { loadSample } from '../ui/plan-io';
+import { loadSample } from '../ui/sample';
 
 /* ---------- Relations ---------- */
 

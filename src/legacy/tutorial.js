@@ -12,7 +12,7 @@ import { toast } from '../ui/toast';
 import { modal } from '../ui/forms/form';
 import { changeLanguage, setHelp, settings } from '../ui/settings';
 import { renderPlanSwitch } from '../ui/plan-switcher';
-import { sampleData } from '../ui/plan-io';
+import { sampleData } from '../ui/sample';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode
