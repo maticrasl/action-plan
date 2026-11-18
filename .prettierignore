@@ -1,0 +1,6 @@
+# Prettier formats only src/ and tests/ (the Edit/Write hook in .claude/settings.json runs it on each edited file).
+# Stored-data fixtures stay byte for byte. Everything else (docs, scripts, configs) was never formatted.
+/*
+!/src/
+!/tests/
+/tests/fixtures/
