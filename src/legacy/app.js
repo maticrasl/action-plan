@@ -3601,7 +3601,7 @@ export function bootUser() {
   // First visit = nothing stored yet; load() creates the first plan, so check before it.
   let firstVisit = false;
   try { firstVisit = !userStorage.getItem(PLANS_KEY) && !userStorage.getItem(STORAGE_KEY); } catch (e) { /* ignore */ }
-  theme = THEMES.includes(prefs.get('theme')) ? prefs.get('theme') : 'system';
+  setTheme(THEMES.includes(prefs.get('theme')) ? prefs.get('theme') : 'system');
   applyTheme();
   load();
   renderPlanSwitch();
