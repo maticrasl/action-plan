@@ -1,4 +1,4 @@
-/** Page lookups, HTML escaping and small HTML pieces shared by the views and dialogs. */
+/** Page lookups, HTML escaping, text cut to fit a width, and small HTML pieces shared by the views and dialogs. */
 import { db } from '../core/state';
 import { smartCheck } from '../core/progress';
 import { t, type TextKey } from '../i18n/index';
@@ -109,3 +109,18 @@ export const matchesSearch = (
     .join(' ')
     .toLowerCase()
     .includes(ui.search.toLowerCase());
+
+export const settings = $<HTMLDialogElement>('#settings');
+
+// Box text is cut to fit its box, ending in "…": measured on a canvas in the fonts the map's CSS sets,
+// with 4 % to spare, as SVG text can come out a little wider than the canvas measures it.
+export let fitCtx: CanvasRenderingContext2D;
+export function fitText(text: string, font: string, max: number) {
+  fitCtx ||= document.createElement('canvas').getContext('2d')!;
+  fitCtx.font = font;
+  const fits = (s: string) => fitCtx.measureText(s).width * 1.04 <= max;
+  if (fits(text)) return text;
+  let s = text;
+  while (s && !fits(s + '…')) s = s.slice(0, -1);
+  return s.trimEnd() + '…';
+}

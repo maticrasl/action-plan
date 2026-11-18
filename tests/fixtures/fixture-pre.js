@@ -1,17 +1,31 @@
 // Runs before the app in the stored-data fixture pages (scripts/fixtures.mjs): a frozen clock,
 // counted ids, no network, and storage set to what the fixture holds. fixture-config.js sets __FX.
 window.__errors = [];
-window.onerror = (msg, src, line, col) => { __errors.push(`${msg} @${(src || '').split('/').pop()}:${line}:${col}`); };
-addEventListener('unhandledrejection', e => __errors.push('unhandled: ' + (e.reason && e.reason.stack || e.reason)));
+window.onerror = (msg, src, line, col) => {
+  __errors.push(`${msg} @${(src || '').split('/').pop()}:${line}:${col}`);
+};
+addEventListener('unhandledrejection', e => __errors.push('unhandled: ' + ((e.reason && e.reason.stack) || e.reason)));
 
 // The clock stands still at __FX.clock; a builder may move it with __clock.set(iso).
 (() => {
   const RealDate = Date;
   let now = RealDate.parse(__FX.clock);
-  window.__clock = { set: at => { now = typeof at === 'number' ? at : RealDate.parse(at); }, get now() { return now; } };
+  window.__clock = {
+    set: at => {
+      now = typeof at === 'number' ? at : RealDate.parse(at);
+    },
+    get now() {
+      return now;
+    },
+  };
   window.Date = class extends RealDate {
-    constructor(...a) { if (a.length) super(...a); else super(now); }
-    static now() { return now; }
+    constructor(...a) {
+      if (a.length) super(...a);
+      else super(now);
+    }
+    static now() {
+      return now;
+    }
   };
 })();
 

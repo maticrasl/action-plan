@@ -1,6 +1,6 @@
 /** Settings: language, theme, display options and the dialog that holds them. */
 import { I18N, lang, t, type Lang, type TextKey } from '../i18n/index';
-import { $, esc } from './dom';
+import { $, esc, settings } from './dom';
 import { applyStaticI18n, setLanguage } from './i18n-dom';
 import { applyNavCollapsed, setNavCollapsed } from './nav';
 import { renderSync } from './sync-ui';
@@ -91,8 +91,6 @@ $('#themeSeg').addEventListener('click', e => {
 });
 
 /* ---------- Settings (gear, top right): plan, language, theme, display options, data, help ---------- */
-
-export const settings = $<HTMLDialogElement>('#settings');
 
 // Display options shown as switches: how to read each one and what changing it does.
 export const SETTINGS: Record<string, { get: () => boolean | undefined; set: (v: boolean) => void }> = {

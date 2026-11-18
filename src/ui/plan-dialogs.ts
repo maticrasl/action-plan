@@ -3,13 +3,12 @@ import { $, esc } from './dom';
 import { closeCtxMenu } from './menu';
 import { db } from '../core/state';
 import { currentPlan, plans } from '../store/state';
-import { t } from '../i18n/index';
+import { t, tp, type PluralKey } from '../i18n/index';
 import { syncConnected } from '../sync/sync';
 import { deletePlan, mergePlanInto, readPlan } from '../store/plans';
 import { toast } from './toast';
-import { planContents } from './plan-switcher';
 import { exportJson } from './plan-io';
-import type { Plan } from '../core/model';
+import type { Db, Plan } from '../core/model';
 
 /* ---------- Deleting a plan: spells out what is lost and asks for the plan's name ---------- */
 
@@ -96,3 +95,16 @@ planMerge.addEventListener('click', e => {
   mergePlanInto(from.id, to.id, remove);
   toast(t(remove ? 'toast.mergedDeleted' : 'toast.merged', { from: from.name, to: to.name }));
 });
+
+// What a plan holds, as list items for the delete and merge dialogs ('' when it is empty).
+export function planContents(data: Db) {
+  const count = (key: PluralKey, n: number) => (n ? `<li>${esc(tp(key, n))}</li>` : '');
+  const measured = data.states.reduce((sum, s) => sum + (s.cumulative ? s.entries || [] : s.history || []).length, 0);
+  return (
+    count('planDel.goals', data.goals.length) +
+    count('planDel.states', data.states.length) +
+    count('planDel.measurements', measured) +
+    count('planDel.activities', data.activities.length) +
+    count('planDel.relations', data.relations.length)
+  );
+}

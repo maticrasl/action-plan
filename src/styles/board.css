@@ -1,0 +1,47 @@
+/* ---------- Board ---------- */
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.col {
+  background: var(--sunken);
+  border-radius: var(--r-lg);
+  padding: 10px;
+  min-height: 120px;
+}
+.col > h3 {
+  font-size: 15px;
+  padding: 6px 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.col > h3::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+}
+.col-doing > h3::before {
+  background: var(--warn);
+  border-color: var(--warn);
+}
+.col-done > h3::before {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.col > h3 span {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.col .card {
+  margin-bottom: 8px;
+}
+.col.drop {
+  outline: 2px dashed var(--goal);
+  outline-offset: -4px;
+}

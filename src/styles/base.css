@@ -1,0 +1,242 @@
+/* =========================================================
+   Action Plan – "trail" design system
+   Wayfinding vocabulary: the route runs from where you are (current states)
+   through activities up to goals. Colour signals status; hue is reserved for
+   goals (summit blue) and current states (violet). Blaze red is the brand mark
+   and the "running late" signal.
+   ========================================================= */
+
+/* `hidden` always hides, even on elements whose class sets a display. */
+[hidden] {
+  display: none !important;
+}
+
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --surface-2: #e9edec;
+  --sunken: #e1e6e5;
+  --ink: #1e2a2e;
+  --ink-2: #56656a;
+  --ink-3: #85939a;
+  --line: #d3dbda;
+  --line-strong: #b9c4c3;
+
+  --goal: #1f4e79;
+  --goal-soft: #dce7f2;
+  --state: #6a4fa0;
+  --state-soft: #ece6f6;
+  --activity: #46555a;
+  --contrib: #00a08a;
+  --rel-state: #9c3db8;
+  --blaze: #d2232a;
+  /* Visions are silver clouds (brighter once a goal serves them); the Purpose is gold. --vglow is the faint wide
+     glow round everything working toward a vision; with a Purpose it turns gold. */
+  --vision: #adb8c3;
+  --vision-lit: #cbd4dd;
+  --vision-ink: #7d8a95;
+  --vision-sheen: 55%;
+  --purpose: #d9a92b;
+  --on-purpose: #2b1f00;
+  --vglow-silver: rgb(104 124 146 / 0.5);
+  --vglow-gold: rgb(214 158 20 / 0.5);
+
+  --ok: #2e8b57;
+  --warn: #d9a21b;
+  --bad: #d2232a;
+  --grey: #8d9898;
+
+  --fill-done: color-mix(in srgb, var(--ok) 22%, var(--surface));
+  --fill-doing: color-mix(in srgb, var(--warn) 30%, var(--surface));
+  --fill-late: color-mix(in srgb, var(--bad) 20%, var(--surface));
+  --fill-blocked: color-mix(in srgb, var(--grey) 38%, var(--surface));
+  /* Today on the timeline and the graphs: a column in the red of the Today flag, light enough to read the bars over. */
+  --today: color-mix(in srgb, var(--blaze) 11%, transparent);
+  --today-edge: color-mix(in srgb, var(--blaze) 35%, transparent);
+  /* Items are milk glass: an opal face that takes a light wash of their colour over this base, and how solid it is.
+     On the map their slab and light are drawn by the map (GLASS in app.js), which reads this base and the item
+     and status colours (--goal, --ok, …) as #RRGGBB: keep those six-digit hex in every theme. */
+  --glass-base: #ffffff;
+  --glass-tint: 12%;
+  --glass-tint-state: 14%;
+  --glass-alpha: 1;
+  /* Outside the map, items are the same glass in CSS: their side is milky, a little of their tint, shaded by
+     --glass-dim; the light from above leaves --glass-spec on the face, and --glass-rim is its lit top edge. */
+  --glass-side-tint: 28%;
+  --glass-dim: 0%;
+  --glass-spec: rgb(255 255 255 / 0.9);
+  --glass-rim: rgb(255 255 255 / 0.9);
+  /* Grey items (still to do, waiting) take more of their grey, so they don't fade into the page. */
+  --glass-tint-quiet: 24%;
+  --glass-side-quiet: 50%;
+  /* Menus, dialogs and fields are clear glass: what is behind them shows faintly through. */
+  --pane: color-mix(in srgb, var(--surface) 88%, transparent);
+  --field: color-mix(in srgb, var(--surface) 62%, transparent);
+
+  --nav-bg: #1e2a2e;
+  --nav-ink: #e9eeed;
+  --focus: 0 0 0 3px color-mix(in srgb, var(--goal) 35%, transparent);
+  --shadow-pop: 0 18px 48px rgba(20, 32, 36, 0.22);
+  /* The chosen chip: solid ink by day; by night a lit tint, so it doesn't outshine the page. */
+  --chip-on: var(--ink);
+  --chip-on-ink: var(--bg);
+  --chip-on-line: var(--ink);
+
+  --font: 'Overpass', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --r-lg: 14px;
+  --r-md: 10px;
+  --r-sm: 6px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #131a1c;
+    --surface: #1b2427;
+    --surface-2: #233033;
+    --sunken: #10171a;
+    --ink: #e6ecea;
+    --ink-2: #a3b1b2;
+    --ink-3: #74858a;
+    --line: #2e3c40;
+    --line-strong: #44565b;
+    --goal: #8db8e4;
+    --goal-soft: #1f3347;
+    --state: #b9a2e6;
+    --state-soft: #2e2742;
+    --activity: #b3c0c2;
+    --contrib: #0f9a88;
+    --rel-state: #d36ac6;
+    --blaze: #f0565c;
+    --vision: #46515a;
+    --vision-lit: #5b6873;
+    --vision-ink: #a3aeb7;
+    --vision-sheen: 14%;
+    --purpose: #d9ae3a;
+    --vglow-silver: rgb(205 215 225 / 0.26);
+    --vglow-gold: rgb(236 190 64 / 0.32);
+    --ok: #5cc489;
+    --warn: #e9bb45;
+    --bad: #f0565c;
+    --grey: #7f8d8f;
+    --nav-bg: #0e1416;
+    --nav-ink: #dce4e2;
+    --shadow-pop: 0 18px 48px rgba(0, 0, 0, 0.5);
+    /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
+    --glass-base: #343b3e;
+    --glass-tint: 20%;
+    /* By night states take more colour, so they stand out from their band. */
+    --glass-tint-state: 26%;
+    --glass-alpha: 1;
+    --glass-side-tint: 36%;
+    --glass-dim: 10%;
+    --glass-spec: rgb(255 255 255 / 0.1);
+    --glass-rim: rgb(255 255 255 / 0.1);
+    --glass-tint-quiet: 20%;
+    --glass-side-quiet: 36%;
+    --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
+    --chip-on-ink: var(--ink);
+    --chip-on-line: var(--ink-2);
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #131a1c;
+  --surface: #1b2427;
+  --surface-2: #233033;
+  --sunken: #10171a;
+  --ink: #e6ecea;
+  --ink-2: #a3b1b2;
+  --ink-3: #74858a;
+  --line: #2e3c40;
+  --line-strong: #44565b;
+  --goal: #8db8e4;
+  --goal-soft: #1f3347;
+  --state: #b9a2e6;
+  --state-soft: #2e2742;
+  --activity: #b3c0c2;
+  --contrib: #0f9a88;
+  --rel-state: #d36ac6;
+  --blaze: #f0565c;
+  --vision: #46515a;
+  --vision-lit: #5b6873;
+  --vision-ink: #a3aeb7;
+  --vision-sheen: 14%;
+  --purpose: #d9ae3a;
+  --vglow-silver: rgb(205 215 225 / 0.26);
+  --vglow-gold: rgb(236 190 64 / 0.32);
+  --ok: #5cc489;
+  --warn: #e9bb45;
+  --bad: #f0565c;
+  --grey: #7f8d8f;
+  --nav-bg: #0e1416;
+  --nav-ink: #dce4e2;
+  --shadow-pop: 0 18px 48px rgba(0, 0, 0, 0.5);
+  /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
+  --glass-base: #343b3e;
+  --glass-tint: 20%;
+  /* By night states take more colour, so they stand out from their band. */
+  --glass-tint-state: 26%;
+  --glass-alpha: 1;
+  --glass-side-tint: 36%;
+  --glass-dim: 10%;
+  --glass-spec: rgb(255 255 255 / 0.1);
+  --glass-rim: rgb(255 255 255 / 0.1);
+  --glass-tint-quiet: 20%;
+  --glass-side-quiet: 36%;
+  --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
+  --chip-on-ink: var(--ink);
+  --chip-on-line: var(--ink-2);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15.5px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+strong,
+b {
+  font-weight: 500;
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+svg {
+  flex: none;
+}
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: var(--r-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

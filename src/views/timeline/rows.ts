@@ -1,6 +1,6 @@
 /** The timeline's rows: goals and their activities in plan order, and folding them (per plan, on this device). */
 import type { Activity, Goal, ISODate, RelType } from '../../core/model';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { $, byDeadline } from '../../ui/dom';
 import { scopeFor } from '../filters';
 import { plans, ui } from '../../store/state';

@@ -22,7 +22,7 @@ import { listTicks, routineCard, routineLegend } from './routines';
 import { descendants, relsFrom } from '../core/relations';
 import { isList } from '../core/routines/checkins';
 import { save } from '../store/plans';
-import { render } from './index';
+import { requestRender as render } from '../ui/render';
 
 export function renderActivities() {
   if (!db.activities.length) return emptyState(t('acts.emptyTitle'), t('acts.emptyText'), 'activity');

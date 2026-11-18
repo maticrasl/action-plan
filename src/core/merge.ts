@@ -4,16 +4,18 @@ import { followList } from './routines/checkins';
 import {
   ACYCLIC,
   PARENT_REL,
+  SYNC_COLLS,
+  type Coll,
   emptyDb,
   type Activity,
   type Db,
   type Goal,
-  type IdSet,
   type ISOTime,
+  type IdSet,
   type Plan,
   type PlanList,
-  type Relation,
   type RelType,
+  type Relation,
   type State,
   type VisionList,
 } from './model';
@@ -21,8 +23,6 @@ import { dropRoutineDeps } from './normalize';
 import { mergeVisions } from './visions';
 import type { WithList } from './routines/checkins';
 
-// The collections of a plan that sync item by item, and what is in them.
-export type Coll = 'goals' | 'states' | 'activities' | 'relations';
 export type SyncItem = Goal | State | Activity | Relation;
 // Anything with an id that sync stamps.
 export interface Stamped {
@@ -50,7 +50,6 @@ type MergeItem = { merge(x: SyncItem, y: SyncItem): SyncItem }['merge'];
    Loaded before app.js; uses its helpers (emptyDb, PARENT_REL, ACYCLIC) only when called.
    ========================================================= */
 
-export const SYNC_COLLS: Coll[] = ['goals', 'states', 'activities', 'relations'];
 export const TOMBSTONE_DAYS = 365; // deletions older than this are forgotten
 
 /* ---------- Change tracking ---------- */

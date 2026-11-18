@@ -2,11 +2,10 @@
 import { locale, t, type TextKey } from '../i18n/index';
 import { USERS_KEY, addUser, currentUser, readUsers, removeUserKeys, saveUsers, setUsers, users } from '../store/users';
 import { drive, loadGis, type Account } from '../sync/drive';
-import type { User } from '../core/model';
+import { SYNC_COLLS, type User } from '../core/model';
 import { prefs } from '../store/prefs';
 import { SYNC_EVERY, setSyncStatus, syncConfigured, syncConnected, syncNow, syncState } from '../sync/sync';
 import { plans } from '../store/state';
-import { SYNC_COLLS } from '../core/merge';
 import { db } from '../core/state';
 import { $, esc } from './dom';
 import { toast } from './toast';

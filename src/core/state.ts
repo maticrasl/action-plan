@@ -1,4 +1,4 @@
-/** What is loaded now: the open plan and the visions (phase 4 gives them a store). */
+/** What is loaded now: the open plan and the visions, which every layer reads (store/ loads and saves them). */
 import type { Db, VisionList } from './model';
 
 // main.ts starts it as an empty plan before boot reads the user's own.

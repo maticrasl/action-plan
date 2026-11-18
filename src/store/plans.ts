@@ -1,9 +1,9 @@
 /** The plans: loading, saving, opening, creating, deleting and merging them, and their names. */
 import { userStorage } from './users';
 import { normalize } from '../core/normalize';
-import { emptyDb, type Db, type Item, type ItemKind, type PlanList } from '../core/model';
+import { SYNC_COLLS, emptyDb, type Db, type Item, type ItemKind, type PlanList } from '../core/model';
 import { currentPlan, plans, plansVersion, setPlans, setPlansVersion, ui } from './state';
-import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
+import { stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
 import { db, setDb } from '../core/state';
 import { STORAGE_KEY } from './prefs';
 import { uid } from '../core/util';

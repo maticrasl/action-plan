@@ -1,14 +1,16 @@
-/** Pointing at a graph: the crosshair and tooltip by pointer, focus and keys, and graphs redrawn when the view resizes. */
+/** Pointing at a graph: the crosshair and tooltip by pointer, focus and keys, zooming one graph, and redraws on resize. */
 import { clamp, fmtNum } from '../../core/util';
 import { withUnit } from '../../ui/text';
 import { fmtRel } from '../../core/dates';
 import { t } from '../../i18n/index';
 import { viewEl } from '../../ui/dom';
-import { zoomGraph } from '../map/zoom';
 import { ui } from '../../store/state';
 import { modal } from '../../ui/forms/form';
-import { render } from '../index';
-import { GR, grCharts, signed } from './states';
+import { requestRender as render } from '../../ui/render';
+import { GR, grCharts, grDrawW, graphFor, signed } from './states';
+import { findEntity } from '../../core/relations';
+import type { State } from '../../core/model';
+import type { Routine } from '../../core/routines/schedule';
 
 // Hover / touch / keyboard: a crosshair snaps to the nearest measurement and a tooltip lists its values.
 export function showGraphPoint(plot: HTMLElement, i: number) {
@@ -125,4 +127,27 @@ export function listenGraphs() {
       if (ui.view === 'graphs' && !modal.open) render();
     }, 150);
   });
+}
+
+// Only that graph is redrawn, into the same element, so a pinch that started on it keeps going.
+export function zoomGraph(plot: HTMLElement, factor: number, cx: number) {
+  const id = plot.closest<HTMLElement>('[data-gr]')?.dataset.gr,
+    c = grCharts[id!],
+    item = id && findEntity(id)?.item;
+  if (!c || !item) return;
+  const z0 = clamp(ui.grZoom[id!] || 1, ...c.zoom),
+    z = clamp(z0 * factor, ...c.zoom);
+  if (z === z0) return;
+  const svg = plot.querySelector('svg')!,
+    w0 = Number(svg.getAttribute('width'));
+  const u = (cx - svg.getBoundingClientRect().left - GR.L) / (w0 - GR.L - GR.R);
+  ui.grZoom[id!] = z;
+  const fresh = document.createElement('div');
+  fresh.innerHTML = graphFor(item as State | Routine, grDrawW);
+  const next = fresh.querySelector('.gr-plot')!;
+  plot.className = next.className;
+  plot.replaceChildren(...next.childNodes);
+  const now = plot.querySelector('svg')!,
+    w = Number(now.getAttribute('width'));
+  plot.scrollLeft += now.getBoundingClientRect().left + GR.L + u * (w - GR.L - GR.R) - cx;
 }

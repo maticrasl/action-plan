@@ -9,13 +9,14 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.core.json && tsc --noEmit -p tsconfig.node.json",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/lib/eslint-layers.test.mjs",
     "test:unit": "vitest run --reporter=./scripts/vitest-quiet.mjs --passWithNoTests",
     "test:fixtures": "node scripts/fixtures.mjs",
     "test:browser": "node scripts/run-suite.mjs",
     "perf": "node scripts/run-suite.mjs --perf",
     "outline": "node scripts/outline.mjs",
     "map": "node scripts/map.mjs",
+    "cycles": "node scripts/cycles.mjs",
     "move": "node scripts/move-decls.mjs"
   },
   "devDependencies": {

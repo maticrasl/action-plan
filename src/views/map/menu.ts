@@ -16,10 +16,9 @@ import { db } from '../../core/state';
 import { categories } from '../../core/categories';
 import { closeCtxMenu, ctxMenu, showCtxMenu } from '../../ui/menu';
 import { visionRel } from '../../core/visions';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { openForm } from '../../ui/forms/form';
 import { toggleCheckin } from '../routines';
-import { openStateValue } from '../states';
 import { startMapLink } from './link';
 import { removeEntity, save } from '../../store/plans';
 import { toast } from '../../ui/toast';
@@ -34,8 +33,9 @@ import type { MenuOption } from '../../ui/menu';
 import type { FormKind } from '../../ui/forms/form';
 import type { GoalFilterTarget } from '../filters';
 import { selectsInView } from './keys';
-import { hasGraph } from '../graphs/states';
 import { setTlCollapsed, timelineRows, tlCollapsed } from '../timeline/rows';
+import { openStateValue } from '../../ui/state-value';
+import { hasGraph } from '../../core/series';
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 

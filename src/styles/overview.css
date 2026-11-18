@@ -1,0 +1,164 @@
+/* ---------- Overview ---------- */
+.summary {
+  padding: 4px 0 30px;
+  max-width: 760px;
+}
+.summary-line {
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  margin: 0 0 12px;
+}
+.summary-line strong {
+  font-weight: 600;
+  color: var(--goal);
+}
+.facts {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.facts li {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.facts .fact-late {
+  background: var(--fill-late);
+  border-color: transparent;
+  color: var(--ink);
+}
+.facts .fact-waiting {
+  background: var(--fill-blocked);
+  border-color: transparent;
+  color: var(--ink);
+}
+.section-title {
+  font-size: 20px;
+  margin: 30px 0 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.section-title small {
+  font-size: 13.5px;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-radius: var(--r-md);
+}
+.list-more {
+  padding: 11px 16px;
+  border: 0;
+  background: none;
+  color: var(--goal);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+}
+.list-more {
+  border-radius: var(--r-md);
+}
+.list-more:hover {
+  background: color-mix(in srgb, var(--goal) 8%, transparent);
+}
+.row .grow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+}
+.check {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 0;
+  cursor: pointer;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  color: #fff;
+  padding: 0;
+  font-weight: 600;
+}
+/* Tick boxes are holes cut through the glass, as deep as the card's slab (--depth): the page shows through them.
+   Seen from where the slabs' sides are seen (below and to the right), a hole shows its far walls, the top and the
+   left. They are shaded like the slab sides that face the same way: the top faces down, like a slab's bottom side,
+   which reflects the darker room below, so it is the darker wall; the left faces right, like a slab's right side,
+   so it is the lighter one. The light, to the left, can't reach the floor next to the left wall, so that wall throws
+   a soft shadow onto it. Ticked, a tile of green glass fills the hole and stands out of it. In progress, the walls
+   are amber. Hovered, they turn green. */
+:is(.check, .li-box) {
+  --wall: var(--side, var(--line-strong));
+  --wall-top: color-mix(in srgb, var(--wall) 80%, #000);
+  --wall-left: var(--wall);
+  --d: var(--depth, 3px);
+  background: var(--bg);
+  box-shadow:
+    inset 0 var(--d) 0 var(--wall-top),
+    inset var(--d) 0 0 var(--wall-left),
+    inset calc(var(--d) + 1px) 0 3px -1px rgb(0 0 0 / 0.14);
+}
+:is(.check.done, .li-tick.done .li-box) {
+  --side: color-mix(in srgb, var(--ok) 72%, #000);
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0.35), transparent 70%), var(--ok);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    1px 1px 0 var(--side),
+    2px 2px 0 var(--side);
+}
+.check.doing {
+  --wall: color-mix(in srgb, var(--warn) 80%, var(--glass-base));
+}
+:is(.check:not(.done):hover, .li-tick:not(.done):hover .li-box) {
+  --wall: var(--ok);
+}
+.done-text {
+  text-decoration: line-through;
+  color: var(--ink-3);
+}
+
+.empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--ink-2);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+}
+.empty h3 {
+  color: var(--ink);
+  margin-bottom: 6px;
+  font-size: 20px;
+}
+/* Inside a list (no next actions due, the rest behind "Show all"). */
+.list > .empty {
+  padding: 24px 20px;
+}
+.empty .btn {
+  margin-top: 16px;
+}

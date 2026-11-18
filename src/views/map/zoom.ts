@@ -3,16 +3,13 @@ import { $, viewEl } from '../../ui/dom';
 import { ui } from '../../store/state';
 import { clamp } from '../../core/util';
 import { prefs } from '../../store/prefs';
-import { render } from '../index';
-import { findEntity } from '../../core/relations';
+import { requestRender as render } from '../../ui/render';
 import { linkDrag } from './link';
 import { press, setPress } from './menu';
 import { MAP } from './layout';
 import { endTlDrag, tlDrag } from '../timeline/drag';
 import { TL } from '../timeline/render';
-import { GR, grCharts, grDrawW, graphFor } from '../graphs/states';
-import type { State } from '../../core/model';
-import type { Routine } from '../../core/routines/schedule';
+import { zoomGraph } from '../graphs/points';
 
 // Safari's gesture events (not in TypeScript's DOM types).
 interface GestureEvent extends UIEvent {
@@ -59,29 +56,6 @@ export function zoomTimeline(factor: number, cx: number) {
   render();
   const a = at();
   $('.tl-scroll').scrollLeft += a.left + (day - a.from) * p - x;
-}
-
-// Only that graph is redrawn, into the same element, so a pinch that started on it keeps going.
-export function zoomGraph(plot: HTMLElement, factor: number, cx: number) {
-  const id = plot.closest<HTMLElement>('[data-gr]')?.dataset.gr,
-    c = grCharts[id!],
-    item = id && findEntity(id)?.item;
-  if (!c || !item) return;
-  const z0 = clamp(ui.grZoom[id!] || 1, ...c.zoom),
-    z = clamp(z0 * factor, ...c.zoom);
-  if (z === z0) return;
-  const svg = plot.querySelector('svg')!,
-    w0 = Number(svg.getAttribute('width'));
-  const u = (cx - svg.getBoundingClientRect().left - GR.L) / (w0 - GR.L - GR.R);
-  ui.grZoom[id!] = z;
-  const fresh = document.createElement('div');
-  fresh.innerHTML = graphFor(item as State | Routine, grDrawW);
-  const next = fresh.querySelector('.gr-plot')!;
-  plot.className = next.className;
-  plot.replaceChildren(...next.childNodes);
-  const now = plot.querySelector('svg')!,
-    w = Number(now.getAttribute('width'));
-  plot.scrollLeft += now.getBoundingClientRect().left + GR.L + u * (w - GR.L - GR.R) - cx;
 }
 
 // Coalesce bursts of wheel / touch events into one zoom per frame.

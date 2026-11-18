@@ -1,5 +1,5 @@
-/* Service worker: lets the installed app open without a connection.
-   The app's own files are fetched from the network first, so an update shows on the next launch,
+/** Service worker: lets the installed app open without a connection. */
+/* The app's own files are fetched from the network first, so an update shows on the next launch,
    and from the cache when offline. Fonts are kept once loaded. Everything else (Google sign-in
    and Drive) goes straight to the network. */
 
@@ -10,13 +10,21 @@ const SHELL = __SW_SHELL__;
 const FONTS = ['https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches
+      .open(CACHE)
+      .then(c => c.addAll(SHELL))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-    .then(() => self.clients.claim()));
+  e.waitUntil(
+    caches
+      .keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  );
 });
 
 self.addEventListener('fetch', e => {
@@ -34,7 +42,8 @@ async function networkFirst(req) {
     if (res.ok) cache.put(req, res.clone());
     return res;
   } catch (err) {
-    const hit = await cache.match(req, { ignoreSearch: true }) || (req.mode === 'navigate' && await cache.match('./'));
+    const hit =
+      (await cache.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' && (await cache.match('./')));
     if (hit) return hit;
     throw err;
   }

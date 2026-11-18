@@ -1,0 +1,340 @@
+/* ---------- Map ---------- */
+.map-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.ctl-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-right: 4px;
+}
+.rel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+}
+.rel-toggle i {
+  width: 16px;
+  border-top: 2.5px solid;
+  display: inline-block;
+}
+.rel-toggle i.dash {
+  border-top-style: dashed;
+}
+.rel-toggle .count {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.rel-toggle[aria-pressed='false'] {
+  opacity: 0.45;
+  text-decoration: line-through;
+  background: transparent;
+}
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  align-items: center;
+}
+.map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-legend i.swatch {
+  width: 18px;
+  height: 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.swatch.st-done {
+  background: var(--fill-done) !important;
+}
+.swatch.st-doing {
+  background: var(--fill-doing) !important;
+}
+.swatch.st-late {
+  background: var(--fill-late) !important;
+}
+.swatch.st-blocked {
+  background: var(--fill-blocked) !important;
+}
+#view[data-view='map'] .map-legend i.swatch {
+  background: color-mix(in srgb, var(--tint) var(--glass-tint), var(--glass-base)) !important;
+  border-color: transparent;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--tint) 45%, transparent);
+}
+.map-legend i.swatch.tl-day {
+  position: static;
+  width: 14px;
+  height: 4px;
+  border: 0;
+  border-radius: 1px;
+}
+.map-legend i.swatch.tl-day.done {
+  background: var(--ok);
+}
+.map-legend i.swatch.tl-day.missed {
+  background: var(--bad);
+}
+.map-legend i.swatch.tl-day.due {
+  background: var(--goal);
+}
+
+.map-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: auto;
+  max-height: calc(100vh - 200px);
+  min-height: 280px;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+.map-wrap svg {
+  display: block;
+  margin: 0 auto;
+  font-family: var(--font);
+}
+.zoom-ctl {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r-sm) + 1px);
+  padding: 1px;
+}
+.zoom-ctl .icon-btn {
+  border-radius: var(--r-sm);
+  width: auto;
+  min-width: 32px;
+  height: 30px;
+  padding: 0 4px;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+}
+.zoom-ctl .zoom-pct {
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+  display: inline-block;
+}
+.band {
+  fill: var(--bg);
+}
+/* Each band takes a breath of its kind's colour, so goals, activities and states read as strata. */
+.band.goal {
+  fill: color-mix(in srgb, var(--goal-soft) 55%, var(--bg));
+}
+.band.state {
+  fill: color-mix(in srgb, var(--state-soft) 55%, var(--bg));
+}
+.col-label {
+  fill: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.col-label.goal {
+  fill: var(--goal);
+  stroke: color-mix(in srgb, var(--goal-soft) 55%, var(--bg));
+}
+.col-label.state {
+  fill: var(--state);
+  stroke: color-mix(in srgb, var(--state-soft) 55%, var(--bg));
+}
+.node {
+  cursor: pointer;
+}
+.map-wrap,
+.tl-scroll {
+  cursor: grab;
+}
+.map-wrap.panning,
+.tl-scroll.panning,
+.panning * {
+  cursor: grabbing;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Each box takes the colour of its status, or else of its kind (glassTint in app.js picks its slab's the same way). */
+:is(.node, .swatch, .glass) {
+  --tint: var(--activity);
+}
+:is(.node, .glass).goal {
+  --tint: var(--goal);
+}
+:is(.node, .glass).state {
+  --tint: var(--state);
+}
+:is(.node, .swatch, .glass).st-done {
+  --tint: var(--ok);
+}
+:is(.node, .swatch, .glass).st-doing {
+  --tint: var(--warn);
+}
+:is(.node, .swatch, .glass).st-late {
+  --tint: var(--bad);
+}
+:is(.node, .swatch, .glass).st-blocked {
+  --tint: var(--grey);
+}
+/* The face: see-through tinted glass with no edge, over its slab. */
+.node rect {
+  fill: color-mix(in srgb, var(--tint) calc(var(--glass-tint) + var(--wash, 0%)), var(--glass-base));
+  fill-opacity: var(--glass-alpha);
+  stroke: none;
+}
+.node-lift {
+  fill: none;
+  stroke: none;
+}
+/* The light on the face: its soft reflection from the top left, and the face dimming away from the light. */
+.glass-spec {
+  fill: url(#glass-spec);
+  pointer-events: none;
+}
+.glass-shade {
+  fill: url(#glass-shade);
+  pointer-events: none;
+}
+/* Selected, focused or being linked, a box glows softly in its own colour; it is drawn over the lines, so they never glow over it. */
+:is(.node.sel, .node.link-source, .node.link-target, .node:focus-visible) .node-lift {
+  fill: var(--glow, var(--tint));
+  filter: url(#node-glow);
+}
+.node text {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 400;
+}
+.node.goal text:not(.sub) {
+  font-weight: 500;
+}
+.node .sub {
+  fill: color-mix(in srgb, var(--ink-2) 70%, var(--ink));
+  font-size: 11.5px;
+  font-weight: 400;
+}
+.node-track,
+.node-progress {
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.node-track {
+  stroke: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.node-progress {
+  stroke: var(--ok);
+}
+.node:hover {
+  --wash: 6%;
+}
+.node.dim {
+  opacity: 0.15;
+}
+/* Linking two boxes: a dashed line follows the pointer; the box under it shows whether a link fits. */
+.map-wrap.linking,
+.map-wrap.linking * {
+  cursor: crosshair;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.link-line {
+  stroke: var(--goal);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+/* Linking: the box under the pointer glows green when the link fits. */
+.node.link-target {
+  --glow: var(--ok);
+}
+.map-wrap.linking .node.link-bad,
+.map-wrap.linking .node.link-bad * {
+  cursor: not-allowed;
+}
+.node.link-bad rect {
+  stroke: var(--bad);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.link-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 22;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--r-lg);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 14.5px;
+  font-weight: 400;
+  box-shadow: var(--shadow-pop);
+}
+.link-bar .btn {
+  color: var(--bg);
+}
+.edge {
+  fill: none;
+  stroke-linecap: round;
+}
+/* Lines are clickable through a wide invisible twin; hover or focus thickens the visible line. */
+.edge-g {
+  cursor: pointer;
+  outline: none;
+}
+.edge-g.dim {
+  opacity: 0.15;
+}
+.edge-g.sel .edge {
+  stroke-width: 2.8 !important;
+  filter: url(#line-glow);
+}
+.edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+}
+.edge-g:hover .edge,
+.edge-g:focus-visible .edge {
+  stroke-width: 2.2 !important;
+}
+/* Long-press must not select text or open the iOS callout. */
+.map-wrap svg {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* Nor flash the phone's tap highlight: around a line it is a box as big as the line is long and high.
+   Selection is shown by the line or box itself. */
+.map-wrap,
+.tl-scroll {
+  -webkit-tap-highlight-color: transparent;
+}
+.node:focus {
+  outline: none;
+  box-shadow: none;
+}

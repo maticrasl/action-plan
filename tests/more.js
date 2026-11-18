@@ -4,16 +4,30 @@
 const REAL_DRIVE = { ...drive };
 window.moreTests = async ({ step, assert }) => {
   const tick = () => new Promise(r => setTimeout(r, 0));
-  const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return isoDate(x); };
-  const eq = (a, b, m) => assert(JSON.stringify(a) === JSON.stringify(b), `${m || 'expected'} ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
-  const fresh = name => { createPlan(name); assert(itemCount() === 0); };
+  const d = n => {
+    const x = new Date();
+    x.setDate(x.getDate() + n);
+    return isoDate(x);
+  };
+  const eq = (a, b, m) =>
+    assert(
+      JSON.stringify(a) === JSON.stringify(b),
+      `${m || 'expected'} ${JSON.stringify(b)}, got ${JSON.stringify(a)}`,
+    );
+  const fresh = name => {
+    createPlan(name);
+    assert(itemCount() === 0);
+  };
   const mk = (kind, p = {}) => {
     const base = { goal: { status: 'active' }, activity: { status: 'todo' }, state: { history: [] } }[kind];
     const x = { id: uid(), title: `${kind} ${Math.random().toString(36).slice(2, 6)}`, ...base, ...p };
     collection(kind).push(x);
     return x;
   };
-  const rel = (a, b, type) => { const e = addRelation(a.id, b.id, type); assert(!e, `${type}: ${e}`); };
+  const rel = (a, b, type) => {
+    const e = addRelation(a.id, b.id, type);
+    assert(!e, `${type}: ${e}`);
+  };
   const plansBefore = plans.list.map(p => p.id);
   // By Sunday every sample routine has met its week: unticking "cook at home" keeps one on the overview any day.
   const untickCook = () => (db.activities.find(a => a.repeat?.times === 5).checkins = {});
@@ -34,7 +48,8 @@ window.moreTests = async ({ step, assert }) => {
       setView('goals');
       $(`[data-category="${cat}"]`).click();
       const cards = viewEl.querySelectorAll('.card.goal').length;
-      const pressed = () => [...viewEl.querySelectorAll('.cat-chips .chip[aria-pressed="true"]')].map(c => c.dataset.category);
+      const pressed = () =>
+        [...viewEl.querySelectorAll('.cat-chips .chip[aria-pressed="true"]')].map(c => c.dataset.category);
       eq(pressed().join('|'), cat, `${cat}: only its chip pressed`);
       $(`[data-category="${cat}"]`).click();
       eq(pressed().join('|'), '', `${cat}: tapped again, only "all" pressed`);
@@ -49,14 +64,27 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('templates: data is complete in both languages and every link names an item of the right kind', () => {
     const TEXT = ['name', 'about', 'title', 'specific', 'metric', 'unit', 'achievable', 'relevant', 'description'];
-    const pairOk = (v, where) => assert(typeof v === 'string' ? v.trim() : Array.isArray(v) && v.length === TPL_LANGS.length && v.every(x => typeof x === 'string' && x.trim()), `text ${where}: ${JSON.stringify(v)}`);
+    const pairOk = (v, where) =>
+      assert(
+        typeof v === 'string'
+          ? v.trim()
+          : Array.isArray(v) && v.length === TPL_LANGS.length && v.every(x => typeof x === 'string' && x.trim()),
+        `text ${where}: ${JSON.stringify(v)}`,
+      );
     const seen = new Set();
     for (const tpl of TEMPLATES) {
-      assert(!seen.has(tpl.id) && TPL_AREAS.includes(tpl.area) && ['starter', 'ambitious'].includes(tpl.level), `${tpl.id}: id, area, level`);
+      assert(
+        !seen.has(tpl.id) && TPL_AREAS.includes(tpl.area) && ['starter', 'ambitious'].includes(tpl.level),
+        `${tpl.id}: id, area, level`,
+      );
       seen.add(tpl.id);
       assert(Array.isArray(tpl.name) && Array.isArray(tpl.about), `${tpl.id}: name and about in every language`);
       const kinds = {};
-      for (const [coll, kind] of [['goals', 'goal'], ['states', 'state'], ['activities', 'activity']]) {
+      for (const [coll, kind] of [
+        ['goals', 'goal'],
+        ['states', 'state'],
+        ['activities', 'activity'],
+      ]) {
         for (const x of tpl[coll]) {
           assert(x.k && !kinds[x.k], `${tpl.id}: key ${x.k} unique`);
           kinds[x.k] = kind;
@@ -68,14 +96,19 @@ window.moreTests = async ({ step, assert }) => {
           }
         }
       }
-      pairOk(tpl.name, tpl.id + '.name'); pairOk(tpl.about, tpl.id + '.about');
+      pairOk(tpl.name, tpl.id + '.name');
+      pairOk(tpl.about, tpl.id + '.about');
       const links = { sub: 'goal', deps: null, measures: 'goal', goals: 'goal', improves: 'state', parent: 'activity' };
       for (const x of [...tpl.goals, ...tpl.states, ...tpl.activities]) {
         for (const [f, kind] of Object.entries(links)) {
           [].concat(x[f] || []).forEach(k => assert(kinds[k] === (kind || kinds[x.k]), `${tpl.id}.${x.k}.${f} → ${k}`));
         }
       }
-      for (const g of tpl.goals) assert(g.progress || (isNum(g.baseline) && isNum(g.target) && g.baseline !== g.target), `${tpl.id}.${g.k}: baseline and target`);
+      for (const g of tpl.goals)
+        assert(
+          g.progress || (isNum(g.baseline) && isNum(g.target) && g.baseline !== g.target),
+          `${tpl.id}.${g.k}: baseline and target`,
+        );
     }
     const starters = TEMPLATES.filter(x => x.level === 'starter').length;
     return `${TEMPLATES.length} templates (${starters} starter, ${TEMPLATES.length - starters} ambitious)`;
@@ -92,23 +125,38 @@ window.moreTests = async ({ step, assert }) => {
         useTemplate(tpl);
         made.push(plans.current);
         assert(currentPlan().name.startsWith(tplText(tpl.name)), `${where}: plan name`);
-        eq([db.goals.length, db.states.length, db.activities.length], [tpl.goals.length, tpl.states.length, tpl.activities.length], `${where}: counts`);
+        eq(
+          [db.goals.length, db.states.length, db.activities.length],
+          [tpl.goals.length, tpl.states.length, tpl.activities.length],
+          `${where}: counts`,
+        );
         items += itemCount();
-        assert([...db.goals, ...db.states, ...db.activities].every(x => typeof x.title === 'string' && x.title), `${where}: titles`);
-        assert(db.goals.every(g => g.category === t('tpl.area.' + tpl.area)), `${where}: category`);
+        assert(
+          [...db.goals, ...db.states, ...db.activities].every(x => typeof x.title === 'string' && x.title),
+          `${where}: titles`,
+        );
+        assert(
+          db.goals.every(g => g.category === t('tpl.area.' + tpl.area)),
+          `${where}: category`,
+        );
         // Every link follows the rules, as if added by hand, and survives a merge.
         const all = [...db.relations];
         all.forEach(r => {
           db.relations = all.filter(x => x !== r);
           const err = canRelate(r.from, r.to, r.type);
-          assert(!err, `${where}: ${r.type} ${findEntity(r.from)?.item.title} → ${findEntity(r.to)?.item.title}: ${err}`);
+          assert(
+            !err,
+            `${where}: ${r.type} ${findEntity(r.from)?.item.title} → ${findEntity(r.to)?.item.title}: ${err}`,
+          );
         });
         db.relations = all;
         assert(repairRelations(db).length === all.length, `${where}: merge repair keeps every relation`);
         // Dates make sense: nothing ends before it starts, nothing is late on the first day,
         // sub-activities sit inside their parent, and work starts once what it waits for is due.
         const title = id => findEntity(id).item.title;
-        db.goals.forEach(g => assert(g.startDate <= g.deadline && goalState(g) !== 'late', `${where}: goal dates ${g.title}`));
+        db.goals.forEach(g =>
+          assert(g.startDate <= g.deadline && goalState(g) !== 'late', `${where}: goal dates ${g.title}`),
+        );
         db.activities.forEach(a => {
           assert(!a.dueDate || a.startDate <= a.dueDate, `${where}: dates ${a.title}`);
           assert(activityState(a) !== 'late', `${where}: late on day one ${a.title}`);
@@ -120,16 +168,31 @@ window.moreTests = async ({ step, assert }) => {
             const dep = findEntity(id).item;
             assert(a.startDate >= dep.dueDate, `${where}: ${a.title} starts before ${dep.title} is due`);
           });
-          relsFrom(a.id, 'contributes').forEach(r => assert(a.dueDate <= findEntity(r.to).item.deadline, `${where}: ${a.title} due after ${title(r.to)}`));
+          relsFrom(a.id, 'contributes').forEach(r =>
+            assert(a.dueDate <= findEntity(r.to).item.deadline, `${where}: ${a.title} due after ${title(r.to)}`),
+          );
           // Every activity works toward a goal, directly or through its parent.
-          assert([a.id, ...ancestors(a.id, 'subactivity')].some(id => relsFrom(id, 'contributes').length), `${where}: ${a.title} serves no goal`);
+          assert(
+            [a.id, ...ancestors(a.id, 'subactivity')].some(id => relsFrom(id, 'contributes').length),
+            `${where}: ${a.title} serves no goal`,
+          );
           if (isRoutine(a)) assert(scheduleText(a) && periodProgress(a).target >= 0, `${where}: routine ${a.title}`);
         });
-        db.states.forEach(s => assert(relsFrom(s.id, 'measures').length || relsTo(s.id, 'improves').length, `${where}: state ${s.title} unlinked`));
-        db.goals.filter(byActivities).forEach(g => assert(countedActivities(g).length, `${where}: ${g.title} has activities to count`));
+        db.states.forEach(s =>
+          assert(
+            relsFrom(s.id, 'measures').length || relsTo(s.id, 'improves').length,
+            `${where}: state ${s.title} unlinked`,
+          ),
+        );
+        db.goals
+          .filter(byActivities)
+          .forEach(g => assert(countedActivities(g).length, `${where}: ${g.title} has activities to count`));
         db.goals.filter(byRoutines).forEach(g => assert(goalRoutines(g).length, `${where}: ${g.title} has routines`));
         assert(!hasProgress(db), `${where}: starts without progress`);
-        views.forEach(v => { setView(v); assert(viewEl.children.length, `${where}: ${v} empty`); });
+        views.forEach(v => {
+          setView(v);
+          assert(viewEl.children.length, `${where}: ${v} empty`);
+        });
       }
     }
     changeLanguage('en');
@@ -138,73 +201,147 @@ window.moreTests = async ({ step, assert }) => {
     return `${made.length} plans, ${items} items`;
   });
 
-  await step('templates: every template fits the current data model (normalize keeps it, routines, lists, states that add up)', () => {
-    // Every key the picker and templateData use exists in both languages.
-    const keys = ['tpl.title', 'tpl.lead', 'tpl.areas', 'tpl.area.all', 'tpl.use', 'tpl.inside', 'tpl.goalList', 'tpl.stepList', 'tpl.routineList',
-      'tpl.goals', 'tpl.states', 'tpl.activities', 'tpl.routines', 'tpl.weeks', 'tpl.months', 'tpl.years',
-      ...TPL_AREAS.map(a => 'tpl.area.' + a), 'tpl.level.starter', 'tpl.level.ambitious'];
-    TPL_LANGS.forEach(code => keys.forEach(k => assert(I18N[code].strings[k], `${code}: ${k}`)));
-    const made = [];
-    const counts = { routines: 0, makeUp: 0, lists: 0, routineLists: 0, cumulative: 0, periods: 0 };
-    for (const code of TPL_LANGS) {
-      changeLanguage(code);
-      for (const tpl of TEMPLATES) {
-        const where = `${code} ${tpl.id}`;
-        let data;
-        try { data = templateData(tpl); } catch (e) { assert(false, `${where}: templateData threw ${e.message}`); }
-        // normalize (what a load or a sync does) changes nothing: no link or field is dropped.
-        eq(JSON.stringify(normalize(JSON.parse(JSON.stringify(data)))), JSON.stringify(data), `${where}: normalize keeps it`);
-        useTemplate(tpl);
-        made.push(plans.current);
-        // Every link passes canRelate against the rest, and none waits for a routine.
-        const all = [...db.relations];
-        all.forEach(r => {
-          db.relations = all.filter(x => x !== r);
-          const err = canRelate(r.from, r.to, r.type);
-          assert(!err, `${where}: ${r.type} ${findEntity(r.from)?.item.title} → ${findEntity(r.to)?.item.title}: ${err}`);
-          assert(REL_TYPES[r.type], `${where}: link type ${r.type}`);
-        });
-        db.relations = all;
-        assert(!db.relations.some(r => r.type === 'depends' && isRoutine(findEntity(r.to).item)), `${where}: something depends on a routine`);
-        db.activities.forEach((a, i) => {
-          const src = tpl.activities[i];
-          eq(a.title, tplText(src.title), `${where}: activities in template order`);
-          if (isRoutine(a)) {
-            counts.routines++;
-            const now = routineToday(a);
-            assert(scheduleText(a) && shortSchedule(a) && (now === null || (now in TODAY_TAG && now !== 'done' && now !== 'makeUp')), `${where}: routine ${a.title} today ${now}`);
-            assert(periodProgress(a).target >= 0 && routineStreak(a).n === 0 && activityState(a) !== 'late', `${where}: routine ${a.title} starts fresh`);
-            if (a.repeat.makeUp) { counts.makeUp++; assert(!isFlexible(a) && makesUp(a), `${where}: ${a.title} makes up only set days`); }
+  await step(
+    'templates: every template fits the current data model (normalize keeps it, routines, lists, states that add up)',
+    () => {
+      // Every key the picker and templateData use exists in both languages.
+      const keys = [
+        'tpl.title',
+        'tpl.lead',
+        'tpl.areas',
+        'tpl.area.all',
+        'tpl.use',
+        'tpl.inside',
+        'tpl.goalList',
+        'tpl.stepList',
+        'tpl.routineList',
+        'tpl.goals',
+        'tpl.states',
+        'tpl.activities',
+        'tpl.routines',
+        'tpl.weeks',
+        'tpl.months',
+        'tpl.years',
+        ...TPL_AREAS.map(a => 'tpl.area.' + a),
+        'tpl.level.starter',
+        'tpl.level.ambitious',
+      ];
+      TPL_LANGS.forEach(code => keys.forEach(k => assert(I18N[code].strings[k], `${code}: ${k}`)));
+      const made = [];
+      const counts = { routines: 0, makeUp: 0, lists: 0, routineLists: 0, cumulative: 0, periods: 0 };
+      for (const code of TPL_LANGS) {
+        changeLanguage(code);
+        for (const tpl of TEMPLATES) {
+          const where = `${code} ${tpl.id}`;
+          let data;
+          try {
+            data = templateData(tpl);
+          } catch (e) {
+            assert(false, `${where}: templateData threw ${e.message}`);
           }
-          if (a.list) {
-            counts[isRoutine(a) ? 'routineLists' : 'lists']++;
-            eq(a.list.map(i => i.text), src.list.map(tplText), `${where}: ${a.title} items`);
-            assert(a.list.every(i => safeId(i.id) && !i.done) && new Set(a.list.map(i => i.id)).size === a.list.length, `${where}: ${a.title} item ids`);
-            assert(isRoutine(a) ? isListRoutine(a) && dayItemsDone(a, today()) === 0 : isList(a) && listDone(a) === 0 && a.status !== 'done', `${where}: ${a.title} list kind`);
-          }
-          relsFrom(a.id, 'improves').forEach(r => assert(findEntity(r.to)?.kind === 'state', `${where}: ${a.title} improves a state`));
-        });
-        db.states.forEach(s => {
-          if (isCumulative(s)) {
-            counts.cumulative++;
-            assert(SCALES.includes(s.scale) && Array.isArray(s.entries) && !s.entries.length && stateTotal(s) === 0, `${where}: ${s.title} adds up from nothing`);
-          } else assert(!('scale' in s) && !('entries' in s), `${where}: ${s.title} plain`);
-        });
-        db.goals.forEach(g => {
-          if (!g.period) return;
-          counts.periods++;
-          const st = relsTo(g.id, 'measures').map(r => findEntity(r.from).item);
-          assert(PERIODS.includes(g.period) && st.length && st.every(isCumulative), `${where}: ${g.title} counts a period of a state that adds up`);
-          assert(goalCurrent(g) === Number(g.baseline) && !goalReached(g), `${where}: ${g.title} starts at its baseline`);
-        });
+          // normalize (what a load or a sync does) changes nothing: no link or field is dropped.
+          eq(
+            JSON.stringify(normalize(JSON.parse(JSON.stringify(data)))),
+            JSON.stringify(data),
+            `${where}: normalize keeps it`,
+          );
+          useTemplate(tpl);
+          made.push(plans.current);
+          // Every link passes canRelate against the rest, and none waits for a routine.
+          const all = [...db.relations];
+          all.forEach(r => {
+            db.relations = all.filter(x => x !== r);
+            const err = canRelate(r.from, r.to, r.type);
+            assert(
+              !err,
+              `${where}: ${r.type} ${findEntity(r.from)?.item.title} → ${findEntity(r.to)?.item.title}: ${err}`,
+            );
+            assert(REL_TYPES[r.type], `${where}: link type ${r.type}`);
+          });
+          db.relations = all;
+          assert(
+            !db.relations.some(r => r.type === 'depends' && isRoutine(findEntity(r.to).item)),
+            `${where}: something depends on a routine`,
+          );
+          db.activities.forEach((a, i) => {
+            const src = tpl.activities[i];
+            eq(a.title, tplText(src.title), `${where}: activities in template order`);
+            if (isRoutine(a)) {
+              counts.routines++;
+              const now = routineToday(a);
+              assert(
+                scheduleText(a) &&
+                  shortSchedule(a) &&
+                  (now === null || (now in TODAY_TAG && now !== 'done' && now !== 'makeUp')),
+                `${where}: routine ${a.title} today ${now}`,
+              );
+              assert(
+                periodProgress(a).target >= 0 && routineStreak(a).n === 0 && activityState(a) !== 'late',
+                `${where}: routine ${a.title} starts fresh`,
+              );
+              if (a.repeat.makeUp) {
+                counts.makeUp++;
+                assert(!isFlexible(a) && makesUp(a), `${where}: ${a.title} makes up only set days`);
+              }
+            }
+            if (a.list) {
+              counts[isRoutine(a) ? 'routineLists' : 'lists']++;
+              eq(
+                a.list.map(i => i.text),
+                src.list.map(tplText),
+                `${where}: ${a.title} items`,
+              );
+              assert(
+                a.list.every(i => safeId(i.id) && !i.done) && new Set(a.list.map(i => i.id)).size === a.list.length,
+                `${where}: ${a.title} item ids`,
+              );
+              assert(
+                isRoutine(a)
+                  ? isListRoutine(a) && dayItemsDone(a, today()) === 0
+                  : isList(a) && listDone(a) === 0 && a.status !== 'done',
+                `${where}: ${a.title} list kind`,
+              );
+            }
+            relsFrom(a.id, 'improves').forEach(r =>
+              assert(findEntity(r.to)?.kind === 'state', `${where}: ${a.title} improves a state`),
+            );
+          });
+          db.states.forEach(s => {
+            if (isCumulative(s)) {
+              counts.cumulative++;
+              assert(
+                SCALES.includes(s.scale) && Array.isArray(s.entries) && !s.entries.length && stateTotal(s) === 0,
+                `${where}: ${s.title} adds up from nothing`,
+              );
+            } else assert(!('scale' in s) && !('entries' in s), `${where}: ${s.title} plain`);
+          });
+          db.goals.forEach(g => {
+            if (!g.period) return;
+            counts.periods++;
+            const st = relsTo(g.id, 'measures').map(r => findEntity(r.from).item);
+            assert(
+              PERIODS.includes(g.period) && st.length && st.every(isCumulative),
+              `${where}: ${g.title} counts a period of a state that adds up`,
+            );
+            assert(
+              goalCurrent(g) === Number(g.baseline) && !goalReached(g),
+              `${where}: ${g.title} starts at its baseline`,
+            );
+          });
+        }
       }
-    }
-    changeLanguage('en');
-    made.forEach(deletePlan);
-    setView('dashboard');
-    assert(counts.makeUp && counts.lists && counts.routineLists && counts.cumulative && counts.periods, `uses the newer features: ${JSON.stringify(counts)}`);
-    return Object.entries(counts).map(([k, v]) => `${v / 2} ${k}`).join(', ');
-  });
+      changeLanguage('en');
+      made.forEach(deletePlan);
+      setView('dashboard');
+      assert(
+        counts.makeUp && counts.lists && counts.routineLists && counts.cumulative && counts.periods,
+        `uses the newer features: ${JSON.stringify(counts)}`,
+      );
+      return Object.entries(counts)
+        .map(([k, v]) => `${v / 2} ${k}`)
+        .join(', ');
+    },
+  );
 
   await step('templates: Exodus 90 is 90 days of prayer, asceticism and fraternity after a week of preparation', () => {
     const tpl = TEMPLATES.find(x => x.id === 'exodus-90');
@@ -216,14 +353,34 @@ window.moreTests = async ({ step, assert }) => {
       made.push(plans.current);
       const [g] = db.goals;
       const by = en => db.activities.find(a => a.title === tplText(tpl.activities.find(x => x.title[0] === en).title));
-      eq([g.category, byRoutines(g), g.deadline], [t('tpl.area.faith'), true, addDays(today(), 96)], `${code}: goal kept by its routines, day 90 on day 96`);
+      eq(
+        [g.category, byRoutines(g), g.deadline],
+        [t('tpl.area.faith'), true, addDays(today(), 96)],
+        `${code}: goal kept by its routines, day 90 on day 96`,
+      );
       const routines = db.activities.filter(isRoutine);
       eq(routines.length, 6, `${code}: six routines`);
-      assert(routines.every(a => a.startDate === addDays(today(), 7) && a.dueDate === g.deadline && addDays(a.startDate, 89) === a.dueDate), `${code}: routines run the 90 days`);
+      assert(
+        routines.every(
+          a =>
+            a.startDate === addDays(today(), 7) && a.dueDate === g.deadline && addDays(a.startDate, 89) === a.dueDate,
+        ),
+        `${code}: routines run the 90 days`,
+      );
       eq(by('Daily prayer').list.length, 4, `${code}: prayer list`);
       eq(by('Daily disciplines').list.length, 9, `${code}: disciplines list`);
-      eq([by('Fast and abstain on Wednesday and Friday').repeat.days, !!by('Fast and abstain on Wednesday and Friday').repeat.makeUp], [[2, 4], false], `${code}: strict Wednesday and Friday fast`);
-      assert(by('Weekly fraternity meeting').repeat.makeUp && by('Intense exercise 3 times a week').repeat.times === 3, `${code}: meeting can move, exercise 3 a week`);
+      eq(
+        [
+          by('Fast and abstain on Wednesday and Friday').repeat.days,
+          !!by('Fast and abstain on Wednesday and Friday').repeat.makeUp,
+        ],
+        [[2, 4], false],
+        `${code}: strict Wednesday and Friday fast`,
+      );
+      assert(
+        by('Weekly fraternity meeting').repeat.makeUp && by('Intense exercise 3 times a week').repeat.times === 3,
+        `${code}: meeting can move, exercise 3 a week`,
+      );
       assert(goalRoutines(g).length === 6, `${code}: the goal counts every routine`);
     }
     changeLanguage('en');
@@ -232,52 +389,79 @@ window.moreTests = async ({ step, assert }) => {
     return 'Faith area, 6 routines over days 7–96, strict fast, movable meeting';
   });
 
-  await step('templates: picker from the empty plan and settings, filtered by area, opens a template as a new plan', () => {
-    fresh('Template picker');
-    setView('goals');
-    const offer = viewEl.querySelector('.empty [data-templates]');
-    assert(offer, 'an empty plan offers templates');
-    offer.click();
-    assert(tplDialog.open, 'picker open');
-    const cards = () => [...tplDialog.querySelectorAll('.tpl-card')];
-    eq(cards().length, TEMPLATES.length, 'all templates listed');
-    eq(tplDialog.querySelectorAll('[data-tpl-area]').length, TPL_AREAS.length + 1, 'a chip for each area and all');
-    tplDialog.querySelector('[data-tpl-area="money"]').click();
-    eq(cards().length, TEMPLATES.filter(x => x.area === 'money').length, 'only money templates');
-    eq(cards().map(c => c.querySelector('.tpl-level').classList.contains('starter')), [true, true, true, false], 'starter ones first');
-    assert(tplDialog.querySelector('[data-tpl-area="money"]').getAttribute('aria-pressed') === 'true', 'chip pressed');
-    tplDialog.querySelector('[data-tpl-area=""]').click();
-    eq(cards().length, TEMPLATES.length, 'all again');
-    const run = tplDialog.querySelector('[data-template="run-5k"]').closest('.tpl-card');
-    eq([...run.querySelectorAll('.tpl-meta span')].map(x => x.textContent), ['10 weeks', '1 goal', '2 states', '6 activities', '2 routines'], 'summary line');
-    const inside = run.querySelector('.tpl-inside').textContent;
-    assert(inside.includes('Buy running shoes') && inside.includes('Run 3 times a week') && !inside.includes('Weeks 1–3'), 'inside: main steps and routines, not sub-steps');
-    const before = plans.list.length, from = plans.current;
-    run.querySelector('[data-template]').click();
-    assert(!tplDialog.open && plans.list.length === before + 1 && plans.current !== from, 'a new plan, the empty one kept');
-    eq(currentPlan().name, 'Run 5 km', 'named after the template');
-    eq(db.activities.length, 8, 'activities');
-    assert($('#toast').textContent.includes('Run 5 km'), 'toast');
-    const made = plans.current;
-    useTemplate(TEMPLATES.find(x => x.id === 'run-5k'));
-    eq(currentPlan().name, 'Run 5 km 2', 'a second copy is numbered');
-    deletePlan(plans.current);
-    // From settings; Esc and the close button both close it.
-    $('#settingsBtn').click();
-    $('#templatesBtn').click();
-    assert(!settings.open && tplDialog.open, 'settings hand over to the picker');
-    tplDialog.querySelector('[data-templates-close]').click();
-    assert(!tplDialog.open, 'closed');
-    changeLanguage('sl');
-    openTemplates();
-    const sl = tplDialog.textContent;
-    assert(sl.includes('Za začetek') && sl.includes('Ambiciozno') && sl.includes('10 tednov1 cilj2 stanji6 aktivnosti2 rutini') && sl.includes('Preteči 5 km'), 'Slovene wording');
-    assert(sl.includes('2 leti') && sl.includes('3 leta'), 'years in Slovene');
-    tplDialog.close();
-    changeLanguage('en');
-    deletePlan(made);
-    return 'ok';
-  });
+  await step(
+    'templates: picker from the empty plan and settings, filtered by area, opens a template as a new plan',
+    () => {
+      fresh('Template picker');
+      setView('goals');
+      const offer = viewEl.querySelector('.empty [data-templates]');
+      assert(offer, 'an empty plan offers templates');
+      offer.click();
+      assert(tplDialog.open, 'picker open');
+      const cards = () => [...tplDialog.querySelectorAll('.tpl-card')];
+      eq(cards().length, TEMPLATES.length, 'all templates listed');
+      eq(tplDialog.querySelectorAll('[data-tpl-area]').length, TPL_AREAS.length + 1, 'a chip for each area and all');
+      tplDialog.querySelector('[data-tpl-area="money"]').click();
+      eq(cards().length, TEMPLATES.filter(x => x.area === 'money').length, 'only money templates');
+      eq(
+        cards().map(c => c.querySelector('.tpl-level').classList.contains('starter')),
+        [true, true, true, false],
+        'starter ones first',
+      );
+      assert(
+        tplDialog.querySelector('[data-tpl-area="money"]').getAttribute('aria-pressed') === 'true',
+        'chip pressed',
+      );
+      tplDialog.querySelector('[data-tpl-area=""]').click();
+      eq(cards().length, TEMPLATES.length, 'all again');
+      const run = tplDialog.querySelector('[data-template="run-5k"]').closest('.tpl-card');
+      eq(
+        [...run.querySelectorAll('.tpl-meta span')].map(x => x.textContent),
+        ['10 weeks', '1 goal', '2 states', '6 activities', '2 routines'],
+        'summary line',
+      );
+      const inside = run.querySelector('.tpl-inside').textContent;
+      assert(
+        inside.includes('Buy running shoes') && inside.includes('Run 3 times a week') && !inside.includes('Weeks 1–3'),
+        'inside: main steps and routines, not sub-steps',
+      );
+      const before = plans.list.length,
+        from = plans.current;
+      run.querySelector('[data-template]').click();
+      assert(
+        !tplDialog.open && plans.list.length === before + 1 && plans.current !== from,
+        'a new plan, the empty one kept',
+      );
+      eq(currentPlan().name, 'Run 5 km', 'named after the template');
+      eq(db.activities.length, 8, 'activities');
+      assert($('#toast').textContent.includes('Run 5 km'), 'toast');
+      const made = plans.current;
+      useTemplate(TEMPLATES.find(x => x.id === 'run-5k'));
+      eq(currentPlan().name, 'Run 5 km 2', 'a second copy is numbered');
+      deletePlan(plans.current);
+      // From settings; Esc and the close button both close it.
+      $('#settingsBtn').click();
+      $('#templatesBtn').click();
+      assert(!settings.open && tplDialog.open, 'settings hand over to the picker');
+      tplDialog.querySelector('[data-templates-close]').click();
+      assert(!tplDialog.open, 'closed');
+      changeLanguage('sl');
+      openTemplates();
+      const sl = tplDialog.textContent;
+      assert(
+        sl.includes('Za začetek') &&
+          sl.includes('Ambiciozno') &&
+          sl.includes('10 tednov1 cilj2 stanji6 aktivnosti2 rutini') &&
+          sl.includes('Preteči 5 km'),
+        'Slovene wording',
+      );
+      assert(sl.includes('2 leti') && sl.includes('3 leta'), 'years in Slovene');
+      tplDialog.close();
+      changeLanguage('en');
+      deletePlan(made);
+      return 'ok';
+    },
+  );
 
   await step('link lists: chosen items on top, search opens the list, goals grouped by category', () => {
     fresh('Pickers');
@@ -289,7 +473,8 @@ window.moreTests = async ({ step, assert }) => {
     rel(a, g1, 'contributes');
     openForm('activity', a.id);
     const pk = modal.querySelector('.picker[data-picker="goal"]');
-    const list = pk.querySelector('.pick-list'), search = pk.querySelector('.picker-search');
+    const list = pk.querySelector('.pick-list'),
+      search = pk.querySelector('.picker-search');
     assert(!modal.querySelector('.picker input[type="checkbox"]'), 'no checkboxes in the link pickers');
     assert(list.hidden && search.getAttribute('aria-expanded') === 'false', 'list closed at first');
     const chosen = () => [...pk.querySelectorAll('[data-unpick]')].map(b => b.dataset.unpick);
@@ -297,7 +482,11 @@ window.moreTests = async ({ step, assert }) => {
     search.focus();
     assert(!list.hidden && search.getAttribute('aria-expanded') === 'true', 'focusing the search opens the list');
     const shown = () => [...pk.querySelectorAll('.pick-opt:not([hidden])')].map(o => o.dataset.pick);
-    eq([...pk.querySelectorAll('.pick-group:not([hidden]) .pick-head')].map(h => h.textContent), ['Finance', 'Health', 'No category'], 'category groups');
+    eq(
+      [...pk.querySelectorAll('.pick-group:not([hidden]) .pick-head')].map(h => h.textContent),
+      ['Finance', 'Health', 'No category'],
+      'category groups',
+    );
     assert(!shown().includes(g1.id) && shown().length === 3, 'chosen goal not offered again');
     pk.querySelector(`.pick-opt[data-pick="${g2.id}"]`).click();
     eq(chosen(), [g1.id, g2.id], 'clicking adds it');
@@ -310,12 +499,17 @@ window.moreTests = async ({ step, assert }) => {
     assert(modal.open && chosen().includes(g3.id), 'Enter adds the first match, form stays open');
     search.value = 'nothing like this';
     search.dispatchEvent(new Event('input', { bubbles: true }));
-    assert(!pk.querySelector('.pick-empty').hidden && pk.querySelector('.pick-empty').textContent === 'No matches', 'no matches message');
+    assert(
+      !pk.querySelector('.pick-empty').hidden && pk.querySelector('.pick-empty').textContent === 'No matches',
+      'no matches message',
+    );
     search.value = '';
     search.dispatchEvent(new Event('input', { bubbles: true }));
     search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
     assert(document.activeElement.matches('.pick-opt'), 'arrow down moves into the list');
-    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    document.activeElement.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    );
     assert(list.hidden && modal.open && document.activeElement === search, 'Escape closes the list, not the form');
     modal.querySelector('#f-title').focus();
     assert(list.hidden, 'leaving the search closes the list');
@@ -324,10 +518,20 @@ window.moreTests = async ({ step, assert }) => {
     search.focus();
     assert(shown().includes(g1.id), 'removed goal offered again');
     submitForm();
-    eq(relsFrom(a.id, 'contributes').map(r => r.to).sort(), [g2.id, g3.id].sort(), 'saved links');
+    eq(
+      relsFrom(a.id, 'contributes')
+        .map(r => r.to)
+        .sort(),
+      [g2.id, g3.id].sort(),
+      'saved links',
+    );
     openForm('goal', g2.id);
     const acts = modal.querySelector('.picker[data-picker="activity"]');
-    assert(!acts.querySelector('.pick-head') && acts.querySelector('[data-unpick]').closest('.tag').textContent.includes('Train'), 'activities flat, contributing one chosen');
+    assert(
+      !acts.querySelector('.pick-head') &&
+        acts.querySelector('[data-unpick]').closest('.tag').textContent.includes('Train'),
+      'activities flat, contributing one chosen',
+    );
     modal.close();
     changeLanguage('sl');
     openForm('activity', null, { repeat: 'once' });
@@ -343,7 +547,13 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     document.querySelector('[data-new="activity"]').click();
     const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
-    assert(modal.open && btns().map(b => b.dataset.actKind).join() === 'once,list,routine,listRoutine', 'four choices shown');
+    assert(
+      modal.open &&
+        btns()
+          .map(b => b.dataset.actKind)
+          .join() === 'once,list,routine,listRoutine',
+      'four choices shown',
+    );
     assert($('#saveBtn').hidden && !$('#f-title'), 'no form and no Save yet');
     eq($('#modalTitle').textContent, t('new.activity'), 'titled New activity');
     await new Promise(r => setTimeout(r, 60));
@@ -353,8 +563,13 @@ window.moreTests = async ({ step, assert }) => {
     btns()[0].click();
     assert(modal.open && !$('#saveBtn').hidden && $('#f-title'), 'one-time: the form opens');
     eq($('#f-repeat').value, 'none', 'one-time: does not repeat');
-    assert(!modal.querySelector('[data-field="status"]').hidden && !modal.querySelector('[data-field="dueDate"]').hidden, 'one-time: status and due date shown');
-    $('#f-title').value = 'Sign up'; $('#f-dueDate').value = dateInput(addDays(today(), 7)); submitForm();
+    assert(
+      !modal.querySelector('[data-field="status"]').hidden && !modal.querySelector('[data-field="dueDate"]').hidden,
+      'one-time: status and due date shown',
+    );
+    $('#f-title').value = 'Sign up';
+    $('#f-dueDate').value = dateInput(addDays(today(), 7));
+    submitForm();
     const once = db.activities.find(a => a.title === 'Sign up');
     assert(once && !isRoutine(once), 'saved as a one-time activity');
     // From a goal's menu: the goal stays linked through the choice.
@@ -362,12 +577,26 @@ window.moreTests = async ({ step, assert }) => {
     assert(btns().length === 4, 'menu add asks too');
     btns()[2].click();
     eq($('#f-repeat').value, 'week', 'routine: a number of times a week');
-    assert(!$('#repeatEnds').hidden && modal.querySelector('[data-field="status"]').hidden && modal.querySelector('[data-field="dueDate"]').hidden, 'routine: ends shown, status and due date hidden');
-    assert(modal.querySelector('[data-unpick]')?.closest('.tag')?.textContent.includes('Fit'), 'the goal is still picked');
-    $('#f-title').value = 'Run'; $('#f-endDate').value = dateInput(addDays(today(), 30)); submitForm();
+    assert(
+      !$('#repeatEnds').hidden &&
+        modal.querySelector('[data-field="status"]').hidden &&
+        modal.querySelector('[data-field="dueDate"]').hidden,
+      'routine: ends shown, status and due date hidden',
+    );
+    assert(
+      modal.querySelector('[data-unpick]')?.closest('.tag')?.textContent.includes('Fit'),
+      'the goal is still picked',
+    );
+    $('#f-title').value = 'Run';
+    $('#f-endDate').value = dateInput(addDays(today(), 30));
+    submitForm();
     const run = db.activities.find(a => a.title === 'Run');
     assert(run && isRoutine(run) && run.repeat.unit === 'week' && run.repeat.times === 3, 'saved as a routine');
-    eq(relsFrom(run.id, 'contributes').map(r => r.to), [g.id], 'linked to the goal');
+    eq(
+      relsFrom(run.id, 'contributes').map(r => r.to),
+      [g.id],
+      'linked to the goal',
+    );
     // Editing skips the choice; so does anything else new.
     openForm('activity', run.id);
     assert(!btns().length && $('#f-title').value === 'Run' && !$('#saveBtn').hidden, 'editing opens the form');
@@ -376,9 +605,13 @@ window.moreTests = async ({ step, assert }) => {
     assert(!btns().length && !$('#saveBtn').hidden, 'a goal opens its form');
     modal.close();
     // Cancel from the choice leaves nothing behind; the next form shows Save again.
-    openForm('activity'); modal.close();
+    openForm('activity');
+    modal.close();
     openForm('state');
-    assert(!$('#saveBtn').hidden && formCtx.kind === 'state' && !formCtx.choose, 'Save back after cancelling the choice');
+    assert(
+      !$('#saveBtn').hidden && formCtx.kind === 'state' && !formCtx.choose,
+      'Save back after cancelling the choice',
+    );
     modal.close();
     eq(db.activities.length, 2, 'nothing saved from the cancelled choice');
     changeLanguage('sl');
@@ -395,21 +628,46 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     openForm('activity', null, { contributes: [g.id] });
     const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
-    eq(btns().map(b => b.dataset.actKind).join(), 'once,list,routine,listRoutine', 'four kinds offered');
+    eq(
+      btns()
+        .map(b => b.dataset.actKind)
+        .join(),
+      'once,list,routine,listRoutine',
+      'four kinds offered',
+    );
     btns()[1].click();
-    assert($('#listRows') && $('#f-repeat').value === 'none' && !$('#f-status'), 'list: items, no status, does not repeat');
-    assert(!$('#listRows').classList.contains('no-ticks') && !modal.querySelector('[data-field="dueDate"]').hidden, 'list: ticks and due date shown');
+    assert(
+      $('#listRows') && $('#f-repeat').value === 'none' && !$('#f-status'),
+      'list: items, no status, does not repeat',
+    );
+    assert(
+      !$('#listRows').classList.contains('no-ticks') && !modal.querySelector('[data-field="dueDate"]').hidden,
+      'list: ticks and due date shown',
+    );
     eq($('#listRows').children.length, 1, 'one empty item to start');
-    $('#f-title').value = 'Pack'; $('#f-startDate').value = dateInput(addDays(today(), 1)); $('#f-dueDate').value = dateInput(addDays(today(), 5));
+    $('#f-title').value = 'Pack';
+    $('#f-startDate').value = dateInput(addDays(today(), 1));
+    $('#f-dueDate').value = dateInput(addDays(today(), 5));
     submitForm();
-    assert(modal.open && modal.querySelector('[data-field="list"]').classList.contains('invalid'), 'an empty list is not saved');
+    assert(
+      modal.open && modal.querySelector('[data-field="list"]').classList.contains('invalid'),
+      'an empty list is not saved',
+    );
     eq(db.activities.length, 0, 'nothing saved yet');
     const input = i => $('#listRows').children[i].querySelector('.li-input');
     input(0).value = 'Shoes';
     input(0).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-    assert(modal.open && $('#listRows').children.length === 2 && document.activeElement === input(1), 'Enter adds the next item and focuses it');
-    assert([...$('#listRows').querySelectorAll('.li-input')].every(i => i.getAttribute('enterkeyhint') === 'enter'), 'a phone keyboard shows Enter, not Next, on items');
-    input(1).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }));
+    assert(
+      modal.open && $('#listRows').children.length === 2 && document.activeElement === input(1),
+      'Enter adds the next item and focuses it',
+    );
+    assert(
+      [...$('#listRows').querySelectorAll('.li-input')].every(i => i.getAttribute('enterkeyhint') === 'enter'),
+      'a phone keyboard shows Enter, not Next, on items',
+    );
+    input(1).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }),
+    );
     eq($('#listRows').children.length, 2, 'Enter that finishes typing in an input method adds nothing');
     input(1).value = 'Gels';
     modal.querySelector('[data-li-add]').click();
@@ -417,20 +675,40 @@ window.moreTests = async ({ step, assert }) => {
     modal.querySelector('[data-li-add]').click();
     eq($('#listRows').children.length, 4, 'Add item adds a row');
     $('#listRows').children[1].querySelector('[data-li-del]').click();
-    eq([...$('#listRows').querySelectorAll('.li-input')].map(i => i.value), ['Shoes', 'Watch', ''], 'remove drops the row');
+    eq(
+      [...$('#listRows').querySelectorAll('.li-input')].map(i => i.value),
+      ['Shoes', 'Watch', ''],
+      'remove drops the row',
+    );
     submitForm();
     const a = db.activities.find(x => x.title === 'Pack');
     assert(a && isList(a) && !isRoutine(a), 'saved as a list');
-    eq(a.list.map(i => i.text), ['Shoes', 'Watch'], 'empty rows left out');
-    assert(a.list.every(i => safeId(i.id) && !i.done), 'items have ids, none done');
+    eq(
+      a.list.map(i => i.text),
+      ['Shoes', 'Watch'],
+      'empty rows left out',
+    );
+    assert(
+      a.list.every(i => safeId(i.id) && !i.done),
+      'items have ids, none done',
+    );
     eq(a.status, 'todo', 'starts to do (its start is tomorrow)');
-    eq(relsFrom(a.id, 'contributes').map(r => r.to), [g.id], 'linked to the goal');
+    eq(
+      relsFrom(a.id, 'contributes').map(r => r.to),
+      [g.id],
+      'linked to the goal',
+    );
     // On the card: tick one, then the other.
     render();
     // Items by their place in the list (ticked ones are shown last).
     const tick = i => document.querySelector(`.card.activity [data-li-tick="${a.id}"][data-li="${a.list[i].id}"]`);
     assert(tick(0) && tick(0).getAttribute('aria-checked') === 'false', 'items on the card');
-    assert(document.querySelector(`.card.activity[data-open="${a.id}"]`).textContent.includes(t('list.done', { done: 0, total: 2 })), 'card shows 0/2 done');
+    assert(
+      document
+        .querySelector(`.card.activity[data-open="${a.id}"]`)
+        .textContent.includes(t('list.done', { done: 0, total: 2 })),
+      'card shows 0/2 done',
+    );
     tick(0).click();
     assert(!modal.open, 'ticking does not open the form');
     assert(a.list[0].done && a.status === 'doing', 'one ticked: in progress');
@@ -445,8 +723,16 @@ window.moreTests = async ({ step, assert }) => {
     const ids = a.list.map(i => i.id);
     openForm('activity', a.id);
     assert(!btns().length && $('#listRows').children.length === 2, 'editing opens the list');
-    eq([...$('#listRows').children].map(r => r.dataset.liRow), [ids[1], ids[0]], 'the form lists the ticked item last');
-    assert(!$('#listRows').children[0].querySelector('.li-check').checked && $('#listRows').children[1].querySelector('.li-check').checked, 'ticks shown in the form');
+    eq(
+      [...$('#listRows').children].map(r => r.dataset.liRow),
+      [ids[1], ids[0]],
+      'the form lists the ticked item last',
+    );
+    assert(
+      !$('#listRows').children[0].querySelector('.li-check').checked &&
+        $('#listRows').children[1].querySelector('.li-check').checked,
+      'ticks shown in the form',
+    );
     $('#listRows').children[0].querySelector('.li-check').checked = true;
     input(0).value = 'GPS watch';
     submitForm();
@@ -456,24 +742,43 @@ window.moreTests = async ({ step, assert }) => {
     // Blocked lists still finish, with the usual warning.
     const pre = mk('activity', { title: 'Register', status: 'todo' });
     rel(a, pre, 'depends');
-    a.list[0].done = false; a.status = 'doing'; save(); render();
+    a.list[0].done = false;
+    a.status = 'doing';
+    save();
+    render();
     tick(0).click();
     eq($('#toast').textContent, t('acts.notDone', { name: 'Register' }), 'warns about what it waits for');
     // On the overview row: a count.
     assert(activityRow(a).includes('>2/2<'), 'row shows the count');
     // Import: bad items dropped, bad lists removed.
-    const d = normalize({ activities: [{ id: 'x1', title: 'L', list: [{ id: 'ok', text: 'a' }, { id: '<b>', text: 'x' }, { id: 'n', text: 3 }, null] }, { id: 'x2', title: 'M', list: 'nope' }] });
-    eq(d.activities[0].list.map(i => i.id), ['ok'], 'unsafe items dropped');
+    const d = normalize({
+      activities: [
+        { id: 'x1', title: 'L', list: [{ id: 'ok', text: 'a' }, { id: '<b>', text: 'x' }, { id: 'n', text: 3 }, null] },
+        { id: 'x2', title: 'M', list: 'nope' },
+      ],
+    });
+    eq(
+      d.activities[0].list.map(i => i.id),
+      ['ok'],
+      'unsafe items dropped',
+    );
     assert(!('list' in d.activities[1]), 'a list that is not an array is dropped');
     // Resetting progress unticks every item.
     const r = resetProgress(db);
-    assert(r.activities.find(x => x.id === a.id).list.every(i => !i.done), 'reset unticks items');
+    assert(
+      r.activities.find(x => x.id === a.id).list.every(i => !i.done),
+      'reset unticks items',
+    );
     // Wording in Slovenian.
     changeLanguage('sl');
     openForm('activity');
     eq(btns()[1].querySelector('strong').textContent, I18N.sl.strings['f.actKind.list'], 'Slovenian kind');
     btns()[1].click();
-    eq(modal.querySelector('[data-li-add]').textContent.trim(), '+ ' + I18N.sl.strings['list.add'], 'Slovenian add button');
+    eq(
+      modal.querySelector('[data-li-add]').textContent.trim(),
+      '+ ' + I18N.sl.strings['list.add'],
+      'Slovenian add button',
+    );
     modal.close();
     changeLanguage('en');
   });
@@ -482,73 +787,152 @@ window.moreTests = async ({ step, assert }) => {
     const it = (id, text, done, at) => ({ id, text, done, at });
     const base = { id: 'L', title: 'Pack', status: 'doing', startDate: today(), dueDate: addDays(today(), 3) };
     // Phone (older save) ticked shoes and added a towel; laptop (newer save) ticked gels and removed the hat.
-    const phone = { ...base, updatedAt: '2099-01-02', list: [it('s', 'Shoes', true, '2099-01-02'), it('g', 'Gels', false, '2099-01-01'), it('h', 'Hat', false, '2099-01-01'), it('t', 'Towel', false, '2099-01-02')] };
-    const laptop = { ...base, updatedAt: '2099-01-03', list: [it('g', 'Energy gels', true, '2099-01-03'), it('s', 'Shoes', false, '2099-01-01')], droppedItems: { h: 1 } };
+    const phone = {
+      ...base,
+      updatedAt: '2099-01-02',
+      list: [
+        it('s', 'Shoes', true, '2099-01-02'),
+        it('g', 'Gels', false, '2099-01-01'),
+        it('h', 'Hat', false, '2099-01-01'),
+        it('t', 'Towel', false, '2099-01-02'),
+      ],
+    };
+    const laptop = {
+      ...base,
+      updatedAt: '2099-01-03',
+      list: [it('g', 'Energy gels', true, '2099-01-03'), it('s', 'Shoes', false, '2099-01-01')],
+      droppedItems: { h: 1 },
+    };
     const m = mergeActivity(phone, laptop);
-    eq(m.list.map(i => `${i.id}:${i.text}:${i.done ? 'x' : '-'}`), ['g:Energy gels:x', 's:Shoes:x', 't:Towel:-'], 'both ticks kept, newer order, added item kept, removed item gone');
+    eq(
+      m.list.map(i => `${i.id}:${i.text}:${i.done ? 'x' : '-'}`),
+      ['g:Energy gels:x', 's:Shoes:x', 't:Towel:-'],
+      'both ticks kept, newer order, added item kept, removed item gone',
+    );
     eq(m.droppedItems, { h: 1 }, 'removal remembered');
     eq(m.status, 'doing', 'not all ticked: still in progress');
     eq(mergeActivity(laptop, phone), m, 'symmetric');
-    assert(phone.list.length === 4 && laptop.list.length === 2 && !phone.droppedItems, 'the copies are left as they were');
+    assert(
+      phone.list.length === 4 && laptop.list.length === 2 && !phone.droppedItems,
+      'the copies are left as they were',
+    );
     // A removal on one side wins over the other side still having (and even ticking) the item.
-    const ticked = { ...phone, updatedAt: '2099-01-05', list: phone.list.map(i => (i.id === 'h' ? it('h', 'Hat', true, '2099-01-05') : i)) };
+    const ticked = {
+      ...phone,
+      updatedAt: '2099-01-05',
+      list: phone.list.map(i => (i.id === 'h' ? it('h', 'Hat', true, '2099-01-05') : i)),
+    };
     assert(!mergeActivity(ticked, laptop).list.some(i => i.id === 'h'), 'removed stays removed');
     // Ticks that finish the list on merge mark it done; a new item on the other side reopens a done list.
-    const a1 = { ...base, status: 'doing', updatedAt: '2099-01-02', list: [it('a', 'A', true, '2099-01-02'), it('b', 'B', false, '2099-01-01')] };
-    const a2 = { ...base, status: 'doing', updatedAt: '2099-01-03', list: [it('a', 'A', false, '2099-01-01'), it('b', 'B', true, '2099-01-03')] };
+    const a1 = {
+      ...base,
+      status: 'doing',
+      updatedAt: '2099-01-02',
+      list: [it('a', 'A', true, '2099-01-02'), it('b', 'B', false, '2099-01-01')],
+    };
+    const a2 = {
+      ...base,
+      status: 'doing',
+      updatedAt: '2099-01-03',
+      list: [it('a', 'A', false, '2099-01-01'), it('b', 'B', true, '2099-01-03')],
+    };
     eq(mergeActivity(a1, a2).status, 'done', 'merged ticks complete it');
     const done = { ...base, status: 'done', updatedAt: '2099-01-04', list: [it('a', 'A', true, '2099-01-04')] };
-    const more = { ...base, status: 'doing', updatedAt: '2099-01-02', list: [it('a', 'A', true, '2099-01-02'), it('n', 'New', false, '2099-01-02')] };
+    const more = {
+      ...base,
+      status: 'doing',
+      updatedAt: '2099-01-02',
+      list: [it('a', 'A', true, '2099-01-02'), it('n', 'New', false, '2099-01-02')],
+    };
     eq(mergeActivity(done, more).status, 'doing', 'an item added elsewhere reopens it');
     // Items from before item times existed count as oldest; plain activities and routines merge as before.
     const legacy = { ...base, updatedAt: '2099-01-09', list: [{ id: 'a', text: 'A', done: false }] };
     eq(mergeActivity(legacy, a1).list.find(i => i.id === 'a').done, true, 'an item with a time beats one without');
-    const plain = { ...base, updatedAt: '2099-01-02' }, plain2 = { ...base, title: 'Later', updatedAt: '2099-01-03' };
+    const plain = { ...base, updatedAt: '2099-01-02' },
+      plain2 = { ...base, title: 'Later', updatedAt: '2099-01-03' };
     eq(mergeActivity(plain, plain2), plain2, 'plain activity: newer copy');
-    assert(!('list' in mergeActivity({ ...plain, updatedAt: '2099-01-05' }, phone)), 'turned into a plain activity on the newer side: no list');
+    assert(
+      !('list' in mergeActivity({ ...plain, updatedAt: '2099-01-05' }, phone)),
+      'turned into a plain activity on the newer side: no list',
+    );
     // Through whole plans.
-    eq(mergePlans({ ...emptyDb(), activities: [phone] }, { ...emptyDb(), activities: [laptop] }).activities[0].list.length, 3, 'mergePlans');
+    eq(
+      mergePlans({ ...emptyDb(), activities: [phone] }, { ...emptyDb(), activities: [laptop] }).activities[0].list
+        .length,
+      3,
+      'mergePlans',
+    );
   });
 
   await step('lists: ticks and edits stamp only the items they change', async () => {
     fresh('List times');
-    const a = mk('activity', { title: 'Pack', status: 'todo', startDate: addDays(today(), 1), dueDate: addDays(today(), 4), list: [{ id: 'p', text: 'Pins', done: false, at: '2000-01-01' }, { id: 'q', text: 'Cap', done: false, at: '2000-01-01' }, { id: 'r', text: 'Bib', done: false, at: '2000-01-01' }] });
-    save(); setView('activities');
+    const a = mk('activity', {
+      title: 'Pack',
+      status: 'todo',
+      startDate: addDays(today(), 1),
+      dueDate: addDays(today(), 4),
+      list: [
+        { id: 'p', text: 'Pins', done: false, at: '2000-01-01' },
+        { id: 'q', text: 'Cap', done: false, at: '2000-01-01' },
+        { id: 'r', text: 'Bib', done: false, at: '2000-01-01' },
+      ],
+    });
+    save();
+    setView('activities');
     document.querySelector(`[data-li-tick="${a.id}"][data-li="p"]`).click();
     assert(a.list[0].at > '2000-01-01' && a.list[1].at === '2000-01-01', 'a tick stamps that item only');
     openForm('activity', a.id);
-    const rows = () => $('#listRows').children, row = id => $(`#listRows [data-li-row="${id}"]`);
+    const rows = () => $('#listRows').children,
+      row = id => $(`#listRows [data-li-row="${id}"]`);
     row('q').querySelector('.li-input').value = 'Cap and gloves';
     row('r').querySelector('[data-li-del]').click();
     modal.querySelector('[data-li-add]').click();
     eq(rows()[1].dataset.liRow, '', 'a new item goes above the ticked ones');
     rows()[1].querySelector('.li-input').value = 'Socks';
     submitForm();
-    eq(a.list.map(i => i.text), ['Cap and gloves', 'Socks', 'Pins'], 'saved in the order shown, ticked last');
+    eq(
+      a.list.map(i => i.text),
+      ['Cap and gloves', 'Socks', 'Pins'],
+      'saved in the order shown, ticked last',
+    );
     const by = text => a.list.find(i => i.text === text);
-    assert(by('Cap and gloves').at > '2000-01-01' && by('Socks').at && safeId(by('Socks').id), 'renamed and new items stamped');
+    assert(
+      by('Cap and gloves').at > '2000-01-01' && by('Socks').at && safeId(by('Socks').id),
+      'renamed and new items stamped',
+    );
     eq(a.droppedItems, { r: 1 }, 'removed item remembered');
     const pinsAt = by('Pins').at;
-    openForm('activity', a.id); submitForm();
+    openForm('activity', a.id);
+    submitForm();
     eq(by('Pins').at, pinsAt, 'saving unchanged keeps the times');
     const r = resetProgress(db).activities.find(x => x.id === a.id);
     assert(r.list.every(i => !i.done && !i.at) && !r.droppedItems, 'reset clears ticks, times and removals');
-    assert(!('droppedItems' in normalize({ activities: [{ id: 'z', title: 'Z', droppedItems: { x: 1 } }] }).activities[0]), 'removals without a list dropped on import');
+    assert(
+      !('droppedItems' in normalize({ activities: [{ id: 'z', title: 'Z', droppedItems: { x: 1 } }] }).activities[0]),
+      'removals without a list dropped on import',
+    );
   });
 
   await step('activity kind: every way in asks first, and the answer carries what was preset', () => {
     fresh('Kind paths');
-    const g = mk('goal', { title: 'Fit', category: 'Health' }), parent = mk('activity', { title: 'Big job', startDate: today(), dueDate: addDays(today(), 9) });
+    const g = mk('goal', { title: 'Fit', category: 'Health' }),
+      parent = mk('activity', { title: 'Big job', startDate: today(), dueDate: addDays(today(), 9) });
     const s = mk('state', { title: 'Weight' });
     save();
     const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
     // Each context-menu "add activity" asks, then keeps its link.
-    const cases = [['subactivity', parent, () => $('#f-parent').value === parent.id], ['contributes', g, () => !!modal.querySelector('[data-picker="goal"] [data-picked-id]')], ['improves', s, () => !!modal.querySelector('[data-picker="state"] [data-picked-id]')]];
+    const cases = [
+      ['subactivity', parent, () => $('#f-parent').value === parent.id],
+      ['contributes', g, () => !!modal.querySelector('[data-picker="goal"] [data-picked-id]')],
+      ['improves', s, () => !!modal.querySelector('[data-picker="state"] [data-picked-id]')],
+    ];
     for (const [type, item, picked] of cases) {
       for (const kind of ['once', 'list', 'routine', 'listRoutine']) {
         runCtxAction(`add:activity:${type}`, item.id);
         assert(modal.open && btns().length === 4 && formCtx.choose, `${type}: asks first`);
-        btns().find(b => b.dataset.actKind === kind).click();
+        btns()
+          .find(b => b.dataset.actKind === kind)
+          .click();
         assert(!formCtx.choose && !$('#saveBtn').hidden, `${type}/${kind}: the form, with Save`);
         assert(picked(), `${type}/${kind}: link kept`);
         assert(!!$('#listRows') === kind.startsWith('list') && !!$('#f-repeat'), `${type}/${kind}: the right fields`);
@@ -559,11 +943,16 @@ window.moreTests = async ({ step, assert }) => {
     // A list made from a parent's menu is saved under it.
     runCtxAction('add:activity:subactivity', parent.id);
     btns()[1].click();
-    $('#f-title').value = 'Pack'; $('#f-dueDate').value = dateInput(addDays(today(), 3));
+    $('#f-title').value = 'Pack';
+    $('#f-dueDate').value = dateInput(addDays(today(), 3));
     $('#listRows .li-input').value = 'Shoes';
     submitForm();
     const pack = db.activities.find(a => a.title === 'Pack');
-    eq(relsFrom(pack.id, 'subactivity').map(r => r.to), [parent.id], 'list saved as a sub-activity');
+    eq(
+      relsFrom(pack.id, 'subactivity').map(r => r.to),
+      [parent.id],
+      'list saved as a sub-activity',
+    );
     // The empty board's button and the view's Add button ask too.
     setView('activities');
     $('#addBtn').click();
@@ -579,8 +968,17 @@ window.moreTests = async ({ step, assert }) => {
       changeLanguage(lang);
       openForm('activity');
       eq($('#modalTitle').textContent, I18N[lang].strings['new.activity'], `${lang}: title`);
-      eq(modal.querySelector('.act-choice').getAttribute('aria-label'), I18N[lang].strings['f.actKind'], `${lang}: group label`);
-      assert(btns().every(b => b.type === 'button' && b.querySelector('strong').textContent && b.querySelector('span').textContent), `${lang}: named and described`);
+      eq(
+        modal.querySelector('.act-choice').getAttribute('aria-label'),
+        I18N[lang].strings['f.actKind'],
+        `${lang}: group label`,
+      );
+      assert(
+        btns().every(
+          b => b.type === 'button' && b.querySelector('strong').textContent && b.querySelector('span').textContent,
+        ),
+        `${lang}: named and described`,
+      );
       modal.close();
     }
     changeLanguage('en');
@@ -590,12 +988,26 @@ window.moreTests = async ({ step, assert }) => {
     for (const lang of ['en', 'sl']) {
       changeLanguage(lang);
       const frame = document.createElement('iframe');
-      Object.assign(frame.style, { width: '390px', height: '700px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+      Object.assign(frame.style, {
+        width: '390px',
+        height: '700px',
+        position: 'fixed',
+        left: '-9999px',
+        top: '0',
+        border: '0',
+      });
       frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px"><div class="modal-body">${activityChoice()}</div></body>`;
-      await new Promise(res => { frame.onload = res; document.body.append(frame); });
-      const doc = frame.contentDocument, rs = [...doc.querySelectorAll('.act-choice-btn')].map(b => b.getBoundingClientRect());
+      await new Promise(res => {
+        frame.onload = res;
+        document.body.append(frame);
+      });
+      const doc = frame.contentDocument,
+        rs = [...doc.querySelectorAll('.act-choice-btn')].map(b => b.getBoundingClientRect());
       assert(rs.length === 4 && rs.every(r => r.left >= 15 && r.right <= 375), `${lang}: inside the gutters`);
-      assert(rs.every((r, i) => !i || rs[i - 1].bottom <= r.top), `${lang}: one under another`);
+      assert(
+        rs.every((r, i) => !i || rs[i - 1].bottom <= r.top),
+        `${lang}: one under another`,
+      );
       assert(rs.at(-1).bottom <= 700, `${lang}: all four fit on the screen`);
       assert(doc.documentElement.scrollWidth <= 390, `${lang}: no sideways scroll`);
       frame.remove();
@@ -610,33 +1022,63 @@ window.moreTests = async ({ step, assert }) => {
     setView('activities');
     openForm('activity');
     const btns = () => [...modal.querySelectorAll('[data-act-kind]')];
-    btns().find(b => b.dataset.actKind === 'listRoutine').click();
+    btns()
+      .find(b => b.dataset.actKind === 'listRoutine')
+      .click();
     assert($('#listRows') && $('#f-repeat').value === 'week' && !$('#f-status'), 'items and a repeat, no status');
-    assert($('#listRows').classList.contains('no-ticks') && getComputedStyle($('#listRows .li-check')).display === 'none', 'no ticks in the form');
-    assert(modal.querySelector('[data-field="dueDate"]').hidden && !$('#repeatEnds').hidden, 'ends instead of a due date');
+    assert(
+      $('#listRows').classList.contains('no-ticks') && getComputedStyle($('#listRows .li-check')).display === 'none',
+      'no ticks in the form',
+    );
+    assert(
+      modal.querySelector('[data-field="dueDate"]').hidden && !$('#repeatEnds').hidden,
+      'ends instead of a due date',
+    );
     eq($('#f-title').placeholder, t('f.listPh'), 'list placeholder');
-    $('#f-title').value = 'Morning'; $('#f-endDate').value = dateInput(addDays(now, 30));
+    $('#f-title').value = 'Morning';
+    $('#f-endDate').value = dateInput(addDays(now, 30));
     submitForm();
-    assert(modal.open && modal.querySelector('[data-field="list"].invalid') && !db.activities.length, 'an empty list is refused');
+    assert(
+      modal.open && modal.querySelector('[data-field="list"].invalid') && !db.activities.length,
+      'an empty list is refused',
+    );
     $('#listRows .li-input').value = 'Stretch';
-    $('#listRows .li-input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    $('#listRows .li-input').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    );
     $('#listRows').children[1].querySelector('.li-input').value = 'Water';
     // A hidden tick left checked is not saved: a routine list's items are ticked per day.
     $('#listRows .li-check').checked = true;
     submitForm();
     const a = db.activities.find(x => x.title === 'Morning');
     assert(a && isListRoutine(a) && !isList(a) && isRoutine(a), 'saved as a routine list');
-    eq(a.list.map(i => [i.text, i.done]), [['Stretch', false], ['Water', false]], 'items saved, none done');
+    eq(
+      a.list.map(i => [i.text, i.done]),
+      [
+        ['Stretch', false],
+        ['Water', false],
+      ],
+      'items saved, none done',
+    );
     assert(a.repeat.times === 3 && a.status === 'todo' && !a.listDays, 'three times a week, nothing ticked');
     render();
     const card = () => $(`.card.routine[data-open="${a.id}"]`);
     const item = i => card().querySelector(`.rt-items [data-li-tick][data-li="${a.list[i].id}"]`);
     eq(card().querySelectorAll('.rt-items [data-li-tick]').length, 2, 'today’s items on the card');
-    eq(card().querySelector('.rt-items .label').textContent, t('list.today', { done: 0, total: 2 }), 'counted for today');
+    eq(
+      card().querySelector('.rt-items .label').textContent,
+      t('list.today', { done: 0, total: 2 }),
+      'counted for today',
+    );
     eq(item(0).dataset.date, now, 'items are today’s');
-    item(0).focus(); item(0).click();
+    item(0).focus();
+    item(0).click();
     assert(itemOn(a, now, a.list[0].id) && !checkedOn(a, now) && !modal.open, 'one item: ticked, the day not yet');
-    eq([...card().querySelectorAll('.li-pips i')].map(i => i.classList.contains('on')), [true, false], 'a pip per item, the ticked one filled');
+    eq(
+      [...card().querySelectorAll('.li-pips i')].map(i => i.classList.contains('on')),
+      [true, false],
+      'a pip per item, the ticked one filled',
+    );
     assert(card().querySelector('.li-tick.done').classList.contains('just'), 'the item just ticked pops');
     render();
     assert(!card().querySelector('.li-tick.just'), 'a later render does not pop it again');
@@ -645,9 +1087,15 @@ window.moreTests = async ({ step, assert }) => {
     item(1).click();
     assert(checkedOn(a, now), 'the last item ticks the day');
     eq($('#toast').textContent, t('list.dayDone', { name: 'Morning' }), 'says the day is done');
-    assert($(`[data-checkin="${a.id}"][data-date="${now}"]`).getAttribute('aria-pressed') === 'true', 'the strip shows the day ticked');
+    assert(
+      $(`[data-checkin="${a.id}"][data-date="${now}"]`).getAttribute('aria-pressed') === 'true',
+      'the strip shows the day ticked',
+    );
     item(0).click();
-    assert(!checkedOn(a, now) && itemOn(a, now, a.list[1].id) && !itemOn(a, now, a.list[0].id), 'unticking one unticks the day, the other stays');
+    assert(
+      !checkedOn(a, now) && itemOn(a, now, a.list[1].id) && !itemOn(a, now, a.list[0].id),
+      'unticking one unticks the day, the other stays',
+    );
     eq(a.checkins[now], 0, 'untick kept for sync');
     // The strip ticks and unticks the whole list.
     const day = iso => $(`.card.routine[data-open="${a.id}"] [data-checkin][data-date="${iso}"]`);
@@ -657,14 +1105,26 @@ window.moreTests = async ({ step, assert }) => {
     assert(!checkedOn(a, now) && a.list.every(i => !itemOn(a, now, i.id)), 'unticking the day unticks every item');
     // An earlier day keeps its own ticks; today's list is not touched.
     const y = addDays(now, -1);
-    a.startDate = addDays(now, -10); save(); render();
-    ui.rtWeek[a.id] = mondayOf(y); render();
+    a.startDate = addDays(now, -10);
+    save();
+    render();
+    ui.rtWeek[a.id] = mondayOf(y);
+    render();
     day(y).click();
-    assert(checkedOn(a, y) && a.list.every(i => itemOn(a, y, i.id)) && a.list.every(i => !itemOn(a, now, i.id)), 'yesterday ticked whole, today untouched');
-    ui.rtWeek = {}; render();
-    eq(card().querySelector('.rt-items .label').textContent, t('list.today', { done: 0, total: 2 }), 'tomorrow – today – starts afresh');
+    assert(
+      checkedOn(a, y) && a.list.every(i => itemOn(a, y, i.id)) && a.list.every(i => !itemOn(a, now, i.id)),
+      'yesterday ticked whole, today untouched',
+    );
+    ui.rtWeek = {};
+    render();
+    eq(
+      card().querySelector('.rt-items .label').textContent,
+      t('list.today', { done: 0, total: 2 }),
+      'tomorrow – today – starts afresh',
+    );
     // A tick on a day that was ticked without its items (a routine that later got a list) leaves it ticked.
-    setCheckin(a, addDays(now, -2), true); delete a.listDays[addDays(now, -2)];
+    setCheckin(a, addDays(now, -2), true);
+    delete a.listDays[addDays(now, -2)];
     tickListItem(a.id, a.list[0].id, addDays(now, -2));
     assert(checkedOn(a, addDays(now, -2)), 'a ticked day stays ticked when one item is ticked');
     tickListItem(a.id, a.list[0].id, addDays(now, -2));
@@ -689,37 +1149,70 @@ window.moreTests = async ({ step, assert }) => {
     assert(!checkedOn(a, now) && a.list.every(i => !itemOn(a, now, i.id)), 'menu untick unticks the list');
     setView('activities');
     // A routine that has not started, or has ended, shows no items to tick.
-    const later = mk('activity', { title: 'Later', startDate: addDays(now, 3), repeat: { every: 1, unit: 'week', times: 2 }, dueDate: addDays(now, 20), list: [{ id: 'l1', text: 'X' }] });
-    const ended = mk('activity', { title: 'Ended', startDate: addDays(now, -20), repeat: { every: 1, unit: 'week', times: 2 }, dueDate: addDays(now, -2), list: [{ id: 'e1', text: 'Y' }] });
-    save(); ui.hideDone = false; render();
+    const later = mk('activity', {
+      title: 'Later',
+      startDate: addDays(now, 3),
+      repeat: { every: 1, unit: 'week', times: 2 },
+      dueDate: addDays(now, 20),
+      list: [{ id: 'l1', text: 'X' }],
+    });
+    const ended = mk('activity', {
+      title: 'Ended',
+      startDate: addDays(now, -20),
+      repeat: { every: 1, unit: 'week', times: 2 },
+      dueDate: addDays(now, -2),
+      list: [{ id: 'e1', text: 'Y' }],
+    });
+    save();
+    ui.hideDone = false;
+    render();
     assert(!$(`.card.routine[data-open="${later.id}"] .rt-items`), 'not started: no items');
     assert(!$(`.card.routine[data-open="${ended.id}"]`)?.querySelector('.rt-items'), 'ended: no items');
     // Every view draws it.
     const before = __errors.length;
-    for (const v of ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs']) { setView(v); render(); }
+    for (const v of ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs']) {
+      setView(v);
+      render();
+    }
     eq(__errors.length, before, 'no errors in any view');
   });
 
   await step('routine lists: a week met says so; improving a state asks how much on the last item', async () => {
     fresh('Routine list amounts');
     const now = today();
-    const a = mk('activity', { title: 'Swim', startDate: addDays(now, -10), dueDate: addDays(now, 30), repeat: { every: 1, unit: 'week', times: 1 }, checkins: {}, list: [{ id: 'w', text: 'Warm up' }, { id: 'l', text: 'Laps' }] });
+    const a = mk('activity', {
+      title: 'Swim',
+      startDate: addDays(now, -10),
+      dueDate: addDays(now, 30),
+      repeat: { every: 1, unit: 'week', times: 1 },
+      checkins: {},
+      list: [
+        { id: 'w', text: 'Warm up' },
+        { id: 'l', text: 'Laps' },
+      ],
+    });
     save();
     setView('activities');
     const item = id => $(`.card.routine[data-open="${a.id}"] [data-li-tick="${a.id}"][data-li="${id}"]`);
     const weekTicked = () => daysBetween(periodOf(a, now).from, now).some(d => checkedOn(a, d));
     if (!weekTicked()) {
-      item('w').click(); item('l').click();
+      item('w').click();
+      item('l').click();
       eq($('#toast').textContent, t('rt.metWeek'), 'the week met wins over the day’s message');
     }
     item('w').click();
     assert(!checkedOn(a, now), 'unticked');
     // With a state that adds up: the last item asks first and stays unticked until answered.
     const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [] });
-    rel(a, km, 'improves'); save(); render();
+    rel(a, km, 'improves');
+    save();
+    render();
     if (itemOn(a, now, 'l')) item('l').click();
     item('w').click();
-    assert(itemOn(a, now, 'w') && !itemOn(a, now, 'l') && !checkedOn(a, now) && !$('.amount-pop'), 'state set up: one ticked, not asked yet');
+    assert(
+      itemOn(a, now, 'w') && !itemOn(a, now, 'l') && !checkedOn(a, now) && !$('.amount-pop'),
+      'state set up: one ticked, not asked yet',
+    );
     item('l').click();
     assert($('.amount-pop') && !itemOn(a, now, 'l') && !checkedOn(a, now), 'asks how much, nothing ticked yet');
     closeAmountPop();
@@ -727,37 +1220,68 @@ window.moreTests = async ({ step, assert }) => {
     item('l').click();
     $('.amount-pop [data-amount]').value = '1,5';
     $('.amount-pop').requestSubmit();
-    assert(!$('.amount-pop') && checkedOn(a, now) && itemOn(a, now, 'l') && itemOn(a, now, 'w'), 'answered: the day and its items ticked');
-    eq(km.entries.map(e => [e.date, e.amount, e.routine]), [[now, '1.5', a.id]], 'amount added');
+    assert(
+      !$('.amount-pop') && checkedOn(a, now) && itemOn(a, now, 'l') && itemOn(a, now, 'w'),
+      'answered: the day and its items ticked',
+    );
+    eq(
+      km.entries.map(e => [e.date, e.amount, e.routine]),
+      [[now, '1.5', a.id]],
+      'amount added',
+    );
     item('w').click();
     assert(!checkedOn(a, now) && !km.entries.length, 'unticking an item unticks the day and takes its amount back');
     // Escape on the question only ticks.
     item('w').click();
     $('.amount-pop [data-amount]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    assert(checkedOn(a, now) && itemOn(a, now, 'w') && itemOn(a, now, 'l') && !km.entries.length, 'Escape ticks without an amount');
+    assert(
+      checkedOn(a, now) && itemOn(a, now, 'w') && itemOn(a, now, 'l') && !km.entries.length,
+      'Escape ticks without an amount',
+    );
   });
 
   await step('routine lists: switching kinds, items edited, import, reset, sync', () => {
     fresh('Routine list edits');
     const now = today();
-    const a = mk('activity', { title: 'Evening', startDate: addDays(now, -5), dueDate: addDays(now, 20), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {}, list: [{ id: 'a1', text: 'Teeth', done: false }, { id: 'a2', text: 'Read', done: false }] });
+    const a = mk('activity', {
+      title: 'Evening',
+      startDate: addDays(now, -5),
+      dueDate: addDays(now, 20),
+      repeat: { every: 1, unit: 'week', times: 3 },
+      checkins: {},
+      list: [
+        { id: 'a1', text: 'Teeth', done: false },
+        { id: 'a2', text: 'Read', done: false },
+      ],
+    });
     save();
     setView('activities');
     tickListItem(a.id, 'a1', now);
     // Editing keeps ids and today's ticks; renaming and adding work as on a list.
     openForm('activity', a.id);
-    assert($('#listRows').children.length === 2 && $('#listRows').classList.contains('no-ticks') && $('#f-repeat').value === 'week', 'edit: items, no ticks, repeats');
+    assert(
+      $('#listRows').children.length === 2 &&
+        $('#listRows').classList.contains('no-ticks') &&
+        $('#f-repeat').value === 'week',
+      'edit: items, no ticks, repeats',
+    );
     $('#listRows').children[1].querySelector('.li-input').value = 'Read a chapter';
     modal.querySelector('[data-li-add]').click();
     $('#listRows').children[2].querySelector('.li-input').value = 'Lights out';
     submitForm();
-    assert(isListRoutine(a) && a.list.length === 3 && a.list[0].id === 'a1' && a.list[1].text === 'Read a chapter', 'saved');
+    assert(
+      isListRoutine(a) && a.list.length === 3 && a.list[0].id === 'a1' && a.list[1].text === 'Read a chapter',
+      'saved',
+    );
     assert(itemOn(a, now, 'a1') && a.list.every(i => !i.done), 'today’s ticks kept, no item done');
     // Turning it into a one-off list: ticks shown again, status follows the items.
     openForm('activity', a.id);
     $('#f-repeat').value = 'none';
     $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
-    assert(!$('#listRows').classList.contains('no-ticks') && !modal.querySelector('[data-field="dueDate"]').hidden, 'no repeat: ticks and due date back');
+    assert(
+      !$('#listRows').classList.contains('no-ticks') && !modal.querySelector('[data-field="dueDate"]').hidden,
+      'no repeat: ticks and due date back',
+    );
     $('#listRows .li-check').checked = true;
     submitForm();
     assert(isList(a) && !isRoutine(a) && a.list[0].done && a.status === 'doing', 'now a list, in progress');
@@ -767,13 +1291,30 @@ window.moreTests = async ({ step, assert }) => {
     $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
     assert($('#listRows').classList.contains('no-ticks'), 'repeat: ticks hidden');
     submitForm();
-    assert(isListRoutine(a) && a.list.every(i => !i.done) && a.status === 'todo', 'a routine list again, items not done');
+    assert(
+      isListRoutine(a) && a.list.every(i => !i.done) && a.status === 'todo',
+      'a routine list again, items not done',
+    );
     // Import keeps good day ticks and drops bad ones.
-    const n = normalize({ activities: [
-      { id: 'r1', title: 'R', repeat: { every: 1, unit: 'week', times: 2 }, list: [{ id: 'i', text: 'I' }], listDays: { [now]: { i: 1 } } },
-      { id: 'r2', title: 'S', repeat: { every: 1, unit: 'week', times: 2 }, list: [{ id: 'i', text: 'I' }], listDays: ['nope'] },
-      { id: 'r3', title: 'T', repeat: { every: 1, unit: 'week', times: 2 }, listDays: { [now]: { i: 1 } } },
-    ] }).activities;
+    const n = normalize({
+      activities: [
+        {
+          id: 'r1',
+          title: 'R',
+          repeat: { every: 1, unit: 'week', times: 2 },
+          list: [{ id: 'i', text: 'I' }],
+          listDays: { [now]: { i: 1 } },
+        },
+        {
+          id: 'r2',
+          title: 'S',
+          repeat: { every: 1, unit: 'week', times: 2 },
+          list: [{ id: 'i', text: 'I' }],
+          listDays: ['nope'],
+        },
+        { id: 'r3', title: 'T', repeat: { every: 1, unit: 'week', times: 2 }, listDays: { [now]: { i: 1 } } },
+      ],
+    }).activities;
     eq(n[0].listDays, { [now]: { i: 1 } }, 'day ticks kept');
     assert(!('listDays' in n[1]) && !('listDays' in n[2]), 'bad day ticks, or ones without a list, dropped');
     // Reset clears the day ticks with the check-ins.
@@ -781,15 +1322,40 @@ window.moreTests = async ({ step, assert }) => {
     const r = resetProgress(db).activities.find(x => x.id === a.id);
     assert(!r.listDays && !r.checkins && r.list.length === 3, 'reset clears day ticks, keeps items');
     // Sync: day ticks from both copies, per item; the newer copy wins a clash, unticks included.
-    const base = { id: 'm', title: 'M', repeat: { every: 1, unit: 'week', times: 3 }, list: [{ id: 'x', text: 'X' }, { id: 'y', text: 'Y' }] };
-    const phone = { ...base, updatedAt: '2099-01-02', checkins: { d1: 1 }, listDays: { d1: { x: 1, y: 1 }, d2: { x: 1 } } };
-    const laptop = { ...base, updatedAt: '2099-01-03', checkins: { d3: 1 }, listDays: { d2: { x: 0, y: 1 }, d3: { x: 1, y: 1 } } };
+    const base = {
+      id: 'm',
+      title: 'M',
+      repeat: { every: 1, unit: 'week', times: 3 },
+      list: [
+        { id: 'x', text: 'X' },
+        { id: 'y', text: 'Y' },
+      ],
+    };
+    const phone = {
+      ...base,
+      updatedAt: '2099-01-02',
+      checkins: { d1: 1 },
+      listDays: { d1: { x: 1, y: 1 }, d2: { x: 1 } },
+    };
+    const laptop = {
+      ...base,
+      updatedAt: '2099-01-03',
+      checkins: { d3: 1 },
+      listDays: { d2: { x: 0, y: 1 }, d3: { x: 1, y: 1 } },
+    };
     const m = mergeActivity(phone, laptop);
-    eq(m.listDays, { d1: { x: 1, y: 1 }, d2: { x: 0, y: 1 }, d3: { x: 1, y: 1 } }, 'merged per day and item, newer wins');
+    eq(
+      m.listDays,
+      { d1: { x: 1, y: 1 }, d2: { x: 0, y: 1 }, d3: { x: 1, y: 1 } },
+      'merged per day and item, newer wins',
+    );
     eq(m.checkins, { d1: 1, d3: 1 }, 'check-ins merged as before');
     assert(phone.listDays.d2.x === 1 && !laptop.listDays.d1, 'copies left as they were');
     eq(mergeActivity(laptop, phone).listDays, m.listDays, 'same either way round');
-    assert(!('listDays' in mergeActivity({ ...base, updatedAt: '1' }, { ...base, updatedAt: '2' })), 'no day ticks: none added');
+    assert(
+      !('listDays' in mergeActivity({ ...base, updatedAt: '1' }, { ...base, updatedAt: '2' })),
+      'no day ticks: none added',
+    );
   });
 
   await step('forms: Ctrl+Enter (or ⌘+Enter) saves from any field', () => {
@@ -798,7 +1364,8 @@ window.moreTests = async ({ step, assert }) => {
     const g = mk('goal', { title: 'Fit' });
     save();
     setView('activities');
-    const press = (el, mods) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...mods }));
+    const press = (el, mods) =>
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...mods }));
     // A new list: Ctrl+Enter in an item saves instead of adding the next one.
     openForm('activity');
     modal.querySelector('[data-act-kind="list"]').click();
@@ -817,7 +1384,8 @@ window.moreTests = async ({ step, assert }) => {
     // In a link picker's search it saves rather than linking the first match.
     openForm('activity', a.id);
     const search = modal.querySelector('.picker[data-picker="goal"] .picker-search');
-    search.value = 'Fi'; search.dispatchEvent(new Event('input', { bubbles: true }));
+    search.value = 'Fi';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
     press(search, { ctrlKey: true });
     assert(!modal.open && !relsFrom(a.id, 'contributes').some(r => r.to === g.id), 'picker: saved, nothing linked');
     // An invalid form stays open with its errors.
@@ -840,11 +1408,30 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('routine lists: removing the only unticked item in the form ticks the day', () => {
     fresh('Routine list removal');
-    const now = today(), y = addDays(now, -1), y2 = addDays(now, -2), tom = addDays(now, 1);
-    const a = mk('activity', { title: 'Gym', startDate: addDays(now, -5), dueDate: addDays(now, 20), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {}, list: [{ id: 'p', text: 'Push' }, { id: 'q', text: 'Pull' }, { id: 'r', text: 'Run' }] });
+    const now = today(),
+      y = addDays(now, -1),
+      y2 = addDays(now, -2),
+      tom = addDays(now, 1);
+    const a = mk('activity', {
+      title: 'Gym',
+      startDate: addDays(now, -5),
+      dueDate: addDays(now, 20),
+      repeat: { every: 1, unit: 'week', times: 3 },
+      checkins: {},
+      list: [
+        { id: 'p', text: 'Push' },
+        { id: 'q', text: 'Pull' },
+        { id: 'r', text: 'Run' },
+      ],
+    });
     const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [] });
     rel(a, km, 'improves');
-    a.listDays = { [now]: { p: 1, q: 1, r: 0 }, [y]: { p: 1, r: 0 }, [y2]: { p: 0, q: 0, r: 0 }, [tom]: { p: 1, q: 1 } };
+    a.listDays = {
+      [now]: { p: 1, q: 1, r: 0 },
+      [y]: { p: 1, r: 0 },
+      [y2]: { p: 0, q: 0, r: 0 },
+      [tom]: { p: 1, q: 1 },
+    };
     save();
     setView('activities');
     // Renaming alone ticks nothing.
@@ -855,13 +1442,20 @@ window.moreTests = async ({ step, assert }) => {
     openForm('activity', a.id);
     $('#listRows').children[2].querySelector('[data-li-del]').click();
     submitForm();
-    eq(a.list.map(i => i.id), ['p', 'q'], 'item removed');
+    eq(
+      a.list.map(i => i.id),
+      ['p', 'q'],
+      'item removed',
+    );
     assert(checkedOn(a, now), 'today had every other item ticked: ticked');
     assert(!checkedOn(a, y) && !checkedOn(a, y2), 'days with other items unticked stay unticked');
     assert(!checkedOn(a, tom), 'a day still to come is not ticked');
     assert(!km.entries.length && !$('.amount-pop'), 'no amount asked or added');
     render();
-    assert($(`[data-checkin="${a.id}"][data-date="${now}"]`).getAttribute('aria-pressed') === 'true', 'the strip shows it');
+    assert(
+      $(`[data-checkin="${a.id}"][data-date="${now}"]`).getAttribute('aria-pressed') === 'true',
+      'the strip shows it',
+    );
     // A day ticked already stays ticked; unticking an item still unticks it.
     tickListItem(a.id, 'q', now);
     assert(!checkedOn(a, now), 'unticking an item unticks the day again');
@@ -869,11 +1463,27 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('routine lists: escaping, help, Slovenian, the sample plan, kind icons', async () => {
     fresh('Routine list around');
-    const now = today(), evil = '<img src=x onerror="window.__xss=1">';
-    const a = mk('activity', { title: 'Daily', startDate: addDays(now, -3), dueDate: addDays(now, 30), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {}, list: [{ id: 'q', text: evil }, { id: 'r', text: 'Ok' }] });
+    const now = today(),
+      evil = '<img src=x onerror="window.__xss=1">';
+    const a = mk('activity', {
+      title: 'Daily',
+      startDate: addDays(now, -3),
+      dueDate: addDays(now, 30),
+      repeat: { every: 1, unit: 'week', times: 3 },
+      checkins: {},
+      list: [
+        { id: 'q', text: evil },
+        { id: 'r', text: 'Ok' },
+      ],
+    });
     save();
     setView('activities');
-    assert(!window.__xss && !$('.rt-items img') && [...document.querySelectorAll('.rt-items .li-text')].some(e => e.textContent === evil), 'item text shown as text');
+    assert(
+      !window.__xss &&
+        !$('.rt-items img') &&
+        [...document.querySelectorAll('.rt-items .li-text')].some(e => e.textContent === evil),
+      'item text shown as text',
+    );
     setView('dashboard');
     assert(!$('.routine-row img'), 'overview row: nothing unescaped');
     setView('activities');
@@ -886,29 +1496,56 @@ window.moreTests = async ({ step, assert }) => {
     setHelp(false);
     changeLanguage('sl');
     render();
-    eq($('.rt-items .label').textContent, I18N.sl.strings['list.today'].replace('{done}', 0).replace('{total}', 2), 'Slovenian count');
+    eq(
+      $('.rt-items .label').textContent,
+      I18N.sl.strings['list.today'].replace('{done}', 0).replace('{total}', 2),
+      'Slovenian count',
+    );
     openForm('activity');
-    eq(modal.querySelector('[data-act-kind="listRoutine"] strong').textContent, I18N.sl.strings['f.actKind.listRoutine'], 'Slovenian kind');
+    eq(
+      modal.querySelector('[data-act-kind="listRoutine"] strong').textContent,
+      I18N.sl.strings['f.actKind.listRoutine'],
+      'Slovenian kind',
+    );
     modal.close();
-    tickListItem(a.id, 'q', now); tickListItem(a.id, 'r', now);
+    tickListItem(a.id, 'q', now);
+    tickListItem(a.id, 'r', now);
     eq($('#toast').textContent, I18N.sl.strings['list.dayDone'].replace('{name}', 'Daily'), 'Slovenian toast');
     changeLanguage('en');
     // Each kind has its own icon, hidden from screen readers.
     openForm('activity');
     const icons = [...modal.querySelectorAll('[data-act-kind] svg.act-choice-icon')];
-    assert(icons.length === 4 && icons.every(s => s.getAttribute('aria-hidden') === 'true' && s.getBoundingClientRect().width >= 24), 'four visible icons');
+    assert(
+      icons.length === 4 &&
+        icons.every(s => s.getAttribute('aria-hidden') === 'true' && s.getBoundingClientRect().width >= 24),
+      'four visible icons',
+    );
     eq(new Set(icons.map(s => s.innerHTML)).size, 4, 'all different');
-    const r = modal.querySelector('[data-act-kind="once"]'), ic = r.querySelector('svg').getBoundingClientRect(), tx = r.querySelector('strong').getBoundingClientRect();
+    const r = modal.querySelector('[data-act-kind="once"]'),
+      ic = r.querySelector('svg').getBoundingClientRect(),
+      tx = r.querySelector('strong').getBoundingClientRect();
     assert(ic.right <= tx.left, 'icon beside the text');
-    assert(getComputedStyle(modal.querySelector('[data-act-kind="routine"] svg')).color !== getComputedStyle(modal.querySelector('[data-act-kind="list"] svg')).color, 'routines and lists in different colours');
+    assert(
+      getComputedStyle(modal.querySelector('[data-act-kind="routine"] svg')).color !==
+        getComputedStyle(modal.querySelector('[data-act-kind="list"] svg')).color,
+      'routines and lists in different colours',
+    );
     modal.close();
     // The sample plan's strength training is a routine list, ticked on the days it was done.
     for (const lang of ['en', 'sl']) {
       changeLanguage(lang);
       loadSample();
       const st = db.activities.find(x => isListRoutine(x));
-      assert(st && st.list.length === 3 && st.list.every(i => i.text === I18N[lang].sample.activities[24].list[st.list.indexOf(i)]), `${lang}: strength training has its exercises`);
-      assert(Object.keys(st.checkins).every(d => st.list.every(i => itemOn(st, d, i.id))), `${lang}: every ticked day has its items ticked`);
+      assert(
+        st &&
+          st.list.length === 3 &&
+          st.list.every(i => i.text === I18N[lang].sample.activities[24].list[st.list.indexOf(i)]),
+        `${lang}: strength training has its exercises`,
+      );
+      assert(
+        Object.keys(st.checkins).every(d => st.list.every(i => itemOn(st, d, i.id))),
+        `${lang}: every ticked day has its items ticked`,
+      );
       deletePlan(plans.current);
     }
     changeLanguage('en');
@@ -916,9 +1553,17 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('lists: ticked items move below the rest, on the card and in the form', () => {
     fresh('Done last');
-    const a = mk('activity', { title: 'Pack', status: 'todo', startDate: today(), dueDate: addDays(today(), 4), list: ['a', 'b', 'c', 'd'].map(id => ({ id, text: id.toUpperCase(), done: false })) });
-    save(); setView('activities');
-    const shown = () => [...document.querySelectorAll(`.card.activity [data-li-tick="${a.id}"]`)].map(b => b.dataset.li);
+    const a = mk('activity', {
+      title: 'Pack',
+      status: 'todo',
+      startDate: today(),
+      dueDate: addDays(today(), 4),
+      list: ['a', 'b', 'c', 'd'].map(id => ({ id, text: id.toUpperCase(), done: false })),
+    });
+    save();
+    setView('activities');
+    const shown = () =>
+      [...document.querySelectorAll(`.card.activity [data-li-tick="${a.id}"]`)].map(b => b.dataset.li);
     const tick = id => document.querySelector(`[data-li-tick="${a.id}"][data-li="${id}"]`);
     eq(shown(), ['a', 'b', 'c', 'd'], 'in order at first');
     tick('b').click();
@@ -928,7 +1573,11 @@ window.moreTests = async ({ step, assert }) => {
     eq(shown(), ['c', 'd', 'a', 'b'], 'ticked ones keep their own order at the bottom');
     tick('b').click();
     eq(shown(), ['b', 'c', 'd', 'a'], 'unticked goes back to its place among the rest');
-    eq(a.list.map(i => i.id), ['a', 'b', 'c', 'd'], 'the stored order is unchanged by ticks');
+    eq(
+      a.list.map(i => i.id),
+      ['a', 'b', 'c', 'd'],
+      'the stored order is unchanged by ticks',
+    );
     // In the form: the ticked rows are last; ticking one there moves it down, unticking moves it back up.
     openForm('activity', a.id);
     const rows = () => [...$('#listRows').children].map(r => r.dataset.liRow);
@@ -942,14 +1591,34 @@ window.moreTests = async ({ step, assert }) => {
     modal.querySelector('[data-li-add]').click();
     eq(rows().length, 5, 'added');
     eq(rows()[3], '', 'form: a new item goes above the ticked ones');
-    eq(document.activeElement, $('#listRows').children[3].querySelector('.li-input'), 'form: Add item puts the cursor in it');
+    eq(
+      document.activeElement,
+      $('#listRows').children[3].querySelector('.li-input'),
+      'form: Add item puts the cursor in it',
+    );
     $('#listRows').children[3].querySelector('.li-input').value = 'E';
     submitForm();
-    eq(a.list.map(i => i.text), ['A', 'B', 'D', 'E', 'C'], 'saved in the order shown');
-    eq(a.list.map(i => !!i.done), [false, false, false, false, true], 'ticks saved');
+    eq(
+      a.list.map(i => i.text),
+      ['A', 'B', 'D', 'E', 'C'],
+      'saved in the order shown',
+    );
+    eq(
+      a.list.map(i => !!i.done),
+      [false, false, false, false, true],
+      'ticks saved',
+    );
     // A routine list does the same with today's ticks.
-    const r = mk('activity', { title: 'Morning', startDate: addDays(today(), -3), dueDate: addDays(today(), 20), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {}, list: ['x', 'y', 'z'].map(id => ({ id, text: id, done: false })) });
-    save(); render();
+    const r = mk('activity', {
+      title: 'Morning',
+      startDate: addDays(today(), -3),
+      dueDate: addDays(today(), 20),
+      repeat: { every: 1, unit: 'week', times: 3 },
+      checkins: {},
+      list: ['x', 'y', 'z'].map(id => ({ id, text: id, done: false })),
+    });
+    save();
+    render();
     const rshown = () => [...document.querySelectorAll(`.rt-items [data-li-tick="${r.id}"]`)].map(b => b.dataset.li);
     tickListItem(r.id, 'x', today());
     eq(rshown(), ['y', 'z', 'x'], 'routine list: today’s ticked item last');
@@ -960,10 +1629,30 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('routines: set days can be made up on another day', () => {
     fresh('Make up');
-    const MON = '2026-11-02', TUE = '2026-11-03', WED = '2026-11-04', THU = '2026-11-05', FRI = '2026-11-06', SUN = '2026-11-08';
-    const onDay = (iso, fn) => { const real = window.today; window.today = () => iso; try { return fn(); } finally { window.today = real; } };
-    const mk2 = (makeUp, checkins) => mk('activity', { title: makeUp ? 'Loose' : 'Strict', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 3], ...(makeUp ? { makeUp: true } : {}) }, checkins });
-    const strict = mk2(false, { [TUE]: 1 }), loose = mk2(true, { [TUE]: 1 });
+    const MON = '2026-11-02',
+      TUE = '2026-11-03',
+      WED = '2026-11-04',
+      THU = '2026-11-05',
+      FRI = '2026-11-06',
+      SUN = '2026-11-08';
+    const onDay = (iso, fn) => {
+      const real = window.today;
+      window.today = () => iso;
+      try {
+        return fn();
+      } finally {
+        window.today = real;
+      }
+    };
+    const mk2 = (makeUp, checkins) =>
+      mk('activity', {
+        title: makeUp ? 'Loose' : 'Strict',
+        startDate: '2026-10-01',
+        repeat: { every: 1, unit: 'week', days: [0, 3], ...(makeUp ? { makeUp: true } : {}) },
+        checkins,
+      });
+    const strict = mk2(false, { [TUE]: 1 }),
+      loose = mk2(true, { [TUE]: 1 });
     save();
     onDay(WED, () => {
       eq(periodProgress(strict).done, 0, 'strict: Tuesday does not count');
@@ -975,16 +1664,30 @@ window.moreTests = async ({ step, assert }) => {
       eq(routineToday(loose), 'rest', 'loose: nothing to make up, not due today');
       setView('activities');
       const day = (a, iso) => $(`.card.routine[data-open="${a.id}"] [data-checkin][data-date="${iso}"]`);
-      assert(day(strict, MON).classList.contains('missed') && day(loose, MON).classList.contains('made'), 'strip: missed vs made up');
-      eq(day(loose, MON).title, t('rt.dayMadeUp', { date: fmtDay(MON, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }), 'made-up day says so');
+      assert(
+        day(strict, MON).classList.contains('missed') && day(loose, MON).classList.contains('made'),
+        'strip: missed vs made up',
+      );
+      eq(
+        day(loose, MON).title,
+        t('rt.dayMadeUp', { date: fmtDay(MON, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }),
+        'made-up day says so',
+      );
       assert(!day(loose, MON).classList.contains('missed'), 'not hatched');
       const cs = getComputedStyle(day(loose, MON));
       assert(cs.borderTopStyle === 'solid' && cs.backgroundImage === 'none', 'made up: solid, not hatched');
       eq(scheduleText(loose), t('rt.orAnotherDay', { text: scheduleText(strict) }), 'schedule says “or another day”');
-      assert([...$('.rt-legend').querySelectorAll('span')].some(s => s.textContent === t('rt.legend.made')), 'legend has Made up');
+      assert(
+        [...$('.rt-legend').querySelectorAll('span')].some(s => s.textContent === t('rt.legend.made')),
+        'legend has Made up',
+      );
       // The timeline shows a made-up day as done; a missed one stays red.
-      const tl = tlRoutineDays(loose, dayNum(MON), dayNum(SUN), n => n, 10), tls = tlRoutineDays(strict, dayNum(MON), dayNum(SUN), n => n, 10);
-      assert(tl.startsWith('<i class="tl-day done"') && tls.startsWith('<i class="tl-day missed"'), 'timeline: made up done, strict missed');
+      const tl = tlRoutineDays(loose, dayNum(MON), dayNum(SUN), n => n, 10),
+        tls = tlRoutineDays(strict, dayNum(MON), dayNum(SUN), n => n, 10);
+      assert(
+        tl.startsWith('<i class="tl-day done"') && tls.startsWith('<i class="tl-day missed"'),
+        'timeline: made up done, strict missed',
+      );
     });
     // One tick per missed day: two missed, one extra tick.
     loose.checkins = { [FRI]: 1 };
@@ -1016,7 +1719,8 @@ window.moreTests = async ({ step, assert }) => {
       eq(madeUpDays(loose, FRI).has(THU), true, 'Thursday made up');
     });
     // Streak and consistency count made-up days as kept; strict ones do not.
-    const ls = mk2(true, { '2026-10-26': 1, '2026-10-30': 1, [MON]: 1 }), ss = mk2(false, { '2026-10-26': 1, '2026-10-30': 1, [MON]: 1 });
+    const ls = mk2(true, { '2026-10-26': 1, '2026-10-30': 1, [MON]: 1 }),
+      ss = mk2(false, { '2026-10-26': 1, '2026-10-30': 1, [MON]: 1 });
     onDay(WED, () => {
       eq(routineStreak(ls).n, 3, 'loose streak: Mon, (Thu made up by Fri), Mon');
       eq(routineStreak(ss).n, 1, 'strict streak broken by the missed Thursday');
@@ -1026,7 +1730,12 @@ window.moreTests = async ({ step, assert }) => {
     const many = mk2(true, { [MON]: 1, [TUE]: 1, [WED]: 1 });
     onDay(WED, () => eq(periodProgress(many).done, 2, 'capped at the target'));
     // Monthly: made up within the month.
-    const monthly = mk('activity', { title: 'Check', startDate: '2026-09-01', repeat: { every: 1, unit: 'month', on: 'day', day: 1, makeUp: true }, checkins: { '2026-11-03': 1 } });
+    const monthly = mk('activity', {
+      title: 'Check',
+      startDate: '2026-09-01',
+      repeat: { every: 1, unit: 'month', on: 'day', day: 1, makeUp: true },
+      checkins: { '2026-11-03': 1 },
+    });
     onDay('2026-11-10', () => {
       eq(missedDays(monthly, '2026-11-01', '2026-11-09'), [], 'monthly: the 1st made up on the 3rd');
       eq(routineState(monthly), 'done', 'monthly: met');
@@ -1037,27 +1746,35 @@ window.moreTests = async ({ step, assert }) => {
   await step('routines: the make-up option in the form', () => {
     fresh('Make up form');
     openForm('activity', null, { repeat: 'routine' });
-    const box = () => $('#repMakeUp'), set = (id, val) => { $(id).value = val; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    const box = () => $('#repMakeUp'),
+      set = (id, val) => {
+        $(id).value = val;
+        $(id).dispatchEvent(new Event('change', { bubbles: true }));
+      };
     assert(box().hidden, 'a number of times a week: no make-up option');
     set('#f-repeat', 'days');
     assert(!box().hidden && !$('#f-makeUp').checked, 'set days: offered, off by default (strict)');
     eq(box().querySelector('label').textContent.trim(), t('f.makeUp'), 'labelled');
     eq(box().querySelector('.hint').textContent, t('f.makeUpHint'), 'explained');
-    set('#f-repeat', 'custom'); set('#f-unit', 'month'); set('#f-on', 'times');
+    set('#f-repeat', 'custom');
+    set('#f-unit', 'month');
+    set('#f-on', 'times');
     assert(box().hidden, 'custom times: hidden');
     set('#f-on', 'day');
     assert(!box().hidden, 'monthly day: offered');
     set('#f-repeat', 'none');
     assert(box().hidden, 'no repeat: hidden');
     set('#f-repeat', 'days');
-    $('#f-title').value = 'Gym'; $('#f-endDate').value = dateInput(addDays(today(), 30));
+    $('#f-title').value = 'Gym';
+    $('#f-endDate').value = dateInput(addDays(today(), 30));
     $('#f-makeUp').checked = true;
     submitForm();
     const a = db.activities.find(x => x.title === 'Gym');
     assert(a && a.repeat.makeUp === true && a.repeat.days, 'saved with make-up');
     openForm('activity', a.id);
     assert($('#f-makeUp').checked && !box().hidden, 'shown checked when editing');
-    $('#f-makeUp').checked = false; submitForm();
+    $('#f-makeUp').checked = false;
+    submitForm();
     assert(!('makeUp' in a.repeat), 'turned off: strict again');
     // A flexible routine never keeps it, even if the box was left ticked.
     openForm('activity', a.id);
@@ -1067,10 +1784,16 @@ window.moreTests = async ({ step, assert }) => {
     assert(a.repeat.times && !a.repeat.makeUp, 'times a week: no make-up');
     // Older plans without it are strict; it syncs with the rest of the repeat.
     assert(!makesUp({ repeat: { every: 1, unit: 'week', days: [0] } }), 'missing: strict');
-    eq(normalize({ activities: [{ id: 'k', title: 'K', repeat: { every: 1, unit: 'week', days: [0], makeUp: true } }] }).activities[0].repeat.makeUp, true, 'kept on import');
+    eq(
+      normalize({ activities: [{ id: 'k', title: 'K', repeat: { every: 1, unit: 'week', days: [0], makeUp: true } }] })
+        .activities[0].repeat.makeUp,
+      true,
+      'kept on import',
+    );
     // Slovenian.
     changeLanguage('sl');
-    openForm('activity', a.id); set('#f-repeat', 'days');
+    openForm('activity', a.id);
+    set('#f-repeat', 'days');
     eq(box().querySelector('label').textContent.trim(), I18N.sl.strings['f.makeUp'], 'Slovenian label');
     modal.close();
     a.repeat = { every: 1, unit: 'week', days: [0, 3], makeUp: true };
@@ -1083,33 +1806,58 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('lists: around the app', async () => {
     fresh('Lists around');
-    const g = mk('goal', { title: 'Race day', progress: 'activities', startDate: today(), deadline: addDays(today(), 20) });
+    const g = mk('goal', {
+      title: 'Race day',
+      progress: 'activities',
+      startDate: today(),
+      deadline: addDays(today(), 20),
+    });
     const evil = '<img src=x onerror="window.__xss=1">';
-    const a = mk('activity', { title: 'Pack', status: 'todo', startDate: addDays(today(), 1), dueDate: addDays(today(), 4), list: [{ id: 'p', text: 'Pins' }, { id: 'q', text: evil }, { id: 'r', text: 'Saltsticks' + 'x'.repeat(80) }] });
+    const a = mk('activity', {
+      title: 'Pack',
+      status: 'todo',
+      startDate: addDays(today(), 1),
+      dueDate: addDays(today(), 4),
+      list: [
+        { id: 'p', text: 'Pins' },
+        { id: 'q', text: evil },
+        { id: 'r', text: 'Saltsticks' + 'x'.repeat(80) },
+      ],
+    });
     rel(a, g, 'contributes');
     save();
     // Every view draws it, without errors.
     const before = __errors.length;
-    for (const v of ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs']) { setView(v); render(); }
+    for (const v of ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs']) {
+      setView(v);
+      render();
+    }
     eq(__errors.length, before, 'no errors in any view');
     setView('activities');
     // Item text is shown as text.
     assert(!window.__xss && !document.querySelector('.li-ticks img'), 'card: markup in an item is not run');
-    assert([...document.querySelectorAll('.li-text')].some(e => e.textContent === evil), 'card: shown as typed');
+    assert(
+      [...document.querySelectorAll('.li-text')].some(e => e.textContent === evil),
+      'card: shown as typed',
+    );
     openForm('activity', a.id);
     eq($('#listRows').children[1].querySelector('.li-input').value, evil, 'form: shown as typed');
     assert(!modal.querySelector('.li-rows img'), 'form: markup not run');
     modal.close();
     assert(!activityRow(a).includes('<img'), 'row: nothing unescaped');
     // Search finds a list by its items.
-    ui.search = 'saltstick'; render();
+    ui.search = 'saltstick';
+    render();
     assert(document.querySelector(`.card.activity[data-open="${a.id}"]`), 'search matches an item');
-    ui.search = 'nothing like it'; render();
+    ui.search = 'nothing like it';
+    render();
     assert(!document.querySelector(`.card.activity[data-open="${a.id}"]`), 'search hides it otherwise');
-    ui.search = ''; render();
+    ui.search = '';
+    render();
     // The keyboard stays on the item ticked, even as the card moves column.
     const tick = id => document.querySelector(`[data-li-tick="${a.id}"][data-li="${id}"]`);
-    tick('p').focus(); tick('p').click();
+    tick('p').focus();
+    tick('p').click();
     eq(document.activeElement, tick('p'), 'focus kept on the ticked item');
     assert(tick('p').closest('.col[data-status="doing"]'), 'card moved to In progress');
     eq(tick('p').getAttribute('aria-checked'), 'true', 'checked state announced');
@@ -1118,26 +1866,39 @@ window.moreTests = async ({ step, assert }) => {
     const dot = document.querySelector('[data-help-tip="list"]');
     assert(dot && dot.nextElementSibling?.matches('.li-ticks'), 'help dot before the items');
     dot.click();
-    eq(document.querySelector('.help-pop, .help-tip, [role="tooltip"]')?.textContent, t('help.tip.list'), 'help text shown');
+    eq(
+      document.querySelector('.help-pop, .help-tip, [role="tooltip"]')?.textContent,
+      t('help.tip.list'),
+      'help text shown',
+    );
     setHelp(false);
     // Done lists hide with "Hide done"; the circle still moves a list by hand.
-    tick('q').click(); tick('r').click();
+    tick('q').click();
+    tick('r').click();
     eq(a.status, 'done', 'all ticked: done');
     eq(goalProgress(g), 100, 'goal progress counts it');
-    ui.hideDone = true; render();
+    ui.hideDone = true;
+    render();
     assert(!document.querySelector(`.card.activity[data-open="${a.id}"]`), 'hidden with Hide done');
-    ui.hideDone = false; render();
+    ui.hideDone = false;
+    render();
     cycleStatus(a.id);
     eq(a.status, 'todo', 'the circle moves it on by hand');
     tick('p').click();
-    assert(!a.list[0].done && a.status === 'doing', 'unticking one of three on a list moved back to To do: the two ticked put it in progress');
+    assert(
+      !a.list[0].done && a.status === 'doing',
+      'unticking one of three on a list moved back to To do: the two ticked put it in progress',
+    );
     tick('p').click();
     eq(a.status, 'done', 'ticking the last one completes it again');
     // Whitespace items are left out; a list of only whitespace is not saved.
     openForm('activity', a.id);
     [...$('#listRows').querySelectorAll('.li-input')].forEach(i => (i.value = '   '));
     submitForm();
-    assert(modal.open && modal.querySelector('[data-field="list"].invalid') && a.list.length === 3, 'whitespace-only list refused, nothing changed');
+    assert(
+      modal.open && modal.querySelector('[data-field="list"].invalid') && a.list.length === 3,
+      'whitespace-only list refused, nothing changed',
+    );
     eq(modal.querySelector('[data-field="list"] .err').textContent, t('err.listEmpty'), 'says why');
     // Title is still required first.
     $('#f-title').value = ' ';
@@ -1151,22 +1912,43 @@ window.moreTests = async ({ step, assert }) => {
     // open the keyboard on a phone.
     const second = rows()[1];
     rows()[0].querySelector('[data-li-del]').click();
-    assert(document.activeElement === second.querySelector('[data-li-del]') && !document.activeElement.matches('input'), 'next row’s remove button focused, not its text');
+    assert(
+      document.activeElement === second.querySelector('[data-li-del]') && !document.activeElement.matches('input'),
+      'next row’s remove button focused, not its text',
+    );
     rows().at(-1).querySelector('[data-li-del]').click();
-    assert(document.activeElement === rows().at(-1).querySelector('[data-li-del]'), 'removing the last row focuses the one above');
+    assert(
+      document.activeElement === rows().at(-1).querySelector('[data-li-del]'),
+      'removing the last row focuses the one above',
+    );
     while (rows().length > 1) rows()[0].querySelector('[data-li-del]').click();
     rows()[0].querySelector('[data-li-del]').click();
-    assert(rows().length === 1 && rows()[0].querySelector('.li-input').value === '' && document.activeElement === modal.querySelector('[data-li-add]'), 'last row removed: a fresh empty one, Add item focused, no text field');
+    assert(
+      rows().length === 1 &&
+        rows()[0].querySelector('.li-input').value === '' &&
+        document.activeElement === modal.querySelector('[data-li-add]'),
+      'last row removed: a fresh empty one, Add item focused, no text field',
+    );
     modal.close();
     openForm('activity', a.id);
-    rows()[0].querySelector('.li-input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    rows()[0]
+      .querySelector('.li-input')
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     rows()[1].querySelector('.li-input').value = 'Between';
     submitForm();
-    eq(a.list.map(i => i.text.slice(0, 10)), ['Pins', 'Between', evil.slice(0, 10), 'Saltsticks'], 'Enter adds below the item');
+    eq(
+      a.list.map(i => i.text.slice(0, 10)),
+      ['Pins', 'Between', evil.slice(0, 10), 'Saltsticks'],
+      'Enter adds below the item',
+    );
     eq(a.status, 'doing', 'an unticked item added: back in progress');
     // Saving the form keeps a status set by hand when the ticks do not decide it.
-    a.list.forEach(i => (i.done = false)); a.status = 'doing'; save();
-    openForm('activity', a.id); $('#f-description').value = 'Bag by the door'; submitForm();
+    a.list.forEach(i => (i.done = false));
+    a.status = 'doing';
+    save();
+    openForm('activity', a.id);
+    $('#f-description').value = 'Bag by the door';
+    submitForm();
     assert(a.status === 'doing' && a.description === 'Bag by the door', 'status kept on save');
     // Export and import keep the list as it is.
     const back = normalize(JSON.parse(JSON.stringify(db))).activities.find(x => x.id === a.id);
@@ -1174,12 +1956,25 @@ window.moreTests = async ({ step, assert }) => {
     // Deleting the list removes it and its links.
     openForm('activity', a.id);
     $('#deleteBtn').click();
-    assert(!db.activities.some(x => x.id === a.id) && !db.relations.some(r => r.from === a.id), 'deleted with its links');
+    assert(
+      !db.activities.some(x => x.id === a.id) && !db.relations.some(r => r.from === a.id),
+      'deleted with its links',
+    );
   });
 
   await step('lists: two devices, through the real save path', () => {
     fresh('Two devices');
-    const a = mk('activity', { title: 'Pack', status: 'todo', startDate: addDays(today(), 1), dueDate: addDays(today(), 4), list: [{ id: 'p', text: 'Pins' }, { id: 'q', text: 'Cap' }, { id: 'r', text: 'Bib' }] });
+    const a = mk('activity', {
+      title: 'Pack',
+      status: 'todo',
+      startDate: addDays(today(), 1),
+      dueDate: addDays(today(), 4),
+      list: [
+        { id: 'p', text: 'Pins' },
+        { id: 'q', text: 'Cap' },
+        { id: 'r', text: 'Bib' },
+      ],
+    });
     save();
     const other = JSON.parse(JSON.stringify(db));
     // This device: ticks Pins on the card, removes Bib in the form.
@@ -1195,41 +1990,103 @@ window.moreTests = async ({ step, assert }) => {
     o.list.push({ id: 'n', text: 'Gels', done: false, at: later });
     o.updatedAt = later;
     const m = mergePlans(db, other).activities.find(x => x.id === a.id);
-    eq(m.list.map(i => `${i.text}:${i.done ? 'x' : '-'}`).sort(), ['Cap:x', 'Gels:-', 'Pins:x'], 'both ticks kept, Bib stays removed, Gels added');
+    eq(
+      m.list.map(i => `${i.text}:${i.done ? 'x' : '-'}`).sort(),
+      ['Cap:x', 'Gels:-', 'Pins:x'],
+      'both ticks kept, Bib stays removed, Gels added',
+    );
     eq(m.status, 'doing', 'in progress');
     // Ticking Gels on the merged copy finishes it.
-    const m2 = mergePlans({ ...emptyDb(), activities: [m] }, { ...emptyDb(), activities: [{ ...m, updatedAt: new Date(Date.now() + 120000).toISOString(), list: m.list.map(i => (i.id === 'n' ? { ...i, done: true, at: new Date(Date.now() + 120000).toISOString() } : i)) }] }).activities[0];
+    const m2 = mergePlans(
+      { ...emptyDb(), activities: [m] },
+      {
+        ...emptyDb(),
+        activities: [
+          {
+            ...m,
+            updatedAt: new Date(Date.now() + 120000).toISOString(),
+            list: m.list.map(i =>
+              i.id === 'n' ? { ...i, done: true, at: new Date(Date.now() + 120000).toISOString() } : i,
+            ),
+          },
+        ],
+      },
+    ).activities[0];
     eq(m2.status, 'done', 'done once the merged list is all ticked');
   });
 
   await step('lists: a card with long items fits a phone', async () => {
-    const a = { id: 'ph', title: 'Pack', status: 'doing', dueDate: addDays(today(), 3), list: [{ id: 'a', text: 'Short', done: true }, { id: 'b', text: 'A'.repeat(120) }, { id: 'c', text: 'A rather long item that has to wrap over a few lines on a phone screen' }] };
+    const a = {
+      id: 'ph',
+      title: 'Pack',
+      status: 'doing',
+      dueDate: addDays(today(), 3),
+      list: [
+        { id: 'a', text: 'Short', done: true },
+        { id: 'b', text: 'A'.repeat(120) },
+        { id: 'c', text: 'A rather long item that has to wrap over a few lines on a phone screen' },
+      ],
+    };
     db.activities.push(a);
     const frame = document.createElement('iframe');
-    Object.assign(frame.style, { width: '390px', height: '700px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    Object.assign(frame.style, {
+      width: '390px',
+      height: '700px',
+      position: 'fixed',
+      left: '-9999px',
+      top: '0',
+      border: '0',
+    });
     frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px">${activityCard(a)}</body>`;
-    await new Promise(res => { frame.onload = res; document.body.append(frame); });
-    const doc = frame.contentDocument, card = doc.querySelector('.card').getBoundingClientRect();
+    await new Promise(res => {
+      frame.onload = res;
+      document.body.append(frame);
+    });
+    const doc = frame.contentDocument,
+      card = doc.querySelector('.card').getBoundingClientRect();
     const items = [...doc.querySelectorAll('.li-tick')].map(b => b.getBoundingClientRect());
-    assert(items.length === 3 && items.every(r => r.left >= card.left && r.right <= card.right + 0.5), 'items inside the card');
+    assert(
+      items.length === 3 && items.every(r => r.left >= card.left && r.right <= card.right + 0.5),
+      'items inside the card',
+    );
     assert(doc.documentElement.scrollWidth <= 390, `no sideways scroll (${doc.documentElement.scrollWidth})`);
     // Shown as b, c, then the ticked a.
     assert(items[0].height > items[2].height * 2, 'a long item wraps');
-    eq([...doc.querySelectorAll('.li-tick')].map(b => b.dataset.li), ['b', 'c', 'a'], 'the ticked item last');
+    eq(
+      [...doc.querySelectorAll('.li-tick')].map(b => b.dataset.li),
+      ['b', 'c', 'a'],
+      'the ticked item last',
+    );
     frame.remove();
     db.activities = db.activities.filter(x => x.id !== 'ph');
   });
 
   await step('map: drag from one box to another to link them; touch picks by tapping', async () => {
     fresh('Linking');
-    const g = mk('goal', { title: 'Big goal' }), g2 = mk('goal', { title: 'Other goal' });
-    const a = mk('activity', { title: 'Do it' }), s = mk('state', { title: 'Now' });
+    const g = mk('goal', { title: 'Big goal' }),
+      g2 = mk('goal', { title: 'Other goal' });
+    const a = mk('activity', { title: 'Do it' }),
+      s = mk('state', { title: 'Now' });
     rel(s, g, 'measures');
     save();
     setView('map');
     const node = id => $(`[data-map-node="${id}"]`);
-    const mid = id => { const r = node(id).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
-    const ev = (type, el, p) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'mouse', button: 0, clientX: p.x, clientY: p.y }));
+    const mid = id => {
+      const r = node(id).getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    };
+    const ev = (type, el, p) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 7,
+          pointerType: 'mouse',
+          button: 0,
+          clientX: p.x,
+          clientY: p.y,
+        }),
+      );
     const drag = (fromId, end, hover) => {
       const p0 = mid(fromId);
       ev('pointerdown', node(fromId), p0);
@@ -1239,29 +2096,50 @@ window.moreTests = async ({ step, assert }) => {
     };
     node(a.id).scrollIntoView({ block: 'center' });
     // Drag activity → goal: the form offers only what fits (contributes).
-    const p0 = mid(a.id), pg = mid(g.id);
+    const p0 = mid(a.id),
+      pg = mid(g.id);
     ev('pointerdown', node(a.id), p0);
     ev('pointermove', document, { x: p0.x + 30, y: p0.y - 30 });
-    assert($('.link-line') && node(a.id).classList.contains('link-source') && $('.map-wrap').classList.contains('linking'), 'line drawn while dragging');
+    assert(
+      $('.link-line') && node(a.id).classList.contains('link-source') && $('.map-wrap').classList.contains('linking'),
+      'line drawn while dragging',
+    );
     assert(!$('.map-wrap').classList.contains('panning'), 'dragging a box does not pan');
     ev('pointermove', document, pg);
     assert(node(g.id).classList.contains('link-target'), 'target box marked');
     ev('pointerup', document, pg);
     assert(!$('.link-line') && !$('.link-source, .link-target'), 'line removed');
     await tick();
-    assert(modal.open && $('#f-from').value === a.id && $('#f-to').value === g.id, 'relationship form opened for the two items');
-    eq([...$('#f-type').options].map(o => o.value), ['contributes'], 'only fitting types');
+    assert(
+      modal.open && $('#f-from').value === a.id && $('#f-to').value === g.id,
+      'relationship form opened for the two items',
+    );
+    eq(
+      [...$('#f-type').options].map(o => o.value),
+      ['contributes'],
+      'only fitting types',
+    );
     submitForm();
-    assert(relsFrom(a.id, 'contributes').some(r => r.to === g.id), 'link saved');
+    assert(
+      relsFrom(a.id, 'contributes').some(r => r.to === g.id),
+      'link saved',
+    );
 
     // Goal dragged onto an activity: offered in the other direction, saved the right way round.
     const before = db.relations.length;
     drag(g2.id, mid(a.id));
     await tick();
-    eq([...$('#f-type').options].map(o => o.value), ['rev:contributes'], 'offered the other way round');
+    eq(
+      [...$('#f-type').options].map(o => o.value),
+      ['rev:contributes'],
+      'offered the other way round',
+    );
     $('#f-type').value = 'rev:contributes';
     submitForm();
-    assert(db.relations.length === before + 1 && relsFrom(a.id, 'contributes').some(r => r.to === g2.id), 'reverse type saved activity → goal');
+    assert(
+      db.relations.length === before + 1 && relsFrom(a.id, 'contributes').some(r => r.to === g2.id),
+      'reverse type saved activity → goal',
+    );
 
     // Released outside a box, on itself, or on the background: nothing happens.
     const n = db.relations.length;
@@ -1272,11 +2150,13 @@ window.moreTests = async ({ step, assert }) => {
     await tick();
     assert(!modal.open && db.relations.length === n && !$('.link-line'), 'dropped outside: no link');
     // A click on a box without dragging still highlights it.
-    ev('pointerdown', node(s.id), mid(s.id)); ev('pointerup', document, mid(s.id));
+    ev('pointerdown', node(s.id), mid(s.id));
+    ev('pointerup', document, mid(s.id));
     await tick();
     node(s.id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
     assert(ui.mapSelected === s.id && !modal.open, 'plain click highlights');
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     // Escape drops a link in progress.
     const ps = mid(s.id);
     ev('pointerdown', node(s.id), ps);
@@ -1295,10 +2175,20 @@ window.moreTests = async ({ step, assert }) => {
     // Touch: "Link to…" from the long-press menu, then tap the other box.
     openCtxMenu(g2.id, 10, 10);
     ctxMenu.querySelector('[data-ctx="link"]').click();
-    assert(ui.mapLinkFrom === g2.id && $('.link-bar') && node(g2.id).classList.contains('link-source'), 'pick mode with a banner');
+    assert(
+      ui.mapLinkFrom === g2.id && $('.link-bar') && node(g2.id).classList.contains('link-source'),
+      'pick mode with a banner',
+    );
     node(g.id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    assert(!ui.mapLinkFrom && modal.open && $('#f-from').value === g2.id && $('#f-to').value === g.id, 'tap on the other box opens the form');
-    eq([...$('#f-type').options].map(o => o.value), ['subgoal', 'depends', 'rev:subgoal', 'rev:depends'], 'goal ↔ goal types');
+    assert(
+      !ui.mapLinkFrom && modal.open && $('#f-from').value === g2.id && $('#f-to').value === g.id,
+      'tap on the other box opens the form',
+    );
+    eq(
+      [...$('#f-type').options].map(o => o.value),
+      ['subgoal', 'depends', 'rev:subgoal', 'rev:depends'],
+      'goal ↔ goal types',
+    );
     modal.close();
     startMapLink(g2.id);
     $('.map-legend').dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -1316,23 +2206,48 @@ window.moreTests = async ({ step, assert }) => {
     modal.close();
     const i = TOUR_STEPS.findIndex(x => x.key === 'mapLink');
     assert(TOUR_STEPS[i - 1].key === 'map' && TOUR_STEPS[i].view === 'map', 'tour step after the map');
-    assert(t('tour.mapLink.text').includes('drag') && I18N.sl.strings['tour.mapLink.text'].includes('povlecite'), 'tour text in both languages');
+    assert(
+      t('tour.mapLink.text').includes('drag') && I18N.sl.strings['tour.mapLink.text'].includes('povlecite'),
+      'tour text in both languages',
+    );
   });
 
   await step('deleting a plan: consequences spelled out, name must be typed', () => {
     fresh('Old plan');
-    const g = mk('goal'), s = mk('state', { history: [{ date: d(-1), value: '1' }, { date: d(0), value: '2' }] });
-    mk('activity'); rel(s, g, 'measures');
+    const g = mk('goal'),
+      s = mk('state', {
+        history: [
+          { date: d(-1), value: '1' },
+          { date: d(0), value: '2' },
+        ],
+      });
+    mk('activity');
+    rel(s, g, 'measures');
     save();
-    const id = plans.current, count = plans.list.length;
+    const id = plans.current,
+      count = plans.list.length;
     $('[data-plan="delete"]').click();
-    const dlg = $('#planDelete'), btn = $('#planDeleteBtn'), box = $('#planDeleteName');
+    const dlg = $('#planDelete'),
+      btn = $('#planDeleteBtn'),
+      box = $('#planDeleteName');
     assert(dlg.open && document.activeElement === box, 'dialog open, name field focused');
     const text = $('#planDeleteBody').textContent;
-    ['Old plan', '1 goal', '1 current state', '2 recorded measurements', '1 activity', '1 relationship', 'can’t be undone', 'only in this browser', 'other plans are not affected']
-      .forEach(x => assert(text.includes(x), 'mentions ' + x));
+    [
+      'Old plan',
+      '1 goal',
+      '1 current state',
+      '2 recorded measurements',
+      '1 activity',
+      '1 relationship',
+      'can’t be undone',
+      'only in this browser',
+      'other plans are not affected',
+    ].forEach(x => assert(text.includes(x), 'mentions ' + x));
     assert(btn.disabled, 'delete disabled at first');
-    const type = v => { box.value = v; box.dispatchEvent(new Event('input', { bubbles: true })); };
+    const type = v => {
+      box.value = v;
+      box.dispatchEvent(new Event('input', { bubbles: true }));
+    };
     type('old plan');
     assert(btn.disabled, 'wrong case not accepted');
     type('Old pla');
@@ -1363,30 +2278,50 @@ window.moreTests = async ({ step, assert }) => {
   await step('plan names: samples numbered, map and timeline full width', () => {
     const base = t('plan.sampleName');
     plans.list.filter(p => p.name.startsWith(base)).forEach(p => deletePlan(p.id));
-    loadSample(); loadSample(); loadSample();
+    loadSample();
+    loadSample();
+    loadSample();
     const names = plans.list.map(p => p.name).filter(n => n.startsWith(base));
     eq(names, [base, base + ' 2', base + ' 3'], 'sample plans numbered');
     eq(uniqueName('Nothing like it'), 'Nothing like it', 'free name kept');
     eq(uniqueName(base.toUpperCase()), base.toUpperCase() + ' 4', 'case is ignored');
     // The map and timeline are not limited to the page width the other views use.
     // (The test window is narrower than that limit, so the limit itself is checked.)
-    const limit = v => { setView(v); return getComputedStyle(viewEl).maxWidth; };
+    const limit = v => {
+      setView(v);
+      return getComputedStyle(viewEl).maxWidth;
+    };
     eq(['map', 'timeline', 'goals', 'dashboard'].map(limit), ['none', 'none', '1240px', '1240px'], 'width limits');
     setView('dashboard');
   });
 
   await step('routines: periods, streaks, consistency and states', () => {
-    const now = today(), monday = addDays(now, -weekday(now));
+    const now = today(),
+      monday = addDays(now, -weekday(now));
     const r = (repeat, p = {}) => ({ id: uid(), title: 'r', status: 'todo', repeat, checkins: {}, ...p });
     eq(periodOf(r({ times: 2, per: 'month' }), '2028-02-10'), { from: '2028-02-01', to: '2028-02-29' }, 'month period');
-    eq(periodOf(r({ times: 2, per: 'week' }), '2026-10-29'), { from: '2026-10-26', to: '2026-11-01' }, 'week starts on Monday');
+    eq(
+      periodOf(r({ times: 2, per: 'week' }), '2026-10-29'),
+      { from: '2026-10-26', to: '2026-11-01' },
+      'week starts on Monday',
+    );
     assert(weekday('2026-10-26') === 0 && weekday('2026-11-01') === 6, 'weekday: Monday 0');
 
     // 3× a week since three weeks before this Monday: met, missed, met; nothing yet this week.
     const tick = (a, ...isos) => isos.forEach(d => (a.checkins[d] = 1));
     const w = n => addDays(monday, -7 * n);
     const run = r({ times: 3, per: 'week' }, { startDate: w(3) });
-    tick(run, w(3), addDays(w(3), 2), addDays(w(3), 4), w(2), addDays(w(2), 1), w(1), addDays(w(1), 3), addDays(w(1), 6));
+    tick(
+      run,
+      w(3),
+      addDays(w(3), 2),
+      addDays(w(3), 4),
+      w(2),
+      addDays(w(2), 1),
+      w(1),
+      addDays(w(1), 3),
+      addDays(w(1), 6),
+    );
     eq(periodProgress(run), { from: monday, to: addDays(monday, 6), done: 0, target: 3, met: false }, 'this week');
     eq(routineStreak(run), { n: 1, unit: 'week' }, 'streak: last week only');
     eq(consistency(run), 2 / 3, 'two of three finished weeks');
@@ -1424,48 +2359,105 @@ window.moreTests = async ({ step, assert }) => {
     // Only the due days count in days mode.
     const monThu = r({ days: [0, 3] }, { startDate: w(2) });
     tick(monThu, addDays(w(1), 1), addDays(w(1), 2));
-    eq(consistency(monThu, '', ), 0, 'ticks on other days do not count');
+    eq(consistency(monThu, ''), 0, 'ticks on other days do not count');
 
     // Not started and ended (nothing can wait for a routine: see the dependency step).
     assert(routineState(r({ times: 1, per: 'week' }, { startDate: addDays(now, 3) })) === 'todo', 'not started');
     fresh('Routine ends');
-    const ended = mk('activity', { repeat: { times: 1, per: 'week' }, checkins: {}, startDate: addDays(now, -30), dueDate: addDays(now, -1) });
+    const ended = mk('activity', {
+      repeat: { times: 1, per: 'week' },
+      checkins: {},
+      startDate: addDays(now, -30),
+      dueDate: addDays(now, -1),
+    });
     const going = mk('activity', { repeat: { times: 1, per: 'week' }, checkins: {}, startDate: addDays(now, -30) });
-    assert(routineState(ended) === 'done' && isComplete('activity', ended) && !isComplete('activity', going), 'ended routine is complete');
+    assert(
+      routineState(ended) === 'done' && isComplete('activity', ended) && !isComplete('activity', going),
+      'ended routine is complete',
+    );
     return `streak ${routineStreak(run).n}, consistency ${Math.round(consistency(run) * 100)} %`;
   });
 
   await step('routines: form, board, overview, goal progress, menu, map and sync', async () => {
     fresh('Routines UI');
     const now = today();
-    const g = mk('goal', { title: 'Move more', progress: 'routines', startDate: addDays(now, -14), deadline: addDays(now, 90), category: 'Health' });
+    const g = mk('goal', {
+      title: 'Move more',
+      progress: 'routines',
+      startDate: addDays(now, -14),
+      deadline: addDays(now, 90),
+      category: 'Health',
+    });
     const oneOff = mk('activity', { title: 'Buy shoes', status: 'todo' });
-    const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    const change = (id, value) => {
+      $(id).value = value;
+      $(id).dispatchEvent(new Event('change', { bubbles: true }));
+    };
     const shown = sel => !modal.querySelector(sel).closest('[hidden]');
     // Create a routine in the form: specific days.
     openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Strength';
-    assert(shown('[data-field="status"]') && !shown('#repeatCustom') && !shown('#repeatEnds') && !shown('#repDays') && !shown('#repTimes'), 'one-off by default');
-    eq([...$('#f-repeat').options].map(o => o.value), ['none', 'week', 'month', 'days', 'custom'], 'kinds of repeat');
+    assert(
+      shown('[data-field="status"]') &&
+        !shown('#repeatCustom') &&
+        !shown('#repeatEnds') &&
+        !shown('#repDays') &&
+        !shown('#repTimes'),
+      'one-off by default',
+    );
+    eq(
+      [...$('#f-repeat').options].map(o => o.value),
+      ['none', 'week', 'month', 'days', 'custom'],
+      'kinds of repeat',
+    );
     change('#f-repeat', 'days');
-    assert(!shown('[data-field="status"]') && !shown('[data-field="dueDate"]') && !shown('#repeatCustom') && shown('#repDays') && !shown('#repTimes') && shown('#repeatEnds'), 'days shown, status and due date hidden');
+    assert(
+      !shown('[data-field="status"]') &&
+        !shown('[data-field="dueDate"]') &&
+        !shown('#repeatCustom') &&
+        shown('#repDays') &&
+        !shown('#repTimes') &&
+        shown('#repeatEnds'),
+      'days shown, status and due date hidden',
+    );
     modal.querySelector('.day-toggle[aria-pressed="true"]').click(); // the start's weekday is chosen by default
     submitForm();
     assert(modal.open && modal.querySelector('[data-field="days"] .err').textContent === t('err.days'), 'needs a day');
-    modal.querySelectorAll('.day-toggle')[0].click(); modal.querySelectorAll('.day-toggle')[3].click();
+    modal.querySelectorAll('.day-toggle')[0].click();
+    modal.querySelectorAll('.day-toggle')[3].click();
     [...modal.querySelectorAll('[data-name="goals"] .pick-opt')].find(o => o.textContent === 'Move more').click();
     // Every routine ends: there is no "never", and a day is asked for.
-    assert(!modal.querySelector('[name="ends"][value="never"]') && modal.querySelector('[name="ends"]:checked').value === 'on', 'ends on a day by default');
+    assert(
+      !modal.querySelector('[name="ends"][value="never"]') &&
+        modal.querySelector('[name="ends"]:checked').value === 'on',
+      'ends on a day by default',
+    );
     submitForm();
-    assert(modal.open && modal.querySelector('[data-field="endDate"] .err').textContent === t('err.endDate'), 'needs an end');
+    assert(
+      modal.open && modal.querySelector('[data-field="endDate"] .err').textContent === t('err.endDate'),
+      'needs an end',
+    );
     $('#f-endDate').value = dateInput(addDays(now, 60));
     submitForm();
     const st = db.activities.find(a => a.title === 'Strength');
-    assert(!modal.open && st && JSON.stringify(st.repeat) === '{"every":1,"unit":"week","days":[0,3]}' && st.startDate === now && st.dueDate === addDays(now, 60), 'saved as a routine from today');
+    assert(
+      !modal.open &&
+        st &&
+        JSON.stringify(st.repeat) === '{"every":1,"unit":"week","days":[0,3]}' &&
+        st.startDate === now &&
+        st.dueDate === addDays(now, 60),
+      'saved as a routine from today',
+    );
     openForm('activity', st.id);
-    assert($('#f-repeat').value === 'days' && modal.querySelector('[name="ends"]:checked').value === 'on', 'form shows the saved repeat');
+    assert(
+      $('#f-repeat').value === 'days' && modal.querySelector('[name="ends"]:checked').value === 'on',
+      'form shows the saved repeat',
+    );
     change('#f-repeat', 'custom');
-    assert($('#f-unit').value === 'week' && $('#f-on').value === 'days' && shown('#repDays'), 'custom starts from specific days');
+    assert(
+      $('#f-unit').value === 'week' && $('#f-on').value === 'days' && shown('#repDays'),
+      'custom starts from specific days',
+    );
     modal.close();
     // A number of times per week, with validation.
     openForm('activity', null, { repeat: 'once' });
@@ -1474,7 +2466,10 @@ window.moreTests = async ({ step, assert }) => {
     assert(shown('#repTimes') && !shown('#repDays') && !shown('#repeatCustom'), 'times shown');
     $('#f-times').value = '9';
     submitForm();
-    assert(modal.querySelector('[data-field="times"] .err').textContent === t('err.times', { max: 7 }), 'at most 7 a week');
+    assert(
+      modal.querySelector('[data-field="times"] .err').textContent === t('err.times', { max: 7 }),
+      'at most 7 a week',
+    );
     $('#f-times').value = '3';
     $('#f-startDate').value = dateInput(addDays(now, -14));
     $('#f-endDate').value = dateInput(addDays(now, 60));
@@ -1490,8 +2485,15 @@ window.moreTests = async ({ step, assert }) => {
     $('#f-startDate').dispatchEvent(new Event('input', { bubbles: true }));
     change('#f-repeat', 'month');
     change('#f-repeat', 'custom');
-    assert($('#f-unit').value === 'month' && $('#f-on').value === 'times' && shown('#repTimes') && !shown('#repDays'), 'custom starts from times per month');
-    eq([...$('#f-on').options].map(o => o.value), ['day', 'lastDay', 'nth', 'times'], 'month options');
+    assert(
+      $('#f-unit').value === 'month' && $('#f-on').value === 'times' && shown('#repTimes') && !shown('#repDays'),
+      'custom starts from times per month',
+    );
+    eq(
+      [...$('#f-on').options].map(o => o.value),
+      ['day', 'lastDay', 'nth', 'times'],
+      'month options',
+    );
     $('#f-every').value = '2';
     $('#f-every').dispatchEvent(new Event('input', { bubbles: true }));
     assert($('#f-unit [value="month"]').textContent === tp('f.unit.month', 2), 'unit follows the interval');
@@ -1502,16 +2504,29 @@ window.moreTests = async ({ step, assert }) => {
     $('#f-count').value = '3';
     submitForm();
     const check = db.activities.find(a => a.title === 'Check-up');
-    assert(JSON.stringify(check.repeat) === '{"every":2,"unit":"month","on":"nth","nth":-1,"weekday":2,"count":3}', 'custom month saved: ' + JSON.stringify(check.repeat));
+    assert(
+      JSON.stringify(check.repeat) === '{"every":2,"unit":"month","on":"nth","nth":-1,"weekday":2,"count":3}',
+      'custom month saved: ' + JSON.stringify(check.repeat),
+    );
     assert(check.dueDate === '2099-05-27', 'ends on the third occurrence: ' + check.dueDate);
-    eq(daysBetween('2099-01-01', '2099-12-31').filter(d => runsOn(check, d) && isDueDay(check, d)), ['2099-01-28', '2099-03-25', '2099-05-27'], 'last Wednesday every 2 months');
+    eq(
+      daysBetween('2099-01-01', '2099-12-31').filter(d => runsOn(check, d) && isDueDay(check, d)),
+      ['2099-01-28', '2099-03-25', '2099-05-27'],
+      'last Wednesday every 2 months',
+    );
     assert(scheduleText(check) === 'every 2 months on the last Wednesday', scheduleText(check));
     openForm('activity', check.id);
-    assert(modal.querySelector('[name="ends"]:checked').value === 'after' && $('#f-count').value === '3', 'ends after shown');
+    assert(
+      modal.querySelector('[name="ends"]:checked').value === 'after' && $('#f-count').value === '3',
+      'ends after shown',
+    );
     modal.querySelector('[name="ends"][value="on"]').checked = true;
     $('#f-endDate').value = dateInput('2098-01-01');
     submitForm();
-    assert(modal.querySelector('[data-field="endDate"] .err').textContent === t('err.startAfterDue'), 'cannot end before it starts');
+    assert(
+      modal.querySelector('[data-field="endDate"] .err').textContent === t('err.startAfterDue'),
+      'cannot end before it starts',
+    );
     $('#f-endDate').value = dateInput('2099-12-31');
     submitForm();
     assert(check.dueDate === '2099-12-31' && !check.repeat.count, 'ends on a date');
@@ -1519,19 +2534,29 @@ window.moreTests = async ({ step, assert }) => {
     change('#f-unit', 'year');
     $('#f-every').value = '1';
     submitForm();
-    assert(JSON.stringify(check.repeat) === '{"every":1,"unit":"year"}' && scheduleText(check) === 'every year on 28 January', scheduleText(check));
+    assert(
+      JSON.stringify(check.repeat) === '{"every":1,"unit":"year"}' &&
+        scheduleText(check) === 'every year on 28 January',
+      scheduleText(check),
+    );
     removeEntity('activity', check.id);
 
     // Board: routines above the columns, ticking days on the week strip.
     setView('activities');
     assert($('.routines') && $('.routines').querySelectorAll('.card.routine').length === 2, 'routines strip');
-    assert(!$('.board').querySelector(`[data-open="${run.id}"]`) && $('.board').querySelector(`[data-open="${oneOff.id}"]`), 'columns hold one-offs only');
+    assert(
+      !$('.board').querySelector(`[data-open="${run.id}"]`) && $('.board').querySelector(`[data-open="${oneOff.id}"]`),
+      'columns hold one-offs only',
+    );
     const day = d => $(`.card.routine[data-open="${run.id}"] [data-checkin][data-date="${d}"]`);
     assert(day(now) && !day(now).disabled, 'today can be ticked');
     const future = addDays(now, 1);
     if (weekday(now) < 6) assert(day(future).getAttribute('aria-disabled') === 'true', 'future days cannot');
     day(now).click();
-    assert(checkedOn(run, now) && day(now).getAttribute('aria-pressed') === 'true' && !modal.open, 'ticked without opening the form');
+    assert(
+      checkedOn(run, now) && day(now).getAttribute('aria-pressed') === 'true' && !modal.open,
+      'ticked without opening the form',
+    );
     day(now).click();
     assert(!checkedOn(run, now) && run.checkins[now] === 0, 'unticked (kept as 0 for sync)');
     // Meeting the week says so.
@@ -1542,7 +2567,8 @@ window.moreTests = async ({ step, assert }) => {
     if (past.length === 2) {
       day(now).click();
       assert($('#toast').textContent === t('rt.metWeek'), 'week met message');
-      run.checkins[now] = 0; render();
+      run.checkins[now] = 0;
+      render();
     }
 
     // Overview: its own list; counts and next actions leave routines out.
@@ -1550,24 +2576,34 @@ window.moreTests = async ({ step, assert }) => {
     setView('dashboard');
     const rows = () => [...$('.routine-list').querySelectorAll('.routine-row')].map(r => r.dataset.open);
     const stDays = st.repeat.days;
-    st.repeat.days = [weekday(now)]; render();
+    st.repeat.days = [weekday(now)];
+    render();
     assert(rows().includes(run.id) && rows().includes(st.id), 'routines on the overview, a set day today');
-    st.repeat.days = [(weekday(now) + 1) % 7]; render();
+    st.repeat.days = [(weekday(now) + 1) % 7];
+    render();
     assert(rows().includes(run.id) && !rows().includes(st.id), 'a set-day routine resting today is left out');
-    st.repeat.days = stDays; render();
-    assert(![...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].some(r => r.dataset.open === run.id), 'not in next actions');
+    st.repeat.days = stDays;
+    render();
+    assert(
+      ![...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].some(r => r.dataset.open === run.id),
+      'not in next actions',
+    );
     assert($('.facts').textContent.includes(t('dash.factDone', { done: 0, total: 1 })), 'one-off counts only');
     $(`.routine-row[data-open="${run.id}"] [data-checkin]`).click();
     assert(checkedOn(run, now) && !modal.open, 'done today from the overview');
 
     // Goal measured by routines: the average of their consistency since the goal started.
     const vals = [run, st].map(a => consistency(a, g.startDate)).filter(v => v !== null);
-    const expected = vals.length ? vals.reduce((x, y) => x + y, 0) / vals.length * 100 : 0;
+    const expected = vals.length ? (vals.reduce((x, y) => x + y, 0) / vals.length) * 100 : 0;
     assert(Math.abs(goalProgress(g) - expected) < 1e-9, `goal progress ${goalProgress(g)} = ${expected}`);
     assert(smartCheck(g).M, 'measurable without a metric');
     openForm('goal', g.id);
-    assert($('#f-progress').value === 'routines' && $('#measureFields').hidden && !$('#routinesHint').hidden, 'goal form: by routines');
-    $('#f-progress').value = 'activities'; $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
+    assert(
+      $('#f-progress').value === 'routines' && $('#measureFields').hidden && !$('#routinesHint').hidden,
+      'goal form: by routines',
+    );
+    $('#f-progress').value = 'activities';
+    $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
     assert($('#routinesHint').hidden && !$('#actsHint').hidden, 'hints follow the choice');
     modal.close();
     assert(!countedActivities(g).some(isRoutine), 'activity counts leave routines out');
@@ -1579,10 +2615,16 @@ window.moreTests = async ({ step, assert }) => {
     item.click();
     assert(checkedOn(st, now), 'ticked from the menu');
     setView('map');
-    assert($(`[data-map-node="${run.id}"] .sub`).textContent.includes(t('map.rt.week', { done: periodProgress(run).done, target: 3 })), 'map shows this week');
+    assert(
+      $(`[data-map-node="${run.id}"] .sub`).textContent.includes(
+        t('map.rt.week', { done: periodProgress(run).done, target: 3 }),
+      ),
+      'map shows this week',
+    );
     // Switching repeat off keeps the check-ins.
     openForm('activity', run.id);
-    $('#f-repeat').value = 'none'; $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#f-repeat').value = 'none';
+    $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
     submitForm();
     assert(!isRoutine(run) && run.checkins[now] === 1, 'one-off again, check-ins kept');
 
@@ -1592,14 +2634,36 @@ window.moreTests = async ({ step, assert }) => {
     const newer = { ...base, updatedAt: '2099-01-03', checkins: { '2099-01-02': 0, '2099-01-03': 1 } };
     const m = mergePlans({ ...emptyDb(), activities: [older] }, { ...emptyDb(), activities: [newer] }).activities[0];
     eq(m.checkins, { '2099-01-01': 1, '2099-01-02': 0, '2099-01-03': 1 }, 'merged check-ins');
-    eq(mergePlans({ ...emptyDb(), activities: [newer] }, { ...emptyDb(), activities: [older] }).activities[0].checkins, m.checkins, 'symmetric');
+    eq(
+      mergePlans({ ...emptyDb(), activities: [newer] }, { ...emptyDb(), activities: [older] }).activities[0].checkins,
+      m.checkins,
+      'symmetric',
+    );
   });
 
   await step('routines: the overview lists only the routines today still asks for', () => {
     fresh('Overview routines');
-    const MON = '2026-11-02', TUE = '2026-11-03', WED = '2026-11-04', THU = '2026-11-05';
-    const onDay = (iso, fn) => { const real = window.today; window.today = () => iso; try { return fn(); } finally { window.today = real; } };
-    const r = (title, repeat, more = {}) => mk('activity', { title, startDate: '2026-10-01', repeat: { every: 1, unit: 'week', ...repeat }, checkins: {}, ...more });
+    const MON = '2026-11-02',
+      TUE = '2026-11-03',
+      WED = '2026-11-04',
+      THU = '2026-11-05';
+    const onDay = (iso, fn) => {
+      const real = window.today;
+      window.today = () => iso;
+      try {
+        return fn();
+      } finally {
+        window.today = real;
+      }
+    };
+    const r = (title, repeat, more = {}) =>
+      mk('activity', {
+        title,
+        startDate: '2026-10-01',
+        repeat: { every: 1, unit: 'week', ...repeat },
+        checkins: {},
+        ...more,
+      });
     const setDay = r('Set Thu', { days: [3] });
     const offDay = r('Set Mon', { days: [0] });
     const ticked = r('Ticked', { days: [3] }, { checkins: { [THU]: 1 } });
@@ -1610,37 +2674,74 @@ window.moreTests = async ({ step, assert }) => {
     const metEarly = r('Met early', { days: [3], makeUp: true }, { checkins: { [WED]: 1 } });
     const ended = r('Ended', { days: [3] }, { dueDate: WED });
     const later = r('Later', { days: [3] }, { startDate: '2026-11-06' });
-    const listOne = r('List half', { days: [3] }, { list: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }], listDays: { [THU]: { a: 1 } } });
-    const listAll = r('List done', { days: [3] }, { list: [{ id: 'a', text: 'A' }], listDays: { [THU]: { a: 1 } }, checkins: { [THU]: 1 } });
+    const listOne = r(
+      'List half',
+      { days: [3] },
+      {
+        list: [
+          { id: 'a', text: 'A' },
+          { id: 'b', text: 'B' },
+        ],
+        listDays: { [THU]: { a: 1 } },
+      },
+    );
+    const listAll = r(
+      'List done',
+      { days: [3] },
+      { list: [{ id: 'a', text: 'A' }], listDays: { [THU]: { a: 1 } }, checkins: { [THU]: 1 } },
+    );
     const monthly = r('Monthly', { unit: 'month', times: 1 });
     const oneOff = mk('activity', { title: 'One-off', status: 'todo' });
     save();
     const rows = () => [...$('#view').querySelectorAll('.routine-list .routine-row')].map(x => x.dataset.open);
     onDay(THU, () => {
-      setView('dashboard'); render();
-      eq(rows(), [setDay, flex, makeUp, listOne, monthly].map(a => a.id), 'set day, flexible not met, make-up, half-ticked list, monthly');
-      assert(![offDay, ticked, flexMet, madeUp, metEarly, ended, later, listAll, oneOff].some(a => rows().includes(a.id)), 'off-day, ticked, met, made up, ended, not started, ticked list, one-off hidden');
+      setView('dashboard');
+      render();
+      eq(
+        rows(),
+        [setDay, flex, makeUp, listOne, monthly].map(a => a.id),
+        'set day, flexible not met, make-up, half-ticked list, monthly',
+      );
+      assert(
+        ![offDay, ticked, flexMet, madeUp, metEarly, ended, later, listAll, oneOff].some(a => rows().includes(a.id)),
+        'off-day, ticked, met, made up, ended, not started, ticked list, one-off hidden',
+      );
       // Ticking from the overview takes the row off; the list's last item does too.
       $(`.routine-row[data-open="${setDay.id}"] [data-checkin]`).click();
       assert(checkedOn(setDay, THU) && !rows().includes(setDay.id), 'ticked: off the overview');
       tickRoutineItem(listOne, 'b', THU);
       assert(checkedOn(listOne, THU) && !rows().includes(listOne.id), 'last item ticked: off the overview');
       // Unticking elsewhere brings it back.
-      setRoutineDay(setDay, THU, false); setView('dashboard'); render();
+      setRoutineDay(setDay, THU, false);
+      setView('dashboard');
+      render();
       assert(rows().includes(setDay.id), 'unticked: back on the overview');
     });
     // A flexible routine that needs every day left still shows; once met it goes.
-    onDay(WED, () => { setView('dashboard'); render(); assert(rows().includes(flex.id) && rows().includes(flexMet.id) === false, 'Wednesday: flex shown, met hidden'); });
+    onDay(WED, () => {
+      setView('dashboard');
+      render();
+      assert(rows().includes(flex.id) && rows().includes(flexMet.id) === false, 'Wednesday: flex shown, met hidden');
+    });
     // Nothing asked for today: no routines section at all.
-    db.activities.filter(isRoutine).forEach(a => { a.checkins = { ...a.checkins, [THU]: 1 }; });
-    onDay(THU, () => { setView('dashboard'); render(); assert(!$('.routine-list'), 'all ticked: no routines section'); });
+    db.activities.filter(isRoutine).forEach(a => {
+      a.checkins = { ...a.checkins, [THU]: 1 };
+    });
+    onDay(THU, () => {
+      setView('dashboard');
+      render();
+      assert(!$('.routine-list'), 'all ticked: no routines section');
+    });
     deletePlan(plans.current);
   });
 
   await step('routines: the due date typed before turning an activity into a routine becomes its end, and back', () => {
     fresh('Carry end');
     const now = today();
-    const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    const change = (id, value) => {
+      $(id).value = value;
+      $(id).dispatchEvent(new Event('change', { bubbles: true }));
+    };
     openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Yoga';
     $('#f-dueDate').value = dateInput(addDays(now, 30));
@@ -1670,9 +2771,18 @@ window.moreTests = async ({ step, assert }) => {
       loadSample();
       const exercise = db.goals.find(g => byRoutines(g));
       const routines = db.activities.filter(isRoutine);
-      assert(exercise && goalRoutines(exercise).length === 2 && routines.length === 3, `${code}: goal by routines, three routines`);
-      assert(goalProgress(exercise) > 50 && goalProgress(exercise) < 100, `${code}: consistency ${goalProgress(exercise)}`);
-      assert(routines.every(a => routineStreak(a).n >= 0 && consistency(a) !== null), `${code}: routines have history`);
+      assert(
+        exercise && goalRoutines(exercise).length === 2 && routines.length === 3,
+        `${code}: goal by routines, three routines`,
+      );
+      assert(
+        goalProgress(exercise) > 50 && goalProgress(exercise) < 100,
+        `${code}: consistency ${goalProgress(exercise)}`,
+      );
+      assert(
+        routines.every(a => routineStreak(a).n >= 0 && consistency(a) !== null),
+        `${code}: routines have history`,
+      );
       setView('activities');
       assert($('.routines .card.routine') && !$('.routines').textContent.includes('rt.'), `${code}: strip rendered`);
       untickCook();
@@ -1680,84 +2790,181 @@ window.moreTests = async ({ step, assert }) => {
       assert($('.routine-list') && !$('.routine-list').textContent.includes('rt.'), `${code}: overview list`);
     }
     const sl = I18N.sl.strings;
-    eq([1, 2, 3, 5].map(n => tp('rt.perWeek', n)), ['enkrat na teden', 'dvakrat na teden', '3-krat na teden', '5-krat na teden'], 'Slovenian schedule');
+    eq(
+      [1, 2, 3, 5].map(n => tp('rt.perWeek', n)),
+      ['enkrat na teden', 'dvakrat na teden', '3-krat na teden', '5-krat na teden'],
+      'Slovenian schedule',
+    );
     eq(tp('rt.streak.week', 2), '2 tedna zapored', 'Slovenian streak');
     changeLanguage('en');
-    eq([1, 3].map(n => tp('rt.perWeek', n)), ['once a week', '3× a week']);
-    assert(scheduleText({ repeat: { days: [0, 3] } }) === 'every Mon, Thu' && scheduleText({ repeat: { days: [0, 1, 2, 3, 4, 5, 6] } }) === 'every day', 'day schedules');
+    eq(
+      [1, 3].map(n => tp('rt.perWeek', n)),
+      ['once a week', '3× a week'],
+    );
+    assert(
+      scheduleText({ repeat: { days: [0, 3] } }) === 'every Mon, Thu' &&
+        scheduleText({ repeat: { days: [0, 1, 2, 3, 4, 5, 6] } }) === 'every day',
+      'day schedules',
+    );
     const at = (repeat, startDate = '2099-01-07') => ({ repeat, startDate }); // a Wednesday
-    eq([
-      at({ every: 1, unit: 'day' }), at({ every: 3, unit: 'day' }), at({ every: 1, unit: 'week' }), at({ every: 2, unit: 'week', days: [0, 4] }),
-      at({ every: 1, unit: 'month' }), at({ every: 1, unit: 'month', on: 'weekday' }), at({ every: 2, unit: 'week', times: 3 }), at({ every: 1, unit: 'month', times: 1 }),
-    ].map(scheduleText), ['every day', 'every 3 days', 'every Wed', 'every 2 weeks on Mon, Fri', 'every month on day 7', 'every month on the first Wednesday', '3× every 2 weeks', 'once a month']);
+    eq(
+      [
+        at({ every: 1, unit: 'day' }),
+        at({ every: 3, unit: 'day' }),
+        at({ every: 1, unit: 'week' }),
+        at({ every: 2, unit: 'week', days: [0, 4] }),
+        at({ every: 1, unit: 'month' }),
+        at({ every: 1, unit: 'month', on: 'weekday' }),
+        at({ every: 2, unit: 'week', times: 3 }),
+        at({ every: 1, unit: 'month', times: 1 }),
+      ].map(scheduleText),
+      [
+        'every day',
+        'every 3 days',
+        'every Wed',
+        'every 2 weeks on Mon, Fri',
+        'every month on day 7',
+        'every month on the first Wednesday',
+        '3× every 2 weeks',
+        'once a month',
+      ],
+    );
     changeLanguage('sl');
-    eq([at({ every: 2, unit: 'week', days: [0] }), at({ every: 1, unit: 'month', on: 'weekday' }), at({ every: 5, unit: 'year' })].map(scheduleText),
-      ['vsaka 2 tedna: pon.', 'vsak mesec: prva sreda v mesecu', 'vsakih 5 let: 7. januar'].map(x => x), 'Slovenian summaries');
+    eq(
+      [
+        at({ every: 2, unit: 'week', days: [0] }),
+        at({ every: 1, unit: 'month', on: 'weekday' }),
+        at({ every: 5, unit: 'year' }),
+      ].map(scheduleText),
+      ['vsaka 2 tedna: pon.', 'vsak mesec: prva sreda v mesecu', 'vsakih 5 let: 7. januar'].map(x => x),
+      'Slovenian summaries',
+    );
     changeLanguage('en');
     // Every 3 days; every 2 weeks (Mon, Fri); flexible every 2 weeks; a yearly one.
-    const due = a => daysBetween('2099-01-07', '2099-01-31').filter(d => isDueDay(a, d)).map(d => d.slice(8));
+    const due = a =>
+      daysBetween('2099-01-07', '2099-01-31')
+        .filter(d => isDueDay(a, d))
+        .map(d => d.slice(8));
     eq(due(at({ every: 3, unit: 'day' })), ['07', '10', '13', '16', '19', '22', '25', '28', '31'], 'every 3 days');
     eq(due(at({ every: 2, unit: 'week', days: [0, 4] })), ['09', '19', '23'], 'every 2 weeks on Mon, Fri');
-    eq(periodOf(at({ every: 2, unit: 'week', times: 3 }), '2099-01-14'), { from: '2099-01-05', to: '2099-01-18' }, 'a two-week period');
+    eq(
+      periodOf(at({ every: 2, unit: 'week', times: 3 }), '2099-01-14'),
+      { from: '2099-01-05', to: '2099-01-18' },
+      'a two-week period',
+    );
     eq(periodOf(at({ every: 1, unit: 'year' }), '2099-06-01'), { from: '2099-01-01', to: '2099-12-31' }, 'a year');
-    eq(lastOccurrence(at({ every: 2, unit: 'week', times: 3 }), 7), '2099-02-15', 'seven times at 3 per two weeks needs three periods');
+    eq(
+      lastOccurrence(at({ every: 2, unit: 'week', times: 3 }), 7),
+      '2099-02-15',
+      'seven times at 3 per two weeks needs three periods',
+    );
     // Nothing due this period: the next due day instead of 0 / 0.
-    const now = today(), lastWeek = addDays(now, -weekday(now) - 7);
+    const now = today(),
+      lastWeek = addDays(now, -weekday(now) - 7);
     const next = iso => t('rt.next', { date: fmtDay(iso, { weekday: 'short', day: 'numeric', month: 'short' }) });
     const offWeek = at({ every: 2, unit: 'week', days: [weekday(now)] }, lastWeek);
     eq(periodText(offWeek), next(addDays(now, 7)), 'off week shows the next due day');
-    eq(periodText(at({ every: 2, unit: 'week', days: [weekday(now)] }, addDays(lastWeek, 7))), t('rt.week', { done: 0, target: 1 }), 'on week shows progress');
+    eq(
+      periodText(at({ every: 2, unit: 'week', days: [weekday(now)] }, addDays(lastWeek, 7))),
+      t('rt.week', { done: 0, target: 1 }),
+      'on week shows progress',
+    );
     eq(periodText(at({ every: 1, unit: 'month' }, addDays(now, 40))), next(addDays(now, 40)), 'not started yet');
     eq(periodText({ ...offWeek, dueDate: addDays(now, 3) }), t('rt.ended'), 'not due again before it ends');
     const i = TOUR_STEPS.findIndex(x => x.key === 'routines');
-    assert(TOUR_STEPS[i - 1].key === 'activities' && TOUR_STEPS[i].target[0] === '.routines', 'tour step after activities');
+    assert(
+      TOUR_STEPS[i - 1].key === 'activities' && TOUR_STEPS[i].target[0] === '.routines',
+      'tour step after activities',
+    );
     assert(t('tour.routines.text').includes('streak') && sl['tour.routines.text'].includes('niz'), 'tour text');
-    return db.activities.filter(isRoutine).map(a => `${a.title}: ${periodText(a)}, ${streakText(routineStreak(a))}`).join(' | ');
+    return db.activities
+      .filter(isRoutine)
+      .map(a => `${a.title}: ${periodText(a)}, ${streakText(routineStreak(a))}`)
+      .join(' | ');
   });
 
   await step('date fields: dd/mm/yyyy typing, picker and validation', () => {
-    const ok = [['7/3/2026', '2026-03-07'], ['07/03/2026', '2026-03-07'], ['7.3.2026', '2026-03-07'], ['7. 3. 2026', '2026-03-07'], ['29/02/2028', '2028-02-29'], ['2026-03-07', '2026-03-07']];
+    const ok = [
+      ['7/3/2026', '2026-03-07'],
+      ['07/03/2026', '2026-03-07'],
+      ['7.3.2026', '2026-03-07'],
+      ['7. 3. 2026', '2026-03-07'],
+      ['29/02/2028', '2028-02-29'],
+      ['2026-03-07', '2026-03-07'],
+    ];
     ok.forEach(([s, iso]) => assert(parseDateInput(s) === iso, `${s} → ${parseDateInput(s)}`));
-    ['31/02/2026', '29/02/2027', '13/13/2026', '7/3/26', 'tomorrow', '', '2026-3-7'].forEach(s => assert(parseDateInput(s) === null, `${s} should be rejected`));
+    ['31/02/2026', '29/02/2027', '13/13/2026', '7/3/26', 'tomorrow', '', '2026-3-7'].forEach(s =>
+      assert(parseDateInput(s) === null, `${s} should be rejected`),
+    );
     assert(dateInput('2026-03-07') === '07/03/2026' && dateInput('') === '', 'shown as dd/mm/yyyy');
 
     fresh('Dates');
     changeLanguage('sl');
     openForm('activity', null, { repeat: 'once' });
     const due = $('#f-dueDate');
-    assert(due.type === 'text' && due.placeholder === 'dd/mm/llll' && $('[data-field="dueDate"] .date-pick').title === 'Izberi datum', 'Slovenian dd/mm/llll field');
-    const type = ch => { due.value += ch; due.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ch })); };
-    due.value = ''; due.focus();
+    assert(
+      due.type === 'text' &&
+        due.placeholder === 'dd/mm/llll' &&
+        $('[data-field="dueDate"] .date-pick').title === 'Izberi datum',
+      'Slovenian dd/mm/llll field',
+    );
+    const type = ch => {
+      due.value += ch;
+      due.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ch }));
+    };
+    due.value = '';
+    due.focus();
     '24102026'.split('').forEach(type);
     const typed = due.value;
     assert(typed === '24/10/2026', 'slashes added while typing: ' + typed);
-    due.value = ''; '7/3/2026'.split('').forEach(type);
+    due.value = '';
+    '7/3/2026'.split('').forEach(type);
     assert(due.value === '7/3/2026', 'typed slashes kept: ' + due.value);
     // The calendar: Monday first, opens on the field's date, picks into the field.
     const calBtn = f => $(`[data-field="${f}"] [data-cal-open]`);
-    const key = k => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const key = k =>
+      document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
     $('#f-startDate').value = '15/02/2026';
     calBtn('startDate').click();
     const cal1 = $('[data-field="startDate"] .cal');
     const head = cal1.querySelector('.cal-head strong').textContent;
     const weekdays = [...cal1.querySelectorAll('.cal-wd')].map(w => w.textContent);
     const blanks = cal1.querySelectorAll('.cal-grid > span:not(.cal-wd)').length;
-    assert(calBtn('startDate').getAttribute('aria-expanded') === 'true' && document.activeElement.dataset.calDay === '2026-02-15', 'opens on the field date, day focused');
-    assert(/^pon/i.test(weekdays[0]) && /^ned/i.test(weekdays[6]) && blanks === 6, `Monday first: ${weekdays} blanks=${blanks}`); // 1 Feb 2026 is a Sunday
-    assert(cal1.querySelector('[data-cal-day="2026-02-15"]').getAttribute('aria-pressed') === 'true', 'chosen day marked');
-    key('ArrowRight'); key('ArrowDown'); key('PageDown');
+    assert(
+      calBtn('startDate').getAttribute('aria-expanded') === 'true' &&
+        document.activeElement.dataset.calDay === '2026-02-15',
+      'opens on the field date, day focused',
+    );
+    assert(
+      /^pon/i.test(weekdays[0]) && /^ned/i.test(weekdays[6]) && blanks === 6,
+      `Monday first: ${weekdays} blanks=${blanks}`,
+    ); // 1 Feb 2026 is a Sunday
+    assert(
+      cal1.querySelector('[data-cal-day="2026-02-15"]').getAttribute('aria-pressed') === 'true',
+      'chosen day marked',
+    );
+    key('ArrowRight');
+    key('ArrowDown');
+    key('PageDown');
     const kb = document.activeElement.dataset.calDay;
     assert(kb === '2026-03-23', 'arrow and page keys: ' + kb);
     key('ArrowLeft');
-    $('[data-field="startDate"] [data-cal-move="-1"]').click(); const back = $('[data-field="startDate"] .cal-head strong').textContent;
+    $('[data-field="startDate"] [data-cal-move="-1"]').click();
+    const back = $('[data-field="startDate"] .cal-head strong').textContent;
     $('[data-field="startDate"] [data-cal-move="1"]').click();
-    assert(document.activeElement.dataset.calMove === "1" && /feb/i.test(back), "month buttons: " + back);
+    assert(document.activeElement.dataset.calMove === '1' && /feb/i.test(back), 'month buttons: ' + back);
     const moved = $('[data-field="startDate"] .cal-head strong').textContent;
     $('[data-field="startDate"] [data-cal-day="2026-03-01"]').click();
     assert($('#f-startDate').value === '01/03/2026' && !$('.cal'), 'picked day fills the field and closes');
     // Focus goes to the calendar button: in the text box a phone would bring up its keyboard.
-    assert(document.activeElement === calBtn('startDate') && calBtn('startDate').getAttribute('aria-expanded') === 'false', 'focus back on the calendar button, not the text box');
-    assert(!String(getSelection()) && $('#f-startDate').selectionStart === $('#f-startDate').selectionEnd, 'no text selected');
+    assert(
+      document.activeElement === calBtn('startDate') && calBtn('startDate').getAttribute('aria-expanded') === 'false',
+      'focus back on the calendar button, not the text box',
+    );
+    assert(
+      !String(getSelection()) && $('#f-startDate').selectionStart === $('#f-startDate').selectionEnd,
+      'no text selected',
+    );
     // An empty end date opens on the start date's month (also after the start was set by the calendar).
     due.value = '';
     calBtn('dueDate').click();
@@ -1768,8 +2975,12 @@ window.moreTests = async ({ step, assert }) => {
     calBtn('dueDate').click();
     modal.dispatchEvent(new Event('cancel', { cancelable: true }));
     assert(!$('.cal') && modal.open, 'dialog cancel closes only the calendar');
-    calBtn('dueDate').click(); calBtn('startDate').click();
-    assert(document.querySelectorAll('.cal').length === 1 && $('[data-field="startDate"] .cal'), 'one calendar at a time');
+    calBtn('dueDate').click();
+    calBtn('startDate').click();
+    assert(
+      document.querySelectorAll('.cal').length === 1 && $('[data-field="startDate"] .cal'),
+      'one calendar at a time',
+    );
     document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     assert(!$('.cal'), 'click outside closes');
     calBtn('dueDate').click();
@@ -1792,18 +3003,35 @@ window.moreTests = async ({ step, assert }) => {
     modal.close();
     changeLanguage('en');
     openForm('goal');
-    const enPh = $('#f-deadline').placeholder, start = $('#f-startDate').value;
+    const enPh = $('#f-deadline').placeholder,
+      start = $('#f-startDate').value;
     modal.close();
     assert(enPh === 'dd/mm/yyyy' && start === dateInput(today()), 'English field and today as default start');
-    return `typed ${typed} | calendar ${head} → ${moved}, due opens ${dueHead}, ${weekdays.join(" ")} | edit shows ${shown.join(", ")} | sl error "${err}"`;
+    return `typed ${typed} | calendar ${head} → ${moved}, due opens ${dueHead}, ${weekdays.join(' ')} | edit shows ${shown.join(', ')} | sl error "${err}"`;
   });
 
   await step('parseNum: separators, signs and junk', () => {
-    const ok = [['78.5', 78.5], ['78,5', 78.5], ['1 234,5', 1234.5], ['1,234.5', 1234.5], ['1.234,5', 1234.5], ['−3', -3], ['+2', 2], ['.5', 0.5], [' 7 ', 7], ["1'000", 1000], ['0', 0]];
+    const ok = [
+      ['78.5', 78.5],
+      ['78,5', 78.5],
+      ['1 234,5', 1234.5],
+      ['1,234.5', 1234.5],
+      ['1.234,5', 1234.5],
+      ['−3', -3],
+      ['+2', 2],
+      ['.5', 0.5],
+      [' 7 ', 7],
+      ["1'000", 1000],
+      ['0', 0],
+    ];
     ok.forEach(([s, v]) => assert(parseNum(s) === v, `${s} → ${parseNum(s)}`));
-    ['12abc', '', '1.2.3', '-', 'abc', null, undefined, '1,2,3'].forEach(s => assert(Number.isNaN(parseNum(s)), `${s} should be NaN`));
-    changeLanguage('sl'); const sl = numInput('78.5');
-    changeLanguage('en'); const en = numInput('78.5');
+    ['12abc', '', '1.2.3', '-', 'abc', null, undefined, '1,2,3'].forEach(s =>
+      assert(Number.isNaN(parseNum(s)), `${s} should be NaN`),
+    );
+    changeLanguage('sl');
+    const sl = numInput('78.5');
+    changeLanguage('en');
+    const en = numInput('78.5');
     assert(sl === '78,5' && en === '78.5' && numInput('') === '' && numInput(null) === '');
     return `${ok.length} valid, 8 rejected, sl input=${sl}`;
   });
@@ -1813,19 +3041,29 @@ window.moreTests = async ({ step, assert }) => {
     const [g1, g2, g3] = [mk('goal'), mk('goal'), mk('goal')];
     const [a1, a2, a3] = [mk('activity'), mk('activity'), mk('activity')];
     const s1 = mk('state');
-    rel(a1, a2, 'depends'); rel(a2, a3, 'depends');
+    rel(a1, a2, 'depends');
+    rel(a2, a3, 'depends');
     assert(canRelate(a3.id, a1.id, 'depends') === t('err.cycle'), 'long depends cycle');
     assert(canRelate(a1.id, a2.id, 'depends') === t('err.relExists'), 'duplicate');
-    assert(canRelate(g1.id, a1.id, 'depends') === t('err.relTo', { rel: relLabel('depends'), kind: kindList(['goal']) }), 'depends must stay within a kind');
+    assert(
+      canRelate(g1.id, a1.id, 'depends') === t('err.relTo', { rel: relLabel('depends'), kind: kindList(['goal']) }),
+      'depends must stay within a kind',
+    );
     rel(a1, a3, 'subactivity');
     assert(canRelate(a1.id, a2.id, 'subactivity') === t('err.oneParent'), 'one parent');
     assert(canRelate(a3.id, a1.id, 'subactivity') === t('err.cycle'), 'parent cycle');
-    rel(g2, g1, 'subgoal'); rel(g3, g2, 'subgoal');
+    rel(g2, g1, 'subgoal');
+    rel(g3, g2, 'subgoal');
     assert(canRelate(g1.id, g3.id, 'subgoal') === t('err.cycle'), 'subgoal cycle');
     eq(ancestors(g3.id, 'subgoal'), [g2.id, g1.id], 'ancestors');
     eq(descendants(g1.id, 'subgoal'), [g2.id, g3.id], 'descendants');
-    rel(a1, s1, 'improves'); rel(s1, g1, 'measures');
-    assert(canRelate(s1.id, a1.id, 'improves') === t('err.relFrom', { rel: relLabel('improves'), kind: kindList(['activity']) }), 'improves direction');
+    rel(a1, s1, 'improves');
+    rel(s1, g1, 'measures');
+    assert(
+      canRelate(s1.id, a1.id, 'improves') ===
+        t('err.relFrom', { rel: relLabel('improves'), kind: kindList(['activity']) }),
+      'improves direction',
+    );
     assert(canRelate(g1.id, s1.id, 'measures'), 'measures direction');
     return `${db.relations.length} relations, all rule errors as expected`;
   });
@@ -1833,58 +3071,101 @@ window.moreTests = async ({ step, assert }) => {
   await step('relation rules: no dependency up or down a parent line, and no item waits for itself', () => {
     fresh('SelfBlock');
     const [p, c, gc, x, y] = [mk('activity'), mk('activity'), mk('activity'), mk('activity'), mk('activity')];
-    rel(c, p, 'subactivity'); rel(gc, c, 'subactivity');
-    const sb = t('err.selfBlock'), line = t('err.lineDep');
+    rel(c, p, 'subactivity');
+    rel(gc, c, 'subactivity');
+    const sb = t('err.selfBlock'),
+      line = t('err.lineDep');
     assert(canRelate(p.id, c.id, 'depends') === line, 'parent on its sub-activity');
     assert(canRelate(p.id, gc.id, 'depends') === line, 'grandparent on a grandchild');
     assert(canRelate(c.id, p.id, 'depends') === line, 'sub-activity on its parent');
     assert(canRelate(gc.id, p.id, 'depends') === line, 'grandchild on a grandparent');
-    const sib = mk('activity'); rel(sib, p, 'subactivity');
-    assert(canRelate(c.id, sib.id, 'depends') === null && canRelate(gc.id, sib.id, 'depends') === null, 'siblings and cousins may wait for each other');
+    const sib = mk('activity');
+    rel(sib, p, 'subactivity');
+    assert(
+      canRelate(c.id, sib.id, 'depends') === null && canRelate(gc.id, sib.id, 'depends') === null,
+      'siblings and cousins may wait for each other',
+    );
     assert(canRelate(c.id, x.id, 'depends') === null, 'ordinary waits stay allowed');
     // Joining a line where a dependency already links the two ends, either way round.
     const [u, v, w] = [mk('activity'), mk('activity'), mk('activity')];
-    rel(w, v, 'subactivity'); rel(w, u, 'depends');
+    rel(w, v, 'subactivity');
+    rel(w, u, 'depends');
     assert(canRelate(v.id, u.id, 'subactivity') === line, 'new parent line over an existing child → ancestor wait');
-    const z = mk('activity'); rel(v, z, 'depends');
+    const z = mk('activity');
+    rel(v, z, 'depends');
     assert(canRelate(z.id, w.id, 'subactivity') === line, 'new parent line under an existing ancestor → child wait');
-    assert(!possibleTypes(p.id, c.id).includes('depends') && !possibleTypes(c.id, p.id).includes('depends'), 'not offered as a choice');
+    assert(
+      !possibleTypes(p.id, c.id).includes('depends') && !possibleTypes(c.id, p.id).includes('depends'),
+      'not offered as a choice',
+    );
     // Through a chain: p waits for x, x waits for gc → gc inherits p's wait and waits for itself.
     rel(x, gc, 'depends');
     assert(canRelate(p.id, x.id, 'depends') === sb, 'indirect self-wait');
     // Making x a sub-activity of y, which waits (via q) for x, would have x wait for itself.
-    const q = mk('activity'); rel(y, q, 'depends'); rel(q, x, 'depends');
+    const q = mk('activity');
+    rel(y, q, 'depends');
+    rel(q, x, 'depends');
     assert(canRelate(x.id, y.id, 'subactivity') === sb, 'sub-activity of an item that waits for it');
-    const g1 = mk('goal'), g2 = mk('goal');
+    const g1 = mk('goal'),
+      g2 = mk('goal');
     rel(g2, g1, 'subgoal');
-    assert(canRelate(g1.id, g2.id, 'depends') === line && canRelate(g2.id, g1.id, 'depends') === line, 'goals follow the same rule');
+    assert(
+      canRelate(g1.id, g2.id, 'depends') === line && canRelate(g2.id, g1.id, 'depends') === line,
+      'goals follow the same rule',
+    );
     return `${db.relations.length} relations, all refused as expected`;
   });
 
   await step('blockers, inherited waits and item states', () => {
     fresh('States');
-    const parent = mk('activity'), child = mk('activity'), q = mk('activity', { title: 'Prerequisite' });
-    rel(child, parent, 'subactivity'); rel(parent, q, 'depends');
-    eq(blockers(child).map(x => x.id), [q.id], 'child inherits the parent dependency');
+    const parent = mk('activity'),
+      child = mk('activity'),
+      q = mk('activity', { title: 'Prerequisite' });
+    rel(child, parent, 'subactivity');
+    rel(parent, q, 'depends');
+    eq(
+      blockers(child).map(x => x.id),
+      [q.id],
+      'child inherits the parent dependency',
+    );
     const seq = [activityState(child)];
-    q.status = 'done'; seq.push(activityState(child));
-    child.dueDate = d(-1); seq.push(activityState(child));
-    child.dueDate = d(5); child.status = 'doing'; seq.push(activityState(child));
-    child.status = 'done'; seq.push(activityState(child));
+    q.status = 'done';
+    seq.push(activityState(child));
+    child.dueDate = d(-1);
+    seq.push(activityState(child));
+    child.dueDate = d(5);
+    child.status = 'doing';
+    seq.push(activityState(child));
+    child.status = 'done';
+    seq.push(activityState(child));
     eq(seq, ['blocked', 'todo', 'late', 'doing', 'done'], 'activity states');
-    q.status = 'todo'; child.status = 'doing';
+    q.status = 'todo';
+    child.status = 'doing';
     cycleStatus(child.id);
-    assert(child.status === 'done' && $('#toast').textContent === t('acts.notDone', { name: 'Prerequisite' }), 'warns when finishing a blocked activity');
+    assert(
+      child.status === 'done' && $('#toast').textContent === t('acts.notDone', { name: 'Prerequisite' }),
+      'warns when finishing a blocked activity',
+    );
 
-    const g = mk('goal', { target: '10', baseline: '0' }), h = mk('goal');
+    const g = mk('goal', { target: '10', baseline: '0' }),
+      h = mk('goal');
     rel(g, h, 'depends');
     const gs = [goalState(g)];
-    h.status = 'achieved'; gs.push(goalState(g));
-    g.deadline = d(-2); gs.push(goalState(g));
-    g.deadline = d(30); g.status = 'paused'; gs.push(goalState(g));
-    g.status = 'active'; g.startDate = d(-3); gs.push(goalState(g));
-    g.startDate = d(3); g.current = '4'; gs.push(goalState(g));
-    g.status = 'achieved'; gs.push(goalState(g));
+    h.status = 'achieved';
+    gs.push(goalState(g));
+    g.deadline = d(-2);
+    gs.push(goalState(g));
+    g.deadline = d(30);
+    g.status = 'paused';
+    gs.push(goalState(g));
+    g.status = 'active';
+    g.startDate = d(-3);
+    gs.push(goalState(g));
+    g.startDate = d(3);
+    g.current = '4';
+    gs.push(goalState(g));
+    g.status = 'achieved';
+    gs.push(goalState(g));
     eq(gs, ['blocked', 'todo', 'late', 'todo', 'doing', 'doing', 'done'], 'goal states');
     return `activity ${seq.join('>')} | goal ${gs.join('>')}`;
   });
@@ -1893,53 +3174,111 @@ window.moreTests = async ({ step, assert }) => {
     fresh('Progress');
     const g = mk('goal', { baseline: '10', target: '20', current: '15' });
     const out = [goalProgress(g)];
-    const s1 = mk('state', { value: '12', date: '2099-01-01' }), s2 = mk('state', { value: '18', date: '2099-02-01' }), junk = mk('state', { value: 'n/a', date: '2099-03-01' });
+    const s1 = mk('state', { value: '12', date: '2099-01-01' }),
+      s2 = mk('state', { value: '18', date: '2099-02-01' }),
+      junk = mk('state', { value: 'n/a', date: '2099-03-01' });
     [s1, s2, junk].forEach(s => rel(s, g, 'measures'));
     out.push(goalProgress(g)); // latest numeric state wins
-    s2.value = '25'; out.push(goalProgress(g));
-    s2.value = '5'; out.push(goalProgress(g));
+    s2.value = '25';
+    out.push(goalProgress(g));
+    s2.value = '5';
+    out.push(goalProgress(g));
     const falling = mk('goal', { baseline: '80', target: '70', current: '75' });
     const flat = mk('goal', { baseline: '5', target: '5' });
     const noBase = mk('goal', { target: '4', current: '1' });
     out.push(goalProgress(falling), goalProgress(flat), goalProgress(noBase));
-    g.status = 'achieved'; out.push(goalProgress(g));
+    g.status = 'achieved';
+    out.push(goalProgress(g));
     eq(out, [50, 80, 100, 0, 50, 0, 25, 100], 'progress values');
 
-    const a = mk('activity'), sub = mk('activity'), other = mk('activity');
-    rel(a, g, 'contributes'); rel(sub, a, 'subactivity');
-    eq(goalActivities(g).map(x => x.id).sort(), [a.id, sub.id].sort(), 'contributors and their sub-activities');
-    const sg = mk('goal'), pre = mk('goal'), st = mk('state');
-    rel(sg, g, 'subgoal'); rel(g, pre, 'depends'); rel(sub, st, 'improves');
+    const a = mk('activity'),
+      sub = mk('activity'),
+      other = mk('activity');
+    rel(a, g, 'contributes');
+    rel(sub, a, 'subactivity');
+    eq(
+      goalActivities(g)
+        .map(x => x.id)
+        .sort(),
+      [a.id, sub.id].sort(),
+      'contributors and their sub-activities',
+    );
+    const sg = mk('goal'),
+      pre = mk('goal'),
+      st = mk('state');
+    rel(sg, g, 'subgoal');
+    rel(g, pre, 'depends');
+    rel(sub, st, 'improves');
     const sc = goalScope(g.id);
     assert([g, sg, pre].every(x => sc.goal.has(x.id)) && !sc.goal.has(falling.id), 'scope goals');
     assert(sc.activity.has(a.id) && sc.activity.has(sub.id) && !sc.activity.has(other.id), 'scope activities');
     assert(sc.state.has(st.id) && sc.state.has(s1.id), 'scope states');
     // A sub-activity turned into a dependency stays in its goal's views (it waits for the goal's work).
-    const kid = mk('activity'), grandkid = mk('activity'), elsewhere = mk('activity');
-    rel(kid, a, 'subactivity'); rel(grandkid, kid, 'subactivity'); rel(elsewhere, other, 'subactivity');
+    const kid = mk('activity'),
+      grandkid = mk('activity'),
+      elsewhere = mk('activity');
+    rel(kid, a, 'subactivity');
+    rel(grandkid, kid, 'subactivity');
+    rel(elsewhere, other, 'subactivity');
     const link = db.relations.find(r => r.from === kid.id && r.type === 'subactivity');
-    ui.mapGoal = g.id; setView('map');
-    openForm('relation', link.id); $('#f-type').value = 'depends'; submitForm();
+    ui.mapGoal = g.id;
+    setView('map');
+    openForm('relation', link.id);
+    $('#f-type').value = 'depends';
+    submitForm();
     assert(link.type === 'depends' && !modal.open, 'relation edited');
     assert($(`[data-map-node="${kid.id}"]`) && $(`[data-map-node="${grandkid.id}"]`), 'still on the goal-focused map');
     const sc2 = goalScope(g.id);
-    assert(sc2.activity.has(kid.id) && sc2.activity.has(grandkid.id) && !sc2.activity.has(elsewhere.id) && !sc2.activity.has(other.id), 'waiting activity and its sub-activities in scope only');
+    assert(
+      sc2.activity.has(kid.id) &&
+        sc2.activity.has(grandkid.id) &&
+        !sc2.activity.has(elsewhere.id) &&
+        !sc2.activity.has(other.id),
+      'waiting activity and its sub-activities in scope only',
+    );
     ui.mapGoal = '';
     return out.map(Math.round).join(',');
   });
 
   await step('goals measured by their activities', () => {
     fresh('ByActivities');
-    const g = mk('goal', { title: 'Counted goal', specific: 'Finish all the work for this goal', achievable: 'Small steps each week', relevant: 'It matters to me', deadline: '2099-01-01', progress: 'activities', target: '10', metric: 'Old metric' });
-    const sub = mk('goal'), elsewhere = mk('goal');
-    const parent = mk('activity'), k1 = mk('activity'), k2 = mk('activity'), viaSub = mk('activity'), other = mk('activity');
-    rel(sub, g, 'subgoal'); rel(parent, g, 'contributes'); rel(k1, parent, 'subactivity'); rel(k2, parent, 'subactivity');
-    rel(viaSub, sub, 'contributes'); rel(other, elsewhere, 'contributes');
-    eq(countedActivities(g).map(a => a.id).sort(), [k1.id, k2.id, viaSub.id].sort(), 'only the actual work, sub-goals included');
+    const g = mk('goal', {
+      title: 'Counted goal',
+      specific: 'Finish all the work for this goal',
+      achievable: 'Small steps each week',
+      relevant: 'It matters to me',
+      deadline: '2099-01-01',
+      progress: 'activities',
+      target: '10',
+      metric: 'Old metric',
+    });
+    const sub = mk('goal'),
+      elsewhere = mk('goal');
+    const parent = mk('activity'),
+      k1 = mk('activity'),
+      k2 = mk('activity'),
+      viaSub = mk('activity'),
+      other = mk('activity');
+    rel(sub, g, 'subgoal');
+    rel(parent, g, 'contributes');
+    rel(k1, parent, 'subactivity');
+    rel(k2, parent, 'subactivity');
+    rel(viaSub, sub, 'contributes');
+    rel(other, elsewhere, 'contributes');
+    eq(
+      countedActivities(g)
+        .map(a => a.id)
+        .sort(),
+      [k1.id, k2.id, viaSub.id].sort(),
+      'only the actual work, sub-goals included',
+    );
     const pcts = [goalProgress(g)];
-    k1.status = 'done'; pcts.push(goalProgress(g));
-    parent.status = 'done'; pcts.push(goalProgress(g)); // a parent with parts does not count itself
-    k2.status = viaSub.status = 'done'; pcts.push(goalProgress(g));
+    k1.status = 'done';
+    pcts.push(goalProgress(g));
+    parent.status = 'done';
+    pcts.push(goalProgress(g)); // a parent with parts does not count itself
+    k2.status = viaSub.status = 'done';
+    pcts.push(goalProgress(g));
     eq(pcts.map(Math.round), [0, 33, 33, 100], 'progress');
     k2.status = viaSub.status = 'todo';
     assert(goalProgress({ ...emptyDb(), id: 'none', progress: 'activities' }) === 0, 'no activities: 0 %');
@@ -1949,25 +3288,40 @@ window.moreTests = async ({ step, assert }) => {
 
     setView('goals');
     const card = viewEl.querySelector(`.card.goal[data-open="${g.id}"]`).textContent;
-    assert(card.includes('1 / 3') && card.includes('3 activities') && !card.includes('Old metric'), 'card shows the activity count: ' + card.replace(/\s+/g, ' '));
+    assert(
+      card.includes('1 / 3') && card.includes('3 activities') && !card.includes('Old metric'),
+      'card shows the activity count: ' + card.replace(/\s+/g, ' '),
+    );
 
     openForm('goal', g.id);
-    assert($('#f-progress').value === 'activities' && $('#measureFields').hidden && !$('#actsHint').hidden, 'form opens in activity mode');
+    assert(
+      $('#f-progress').value === 'activities' && $('#measureFields').hidden && !$('#actsHint').hidden,
+      'form opens in activity mode',
+    );
     const live = () => $('#smartLive').querySelector('b:nth-child(2)').classList.contains('on');
     const m0 = live();
-    $('#f-progress').value = 'measure'; $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#f-progress').value = 'measure';
+    $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
     assert(!$('#measureFields').hidden && $('#actsHint').hidden, 'switching shows the metric fields');
-    $('#f-metric').value = ''; $('#modalForm').dispatchEvent(new Event('input'));
+    $('#f-metric').value = '';
+    $('#modalForm').dispatchEvent(new Event('input'));
     const m1 = live();
-    $('#f-progress').value = 'activities'; $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#f-progress').value = 'activities';
+    $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
     $('#f-baseline').value = 'junk'; // hidden fields are not validated
     submitForm();
-    assert(!modal.open && g.progress === 'activities' && g.target === '10', 'saved in activity mode, metric fields kept');
+    assert(
+      !modal.open && g.progress === 'activities' && g.target === '10',
+      'saved in activity mode, metric fields kept',
+    );
     assert(m0 && !m1, 'live SMART badge follows the mode');
 
     openForm('goal', g.id);
-    $('#f-progress').value = 'measure'; $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
-    $('#f-metric').value = 'Pages'; $('#f-baseline').value = '0'; $('#f-target').value = '10';
+    $('#f-progress').value = 'measure';
+    $('#f-progress').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#f-metric').value = 'Pages';
+    $('#f-baseline').value = '0';
+    $('#f-target').value = '10';
     submitForm();
     assert(!modal.open && !('progress' in g) && g.metric === 'Pages', 'switched back to a measurement');
     openForm('goal');
@@ -1976,11 +3330,23 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('SMART check edge cases', () => {
-    const good = { title: 'Read books', specific: 'Read twelve books this year', metric: 'Books', baseline: '0', target: '12', achievable: 'One a month', relevant: 'I want to learn', deadline: '2099-12-31' };
+    const good = {
+      title: 'Read books',
+      specific: 'Read twelve books this year',
+      metric: 'Books',
+      baseline: '0',
+      target: '12',
+      achievable: 'One a month',
+      relevant: 'I want to learn',
+      deadline: '2099-12-31',
+    };
     const c = smartCheck(good);
     assert(c.S && c.M && c.A && c.R && c.T && !Object.keys(c.errs).length, 'valid goal passes');
     assert(smartCheck({ ...good, target: '0' }).errs.target === t('err.targetSame'), 'target equals start');
-    assert(smartCheck({ ...good, startDate: '2099-12-31' }).errs.deadline === t('err.deadlineOrder'), 'deadline equal to start');
+    assert(
+      smartCheck({ ...good, startDate: '2099-12-31' }).errs.deadline === t('err.deadlineOrder'),
+      'deadline equal to start',
+    );
     assert(smartCheck({ ...good, target: 'many' }).errs.target === t('err.target'), 'non-numeric target');
     const blank = smartCheck({ title: '   x   ' });
     return Object.keys(blank.errs).join(',');
@@ -2005,12 +3371,19 @@ window.moreTests = async ({ step, assert }) => {
     stampChanges(data);
     assert(!data.deleted.old, 'old tombstones expire');
 
-    const idx = { list: [{ id: 'p1', name: 'One' }, { id: 'p2', name: 'Two' }] };
+    const idx = {
+      list: [
+        { id: 'p1', name: 'One' },
+        { id: 'p2', name: 'Two' },
+      ],
+    };
     takePlanSnapshot(idx);
-    idx.list[0].name = 'Uno'; idx.list.pop();
+    idx.list[0].name = 'Uno';
+    idx.list.pop();
     stampPlanChanges(idx);
     assert(idx.list[0].updatedAt && idx.deleted.p2, 'plan rename stamped and plan deletion recorded');
-    takeSnapshot(db); takePlanSnapshot(plans);
+    takeSnapshot(db);
+    takePlanSnapshot(plans);
 
     // Through the app: editing one goal stamps only that goal.
     fresh('Tracking');
@@ -2041,54 +3414,127 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('"is related to" links are gone: dropped from saved plans, files and synced copies', () => {
-    assert(!REL_TYPES.related && !('rel.related' in I18N.en.strings) && !('rel.related' in I18N.sl.strings), 'no such type or label');
-    const old = { goals: [{ id: 'g1', title: 'G' }, { id: 'g2', title: 'H' }], states: [], activities: [{ id: 'a1', title: 'A' }],
-      relations: [{ id: 'r1', from: 'a1', to: 'g1', type: 'contributes' }, { id: 'r2', from: 'g1', to: 'g2', type: 'related' }, { id: 'r3', from: 'a1', to: 'g2', type: 'related' }] };
-    eq(normalize(old).relations.map(r => r.id), ['r1'], 'normalize keeps the rest');
+    assert(
+      !REL_TYPES.related && !('rel.related' in I18N.en.strings) && !('rel.related' in I18N.sl.strings),
+      'no such type or label',
+    );
+    const old = {
+      goals: [
+        { id: 'g1', title: 'G' },
+        { id: 'g2', title: 'H' },
+      ],
+      states: [],
+      activities: [{ id: 'a1', title: 'A' }],
+      relations: [
+        { id: 'r1', from: 'a1', to: 'g1', type: 'contributes' },
+        { id: 'r2', from: 'g1', to: 'g2', type: 'related' },
+        { id: 'r3', from: 'a1', to: 'g2', type: 'related' },
+      ],
+    };
+    eq(
+      normalize(old).relations.map(r => r.id),
+      ['r1'],
+      'normalize keeps the rest',
+    );
     // A saved plan from before: opened, it has no such links and the map draws and counts none.
     fresh('Old related');
     const id = plans.current;
     localStorage.setItem(planKey(id), JSON.stringify(old));
-    eq(readPlan(id).relations.map(r => r.id), ['r1'], 'saved plan');
+    eq(
+      readPlan(id).relations.map(r => r.id),
+      ['r1'],
+      'saved plan',
+    );
     openPlan(id);
-    eq(db.relations.map(r => r.id), ['r1'], 'opened plan');
+    eq(
+      db.relations.map(r => r.id),
+      ['r1'],
+      'opened plan',
+    );
     ui.mapHidden = new Set(['related']);
     setView('map');
-    assert(!$('[data-rel-toggle="related"]') && document.querySelectorAll('[data-rel-edit]').length === 1, 'no toggle or line on the map');
+    assert(
+      !$('[data-rel-toggle="related"]') && document.querySelectorAll('[data-rel-edit]').length === 1,
+      'no toggle or line on the map',
+    );
     ui.mapHidden = new Set();
     // Goal → goal and activity → goal: only the remaining types are offered.
     openForm('relation', null, { from: 'g1' });
-    const pick = (f, v) => { $(f).value = v; $(f).dispatchEvent(new Event('change', { bubbles: true })); };
+    const pick = (f, v) => {
+      $(f).value = v;
+      $(f).dispatchEvent(new Event('change', { bubbles: true }));
+    };
     pick('#f-to', 'g2');
     const types = [...$('#f-type').options].map(o => o.value);
     assert(types.length && !types.some(k => k.endsWith('related')), 'form: ' + types);
     modal.close();
     assert(canRelate('a1', 'g2', 'related') === t('err.unknown'), 'canRelate refuses it');
     // A plan file and an older synced copy carrying them: dropped, and the merge does not bring them back.
-    eq(parsePlanFile(JSON.stringify({ name: 'F', ...old }), 'f.json').data.relations.map(r => r.id), ['r1'], 'plan file');
-    const remote = parseStore(JSON.stringify({ format: SYNC_FORMAT, version: 1, plans: { list: [{ id, name: 'Old related' }], deleted: {} }, data: { [id]: old } }));
-    eq(remote.data[id].relations.map(r => r.id), ['r1'], 'sync file');
-    eq(mergeStores(localStore(), remote).data[id].relations.map(r => r.id), ['r1'], 'merged');
+    eq(
+      parsePlanFile(JSON.stringify({ name: 'F', ...old }), 'f.json').data.relations.map(r => r.id),
+      ['r1'],
+      'plan file',
+    );
+    const remote = parseStore(
+      JSON.stringify({
+        format: SYNC_FORMAT,
+        version: 1,
+        plans: { list: [{ id, name: 'Old related' }], deleted: {} },
+        data: { [id]: old },
+      }),
+    );
+    eq(
+      remote.data[id].relations.map(r => r.id),
+      ['r1'],
+      'sync file',
+    );
+    eq(
+      mergeStores(localStore(), remote).data[id].relations.map(r => r.id),
+      ['r1'],
+      'merged',
+    );
     deletePlan(id);
     return 'ok';
   });
 
   await step('nothing depends on a routine: rules, forms, an activity turned routine, old plans and sync', async () => {
     fresh('Routine deps');
-    const routine = (p = {}) => mk('activity', { repeat: { every: 1, unit: 'week', times: 2 }, checkins: {}, startDate: d(-7), ...p });
-    const a = mk('activity', { title: 'One-off' }), b = mk('activity', { title: 'Other one-off' }), r = routine({ title: 'Routine' }), r2 = routine();
-    const g = mk('goal'), g2 = mk('goal');
+    const routine = (p = {}) =>
+      mk('activity', { repeat: { every: 1, unit: 'week', times: 2 }, checkins: {}, startDate: d(-7), ...p });
+    const a = mk('activity', { title: 'One-off' }),
+      b = mk('activity', { title: 'Other one-off' }),
+      r = routine({ title: 'Routine' }),
+      r2 = routine();
+    const g = mk('goal'),
+      g2 = mk('goal');
     const err = t('err.dependsRoutine');
-    eq([canRelate(a.id, r.id, 'depends'), canRelate(r2.id, r.id, 'depends')], [err, err], 'activity or routine → routine refused');
-    assert(!canRelate(r.id, a.id, 'depends') && !canRelate(a.id, b.id, 'depends') && !canRelate(g.id, g2.id, 'depends'), 'routine → activity, activity → activity, goal → goal still fine');
-    assert(!canRelate(a.id, r.id, 'subactivity') && !canRelate(r.id, a.id, 'subactivity'), 'other links to a routine unaffected');
+    eq(
+      [canRelate(a.id, r.id, 'depends'), canRelate(r2.id, r.id, 'depends')],
+      [err, err],
+      'activity or routine → routine refused',
+    );
+    assert(
+      !canRelate(r.id, a.id, 'depends') && !canRelate(a.id, b.id, 'depends') && !canRelate(g.id, g2.id, 'depends'),
+      'routine → activity, activity → activity, goal → goal still fine',
+    );
+    assert(
+      !canRelate(a.id, r.id, 'subactivity') && !canRelate(r.id, a.id, 'subactivity'),
+      'other links to a routine unaffected',
+    );
     assert(addRelation(a.id, r.id, 'depends') === err && !db.relations.length, 'addRelation refuses it');
     // The relationship form (also what a drag on the map opens) offers only the routine depending on the activity.
     openForm('relation', null, { from: a.id, to: r.id });
-    eq([...$('#f-type').options].map(o => o.value), ['subactivity', 'rev:subactivity', 'rev:depends'], 'relationship form');
+    eq(
+      [...$('#f-type').options].map(o => o.value),
+      ['subactivity', 'rev:subactivity', 'rev:depends'],
+      'relationship form',
+    );
     $('#f-type').value = 'rev:depends';
     submitForm();
-    assert(relsFrom(r.id, 'depends').some(x => x.to === a.id), 'routine → activity saved');
+    assert(
+      relsFrom(r.id, 'depends').some(x => x.to === a.id),
+      'routine → activity saved',
+    );
     assert(canLink(a.id, r2.id) && canLink(r.id, r2.id), 'map still lets them link (as sub-activities)');
     // The activity form lists one-offs, not routines, under "Depends on".
     openForm('activity', a.id);
@@ -2096,15 +3542,21 @@ window.moreTests = async ({ step, assert }) => {
     assert(opts.includes(b.id) && !opts.includes(r.id) && !opts.includes(r2.id), 'depends picker: ' + opts.length);
     modal.close();
     // An activity something waits for becomes a routine: those links go, its own stay, and the toast says so.
-    const c = mk('activity', { title: 'Becomes routine', startDate: d(0), dueDate: d(10) }), x = mk('activity');
-    rel(a, c, 'depends'); rel(x, c, 'depends'); rel(c, b, 'depends');
+    const c = mk('activity', { title: 'Becomes routine', startDate: d(0), dueDate: d(10) }),
+      x = mk('activity');
+    rel(a, c, 'depends');
+    rel(x, c, 'depends');
+    rel(c, b, 'depends');
     assert(activityState(a) === 'blocked', 'blocked before');
     openForm('activity', c.id);
     $('#f-repeat').value = 'week';
     $('#f-repeat').dispatchEvent(new Event('change', { bubbles: true }));
     submitForm();
     assert(isRoutine(c) && !modal.open, 'saved as a routine');
-    assert(!relsTo(c.id, 'depends').length && relsFrom(c.id, 'depends').length === 1, 'incoming dependencies dropped, its own kept');
+    assert(
+      !relsTo(c.id, 'depends').length && relsFrom(c.id, 'depends').length === 1,
+      'incoming dependencies dropped, its own kept',
+    );
     eq($('#toast').textContent, tp('toast.routineDepsDropped', 2), 'toast says so');
     assert(activityState(a) !== 'blocked', 'no longer blocked');
     // Saved again without such links: the usual message.
@@ -2113,52 +3565,141 @@ window.moreTests = async ({ step, assert }) => {
     eq($('#toast').textContent, t('toast.activityUpdated'), 'plain update');
     assert(I18N.sl.strings['toast.routineDepsDropped'].two && I18N.sl.strings['err.dependsRoutine'], 'Slovenian texts');
     // Old plans, plan files and synced copies drop links onto a routine; a routine depending on an activity stays.
-    const old = { goals: [], states: [], activities: [{ id: 'a1', title: 'A' }, { id: 'r1', title: 'R', repeat: { every: 1, unit: 'day' } }],
-      relations: [{ id: 'bad', from: 'a1', to: 'r1', type: 'depends' }, { id: 'ok', from: 'r1', to: 'a1', type: 'depends' }, { id: 'sub', from: 'a1', to: 'r1', type: 'subactivity' }] };
-    eq(normalize(old).relations.map(x => x.id), ['ok', 'sub'], 'normalize');
-    eq(parsePlanFile(JSON.stringify({ name: 'F', ...old }), 'f.json').data.relations.map(x => x.id), ['ok', 'sub'], 'plan file');
+    const old = {
+      goals: [],
+      states: [],
+      activities: [
+        { id: 'a1', title: 'A' },
+        { id: 'r1', title: 'R', repeat: { every: 1, unit: 'day' } },
+      ],
+      relations: [
+        { id: 'bad', from: 'a1', to: 'r1', type: 'depends' },
+        { id: 'ok', from: 'r1', to: 'a1', type: 'depends' },
+        { id: 'sub', from: 'a1', to: 'r1', type: 'subactivity' },
+      ],
+    };
+    eq(
+      normalize(old).relations.map(x => x.id),
+      ['ok', 'sub'],
+      'normalize',
+    );
+    eq(
+      parsePlanFile(JSON.stringify({ name: 'F', ...old }), 'f.json').data.relations.map(x => x.id),
+      ['ok', 'sub'],
+      'plan file',
+    );
     // Sync: one device links a1 → r1 while the other makes r1 a routine; the merge drops the link.
-    eq(repairRelations(old).map(x => x.id), ['ok', 'sub'], 'merge repair');
+    eq(
+      repairRelations(old).map(x => x.id),
+      ['ok', 'sub'],
+      'merge repair',
+    );
     const id = plans.current;
-    const mine = { goals: [], states: [], deleted: {}, activities: [{ id: 'a1', title: 'A', updatedAt: '2099-01-01' }, { id: 'r1', title: 'R', updatedAt: '2099-01-01' }],
-      relations: [{ id: 'bad', from: 'a1', to: 'r1', type: 'depends', updatedAt: '2099-01-02' }] };
-    const theirs = { ...mine, relations: [], activities: [mine.activities[0], { id: 'r1', title: 'R', repeat: { every: 1, unit: 'day' }, updatedAt: '2099-01-03' }] };
+    const mine = {
+      goals: [],
+      states: [],
+      deleted: {},
+      activities: [
+        { id: 'a1', title: 'A', updatedAt: '2099-01-01' },
+        { id: 'r1', title: 'R', updatedAt: '2099-01-01' },
+      ],
+      relations: [{ id: 'bad', from: 'a1', to: 'r1', type: 'depends', updatedAt: '2099-01-02' }],
+    };
+    const theirs = {
+      ...mine,
+      relations: [],
+      activities: [
+        mine.activities[0],
+        { id: 'r1', title: 'R', repeat: { every: 1, unit: 'day' }, updatedAt: '2099-01-03' },
+      ],
+    };
     const store = data => ({ plans: { list: [{ id, name: 'Routine deps' }], deleted: {} }, data: { [id]: data } });
     const merged = mergeStores(store(mine), store(theirs)).data[id];
-    assert(isRoutine(merged.activities.find(x => x.id === 'r1')) && !merged.relations.length, 'merged: routine kept, link dropped');
+    assert(
+      isRoutine(merged.activities.find(x => x.id === 'r1')) && !merged.relations.length,
+      'merged: routine kept, link dropped',
+    );
     return 'ok';
   });
 
   await step('merge: state histories, deletions vs edits, symmetry', () => {
-    const x = { id: 's', value: '3', date: '2099-01-03', updatedAt: '2099-01-01', history: [{ date: '2099-01-01', value: '1' }, { date: '2099-01-03', value: '3' }] };
-    const y = { id: 's', value: '30', date: '2099-01-03', updatedAt: '2099-02-01', history: [{ date: '2099-01-03', value: '30' }, { date: '2099-01-02', value: '2' }] };
+    const x = {
+      id: 's',
+      value: '3',
+      date: '2099-01-03',
+      updatedAt: '2099-01-01',
+      history: [
+        { date: '2099-01-01', value: '1' },
+        { date: '2099-01-03', value: '3' },
+      ],
+    };
+    const y = {
+      id: 's',
+      value: '30',
+      date: '2099-01-03',
+      updatedAt: '2099-02-01',
+      history: [
+        { date: '2099-01-03', value: '30' },
+        { date: '2099-01-02', value: '2' },
+      ],
+    };
     const m = mergeState(x, y);
-    eq(m.history.map(h => `${h.date.slice(-2)}=${h.value}`), ['01=1', '02=2', '03=30'], 'history');
+    eq(
+      m.history.map(h => `${h.date.slice(-2)}=${h.value}`),
+      ['01=1', '02=2', '03=30'],
+      'history',
+    );
     assert(m.value === '30' && m.date === '2099-01-03', 'value follows the latest measurement');
     eq(mergeState(y, x), m, 'mergeState is symmetric');
-    const deletedDay = { ...y, updatedAt: '2099-03-01', history: [{ date: '2099-01-03', value: '30' }], dropped: { '2099-01-02': 1 } };
+    const deletedDay = {
+      ...y,
+      updatedAt: '2099-03-01',
+      history: [{ date: '2099-01-03', value: '30' }],
+      dropped: { '2099-01-02': 1 },
+    };
     const md = mergeState(x, deletedDay);
-    eq(md.history.map(h => h.date.slice(-2)), ['01', '03'], 'a deleted measurement stays deleted');
+    eq(
+      md.history.map(h => h.date.slice(-2)),
+      ['01', '03'],
+      'a deleted measurement stays deleted',
+    );
     eq(md.dropped, { '2099-01-02': 1 }, 'deletion remembered');
-    eq(mergeState({ ...x, updatedAt: '2099-04-01', history: [...x.history, { date: '2099-01-02', value: '9' }] }, deletedDay).dropped, undefined, 're-recorded later wins');
+    eq(
+      mergeState(
+        { ...x, updatedAt: '2099-04-01', history: [...x.history, { date: '2099-01-02', value: '9' }] },
+        deletedDay,
+      ).dropped,
+      undefined,
+      're-recorded later wins',
+    );
 
     const plan = (goals, deleted = {}) => ({ ...emptyDb(), goals, deleted });
     const z = at => ({ id: 'z', title: 'Z', updatedAt: at });
-    assert(mergePlans(plan([z('2099-06-01')]), plan([], { z: '2099-05-01' })).goals.length === 1, 'edit after delete survives');
+    assert(
+      mergePlans(plan([z('2099-06-01')]), plan([], { z: '2099-05-01' })).goals.length === 1,
+      'edit after delete survives',
+    );
     const gone = mergePlans(plan([z('2099-06-01')]), plan([], { z: '2099-07-01' }));
     assert(!gone.goals.length && gone.deleted.z, 'delete after edit wins');
 
     const base = normalize(sampleData());
-    const a = JSON.parse(JSON.stringify(base)), b = JSON.parse(JSON.stringify(base));
-    a.goals[0].title = 'Same time A'; b.goals[0].title = 'Same time B';
+    const a = JSON.parse(JSON.stringify(base)),
+      b = JSON.parse(JSON.stringify(base));
+    a.goals[0].title = 'Same time A';
+    b.goals[0].title = 'Same time B';
     a.goals[0].updatedAt = b.goals[0].updatedAt = '2099-01-01T00:00:00.000Z';
-    b.activities[2].status = 'done'; b.activities[2].updatedAt = '2099-01-02T00:00:00.000Z';
+    b.activities[2].status = 'done';
+    b.activities[2].updatedAt = '2099-01-02T00:00:00.000Z';
     const sorted = p => JSON.stringify(SYNC_COLLS.map(c => [...p[c]].sort((u, v) => u.id.localeCompare(v.id))));
-    const ab = mergePlans(a, b), ba = mergePlans(b, a);
+    const ab = mergePlans(a, b),
+      ba = mergePlans(b, a);
     assert(sorted(ab) === sorted(ba), 'both devices end up with the same plan');
     assert(ab.activities[2].status === 'done', 'newer activity edit kept');
 
-    const store = (planGoalsAt, deletedAt) => ({ plans: { list: [{ id: 'p', name: 'P' }], deleted: deletedAt ? { p: deletedAt } : {} }, data: { p: plan(planGoalsAt ? [z(planGoalsAt)] : []) } });
+    const store = (planGoalsAt, deletedAt) => ({
+      plans: { list: [{ id: 'p', name: 'P' }], deleted: deletedAt ? { p: deletedAt } : {} },
+      data: { p: plan(planGoalsAt ? [z(planGoalsAt)] : []) },
+    });
     const del = { plans: { list: [], deleted: { p: '2099-01-01' } }, data: {} };
     const kept = mergeStores(del, store('2099-02-01'));
     const dropped = mergeStores(del, store('2098-01-01'));
@@ -2173,9 +3714,17 @@ window.moreTests = async ({ step, assert }) => {
     assert(!shown($('#installSection')) && !shown($('#installBtn')), 'Chrome without a prompt shows nothing');
     const ua = Object.getOwnPropertyDescriptor(Navigator.prototype, 'userAgent');
     try {
-      Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0', configurable: true });
+      Object.defineProperty(navigator, 'userAgent', {
+        value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0',
+        configurable: true,
+      });
       renderInstall();
-      assert(shown($('#installSection')) && !shown($('#installBtn')) && $('#installHint').textContent === t('install.firefoxHint'), 'Firefox: a hint, no button');
+      assert(
+        shown($('#installSection')) &&
+          !shown($('#installBtn')) &&
+          $('#installHint').textContent === t('install.firefoxHint'),
+        'Firefox: a hint, no button',
+      );
     } finally {
       delete navigator.userAgent;
       if (navigator.userAgent !== ua.get.call(navigator)) throw new Error('user agent not restored');
@@ -2185,29 +3734,66 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('sync file: parsing and starter plans', () => {
-    const codes = ['nope', JSON.stringify({ format: 'other', plans: { list: [] } }), JSON.stringify({ format: SYNC_FORMAT, plans: {} })].map(s => {
-      try { parseStore(s); return 'parsed'; } catch (e) { return e instanceof SyncError ? e.code : 'other:' + e; }
+    const codes = [
+      'nope',
+      JSON.stringify({ format: 'other', plans: { list: [] } }),
+      JSON.stringify({ format: SYNC_FORMAT, plans: {} }),
+    ].map(s => {
+      try {
+        parseStore(s);
+        return 'parsed';
+      } catch (e) {
+        return e instanceof SyncError ? e.code : 'other:' + e;
+      }
     });
     eq(codes, ['error', 'error', 'error'], 'bad files rejected');
-    const st = parseStore(JSON.stringify({ format: SYNC_FORMAT, plans: { list: [{ id: 'a', name: 'A' }, { id: 5 }, null, { id: 'b' }], deleted: 'x' }, data: { a: { goals: 'bad' } } }));
-    eq(st.plans.list.map(p => p.id), ['a'], 'invalid plan entries dropped');
+    const st = parseStore(
+      JSON.stringify({
+        format: SYNC_FORMAT,
+        plans: { list: [{ id: 'a', name: 'A' }, { id: 5 }, null, { id: 'b' }], deleted: 'x' },
+        data: { a: { goals: 'bad' } },
+      }),
+    );
+    eq(
+      st.plans.list.map(p => p.id),
+      ['a'],
+      'invalid plan entries dropped',
+    );
     eq(st.data.a, emptyDb(), 'plan data normalized');
     eq(st.plans.deleted, {}, 'deleted normalized');
 
-    const withGoal = { ...emptyDb(), goals: [{ id: 'g' }] }, withTomb = { ...emptyDb(), deleted: { q: '2099-01-01' } };
+    const withGoal = { ...emptyDb(), goals: [{ id: 'g' }] },
+      withTomb = { ...emptyDb(), deleted: { q: '2099-01-01' } };
     const local = {
-      plans: { list: [{ id: '1', name: I18N.en.strings['plan.defaultName'] }, { id: '2', name: I18N.sl.strings['plan.defaultName'] }, { id: '3', name: I18N.en.strings['plan.defaultName'] }, { id: '4', name: 'Other' }, { id: '5', name: I18N.en.strings['plan.defaultName'] }] },
+      plans: {
+        list: [
+          { id: '1', name: I18N.en.strings['plan.defaultName'] },
+          { id: '2', name: I18N.sl.strings['plan.defaultName'] },
+          { id: '3', name: I18N.en.strings['plan.defaultName'] },
+          { id: '4', name: 'Other' },
+          { id: '5', name: I18N.en.strings['plan.defaultName'] },
+        ],
+      },
       data: { 1: emptyDb(), 2: emptyDb(), 3: withGoal, 4: emptyDb(), 5: withTomb },
     };
-    eq(dropStarterPlans(local).plans.list.map(p => p.id), ['3', '4', '5'], 'only empty starter plans dropped');
+    eq(
+      dropStarterPlans(local).plans.list.map(p => p.id),
+      ['3', '4', '5'],
+      'only empty starter plans dropped',
+    );
   });
 
   await step('persistence: reload, corrupt data, legacy migration', () => {
     fresh('Persist');
-    const g = mk('goal', { title: 'Saved goal' }); mk('activity'); rel(db.activities[0], g, 'contributes');
+    const g = mk('goal', { title: 'Saved goal' });
+    mk('activity');
+    rel(db.activities[0], g, 'contributes');
     save();
-    const before = JSON.stringify(db), cur = plans.current, names = plans.list.map(p => p.name).join();
-    db = emptyDb(); plans = { current: null, list: [] };
+    const before = JSON.stringify(db),
+      cur = plans.current,
+      names = plans.list.map(p => p.name).join();
+    db = emptyDb();
+    plans = { current: null, list: [] };
     load();
     assert(plans.current === cur && plans.list.map(p => p.name).join() === names, 'plan list restored');
     assert(JSON.stringify(db) === before, 'plan data restored');
@@ -2216,7 +3802,10 @@ window.moreTests = async ({ step, assert }) => {
     eq(readPlan('bad'), emptyDb(), 'corrupt plan reads as empty');
     localStorage.setItem(planKey('bad'), JSON.stringify({ goals: 'x', states: [{ id: 's' }], deleted: [] }));
     const part = readPlan('bad');
-    assert(Array.isArray(part.goals) && !part.goals.length && part.states.length === 1 && !Array.isArray(part.deleted), 'partially valid plan normalized');
+    assert(
+      Array.isArray(part.goals) && !part.goals.length && part.states.length === 1 && !Array.isArray(part.deleted),
+      'partially valid plan normalized',
+    );
     localStorage.removeItem(planKey('bad'));
     eq(readPlan('never-saved'), emptyDb(), 'missing plan reads as empty');
 
@@ -2225,19 +3814,28 @@ window.moreTests = async ({ step, assert }) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ goals: [{ id: 'legacy', title: 'Legacy goal' }] }));
     plans = { current: null, list: [] };
     load();
-    const migrated = plans.list.length === 1 && plans.list[0].name === t('plan.defaultName') && db.goals[0]?.title === 'Legacy goal';
+    const migrated =
+      plans.list.length === 1 && plans.list[0].name === t('plan.defaultName') && db.goals[0]?.title === 'Legacy goal';
     localStorage.removeItem(planKey(plans.current));
     localStorage.removeItem(STORAGE_KEY);
     localStorage.setItem(PLANS_KEY, index);
     plans = { current: null, list: [] };
-    load(); renderPlanSwitch(); render();
+    load();
+    renderPlanSwitch();
+    render();
     assert(migrated, 'single-plan data migrated into a first plan');
     assert(plans.current === cur, 'back to the saved plans');
 
     // A full localStorage shows a toast instead of throwing.
     const setItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = () => { throw new DOMException('full', 'QuotaExceededError'); };
-    try { save(); } finally { Storage.prototype.setItem = setItem; }
+    Storage.prototype.setItem = () => {
+      throw new DOMException('full', 'QuotaExceededError');
+    };
+    try {
+      save();
+    } finally {
+      Storage.prototype.setItem = setItem;
+    }
     assert($('#toast').textContent === t('err.storage'), 'storage error toast');
   });
 
@@ -2255,8 +3853,13 @@ window.moreTests = async ({ step, assert }) => {
     assert($('.col[data-status="doing"]').querySelector(`[data-drag="${a.id}"]`), 'card rendered in its new column');
     const dt2 = new DataTransfer();
     $(`[data-drag="${a.id}"]`).dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt2 }));
-    $('.col[data-status="done"]').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt2 }));
-    assert(a.status === 'done' && JSON.parse(localStorage.getItem(planKey(plans.current))).activities[0].status === 'done', 'saved');
+    $('.col[data-status="done"]').dispatchEvent(
+      new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt2 }),
+    );
+    assert(
+      a.status === 'done' && JSON.parse(localStorage.getItem(planKey(plans.current))).activities[0].status === 'done',
+      'saved',
+    );
     return `highlight=${hl}`;
   });
 
@@ -2271,34 +3874,52 @@ window.moreTests = async ({ step, assert }) => {
     assert(ui.mapSelected === g1.id, 'Enter selects');
     assert(!modal.open, 'Enter on an unselected item only selects it');
     node().dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-    assert(modal.open && formCtx.kind === 'goal' && formCtx.id === g1.id && ui.mapSelected === g1.id, 'Space on the selected item opens it');
+    assert(
+      modal.open && formCtx.kind === 'goal' && formCtx.id === g1.id && ui.mapSelected === g1.id,
+      'Space on the selected item opens it',
+    );
     modal.close();
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     node().dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
     assert(!ctxMenu.hidden && ctxMenu.dataset.id === g1.id, 'menu key opens the context menu');
     const btns = [...ctxMenu.querySelectorAll('button')];
     const key = k => ctxMenu.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
     const focus = [btns.indexOf(document.activeElement)];
-    key('ArrowDown'); focus.push(btns.indexOf(document.activeElement));
-    key('ArrowUp'); key('ArrowUp'); focus.push(btns.indexOf(document.activeElement));
-    key('Home'); focus.push(btns.indexOf(document.activeElement));
-    key('End'); focus.push(btns.indexOf(document.activeElement));
+    key('ArrowDown');
+    focus.push(btns.indexOf(document.activeElement));
+    key('ArrowUp');
+    key('ArrowUp');
+    focus.push(btns.indexOf(document.activeElement));
+    key('Home');
+    focus.push(btns.indexOf(document.activeElement));
+    key('End');
+    focus.push(btns.indexOf(document.activeElement));
     eq(focus, [0, 1, btns.length - 1, 0, btns.length - 1], 'menu focus moves');
     key('Escape');
     assert(ctxMenu.hidden && document.activeElement === node(), 'Escape closes and returns focus');
     node().dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true }));
-    assert(!ctxMenu.hidden, 'Shift+F10 opens the menu'); closeCtxMenu();
+    assert(!ctxMenu.hidden, 'Shift+F10 opens the menu');
+    closeCtxMenu();
     node().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    assert(modal.open && $('#f-title').value === 'Key goal', 'double-click opens the form'); modal.close();
+    assert(modal.open && $('#f-title').value === 'Key goal', 'double-click opens the form');
+    modal.close();
 
-    const count = plans.list.length, cur = plans.current;
+    const count = plans.list.length,
+      cur = plans.current;
     startTour();
     const press = k => window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
     const steps = [tour.step];
-    press('ArrowRight'); press('ArrowRight'); steps.push(tour.step);
-    press('ArrowLeft'); steps.push(tour.step);
-    press('ArrowLeft'); press('ArrowLeft'); steps.push(tour.step);
-    press('Escape'); steps.push(tour.step);
+    press('ArrowRight');
+    press('ArrowRight');
+    steps.push(tour.step);
+    press('ArrowLeft');
+    steps.push(tour.step);
+    press('ArrowLeft');
+    press('ArrowLeft');
+    steps.push(tour.step);
+    press('Escape');
+    steps.push(tour.step);
     eq(steps, [0, 2, 1, 0, -1], 'tour steps');
     assert(plans.list.length === count && plans.current === cur, 'tour plan removed, previous plan reopened');
     return `menu=${btns.length} items, tour ${steps.join('>')}`;
@@ -2306,48 +3927,95 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('zoom: limits, ctrl+wheel and timeline presets', async () => {
     fresh('Zoom');
-    const g = mk('goal', { deadline: d(60), startDate: d(-10) }), a = mk('activity', { startDate: d(1), dueDate: d(20) });
-    rel(a, g, 'contributes'); save();
+    const g = mk('goal', { deadline: d(60), startDate: d(-10) }),
+      a = mk('activity', { startDate: d(1), dueDate: d(20) });
+    rel(a, g, 'contributes');
+    save();
     setView('map');
-    const wrap = $('.map-wrap'), r = wrap.getBoundingClientRect();
-    zoomMap(100, r.left + 10, r.top + 10); const max = ui.mapScale;
-    zoomMap(0.001, r.left + 10, r.top + 10); const min = ui.mapScale;
-    assert(max === MAP.MAX_SCALE && min === MAP.MIN_SCALE && prefs.get('mapScale') === MAP.MIN_SCALE, 'map scale clamped and saved');
+    const wrap = $('.map-wrap'),
+      r = wrap.getBoundingClientRect();
+    zoomMap(100, r.left + 10, r.top + 10);
+    const max = ui.mapScale;
+    zoomMap(0.001, r.left + 10, r.top + 10);
+    const min = ui.mapScale;
+    assert(
+      max === MAP.MAX_SCALE && min === MAP.MIN_SCALE && prefs.get('mapScale') === MAP.MIN_SCALE,
+      'map scale clamped and saved',
+    );
     assert($('.zoom-pct').textContent === `${Math.round(MAP.MIN_SCALE * 100)} %`, 'zoom label');
     zoomMap(1, r.left, r.top);
-    $('.map-wrap').dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100, clientX: r.left + 50, clientY: r.top + 50 }));
-    $('.map-wrap').dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100, clientX: r.left + 50, clientY: r.top + 50 }));
-    await tick(); await tick();
+    $('.map-wrap').dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: true,
+        deltaY: -100,
+        clientX: r.left + 50,
+        clientY: r.top + 50,
+      }),
+    );
+    $('.map-wrap').dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: true,
+        deltaY: -100,
+        clientX: r.left + 50,
+        clientY: r.top + 50,
+      }),
+    );
+    await tick();
+    await tick();
     const wheel = ui.mapScale;
     assert(Math.abs(wheel - Math.exp(0.5)) < 1e-9, 'two wheel steps coalesced into one zoom: ' + wheel);
     $('.map-wrap').dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100 }));
-    await tick(); await tick();
+    await tick();
+    await tick();
     assert(ui.mapScale === wheel, 'wheel without ctrl does not zoom');
     zoomMap(1, r.left, r.top);
 
     setView('timeline');
     const tx = $('.tl-scroll').getBoundingClientRect().right - 20;
-    ui.tlPx = 8; zoomTimeline(1000, tx); const tmax = ui.tlPx;
-    zoomTimeline(1e-6, tx); const tmin = ui.tlPx;
+    ui.tlPx = 8;
+    zoomTimeline(1000, tx);
+    const tmax = ui.tlPx;
+    zoomTimeline(1e-6, tx);
+    const tmin = ui.tlPx;
     assert(tmax === TL.MAX && tmin === TL.MIN, 'timeline zoom clamped');
-    $('[data-tl-zoom="quarter"]').click(); assert(ui.tlPx === TL.ZOOM.quarter);
-    $('[data-tl-zoom="month"]').click(); assert(ui.tlPx === TL.ZOOM.month && prefs.get('tlPx') === TL.ZOOM.month);
+    $('[data-tl-zoom="quarter"]').click();
+    assert(ui.tlPx === TL.ZOOM.quarter);
+    $('[data-tl-zoom="month"]').click();
+    assert(ui.tlPx === TL.ZOOM.month && prefs.get('tlPx') === TL.ZOOM.month);
     return `map ${min}–${max}, wheel=${wheel.toFixed(3)}, timeline ${tmin}–${tmax}`;
   });
 
   await step('timeline rows: tree order, hidden done, unlinked group', () => {
     fresh('Rows');
-    const g1 = mk('goal', { title: 'G1', startDate: d(1) }), g2 = mk('goal', { title: 'G2', startDate: d(2) });
-    const a = mk('activity', { title: 'A', startDate: d(3) }), b = mk('activity', { title: 'B', startDate: d(4) }), b0 = mk('activity', { title: 'B0', startDate: d(2) });
+    const g1 = mk('goal', { title: 'G1', startDate: d(1) }),
+      g2 = mk('goal', { title: 'G2', startDate: d(2) });
+    const a = mk('activity', { title: 'A', startDate: d(3) }),
+      b = mk('activity', { title: 'B', startDate: d(4) }),
+      b0 = mk('activity', { title: 'B0', startDate: d(2) });
     const u = mk('activity', { title: 'U' });
-    rel(g2, g1, 'subgoal'); rel(a, g1, 'contributes'); rel(b, a, 'subactivity'); rel(b0, a, 'subactivity');
-    const show = rows => rows.map(r => r.kind === 'group' ? `[${r.label}]` : `${r.item.title}:${r.depth}${r.rel ? ':' + r.rel : ''}`).join(' ');
+    rel(g2, g1, 'subgoal');
+    rel(a, g1, 'contributes');
+    rel(b, a, 'subactivity');
+    rel(b0, a, 'subactivity');
+    const show = rows =>
+      rows
+        .map(r => (r.kind === 'group' ? `[${r.label}]` : `${r.item.title}:${r.depth}${r.rel ? ':' + r.rel : ''}`))
+        .join(' ');
     const all = show(timelineRows(null));
     eq(all, `G1:0 A:1:contributes B0:2:subactivity B:2:subactivity G2:1:subgoal [${t('tl.unlinked')}] U:1`, 'rows');
-    a.status = 'done'; ui.hideDone = true;
+    a.status = 'done';
+    ui.hideDone = true;
     const hidden = show(timelineRows(null));
     ui.hideDone = false;
-    eq(hidden, `G1:0 B0:1:contributes B:1:contributes G2:1:subgoal [${t('tl.unlinked')}] U:1`, 'children take a hidden parent\'s place');
+    eq(
+      hidden,
+      `G1:0 B0:1:contributes B:1:contributes G2:1:subgoal [${t('tl.unlinked')}] U:1`,
+      "children take a hidden parent's place",
+    );
     const scoped = show(timelineRows(scopeFor(g2.id)));
     return `${all} || scoped(G2): ${scoped}`;
   });
@@ -2355,13 +4023,25 @@ window.moreTests = async ({ step, assert }) => {
   await step('graph helpers: ticks, change and signs', () => {
     eq(niceTicks(0, 10), [0, 5, 10], 'ticks 0–10');
     eq(niceTicks(0, 100, 5), [0, 20, 40, 60, 80, 100], 'ticks 0–100');
-    [[3, 3], [0, 0], [-7, 13], [0.01, 0.07], [1e6, 1.3e6]].forEach(([lo, hi]) => {
+    [
+      [3, 3],
+      [0, 0],
+      [-7, 13],
+      [0.01, 0.07],
+      [1e6, 1.3e6],
+    ].forEach(([lo, hi]) => {
       const tk = niceTicks(lo, hi);
       const step = tk[1] - tk[0];
       assert(tk[0] <= lo && tk[tk.length - 1] >= hi, `ticks cover ${lo}–${hi}: ${tk}`);
-      assert(tk.every((v, i) => !i || Math.abs(v - tk[i - 1] - step) < step * 1e-6), `even steps ${tk}`);
+      assert(
+        tk.every((v, i) => !i || Math.abs(v - tk[i - 1] - step) < step * 1e-6),
+        `even steps ${tk}`,
+      );
       const m = step / 10 ** Math.floor(Math.log10(step) + 1e-9);
-      assert([1, 2, 5].some(x => Math.abs(m - x) < 1e-6), `nice step ${step}`);
+      assert(
+        [1, 2, 5].some(x => Math.abs(m - x) < 1e-6),
+        `nice step ${step}`,
+      );
     });
     const p = (v, day) => ({ value: v, day, date: '2099-01-0' + day });
     const up = stateChange({}, [p(10, 1), p(15, 2)], [{ value: 20 }]);
@@ -2374,62 +4054,111 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('i18n: plurals, fallbacks and language detection', () => {
-    const forms = code => { changeLanguage(code); return [1, 2, 3, 5, 101, 102, 104].map(n => tp('states.measurements', n)).join(', '); };
-    const sl = forms('sl'), en = forms('en');
+    const forms = code => {
+      changeLanguage(code);
+      return [1, 2, 3, 5, 101, 102, 104].map(n => tp('states.measurements', n)).join(', ');
+    };
+    const sl = forms('sl'),
+      en = forms('en');
     eq(sl, '1 meritev, 2 meritvi, 3 meritve, 5 meritev, 101 meritev, 102 meritvi, 104 meritve', 'Slovenian plurals');
     assert(en.startsWith('1 measurement, 2 measurements'), 'English plurals');
     assert(t('no.such.key') === 'no.such.key', 'missing key falls back to the key');
     assert(fill('{a} and {b}', { a: 1 }) === '1 and {b}', 'unknown placeholder kept');
-    I18N.sl.strings['__only.en'] = undefined; I18N.en.strings['__only.en'] = 'English text';
-    changeLanguage('sl'); const fb = t('__only.en'); changeLanguage('en');
-    delete I18N.sl.strings['__only.en']; delete I18N.en.strings['__only.en'];
+    I18N.sl.strings['__only.en'] = undefined;
+    I18N.en.strings['__only.en'] = 'English text';
+    changeLanguage('sl');
+    const fb = t('__only.en');
+    changeLanguage('en');
+    delete I18N.sl.strings['__only.en'];
+    delete I18N.en.strings['__only.en'];
     assert(fb === 'English text', 'missing translation falls back to English');
-    localStorage.setItem(LANG_KEY, 'sl'); const saved = detectLang();
-    localStorage.setItem(LANG_KEY, 'xx'); const bad = detectLang();
+    localStorage.setItem(LANG_KEY, 'sl');
+    const saved = detectLang();
+    localStorage.setItem(LANG_KEY, 'xx');
+    const bad = detectLang();
     localStorage.setItem(LANG_KEY, 'en');
     assert(saved === 'sl' && I18N[bad], 'detectLang');
     return sl;
   });
 
   await step('sync states: offline, paused, error, retry, unchanged file', async () => {
-    const reset = () => { currentUser().account = { id: 'acct-test', email: 'test@example.com' }; syncState.busy = false; syncState.again = false; };
+    const reset = () => {
+      currentUser().account = { id: 'acct-test', email: 'test@example.com' };
+      syncState.busy = false;
+      syncState.again = false;
+    };
     const out = {};
-    currentUser().account = null; setSyncStatus('idle');
-    let called = false; drive.getToken = async () => { called = true; return 'tok'; };
+    currentUser().account = null;
+    setSyncStatus('idle');
+    let called = false;
+    drive.getToken = async () => {
+      called = true;
+      return 'tok';
+    };
     await syncNow(true);
     assert(!called && syncState.status === 'idle', 'not connected: nothing happens');
 
     reset();
     Object.defineProperty(navigator, 'onLine', { get: () => false, configurable: true });
-    await syncNow(true); out.offline = syncState.status;
+    await syncNow(true);
+    out.offline = syncState.status;
     delete navigator.onLine;
 
-    drive.getToken = async () => { throw new SyncError('auth'); };
-    await syncNow(false); out.auth = syncState.status;
-    const err = console.error; console.error = () => {};
-    drive.getToken = async () => { throw new Error('boom'); };
-    await syncNow(false); out.crash = syncState.status;
+    drive.getToken = async () => {
+      throw new SyncError('auth');
+    };
+    await syncNow(false);
+    out.auth = syncState.status;
+    const err = console.error;
+    console.error = () => {};
+    drive.getToken = async () => {
+      throw new Error('boom');
+    };
+    await syncNow(false);
+    out.crash = syncState.status;
     console.error = err;
     eq(out, { offline: 'offline', auth: 'paused', crash: 'error' }, 'statuses');
-    assert($('#syncBtn').dataset.status === 'error' && $('#syncBtn').title === t('sync.status.error'), 'button shows the status');
+    assert(
+      $('#syncBtn').dataset.status === 'error' && $('#syncBtn').title === t('sync.status.error'),
+      'button shows the status',
+    );
 
     // A sync asked for while one is running is queued, not run in parallel.
-    let release, runs = 0;
-    drive.getToken = () => { runs++; return new Promise(r => { release = r; }); };
-    drive.read = async () => { throw new SyncError('offline'); };
+    let release,
+      runs = 0;
+    drive.getToken = () => {
+      runs++;
+      return new Promise(r => {
+        release = r;
+      });
+    };
+    drive.read = async () => {
+      throw new SyncError('offline');
+    };
     const first = syncNow(false);
     await tick();
     await syncNow(false);
     assert(runs === 1 && syncState.again, 'second sync queued');
-    release('tok'); await first;
+    release('tok');
+    await first;
     assert(!syncState.again && syncState.timer, 'queued sync rescheduled');
     clearTimeout(syncState.timer);
 
     // Second sync with nothing new: the Drive file is not rewritten; stray duplicate files are removed.
-    let file = null, writes = 0; const removed = [];
+    let file = null,
+      writes = 0;
+    const removed = [];
     drive.getToken = async () => 'tok';
-    drive.read = async () => ({ id: 'f', content: file && parseStore(JSON.stringify(file)), extra: file ? ['dup1'] : [] });
-    drive.write = async (tok, id, content) => { writes++; file = content; return 'f'; };
+    drive.read = async () => ({
+      id: 'f',
+      content: file && parseStore(JSON.stringify(file)),
+      extra: file ? ['dup1'] : [],
+    });
+    drive.write = async (tok, id, content) => {
+      writes++;
+      file = content;
+      return 'f';
+    };
     drive.remove = async (tok, id) => removed.push(id);
     await syncNow(true);
     drive.read = async () => ({ id: 'f', content: parseStore(JSON.stringify(file)), extra: [] });
@@ -2441,23 +4170,32 @@ window.moreTests = async ({ step, assert }) => {
 
     // During the tour sync leaves Drive alone (no retry loop); ending the tour syncs once.
     let reads = 0;
-    drive.read = async () => { reads++; return { id: 'f', content: parseStore(JSON.stringify(file)), extra: [] }; };
-    clearTimeout(syncState.timer); syncState.timer = null;
+    drive.read = async () => {
+      reads++;
+      return { id: 'f', content: parseStore(JSON.stringify(file)), extra: [] };
+    };
+    clearTimeout(syncState.timer);
+    syncState.timer = null;
     startTour();
-    await syncNow(false); await syncNow(true);
+    await syncNow(false);
+    await syncNow(true);
     assert(!reads && !syncState.again && !syncState.busy, 'no Drive calls during the tour');
     endTour(false);
     clearTimeout(syncState.timer);
     await syncNow(false);
     assert(reads === 1 && syncState.status === 'synced', 'syncs after the tour');
-    currentUser().account = null; renderSync();
+    currentUser().account = null;
+    renderSync();
     assert($('#syncBtn').hidden, 'signed out: no cloud button');
     return `${Object.values(out).join(',')} writes=${writes}`;
   });
 
   await step('sync: an empty merged store still leaves one plan', () => {
     applyStore({ plans: { list: [], deleted: {} }, data: {} });
-    assert(plans.list.length === 1 && plans.list[0].name === t('plan.defaultName') && itemCount() === 0, 'one empty plan');
+    assert(
+      plans.list.length === 1 && plans.list[0].name === t('plan.defaultName') && itemCount() === 0,
+      'one empty plan',
+    );
     const leftover = plansBefore.filter(id => localStorage.getItem(planKey(id)));
     assert(!leftover.length, 'old plans removed from storage');
   });
@@ -2466,12 +4204,25 @@ window.moreTests = async ({ step, assert }) => {
     const first = plans.current;
     createPlan('Second plan');
     const pick = $('#planName');
-    assert(pick.matches('select[data-plan-select]') && pick.closest('label').textContent.includes(t('plan.label')), 'labelled select');
-    assert(pick.options.length === plans.list.length && pick.value === plans.current, 'lists every plan, current selected');
-    assert(pick.selectedOptions[0].textContent === `${HEALTH_BADGE.ok} Second plan`, 'shows the current plan name, after its status badge');
-    pick.value = first; pick.dispatchEvent(new Event('change', { bubbles: true }));
+    assert(
+      pick.matches('select[data-plan-select]') && pick.closest('label').textContent.includes(t('plan.label')),
+      'labelled select',
+    );
+    assert(
+      pick.options.length === plans.list.length && pick.value === plans.current,
+      'lists every plan, current selected',
+    );
+    assert(
+      pick.selectedOptions[0].textContent === `${HEALTH_BADGE.ok} Second plan`,
+      'shows the current plan name, after its status badge',
+    );
+    pick.value = first;
+    pick.dispatchEvent(new Event('change', { bubbles: true }));
     assert(plans.current === first && $('#planName').value === first, 'switches the plan');
-    assert([...document.querySelectorAll('[data-plan-select]')].every(s => s.value === first), 'all switchers agree');
+    assert(
+      [...document.querySelectorAll('[data-plan-select]')].every(s => s.value === first),
+      'all switchers agree',
+    );
     const second = plans.list.find(p => p.name === 'Second plan');
     deletePlan(second.id);
     assert(![...$('#planName').options].some(o => o.value === second.id), 'deleted plan gone');
@@ -2483,8 +4234,12 @@ window.moreTests = async ({ step, assert }) => {
     // The tests run at desktop width; show the menu as a phone would.
     const phone = document.head.appendChild(document.createElement('style'));
     phone.textContent = '.nav-more { display: flex } .nav-sheet:not([hidden]) { display: flex }';
-    const more = $('#navMore'), sheet = $('#navSheet');
-    assert(sheet.hidden && more.getAttribute('aria-expanded') === 'false' && !more.classList.contains('active'), 'closed at first');
+    const more = $('#navMore'),
+      sheet = $('#navSheet');
+    assert(
+      sheet.hidden && more.getAttribute('aria-expanded') === 'false' && !more.classList.contains('active'),
+      'closed at first',
+    );
     more.click();
     const items = [...sheet.querySelectorAll('[data-sheet-view]')].map(b => b.dataset.sheetView);
     assert(!sheet.hidden && more.getAttribute('aria-expanded') === 'true', 'opens');
@@ -2494,7 +4249,10 @@ window.moreTests = async ({ step, assert }) => {
     sheet.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
     assert(document.activeElement.dataset.sheetView === 'graphs', 'arrows wrap');
     sheet.querySelector('[data-sheet-view="timeline"]').click();
-    assert(ui.view === 'timeline' && sheet.hidden && more.classList.contains('active'), 'picks a view, closes, More marked');
+    assert(
+      ui.view === 'timeline' && sheet.hidden && more.classList.contains('active'),
+      'picks a view, closes, More marked',
+    );
     more.click();
     assert(document.activeElement.dataset.sheetView === 'timeline', 'current view focused');
     document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -2502,7 +4260,8 @@ window.moreTests = async ({ step, assert }) => {
     more.click();
     $('#view').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     assert(sheet.hidden, 'click outside closes');
-    more.click(); more.click();
+    more.click();
+    more.click();
     assert(sheet.hidden, 'More toggles');
     setView('goals');
     assert(!more.classList.contains('active'), 'More unmarked on a main tab');
@@ -2519,9 +4278,16 @@ window.moreTests = async ({ step, assert }) => {
     offer.userChoice = Promise.resolve({ outcome: 'accepted' });
     window.dispatchEvent(offer);
     assert(offer.defaultPrevented, 'browser banner held back');
-    assert(!$('#installSection').hidden && !$('#installBtn').hidden && $('#installHint').textContent === t('install.hint'), 'section and button shown');
+    assert(
+      !$('#installSection').hidden && !$('#installBtn').hidden && $('#installHint').textContent === t('install.hint'),
+      'section and button shown',
+    );
     changeLanguage('sl');
-    assert($('#installHint').textContent === I18N.sl.strings['install.hint'] && $('#installBtn').textContent === 'Namesti aplikacijo', 'translated');
+    assert(
+      $('#installHint').textContent === I18N.sl.strings['install.hint'] &&
+        $('#installBtn').textContent === 'Namesti aplikacijo',
+      'translated',
+    );
     changeLanguage('en');
     $('#installBtn').click();
     await new Promise(r => setTimeout(r, 0));
@@ -2534,31 +4300,48 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('overview: the active next actions first, expandable', () => {
     const before = plans.current;
-    loadSample(); changeLanguage('en');
+    loadSample();
+    changeLanguage('en');
     untickCook();
     setView('dashboard');
     const titles = [...$('#view').querySelectorAll('.section-title')].map(h => h.firstChild.textContent.trim());
-    assert(titles.join('|') === `${t('dash.next')}|${t('rt.title')}|${t('dash.goalsInProgress')}`, 'next actions, routines, then the goals');
+    assert(
+      titles.join('|') === `${t('dash.next')}|${t('rt.title')}|${t('dash.goalsInProgress')}`,
+      'next actions, routines, then the goals',
+    );
     const todo = db.activities.filter(a => a.status !== 'done' && !isRoutine(a)).sort(byDueDate);
     const shown = () => [...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].map(r => r.dataset.open);
     const more = () => $('[data-next-more]');
     const due = todo.filter(a => a.dueDate && a.dueDate <= today());
     const going = todo.filter(a => due.includes(a) || a.status === 'doing');
-    assert(due.length && due.length < going.length && going.length < todo.length, `the sample has due, other active and not started ones: ${due.length}, ${going.length}, ${todo.length}`);
+    assert(
+      due.length && due.length < going.length && going.length < todo.length,
+      `the sample has due, other active and not started ones: ${due.length}, ${going.length}, ${todo.length}`,
+    );
     assert(shown().join() === due.map(a => a.id).join(), 'those due by today, by due date');
-    assert(more().textContent === t('dash.showAll', { n: going.length }) && more().getAttribute('aria-expanded') === 'false', 'show all with the count');
+    assert(
+      more().textContent === t('dash.showAll', { n: going.length }) && more().getAttribute('aria-expanded') === 'false',
+      'show all with the count',
+    );
     window.scrollTo(0, 0);
     more().click();
     assert(shown().join() === going.map(a => a.id).join(), 'expanded to all active ones');
     assert(window.scrollY === 0 && document.documentElement.scrollHeight > innerHeight, 'page stays where it was');
-    assert(more().textContent === t('dash.showFewer') && more().getAttribute('aria-expanded') === 'true' && document.activeElement === more(), 'show fewer, focus kept');
+    assert(
+      more().textContent === t('dash.showFewer') &&
+        more().getAttribute('aria-expanded') === 'true' &&
+        document.activeElement === more(),
+      'show fewer, focus kept',
+    );
     assert(prefs.get('nextAll') === true, 'remembered');
     more().click();
     assert(shown().length === due.length && prefs.get('nextAll') === false, 'collapsed again');
     // No button when every active one is due.
-    going.filter(a => !due.includes(a)).forEach(a => (a.status = 'done')); render();
+    going.filter(a => !due.includes(a)).forEach(a => (a.status = 'done'));
+    render();
     assert(shown().length === due.length && !more(), 'no button when all are shown');
-    deletePlan(plans.current); openPlan(before);
+    deletePlan(plans.current);
+    openPlan(before);
     return `${todo.length} to do`;
   });
 
@@ -2567,12 +4350,24 @@ window.moreTests = async ({ step, assert }) => {
     let done = 0;
     chooseLanguage(() => done++);
     const card = $('.lang-pick');
-    assert(card && $('.lang-pick-block') && document.activeElement === $('[data-lang-done]'), 'picker open, Continue focused');
-    const options = [...card.querySelectorAll('[data-lang-pick]')].map(b => `${b.dataset.langPick}=${b.textContent}`).join(' ');
-    assert(card.querySelector('[data-lang-pick="en"]').getAttribute('aria-pressed') === 'true', 'current language marked');
+    assert(
+      card && $('.lang-pick-block') && document.activeElement === $('[data-lang-done]'),
+      'picker open, Continue focused',
+    );
+    const options = [...card.querySelectorAll('[data-lang-pick]')]
+      .map(b => `${b.dataset.langPick}=${b.textContent}`)
+      .join(' ');
+    assert(
+      card.querySelector('[data-lang-pick="en"]').getAttribute('aria-pressed') === 'true',
+      'current language marked',
+    );
     card.querySelector('[data-lang-pick="sl"]').click();
     assert(lang === 'sl' && localStorage.getItem(LANG_KEY) === 'sl', 'language switched and saved');
-    assert($('#langPickTitle').textContent === 'Izberite jezik' && card.querySelector('[data-lang-pick="sl"]').getAttribute('aria-pressed') === 'true', 'card redrawn in Slovenian');
+    assert(
+      $('#langPickTitle').textContent === 'Izberite jezik' &&
+        card.querySelector('[data-lang-pick="sl"]').getAttribute('aria-pressed') === 'true',
+      'card redrawn in Slovenian',
+    );
     assert(currentPlan().name === I18N.sl.strings['plan.defaultName'], 'empty starter plan renamed');
     const tabs = [];
     for (let i = 0; i < card.querySelectorAll('button').length + 1; i++) {
@@ -2584,16 +4379,27 @@ window.moreTests = async ({ step, assert }) => {
     assert(!$('.lang-pick') && !$('.lang-pick-block') && done === 1, 'Escape closes and continues');
 
     // A plan with content keeps its name; Continue starts the tour in the chosen language.
-    mk('goal', { title: 'Keep my name' }); save();
+    mk('goal', { title: 'Keep my name' });
+    save();
     chooseLanguage(startTour);
     $('[data-lang-pick="en"]').click();
     assert(currentPlan().name === I18N.sl.strings['plan.defaultName'], 'plan with items not renamed');
     $('[data-lang-done]').click();
-    assert(!$('.lang-pick') && tour.step === 0 && $('#tourTitle').textContent === t('tour.about.title'), 'tour starts in English');
-    assert($('[data-tour="next"]').textContent === t('tour.next') && !$('[data-tour="back"]'), 'about slide first, Next');
+    assert(
+      !$('.lang-pick') && tour.step === 0 && $('#tourTitle').textContent === t('tour.about.title'),
+      'tour starts in English',
+    );
+    assert(
+      $('[data-tour="next"]').textContent === t('tour.next') && !$('[data-tour="back"]'),
+      'about slide first, Next',
+    );
     assert(t('tour.about.text').includes('SMART'), 'describes the app');
     $('[data-tour="next"]').click();
-    assert($('#tourTitle').textContent === t('tour.welcome.title') && $('[data-tour="next"]').textContent === t('tour.start'), 'then the tour intro with Start');
+    assert(
+      $('#tourTitle').textContent === t('tour.welcome.title') &&
+        $('[data-tour="next"]').textContent === t('tour.start'),
+      'then the tour intro with Start',
+    );
     endTour(false);
     return options;
   });
@@ -2603,56 +4409,156 @@ window.moreTests = async ({ step, assert }) => {
   // A plan with progress of every kind: achieved and measured goals, measurements, done and started
   // activities, routine check-ins (ticked and unticked), sync bookkeeping and a relation.
   const progressPlan = () => {
-    const g1 = { id: uid(), title: 'Run 10 km', unit: 'km', baseline: '5', current: '7', target: '10', startDate: d(-30), deadline: d(40), status: 'active', category: 'Health', createdAt: d(-31), updatedAt: '2026-01-01T00:00:00.000Z' };
-    const g2 = { id: uid(), title: 'Read a book', baseline: '0', current: '1', target: '1', startDate: d(-20), deadline: d(-2), status: 'achieved', updatedAt: '2026-01-01T00:00:00.000Z' };
+    const g1 = {
+      id: uid(),
+      title: 'Run 10 km',
+      unit: 'km',
+      baseline: '5',
+      current: '7',
+      target: '10',
+      startDate: d(-30),
+      deadline: d(40),
+      status: 'active',
+      category: 'Health',
+      createdAt: d(-31),
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const g2 = {
+      id: uid(),
+      title: 'Read a book',
+      baseline: '0',
+      current: '1',
+      target: '1',
+      startDate: d(-20),
+      deadline: d(-2),
+      status: 'achieved',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
     const g3 = { id: uid(), title: 'On hold', progress: 'activities', startDate: d(-10), status: 'paused' };
-    const s1 = { id: uid(), title: 'Longest run', unit: 'km', value: '7', date: d(-1), history: [{ date: d(-30), value: '5' }, { date: d(-1), value: '7' }], updatedAt: '2026-01-01T00:00:00.000Z' };
+    const s1 = {
+      id: uid(),
+      title: 'Longest run',
+      unit: 'km',
+      value: '7',
+      date: d(-1),
+      history: [
+        { date: d(-30), value: '5' },
+        { date: d(-1), value: '7' },
+      ],
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
     const s2 = { id: uid(), title: 'Weight', unit: 'kg', history: [] };
     const a1 = { id: uid(), title: 'Buy shoes', status: 'done', startDate: d(-28), dueDate: d(-25) };
-    const a2 = { id: uid(), title: 'Training plan', status: 'doing', startDate: d(-21), dueDate: d(50), notes: 'Three runs a week' };
+    const a2 = {
+      id: uid(),
+      title: 'Training plan',
+      status: 'doing',
+      startDate: d(-21),
+      dueDate: d(50),
+      notes: 'Three runs a week',
+    };
     const a3 = { id: uid(), title: 'Someday', status: 'todo' };
-    const r1 = { id: uid(), title: 'Run', status: 'todo', startDate: d(-14), repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: { [d(-7)]: 1, [d(-4)]: 1, [d(-3)]: 0 } };
+    const r1 = {
+      id: uid(),
+      title: 'Run',
+      status: 'todo',
+      startDate: d(-14),
+      repeat: { every: 1, unit: 'week', days: [0, 3] },
+      checkins: { [d(-7)]: 1, [d(-4)]: 1, [d(-3)]: 0 },
+    };
     const rel1 = { id: uid(), from: a2.id, to: g1.id, type: 'contributes' };
-    return { name: 'Running', data: { goals: [g1, g2, g3], states: [s1, s2], activities: [a1, a2, a3, r1], relations: [rel1], deleted: { gone: '2026-01-01T00:00:00.000Z' } } };
+    return {
+      name: 'Running',
+      data: {
+        goals: [g1, g2, g3],
+        states: [s1, s2],
+        activities: [a1, a2, a3, r1],
+        relations: [rel1],
+        deleted: { gone: '2026-01-01T00:00:00.000Z' },
+      },
+    };
   };
   const clone = x => JSON.parse(JSON.stringify(x));
-  const datesOf = data => [...data.goals, ...data.activities].flatMap(x => [x.startDate, x.deadline, x.dueDate]).filter(Boolean);
-  const addPlan = ({ name, data }) => { createPlan(uniqueName(name), normalize(clone(data))); return currentPlan(); };
+  const datesOf = data =>
+    [...data.goals, ...data.activities].flatMap(x => [x.startDate, x.deadline, x.dueDate]).filter(Boolean);
+  const addPlan = ({ name, data }) => {
+    createPlan(uniqueName(name), normalize(clone(data)));
+    return currentPlan();
+  };
   // Captures what a download or share would hand over instead of saving it.
   const capture = async run => {
     const got = [];
-    const orig = URL.createObjectURL, click = HTMLAnchorElement.prototype.click;
-    URL.createObjectURL = b => { got.push({ blob: b }); return 'blob:x' + got.length; };
-    HTMLAnchorElement.prototype.click = function () { got[got.length - 1].name = this.download; };
-    try { await run(); } finally { URL.createObjectURL = orig; HTMLAnchorElement.prototype.click = click; }
+    const orig = URL.createObjectURL,
+      click = HTMLAnchorElement.prototype.click;
+    URL.createObjectURL = b => {
+      got.push({ blob: b });
+      return 'blob:x' + got.length;
+    };
+    HTMLAnchorElement.prototype.click = function () {
+      got[got.length - 1].name = this.download;
+    };
+    try {
+      await run();
+    } finally {
+      URL.createObjectURL = orig;
+      HTMLAnchorElement.prototype.click = click;
+    }
     for (const g of got) g.json = JSON.parse(await g.blob.text());
     return got;
   };
-  const fileOf = (obj, name = 'plan.json') => new File([typeof obj === 'string' ? obj : JSON.stringify(obj)], name, { type: 'application/json' });
-  const imp = $('#planImport'), exp = $('#planExport');
+  const fileOf = (obj, name = 'plan.json') =>
+    new File([typeof obj === 'string' ? obj : JSON.stringify(obj)], name, { type: 'application/json' });
+  const imp = $('#planImport'),
+    exp = $('#planExport');
 
   await step('plan files: resetting progress strips progress and keeps the structure', () => {
     const { data } = progressPlan();
     const before = clone(data);
     const r = resetProgress(data);
     eq(data, before, 'the original is left alone');
-    const [g1, g2, g3] = r.goals, [s1, s2] = r.states, [a1, a2, a3, r1] = r.activities;
+    const [g1, g2, g3] = r.goals,
+      [s1, s2] = r.states,
+      [a1, a2, a3, r1] = r.activities;
     assert(g1.current === '' && g2.current === '', 'goal current values cleared');
     assert(g1.status === 'active' && g2.status === 'active', 'achieved goal active again');
     assert(g3.status === 'paused', 'paused goal stays paused');
-    eq([g1.baseline, g1.target, g1.unit, g1.category, g1.title], ['5', '10', 'km', 'Health', 'Run 10 km'], 'goal metric and wording kept');
+    eq(
+      [g1.baseline, g1.target, g1.unit, g1.category, g1.title],
+      ['5', '10', 'km', 'Health', 'Run 10 km'],
+      'goal metric and wording kept',
+    );
     eq([g3.progress, g2.target], ['activities', '1'], 'progress mode and target kept');
     assert(s1.value === '' && s1.date === '' && s1.history.length === 0, 'measurements cleared');
     eq([s1.title, s1.unit, s2.unit], ['Longest run', 'km', 'kg'], 'states and units kept');
-    eq(r.activities.map(a => a.status), ['todo', 'todo', 'todo', 'todo'], 'activities to do again');
+    eq(
+      r.activities.map(a => a.status),
+      ['todo', 'todo', 'todo', 'todo'],
+      'activities to do again',
+    );
     assert(!('checkins' in r1), 'check-ins removed');
     eq(r1.repeat, before.activities[3].repeat, 'recurrence kept');
     assert(a2.notes === 'Three runs a week', 'notes kept');
     eq(r.relations, before.relations, 'relations kept');
-    eq([...r.goals, ...r.states, ...r.activities].map(x => x.id), [...before.goals, ...before.states, ...before.activities].map(x => x.id), 'ids kept, so relations still connect');
-    assert(![...r.goals, ...r.states, ...r.activities, ...r.relations].some(x => 'updatedAt' in x), 'sync stamps dropped');
+    eq(
+      [...r.goals, ...r.states, ...r.activities].map(x => x.id),
+      [...before.goals, ...before.states, ...before.activities].map(x => x.id),
+      'ids kept, so relations still connect',
+    );
+    assert(
+      ![...r.goals, ...r.states, ...r.activities, ...r.relations].some(x => 'updatedAt' in x),
+      'sync stamps dropped',
+    );
     eq(r.deleted, {}, 'deletion records dropped');
-    eq([g1.startDate, g1.deadline, a1.dueDate, r1.startDate], [before.goals[0].startDate, before.goals[0].deadline, before.activities[0].dueDate, before.activities[3].startDate], 'dates unchanged without shift');
+    eq(
+      [g1.startDate, g1.deadline, a1.dueDate, r1.startDate],
+      [
+        before.goals[0].startDate,
+        before.goals[0].deadline,
+        before.activities[0].dueDate,
+        before.activities[3].startDate,
+      ],
+      'dates unchanged without shift',
+    );
     assert(g1.createdAt === before.goals[0].createdAt, 'created date kept without shift');
     assert(a3.startDate === undefined && a3.dueDate === undefined, 'undated activity stays undated');
     eq(progressCounts(r), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'no progress left');
@@ -2662,23 +4568,49 @@ window.moreTests = async ({ step, assert }) => {
   await step('plan files: a template moves its dates by whole weeks to start this week', () => {
     for (const offset of [-30, -400, 0, 3, 20, 365]) {
       const { data } = progressPlan();
-      const move = x => { for (const k of ['startDate', 'deadline', 'dueDate', 'createdAt']) if (x[k]) x[k] = addDays(x[k], offset); };
+      const move = x => {
+        for (const k of ['startDate', 'deadline', 'dueDate', 'createdAt']) if (x[k]) x[k] = addDays(x[k], offset);
+      };
       [...data.goals, ...data.activities].forEach(move);
       const r = resetProgress(data, { shift: true });
-      const was = datesOf(data), now = datesOf(r);
+      const was = datesOf(data),
+        now = datesOf(r);
       const first = now.slice().sort()[0];
       assert(first >= today() && first <= addDays(today(), 6), `offset ${offset}: earliest ${first} lands this week`);
       const by = dayNum(now[0]) - dayNum(was[0]);
       assert(by % 7 === 0, `offset ${offset}: moved by whole weeks (${by})`);
-      assert(now.every((x, i) => dayNum(x) - dayNum(was[i]) === by), `offset ${offset}: every date moved the same`);
-      assert(now.every((x, i) => weekday(x) === weekday(was[i])), `offset ${offset}: weekdays kept, so weekly routines still fall on their days`);
+      assert(
+        now.every((x, i) => dayNum(x) - dayNum(was[i]) === by),
+        `offset ${offset}: every date moved the same`,
+      );
+      assert(
+        now.every((x, i) => weekday(x) === weekday(was[i])),
+        `offset ${offset}: weekdays kept, so weekly routines still fall on their days`,
+      );
       assert(r.goals[0].createdAt === addDays(data.goals[0].createdAt, by), `offset ${offset}: created date moved too`);
       assert(r.activities[2].startDate === undefined && r.activities[2].dueDate === undefined, 'undated stays undated');
     }
-    const none = resetProgress({ goals: [{ id: 'g', title: 'No dates', status: 'active' }], states: [], activities: [], relations: [] }, { shift: true });
-    assert(none.goals[0].startDate === undefined && none.goals[0].deadline === undefined, 'a plan without dates is not given any');
-    const only = resetProgress({ goals: [], states: [], activities: [{ id: 'a', title: 'Due', status: 'todo', dueDate: d(-50) }], relations: [] }, { shift: true });
-    assert(only.activities[0].dueDate >= today() && only.activities[0].dueDate <= addDays(today(), 6), 'a due date alone counts as the earliest');
+    const none = resetProgress(
+      { goals: [{ id: 'g', title: 'No dates', status: 'active' }], states: [], activities: [], relations: [] },
+      { shift: true },
+    );
+    assert(
+      none.goals[0].startDate === undefined && none.goals[0].deadline === undefined,
+      'a plan without dates is not given any',
+    );
+    const only = resetProgress(
+      {
+        goals: [],
+        states: [],
+        activities: [{ id: 'a', title: 'Due', status: 'todo', dueDate: d(-50) }],
+        relations: [],
+      },
+      { shift: true },
+    );
+    assert(
+      only.activities[0].dueDate >= today() && only.activities[0].dueDate <= addDays(today(), 6),
+      'a due date alone counts as the earliest',
+    );
     return 'six offsets checked';
   });
 
@@ -2688,15 +4620,34 @@ window.moreTests = async ({ step, assert }) => {
     // 1 done activity + 1 achieved goal, 1 activity in progress.
     eq(progressCounts(data), { checkins: 2, measurements: 4, done: 2, started: 1 }, 'counts');
     eq(progressCounts(emptyDb()), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'empty plan');
-    eq(progressCounts({ goals: [], states: [{ id: 's', title: 'x', value: '3', date: d(-1) }], activities: [], relations: [] }).measurements, 1, 'a value without history counts once');
-    eq(progressCounts({ goals: [], states: [{ id: 's', title: 'x', value: '', history: [] }], activities: [], relations: [] }).measurements, 0, 'an empty state does not');
+    eq(
+      progressCounts({
+        goals: [],
+        states: [{ id: 's', title: 'x', value: '3', date: d(-1) }],
+        activities: [],
+        relations: [],
+      }).measurements,
+      1,
+      'a value without history counts once',
+    );
+    eq(
+      progressCounts({
+        goals: [],
+        states: [{ id: 's', title: 'x', value: '', history: [] }],
+        activities: [],
+        relations: [],
+      }).measurements,
+      0,
+      'an empty state does not',
+    );
     eq(progressCounts(normalize(sampleData())).checkins > 0, true, 'the sample plan has check-ins');
     return JSON.stringify(progressCounts(data));
   });
 
   await step('plan files: header, full copy and template', () => {
     const plan = addPlan(progressPlan());
-    const full = planFile('full'), tpl = planFile('template');
+    const full = planFile('full'),
+      tpl = planFile('template');
     eq([full.format, full.version, full.kind, full.name], ['actionplan-plan', 1, 'full', plan.name], 'full header');
     eq([tpl.format, tpl.version, tpl.kind, tpl.name], ['actionplan-plan', 1, 'template', plan.name], 'template header');
     assert(!isNaN(Date.parse(full.exportedAt)), 'export time recorded');
@@ -2704,21 +4655,53 @@ window.moreTests = async ({ step, assert }) => {
     eq(full.activities, db.activities, 'full copy keeps check-ins');
     eq(progressCounts(tpl), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'template has no progress');
     assert(datesOf(tpl).sort()[0] >= today(), 'template dates moved to now');
-    assert(db.goals[1].status === 'achieved' && db.activities[3].checkins, 'exporting a template leaves the plan alone');
+    assert(
+      db.goals[1].status === 'achieved' && db.activities[3].checkins,
+      'exporting a template leaves the plan alone',
+    );
     deletePlan(plan.id);
     return `${full.goals.length} goals`;
   });
 
   await step('plan files: reading checks the format', async () => {
     const { name, data } = progressPlan();
-    const ok = parsePlanFile(JSON.stringify({ format: 'actionplan-plan', version: 1, kind: 'template', name, ...data }), 'x.json');
+    const ok = parsePlanFile(
+      JSON.stringify({ format: 'actionplan-plan', version: 1, kind: 'template', name, ...data }),
+      'x.json',
+    );
     eq([ok.name, ok.kind, ok.data.goals.length, ok.data.relations.length], [name, 'template', 3, 1], 'new format');
     const old = parsePlanFile(JSON.stringify({ name: 'Old export', ...data }), 'old.json');
-    eq([old.name, old.kind, old.data.activities.length], ['Old export', 'full', 4], 'files exported before the header still import as full copies');
-    eq(parsePlanFile(JSON.stringify({ goals: [] }), 'My backup.JSON').name, 'My backup', 'name from the file when missing');
-    eq(parsePlanFile(JSON.stringify({ name: '   ', goals: [] }), 'blank.json').name, 'blank', 'blank name falls back to the file name');
-    eq(parsePlanFile(JSON.stringify({ format: 'actionplan-plan', version: 1, kind: 'weird', name: 'k', goals: [] }), 'k.json').kind, 'full', 'unknown kind read as full');
-    const reason = (text, msg) => { try { parsePlanFile(text, 'f.json'); } catch (e) { return e.code; } assert(false, `${msg}: accepted`); };
+    eq(
+      [old.name, old.kind, old.data.activities.length],
+      ['Old export', 'full', 4],
+      'files exported before the header still import as full copies',
+    );
+    eq(
+      parsePlanFile(JSON.stringify({ goals: [] }), 'My backup.JSON').name,
+      'My backup',
+      'name from the file when missing',
+    );
+    eq(
+      parsePlanFile(JSON.stringify({ name: '   ', goals: [] }), 'blank.json').name,
+      'blank',
+      'blank name falls back to the file name',
+    );
+    eq(
+      parsePlanFile(
+        JSON.stringify({ format: 'actionplan-plan', version: 1, kind: 'weird', name: 'k', goals: [] }),
+        'k.json',
+      ).kind,
+      'full',
+      'unknown kind read as full',
+    );
+    const reason = (text, msg) => {
+      try {
+        parsePlanFile(text, 'f.json');
+      } catch (e) {
+        return e.code;
+      }
+      assert(false, `${msg}: accepted`);
+    };
     eq(reason('not json', 'text'), 'invalid', 'not JSON');
     eq(reason('[1,2]', 'array'), 'invalid', 'an array');
     eq(reason('null', 'null'), 'invalid', 'null');
@@ -2726,18 +4709,46 @@ window.moreTests = async ({ step, assert }) => {
     eq(reason('{"foo":1,"name":"x"}', 'other'), 'invalid', 'unrelated JSON');
     eq(reason('{"goals":"many"}', 'wrong type'), 'invalid', 'collections that are not lists');
     eq(reason(JSON.stringify({ format: 'something-else', goals: [] }), 'format'), 'invalid', 'another format');
-    eq(reason(JSON.stringify({ format: 'actionplan-sync', version: 1, plans: { list: [] }, data: {} }), 'sync'), 'invalid', 'the Drive sync file');
-    eq(reason(JSON.stringify({ format: 'actionplan-plan', version: 2, name: 'n', goals: [] }), 'newer'), 'version', 'a file from a newer version');
-    const junk = parsePlanFile(JSON.stringify({ name: 'J', goals: [{ id: 'g', title: 'ok', status: 'active' }], extra: 'x', states: 7 }), 'j.json');
-    assert(!('extra' in junk.data) && Array.isArray(junk.data.states) && junk.data.states.length === 0, 'unknown fields dropped, bad collections emptied');
+    eq(
+      reason(JSON.stringify({ format: 'actionplan-sync', version: 1, plans: { list: [] }, data: {} }), 'sync'),
+      'invalid',
+      'the Drive sync file',
+    );
+    eq(
+      reason(JSON.stringify({ format: 'actionplan-plan', version: 2, name: 'n', goals: [] }), 'newer'),
+      'version',
+      'a file from a newer version',
+    );
+    const junk = parsePlanFile(
+      JSON.stringify({ name: 'J', goals: [{ id: 'g', title: 'ok', status: 'active' }], extra: 'x', states: 7 }),
+      'j.json',
+    );
+    assert(
+      !('extra' in junk.data) && Array.isArray(junk.data.states) && junk.data.states.length === 0,
+      'unknown fields dropped, bad collections emptied',
+    );
 
     // Ids go into the page unescaped: items with markup in their id, broken items and links to them are dropped.
     const evil = 'x"><img src=x onerror="window.__pwned=1">';
-    const bad = parsePlanFile(JSON.stringify({ name: 'Bad', goals: [{ id: 'g1', title: 'Fine' }, { id: evil, title: 'Evil' }, null, 7, { title: 'No id' }],
-      activities: [{ id: 'a1', title: 'Act' }],
-      relations: [{ id: 'r1', from: 'a1', to: 'g1', type: 'contributes' }, { id: 'r2', from: 'a1', to: evil, type: 'contributes' },
-        { id: evil, from: 'a1', to: 'g1', type: 'contributes' }, null] }), 'b.json');
-    eq([bad.data.goals.map(g => g.id), bad.data.relations.map(r => r.id)], [['g1'], ['r1']], 'unsafe and broken items dropped');
+    const bad = parsePlanFile(
+      JSON.stringify({
+        name: 'Bad',
+        goals: [{ id: 'g1', title: 'Fine' }, { id: evil, title: 'Evil' }, null, 7, { title: 'No id' }],
+        activities: [{ id: 'a1', title: 'Act' }],
+        relations: [
+          { id: 'r1', from: 'a1', to: 'g1', type: 'contributes' },
+          { id: 'r2', from: 'a1', to: evil, type: 'contributes' },
+          { id: evil, from: 'a1', to: 'g1', type: 'contributes' },
+          null,
+        ],
+      }),
+      'b.json',
+    );
+    eq(
+      [bad.data.goals.map(g => g.id), bad.data.relations.map(r => r.id)],
+      [['g1'], ['r1']],
+      'unsafe and broken items dropped',
+    );
     addImported(bad.name, bad.data);
     ['dashboard', 'goals', 'activities', 'map', 'timeline'].forEach(v => setView(v));
     await tick();
@@ -2750,7 +4761,11 @@ window.moreTests = async ({ step, assert }) => {
     const plan = addPlan(progressPlan());
     const nav = { canShare: navigator.canShare, share: navigator.share };
     navigator.canShare = undefined;
-    assert(document.querySelectorAll('[data-plan="export"]').length >= 1 && document.querySelectorAll('[data-plan="import"]').length >= 1, 'export and import beside the plan actions');
+    assert(
+      document.querySelectorAll('[data-plan="export"]').length >= 1 &&
+        document.querySelectorAll('[data-plan="import"]').length >= 1,
+      'export and import beside the plan actions',
+    );
     $('[data-plan="export"]').click();
     assert(exp.open, 'export dialog opens');
     assert(exp.querySelector('input[name="exportKind"][value="full"]').checked, 'full copy chosen at first');
@@ -2768,8 +4783,15 @@ window.moreTests = async ({ step, assert }) => {
     exp.querySelector('input[name="exportKind"][value="template"]').click();
     got = await capture(() => $('#exportDownloadBtn').click());
     eq(got[0].json.kind, 'template', 'template file');
-    eq(progressCounts(got[0].json), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'template file has no progress');
-    assert(got[0].name === `${plan.name}-${t('export.templateFile')}-${today()}.json`, `template file name ${got[0].name}`);
+    eq(
+      progressCounts(got[0].json),
+      { checkins: 0, measurements: 0, done: 0, started: 0 },
+      'template file has no progress',
+    );
+    assert(
+      got[0].name === `${plan.name}-${t('export.templateFile')}-${today()}.json`,
+      `template file name ${got[0].name}`,
+    );
     $('[data-plan="export"]').click();
     assert(exp.querySelector('input[name="exportKind"][value="full"]').checked, 'full copy chosen again next time');
     exp.querySelector('[data-plan-export-close]').click();
@@ -2779,15 +4801,27 @@ window.moreTests = async ({ step, assert }) => {
     const shared = [];
     let fail = null;
     navigator.canShare = o => !!o?.files?.length;
-    navigator.share = async o => { shared.push(o); if (fail) throw fail; };
+    navigator.share = async o => {
+      shared.push(o);
+      if (fail) throw fail;
+    };
     try {
       $('[data-plan="export"]').click();
       assert(!$('#exportShareBtn').hidden, 'Share offered');
       exp.querySelector('input[name="exportKind"][value="template"]').click();
-      got = await capture(async () => { $('#exportShareBtn').click(); await tick(); await tick(); });
+      got = await capture(async () => {
+        $('#exportShareBtn').click();
+        await tick();
+        await tick();
+      });
       eq(shared.length, 1, 'shared once');
       const f = shared[0].files[0];
-      assert(f instanceof File && f.name === `${plan.name}-${t('export.templateFile')}-${today()}.json` && f.type === 'application/json', `shared file ${f.name}`);
+      assert(
+        f instanceof File &&
+          f.name === `${plan.name}-${t('export.templateFile')}-${today()}.json` &&
+          f.type === 'application/json',
+        `shared file ${f.name}`,
+      );
       eq(JSON.parse(await f.text()).kind, 'template', 'shared the template');
       assert(shared[0].title === plan.name, 'share title is the plan name');
       eq(got.length, 0, 'nothing downloaded');
@@ -2795,12 +4829,20 @@ window.moreTests = async ({ step, assert }) => {
 
       fail = new DOMException('cancelled', 'AbortError');
       $('[data-plan="export"]').click();
-      got = await capture(async () => { $('#exportShareBtn').click(); await tick(); await tick(); });
+      got = await capture(async () => {
+        $('#exportShareBtn').click();
+        await tick();
+        await tick();
+      });
       eq(got.length, 0, 'cancelling the share sheet downloads nothing');
 
       fail = new Error('share broke');
       $('[data-plan="export"]').click();
-      got = await capture(async () => { $('#exportShareBtn').click(); await tick(); await tick(); });
+      got = await capture(async () => {
+        $('#exportShareBtn').click();
+        await tick();
+        await tick();
+      });
       eq([got.length, got[0]?.json.kind], [1, 'full'], 'a failed share falls back to a download');
 
       navigator.canShare = () => false;
@@ -2808,7 +4850,8 @@ window.moreTests = async ({ step, assert }) => {
       assert($('#exportShareBtn').hidden, 'no Share when files cannot be shared');
       exp.close();
     } finally {
-      navigator.canShare = nav.canShare; navigator.share = nav.share;
+      navigator.canShare = nav.canShare;
+      navigator.share = nav.share;
     }
 
     // The Settings button opens the same dialog; the delete dialog's backup still downloads a full copy at once.
@@ -2818,7 +4861,11 @@ window.moreTests = async ({ step, assert }) => {
     settings.close();
     openPlanDelete(plan);
     got = await capture(() => $('[data-plan-backup]').click());
-    eq([got.length, got[0].json.kind, exp.open], [1, 'full', false], 'backup before deleting is a full copy, no dialog');
+    eq(
+      [got.length, got[0].json.kind, exp.open],
+      [1, 'full', false],
+      'backup before deleting is a full copy, no dialog',
+    );
     planDel.close();
     deletePlan(plan.id);
     return 'download, template, share, fallback';
@@ -2827,13 +4874,23 @@ window.moreTests = async ({ step, assert }) => {
   await step('import: templates and plans without progress come straight in', async () => {
     const n0 = plans.list.length;
     const { name, data } = progressPlan();
-    await importJson(fileOf({ format: 'actionplan-plan', version: 1, kind: 'template', name, ...resetProgress(data, { shift: true }) }));
+    await importJson(
+      fileOf({
+        format: 'actionplan-plan',
+        version: 1,
+        kind: 'template',
+        name,
+        ...resetProgress(data, { shift: true }),
+      }),
+    );
     assert(!imp.open && plans.list.length === n0 + 1 && currentPlan().name === name, 'template imported as a new plan');
     assert(db.goals.length === 3 && db.relations.length === 1, 'with its content');
     assert($('#toast').textContent === t('toast.imported'), 'toast');
     await importJson(fileOf({ format: 'actionplan-plan', version: 1, kind: 'template', name, ...resetProgress(data) }));
     assert(currentPlan().name === `${name} 2` && plans.list.length === n0 + 2, 'same name gets a number');
-    await importJson(fileOf({ format: 'actionplan-plan', version: 1, kind: 'full', name: 'Fresh', ...resetProgress(data) }));
+    await importJson(
+      fileOf({ format: 'actionplan-plan', version: 1, kind: 'full', name: 'Fresh', ...resetProgress(data) }),
+    );
     assert(!imp.open && currentPlan().name === 'Fresh', 'a full copy without progress does not ask');
     const ids = plans.list.slice(n0).map(p => p.id);
     ids.forEach(deletePlan);
@@ -2842,14 +4899,21 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('import: a full copy with progress asks to keep it or start fresh', async () => {
-    const n0 = plans.list.length, startId = plans.current;
+    const n0 = plans.list.length,
+      startId = plans.current;
     const { name, data } = progressPlan();
     const file = { format: 'actionplan-plan', version: 1, kind: 'full', name, ...data };
 
     await importJson(fileOf(file));
     assert(imp.open && plans.list.length === n0, 'asks before adding anything');
     const text = imp.textContent;
-    for (const s of [tp('import.checkins', 2), tp('import.measurements', 4), tp('import.done', 2), tp('import.started', 1)]) assert(text.includes(s), `mentions “${s}”`);
+    for (const s of [
+      tp('import.checkins', 2),
+      tp('import.measurements', 4),
+      tp('import.done', 2),
+      tp('import.started', 1),
+    ])
+      assert(text.includes(s), `mentions “${s}”`);
     assert(text.includes(name), 'names the plan');
     $('#importKeepBtn').click();
     await tick();
@@ -2863,10 +4927,17 @@ window.moreTests = async ({ step, assert }) => {
     assert(imp.open, 'asks again');
     $('#importFreshBtn').click();
     await tick();
-    assert(!imp.open && plans.list.length === n0 + 2 && currentPlan().name === `${name} 2`, 'Start fresh adds the plan');
+    assert(
+      !imp.open && plans.list.length === n0 + 2 && currentPlan().name === `${name} 2`,
+      'Start fresh adds the plan',
+    );
     eq(progressCounts(db), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'without progress');
     eq(datesOf(db), datesOf(data), 'dates left as they were');
-    eq([db.goals.length, db.states.length, db.activities.length, db.relations.length], [3, 2, 4, 1], 'structure intact');
+    eq(
+      [db.goals.length, db.states.length, db.activities.length, db.relations.length],
+      [3, 2, 4, 1],
+      'structure intact',
+    );
     assert($('#toast').textContent === t('toast.importedFresh'), 'fresh toast');
 
     const before = plans.current;
@@ -2890,13 +4961,20 @@ window.moreTests = async ({ step, assert }) => {
     assert(currentPlan().name === 'Legacy' && progressCounts(db).checkins === 2, 'legacy kept');
 
     // Bad files change nothing.
-    const n1 = plans.list.length, cur = plans.current;
+    const n1 = plans.list.length,
+      cur = plans.current;
     await importJson(fileOf('not json', 'bad.json'));
-    assert(!imp.open && plans.list.length === n1 && plans.current === cur && $('#toast').textContent === t('err.import'), 'invalid file');
+    assert(
+      !imp.open && plans.list.length === n1 && plans.current === cur && $('#toast').textContent === t('err.import'),
+      'invalid file',
+    );
     await importJson(fileOf({ format: 'actionplan-plan', version: 9, name: 'n', goals: [] }));
     assert(plans.list.length === n1 && $('#toast').textContent === t('err.importVersion'), 'newer version explained');
 
-    plans.list.slice(n0).map(p => p.id).forEach(deletePlan);
+    plans.list
+      .slice(n0)
+      .map(p => p.id)
+      .forEach(deletePlan);
     openPlan(startId);
     eq(plans.list.length, n0, 'cleaned up');
     return text.replace(/\s+/g, ' ').trim().slice(0, 140);
@@ -2910,13 +4988,22 @@ window.moreTests = async ({ step, assert }) => {
     $('#importKeepBtn').click();
     await tick();
     assert(plans.current !== src.id && currentPlan().name === `${src.name} 2`, 'imported beside the original');
-    for (const k of ['goals', 'states', 'activities', 'relations']) eq(db[k], original[k], `${k} identical after a full round trip`);
+    for (const k of ['goals', 'states', 'activities', 'relations'])
+      eq(db[k], original[k], `${k} identical after a full round trip`);
 
     openPlan(src.id);
-    const [tpl] = await capture(() => { $('[data-plan="export"]').click(); exp.querySelector('input[name="exportKind"][value="template"]').click(); $('#exportDownloadBtn').click(); });
+    const [tpl] = await capture(() => {
+      $('[data-plan="export"]').click();
+      exp.querySelector('input[name="exportKind"][value="template"]').click();
+      $('#exportDownloadBtn').click();
+    });
     await importJson(fileOf(tpl.json, tpl.name));
     assert(!imp.open && currentPlan().name === `${src.name} 3`, 'a template round trip needs no question');
-    eq(db.goals.map(g => g.title), original.goals.map(g => g.title), 'template keeps the goals');
+    eq(
+      db.goals.map(g => g.title),
+      original.goals.map(g => g.title),
+      'template keeps the goals',
+    );
 
     // The plan's Import button opens the file picker; it accepts .json files (Android greys out some otherwise).
     const input = $('#importInput');
@@ -2926,7 +5013,13 @@ window.moreTests = async ({ step, assert }) => {
     $('[data-plan="import"]').click();
     input.click = origClick;
     eq(picked, 1, 'Import opens the file picker');
-    assert(input.accept.split(',').map(s => s.trim()).includes('.json') && input.accept.includes('application/json'), `accept="${input.accept}"`);
+    assert(
+      input.accept
+        .split(',')
+        .map(s => s.trim())
+        .includes('.json') && input.accept.includes('application/json'),
+      `accept="${input.accept}"`,
+    );
 
     // Choosing a file in the picker imports it.
     const dt = new DataTransfer();
@@ -2937,7 +5030,9 @@ window.moreTests = async ({ step, assert }) => {
     for (let i = 0; i < 100 && currentPlan().name !== 'Picked'; i++) await new Promise(r => setTimeout(r, 20));
     assert(currentPlan().name === 'Picked' && input.value === '', 'picked file imported, picker reset');
 
-    const plansNow = plans.list.filter(p => [src.name, `${src.name} 2`, `${src.name} 3`, 'Picked'].includes(p.name)).map(p => p.id);
+    const plansNow = plans.list
+      .filter(p => [src.name, `${src.name} 2`, `${src.name} 3`, 'Picked'].includes(p.name))
+      .map(p => p.id);
     plansNow.forEach(deletePlan);
     return 'round trips identical';
   });
@@ -2948,179 +5043,359 @@ window.moreTests = async ({ step, assert }) => {
     $('[data-plan="export"]').click();
     assert(exp.querySelector('h2').textContent === I18N.sl.strings['export.title'], 'export dialog in Slovenian');
     assert($('[data-plan="export"]').title === I18N.sl.strings['plan.export'], 'button title in Slovenian');
-    const [tpl] = await capture(() => { exp.querySelector('input[name="exportKind"][value="template"]').click(); $('#exportDownloadBtn').click(); });
-    assert(tpl.name.includes(`-${I18N.sl.strings['export.templateFile']}-`), `Slovenian template file name ${tpl.name}`);
-    await importJson(fileOf({ format: 'actionplan-plan', version: 1, kind: 'full', name: 'Tek', ...progressPlan().data }));
+    const [tpl] = await capture(() => {
+      exp.querySelector('input[name="exportKind"][value="template"]').click();
+      $('#exportDownloadBtn').click();
+    });
+    assert(
+      tpl.name.includes(`-${I18N.sl.strings['export.templateFile']}-`),
+      `Slovenian template file name ${tpl.name}`,
+    );
+    await importJson(
+      fileOf({ format: 'actionplan-plan', version: 1, kind: 'full', name: 'Tek', ...progressPlan().data }),
+    );
     const text = imp.textContent;
-    assert(text.includes(tp('import.checkins', 2)) && tp('import.checkins', 2) !== I18N.en.strings['import.checkins'].other.replace('{n}', 2), 'progress listed in Slovenian');
+    assert(
+      text.includes(tp('import.checkins', 2)) &&
+        tp('import.checkins', 2) !== I18N.en.strings['import.checkins'].other.replace('{n}', 2),
+      'progress listed in Slovenian',
+    );
     assert(text.includes(tp('import.measurements', 4)), 'Slovenian plural for four');
     imp.close();
     deletePlan(plan.id);
     changeLanguage('en');
     return text.replace(/\s+/g, ' ').trim().slice(0, 120);
   });
-  await step('full backup: every plan and the visions in one file; restoring adds copies and missing visions', async () => {
-    const startId = plans.current, n0 = plans.list.length, v0 = clone(visions);
-    const src = addPlan(progressPlan());
-    const kept = { id: uid(), title: 'Kept vision', parents: [] }, lost = { id: uid(), title: 'Lost vision', parents: [kept.id] };
-    visions.list.push(kept, lost);
-    db.goals[0].visions = [lost.id];
-    save(); saveVisions();
-    const original = clone(db);
+  await step(
+    'full backup: every plan and the visions in one file; restoring adds copies and missing visions',
+    async () => {
+      const startId = plans.current,
+        n0 = plans.list.length,
+        v0 = clone(visions);
+      const src = addPlan(progressPlan());
+      const kept = { id: uid(), title: 'Kept vision', parents: [] },
+        lost = { id: uid(), title: 'Lost vision', parents: [kept.id] };
+      visions.list.push(kept, lost);
+      db.goals[0].visions = [lost.id];
+      save();
+      saveVisions();
+      const original = clone(db);
 
-    // The Settings button downloads one file in the sync file's format.
-    const [file] = await capture(() => $('#backupAllBtn').click());
-    const count = file.json.plans.list.length;
-    assert(file.name === `${t('backup.file')} ${today()}.json` && file.blob.type === 'application/json', `file name ${file.name}`);
-    eq([file.json.format, file.json.kind, file.json.version], ['actionplan-sync', 'backup', 1], 'sync format, marked as a backup');
-    assert(!isNaN(new Date(file.json.exportedAt)), 'dated');
-    eq(file.json.plans.list.map(p => p.id), plans.list.map(p => p.id), 'every plan listed');
-    eq(file.json.data[src.id], original, 'the open plan, with its progress');
-    eq(file.json.data[startId], clone(readPlan(startId)), 'a plan that is not open');
-    eq(file.json.visions.list, clone(visions.list), 'the visions');
-    eq(parseStore(JSON.stringify(file.json)).visions.list, clone(visions.list), 'the sync parser reads it');
+      // The Settings button downloads one file in the sync file's format.
+      const [file] = await capture(() => $('#backupAllBtn').click());
+      const count = file.json.plans.list.length;
+      assert(
+        file.name === `${t('backup.file')} ${today()}.json` && file.blob.type === 'application/json',
+        `file name ${file.name}`,
+      );
+      eq(
+        [file.json.format, file.json.kind, file.json.version],
+        ['actionplan-sync', 'backup', 1],
+        'sync format, marked as a backup',
+      );
+      assert(!isNaN(new Date(file.json.exportedAt)), 'dated');
+      eq(
+        file.json.plans.list.map(p => p.id),
+        plans.list.map(p => p.id),
+        'every plan listed',
+      );
+      eq(file.json.data[src.id], original, 'the open plan, with its progress');
+      eq(file.json.data[startId], clone(readPlan(startId)), 'a plan that is not open');
+      eq(file.json.visions.list, clone(visions.list), 'the visions');
+      eq(parseStore(JSON.stringify(file.json)).visions.list, clone(visions.list), 'the sync parser reads it');
 
-    // Lose a plan and a vision, change the kept vision, then restore.
-    deletePlan(src.id);
-    openPlan(startId);
-    visions.list = visions.list.filter(v => v.id !== lost.id);
-    findVision(kept.id).title = 'Kept vision, renamed since';
-    saveVisions();
-    const others = clone(plans.list), othersData = clone(plans.list.map(p => readPlan(p.id)));
-    await restoreFromFile(fileOf(file.json));
-    const date = fmtDate(isoDate(new Date(file.json.exportedAt)));
-    eq(plans.list.length, n0 + count, 'every plan in the file added');
-    eq(plans.list.slice(0, n0).map(p => [p.id, p.name]), others.map(p => [p.id, p.name]), 'plans that were here keep id and name');
-    eq(clone(plans.list.slice(0, n0).map(p => readPlan(p.id))), othersData, 'and their content');
-    eq(plans.current, startId, 'the open plan stays open');
-    const copy = plans.list.find(p => p.name === `${src.name} (${date})`);
-    assert(copy && copy.id !== src.id, 'the lost plan is back as a copy named with the backup\'s date');
-    const back = readPlan(copy.id);
-    for (const k of SYNC_COLLS) eq(back[k], original[k], `${k} identical`);
-    eq(back.deleted, {}, 'no deletions carried over');
-    assert(findVision(lost.id)?.title === 'Lost vision', 'the missing vision is back');
-    eq(visionParents(findVision(lost.id)), [kept.id], 'under its parent');
-    eq(findVision(kept.id).title, 'Kept vision, renamed since', 'a vision that is here is left alone');
-    eq(visions.list.filter(v => v.id === kept.id).length, 1, 'and not doubled');
-    assert(!visions.deleted[lost.id], 'its deletion is forgotten, so sync keeps it');
-    eq(JSON.parse(userStorage.getItem(VISIONS_KEY)).list.map(v => v.id), visions.list.map(v => v.id), 'visions stored');
-    eq($('#toast').textContent, `${tp('backup.done', count)}. ${tp('backup.visions', 1)}`, 'toast counts both');
-    assert(servingGoals(lost.id).some(s => s.plan.id === copy.id), 'the copied goal serves the vision again');
+      // Lose a plan and a vision, change the kept vision, then restore.
+      deletePlan(src.id);
+      openPlan(startId);
+      visions.list = visions.list.filter(v => v.id !== lost.id);
+      findVision(kept.id).title = 'Kept vision, renamed since';
+      saveVisions();
+      const others = clone(plans.list),
+        othersData = clone(plans.list.map(p => readPlan(p.id)));
+      await restoreFromFile(fileOf(file.json));
+      const date = fmtDate(isoDate(new Date(file.json.exportedAt)));
+      eq(plans.list.length, n0 + count, 'every plan in the file added');
+      eq(
+        plans.list.slice(0, n0).map(p => [p.id, p.name]),
+        others.map(p => [p.id, p.name]),
+        'plans that were here keep id and name',
+      );
+      eq(clone(plans.list.slice(0, n0).map(p => readPlan(p.id))), othersData, 'and their content');
+      eq(plans.current, startId, 'the open plan stays open');
+      const copy = plans.list.find(p => p.name === `${src.name} (${date})`);
+      assert(copy && copy.id !== src.id, "the lost plan is back as a copy named with the backup's date");
+      const back = readPlan(copy.id);
+      for (const k of SYNC_COLLS) eq(back[k], original[k], `${k} identical`);
+      eq(back.deleted, {}, 'no deletions carried over');
+      assert(findVision(lost.id)?.title === 'Lost vision', 'the missing vision is back');
+      eq(visionParents(findVision(lost.id)), [kept.id], 'under its parent');
+      eq(findVision(kept.id).title, 'Kept vision, renamed since', 'a vision that is here is left alone');
+      eq(visions.list.filter(v => v.id === kept.id).length, 1, 'and not doubled');
+      assert(!visions.deleted[lost.id], 'its deletion is forgotten, so sync keeps it');
+      eq(
+        JSON.parse(userStorage.getItem(VISIONS_KEY)).list.map(v => v.id),
+        visions.list.map(v => v.id),
+        'visions stored',
+      );
+      eq($('#toast').textContent, `${tp('backup.done', count)}. ${tp('backup.visions', 1)}`, 'toast counts both');
+      assert(
+        servingGoals(lost.id).some(s => s.plan.id === copy.id),
+        'the copied goal serves the vision again',
+      );
 
-    // Restoring the same file again: copies get a number, no vision is added twice.
-    const vn = visions.list.length;
-    restoreText(JSON.stringify(file.json));
-    assert(plans.list.some(p => p.name === `${src.name} (${date}) 2`), 'a second copy gets a number');
-    eq(visions.list.length, vn, 'no vision added twice');
-    eq($('#toast').textContent, tp('backup.done', count), 'toast without visions');
-    eq(new Set(plans.list.map(p => p.id)).size, plans.list.length, 'plan ids unique');
+      // Restoring the same file again: copies get a number, no vision is added twice.
+      const vn = visions.list.length;
+      restoreText(JSON.stringify(file.json));
+      assert(
+        plans.list.some(p => p.name === `${src.name} (${date}) 2`),
+        'a second copy gets a number',
+      );
+      eq(visions.list.length, vn, 'no vision added twice');
+      eq($('#toast').textContent, tp('backup.done', count), 'toast without visions');
+      eq(new Set(plans.list.map(p => p.id)).size, plans.list.length, 'plan ids unique');
 
-    // What sync uploads (no kind, no date) restores too, under the plain names.
-    const n2 = plans.list.length;
-    restoreText(JSON.stringify(toFile({ plans: { list: [{ id: 'x1', name: 'From Drive' }], deleted: {} }, data: { x1: progressPlan().data }, visions: { list: [], deleted: {} } })));
-    assert(plans.list.length === n2 + 1 && plans.list.at(-1).name === 'From Drive', 'a sync file without a date');
+      // What sync uploads (no kind, no date) restores too, under the plain names.
+      const n2 = plans.list.length;
+      restoreText(
+        JSON.stringify(
+          toFile({
+            plans: { list: [{ id: 'x1', name: 'From Drive' }], deleted: {} },
+            data: { x1: progressPlan().data },
+            visions: { list: [], deleted: {} },
+          }),
+        ),
+      );
+      assert(plans.list.length === n2 + 1 && plans.list.at(-1).name === 'From Drive', 'a sync file without a date');
 
-    // Files that are not backups change nothing and say why.
-    const n3 = plans.list.length, vis = clone(visions);
-    const refused = (f, key, m) => {
-      restoreText(typeof f === 'string' ? f : JSON.stringify(f));
-      assert(plans.list.length === n3 && $('#toast').textContent === t(key), m);
-      eq(visions, vis, m + ': visions untouched');
-    };
-    refused('not json', 'err.import', 'not JSON');
-    refused('null', 'err.import', 'null');
-    refused({ format: 'something-else', plans: { list: [] } }, 'err.import', 'another format');
-    refused({ format: 'actionplan-sync', version: 1 }, 'err.import', 'no plan list');
-    refused(planFile('full'), 'backup.isPlan', 'a single plan\'s export');
-    refused({ name: 'Legacy', goals: [] }, 'backup.isPlan', 'an old plan export without a header');
-    refused({ ...file.json, version: 2 }, 'backup.newer', 'from a newer version');
+      // Files that are not backups change nothing and say why.
+      const n3 = plans.list.length,
+        vis = clone(visions);
+      const refused = (f, key, m) => {
+        restoreText(typeof f === 'string' ? f : JSON.stringify(f));
+        assert(plans.list.length === n3 && $('#toast').textContent === t(key), m);
+        eq(visions, vis, m + ': visions untouched');
+      };
+      refused('not json', 'err.import', 'not JSON');
+      refused('null', 'err.import', 'null');
+      refused({ format: 'something-else', plans: { list: [] } }, 'err.import', 'another format');
+      refused({ format: 'actionplan-sync', version: 1 }, 'err.import', 'no plan list');
+      refused(planFile('full'), 'backup.isPlan', "a single plan's export");
+      refused({ name: 'Legacy', goals: [] }, 'backup.isPlan', 'an old plan export without a header');
+      refused({ ...file.json, version: 2 }, 'backup.newer', 'from a newer version');
 
-    // Unsafe ids and markup in a file do not reach the page.
-    restoreText(JSON.stringify({ format: 'actionplan-sync', version: 1, kind: 'backup', exportedAt: 'never',
-      plans: { list: [{ id: 'ok', name: '<img src=x onerror=alert(1)>' }, { id: '"><b>', name: 'bad id' }] },
-      data: { ok: { goals: [{ id: 'g1', title: 'G' }, { id: '<i>', title: 'bad' }] } },
-      visions: { list: [{ id: '<u>', title: 'bad' }, { id: 'vok', title: '<b>bold</b>', parents: [] }, { id: 'vok', title: 'twice', parents: [] }] } }));
-    const odd = plans.list.at(-1);
-    assert(plans.list.length === n3 + 1 && odd.name === '<img src=x onerror=alert(1)>', 'only the plan with a plain id; no date when the file has none');
-    eq(readPlan(odd.id).goals.map(g => g.id), ['g1'], 'items with unsafe ids dropped');
-    eq(visions.list.filter(v => v.id === 'vok' || v.id === '<u>').map(v => v.title), ['<b>bold</b>'], 'visions with unsafe ids dropped, a repeated id added once');
-    assert(!document.querySelector('img[src="x"]'), 'the name is not markup in the plan switcher');
+      // Unsafe ids and markup in a file do not reach the page.
+      restoreText(
+        JSON.stringify({
+          format: 'actionplan-sync',
+          version: 1,
+          kind: 'backup',
+          exportedAt: 'never',
+          plans: {
+            list: [
+              { id: 'ok', name: '<img src=x onerror=alert(1)>' },
+              { id: '"><b>', name: 'bad id' },
+            ],
+          },
+          data: {
+            ok: {
+              goals: [
+                { id: 'g1', title: 'G' },
+                { id: '<i>', title: 'bad' },
+              ],
+            },
+          },
+          visions: {
+            list: [
+              { id: '<u>', title: 'bad' },
+              { id: 'vok', title: '<b>bold</b>', parents: [] },
+              { id: 'vok', title: 'twice', parents: [] },
+            ],
+          },
+        }),
+      );
+      const odd = plans.list.at(-1);
+      assert(
+        plans.list.length === n3 + 1 && odd.name === '<img src=x onerror=alert(1)>',
+        'only the plan with a plain id; no date when the file has none',
+      );
+      eq(
+        readPlan(odd.id).goals.map(g => g.id),
+        ['g1'],
+        'items with unsafe ids dropped',
+      );
+      eq(
+        visions.list.filter(v => v.id === 'vok' || v.id === '<u>').map(v => v.title),
+        ['<b>bold</b>'],
+        'visions with unsafe ids dropped, a repeated id added once',
+      );
+      assert(!document.querySelector('img[src="x"]'), 'the name is not markup in the plan switcher');
 
-    // The Settings file picker restores, resets itself and closes Settings.
-    $('#settingsBtn').click();
-    const input = $('#backupInput'), n4 = plans.list.length;
-    assert(settings.open && settings.contains(input) && settings.contains($('#backupAllBtn')) && input.accept.includes('.json'), 'both in Settings');
-    const dt = new DataTransfer();
-    dt.items.add(fileOf(file.json));
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    // Reading the file takes real time, which the test's virtual clock does not wait for: poll.
-    for (let i = 0; i < 100 && plans.list.length === n4; i++) await new Promise(r => setTimeout(r, 20));
-    assert(plans.list.length === n4 + count && input.value === '' && !settings.open, 'picked file restored, picker reset, Settings closed');
+      // The Settings file picker restores, resets itself and closes Settings.
+      $('#settingsBtn').click();
+      const input = $('#backupInput'),
+        n4 = plans.list.length;
+      assert(
+        settings.open &&
+          settings.contains(input) &&
+          settings.contains($('#backupAllBtn')) &&
+          input.accept.includes('.json'),
+        'both in Settings',
+      );
+      const dt = new DataTransfer();
+      dt.items.add(fileOf(file.json));
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      // Reading the file takes real time, which the test's virtual clock does not wait for: poll.
+      for (let i = 0; i < 100 && plans.list.length === n4; i++) await new Promise(r => setTimeout(r, 20));
+      assert(
+        plans.list.length === n4 + count && input.value === '' && !settings.open,
+        'picked file restored, picker reset, Settings closed',
+      );
 
-    // Storage full: the plan written before it filled up stays, the other is not listed, the message says so.
-    const n5 = plans.list.length, set = Storage.prototype.setItem;
-    let newPlans = 0;
-    Storage.prototype.setItem = function (k, v) {
-      if (k.includes('actionplan.plan.') && !plans.list.some(p => k.endsWith('.' + p.id)) && ++newPlans > 1) throw new Error('full');
-      return set.call(this, k, v);
-    };
-    try {
-      restoreText(JSON.stringify(toFile({ plans: { list: [{ id: 'a', name: 'Fits' }, { id: 'b', name: 'Does not fit' }], deleted: {} }, data: {}, visions: { list: [], deleted: {} } })));
-    } finally { Storage.prototype.setItem = set; }
-    assert(plans.list.length === n5 + 1 && plans.list.at(-1).name === 'Fits', 'only the plan that was stored is listed');
-    eq($('#toast').textContent, t('err.storage'), 'storage message');
+      // Storage full: the plan written before it filled up stays, the other is not listed, the message says so.
+      const n5 = plans.list.length,
+        set = Storage.prototype.setItem;
+      let newPlans = 0;
+      Storage.prototype.setItem = function (k, v) {
+        if (k.includes('actionplan.plan.') && !plans.list.some(p => k.endsWith('.' + p.id)) && ++newPlans > 1)
+          throw new Error('full');
+        return set.call(this, k, v);
+      };
+      try {
+        restoreText(
+          JSON.stringify(
+            toFile({
+              plans: {
+                list: [
+                  { id: 'a', name: 'Fits' },
+                  { id: 'b', name: 'Does not fit' },
+                ],
+                deleted: {},
+              },
+              data: {},
+              visions: { list: [], deleted: {} },
+            }),
+          ),
+        );
+      } finally {
+        Storage.prototype.setItem = set;
+      }
+      assert(
+        plans.list.length === n5 + 1 && plans.list.at(-1).name === 'Fits',
+        'only the plan that was stored is listed',
+      );
+      eq($('#toast').textContent, t('err.storage'), 'storage message');
 
-    // Slovenian wording.
-    changeLanguage('sl');
-    assert($('#backupAllBtn').textContent === I18N.sl.strings['backup.all'] && input.previousElementSibling.textContent === I18N.sl.strings['backup.restore'], 'buttons in Slovenian');
-    assert(tp('backup.done', 2) === 'Dodana 2 načrta kot kopiji' && tp('backup.visions', 3) === 'Vrnjene 3 manjkajoče vizije', 'Slovenian plurals');
-    const [slFile] = await capture(() => backupAll());
-    assert(slFile.name.startsWith(I18N.sl.strings['backup.file'] + ' '), `Slovenian file name ${slFile.name}`);
-    changeLanguage('en');
+      // Slovenian wording.
+      changeLanguage('sl');
+      assert(
+        $('#backupAllBtn').textContent === I18N.sl.strings['backup.all'] &&
+          input.previousElementSibling.textContent === I18N.sl.strings['backup.restore'],
+        'buttons in Slovenian',
+      );
+      assert(
+        tp('backup.done', 2) === 'Dodana 2 načrta kot kopiji' &&
+          tp('backup.visions', 3) === 'Vrnjene 3 manjkajoče vizije',
+        'Slovenian plurals',
+      );
+      const [slFile] = await capture(() => backupAll());
+      assert(slFile.name.startsWith(I18N.sl.strings['backup.file'] + ' '), `Slovenian file name ${slFile.name}`);
+      changeLanguage('en');
 
-    plans.list.slice(n0).map(p => p.id).forEach(deletePlan);
-    openPlan(startId);
-    visions = v0; saveVisions(); render();
-    eq(plans.list.length, n0, 'cleaned up');
-    return `${count} plans, ${file.json.visions.list.length} visions`;
-  });
+      plans.list
+        .slice(n0)
+        .map(p => p.id)
+        .forEach(deletePlan);
+      openPlan(startId);
+      visions = v0;
+      saveVisions();
+      render();
+      eq(plans.list.length, n0, 'cleaned up');
+      return `${count} plans, ${file.json.visions.list.length} visions`;
+    },
+  );
 
   /* ---------- Merging one plan into another ---------- */
 
   const mrg = $('#planMerge');
-  const titles = data => SYNC_COLLS.filter(c => c !== 'relations').flatMap(c => data[c].map(x => `${c}:${x.title}`)).sort();
+  const titles = data =>
+    SYNC_COLLS.filter(c => c !== 'relations')
+      .flatMap(c => data[c].map(x => `${c}:${x.title}`))
+      .sort();
   const allIds = data => SYNC_COLLS.flatMap(c => data[c].map(x => x.id));
   // A target plan with items of its own, a relation and progress.
   const targetPlan = () => {
-    const g = { id: uid(), title: 'Save money', status: 'active', unit: '€', baseline: '0', target: '500', current: '100', category: 'Finance', updatedAt: '2026-02-02T00:00:00.000Z' };
+    const g = {
+      id: uid(),
+      title: 'Save money',
+      status: 'active',
+      unit: '€',
+      baseline: '0',
+      target: '500',
+      current: '100',
+      category: 'Finance',
+      updatedAt: '2026-02-02T00:00:00.000Z',
+    };
     const a = { id: uid(), title: 'Budget', status: 'done', updatedAt: '2026-02-02T00:00:00.000Z' };
-    return { name: 'Money', data: { goals: [g], states: [], activities: [a], relations: [{ id: uid(), from: a.id, to: g.id, type: 'contributes', updatedAt: '2026-02-02T00:00:00.000Z' }] } };
+    return {
+      name: 'Money',
+      data: {
+        goals: [g],
+        states: [],
+        activities: [a],
+        relations: [{ id: uid(), from: a.id, to: g.id, type: 'contributes', updatedAt: '2026-02-02T00:00:00.000Z' }],
+      },
+    };
   };
-  const cleanup = (...names) => plans.list.filter(p => names.includes(p.name)).map(p => p.id).forEach(deletePlan);
+  const cleanup = (...names) =>
+    plans.list
+      .filter(p => names.includes(p.name))
+      .map(p => p.id)
+      .forEach(deletePlan);
   const sum = (a, b) => Object.fromEntries(Object.keys(a).map(k => [k, a[k] + b[k]]));
 
   await step('merge: everything moves over and the target keeps its own', () => {
-    const T = addPlan(targetPlan()), tBefore = clone(db);
-    const S = addPlan(progressPlan()), sBefore = clone(db);
+    const T = addPlan(targetPlan()),
+      tBefore = clone(db);
+    const S = addPlan(progressPlan()),
+      sBefore = clone(db);
     const started = new Date().toISOString();
     mergePlanInto(S.id, T.id);
     assert(plans.current === T.id, 'the target plan is open afterwards');
     eq(titles(db), [...titles(tBefore), ...titles(sBefore)].sort(), 'all items of both plans');
     eq(db.relations.length, 2, 'relations of both plans');
     tBefore.goals.concat(tBefore.activities, tBefore.relations).forEach(x =>
-      eq(SYNC_COLLS.flatMap(c => db[c]).find(y => y.id === x.id), x, 'target item untouched'));
+      eq(
+        SYNC_COLLS.flatMap(c => db[c]).find(y => y.id === x.id),
+        x,
+        'target item untouched',
+      ),
+    );
     eq(progressCounts(db), sum(progressCounts(tBefore), progressCounts(sBefore)), 'progress of both kept');
     const run = db.activities.find(a => a.title === 'Run');
-    eq([run.checkins, run.repeat], [sBefore.activities[3].checkins, sBefore.activities[3].repeat], 'check-ins and recurrence kept');
+    eq(
+      [run.checkins, run.repeat],
+      [sBefore.activities[3].checkins, sBefore.activities[3].repeat],
+      'check-ins and recurrence kept',
+    );
     eq(db.states.find(s => s.title === 'Longest run').history, sBefore.states[0].history, 'measurement history kept');
     eq(db.goals.find(g => g.title === 'Run 10 km').category, 'Health', 'category kept');
-    eq(allIds(sBefore).every(id => allIds(db).includes(id)), true, 'ids without a clash kept');
+    eq(
+      allIds(sBefore).every(id => allIds(db).includes(id)),
+      true,
+      'ids without a clash kept',
+    );
     const moved = SYNC_COLLS.flatMap(c => db[c]).filter(x => allIds(sBefore).includes(x.id));
-    assert(moved.length === 10 && moved.every(x => x.updatedAt >= started), 'moved items stamped, so sync carries them');
+    assert(
+      moved.length === 10 && moved.every(x => x.updatedAt >= started),
+      'moved items stamped, so sync carries them',
+    );
     eq(readPlan(T.id), JSON.parse(JSON.stringify(db)), 'target saved');
     eq(readPlan(S.id), sBefore, 'source left as it was');
-    assert(plans.list.some(p => p.id === S.id), 'source kept');
+    assert(
+      plans.list.some(p => p.id === S.id),
+      'source kept',
+    );
     assert(repairRelations(clone(db)).length === db.relations.length, 'every relation still valid');
     const n = db.goals.length;
     cleanup(T.name, S.name);
@@ -3129,7 +5404,8 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('merge: clashing ids get new ones and their links follow', () => {
     const src = progressPlan();
-    const T = addPlan(src), S = addPlan(src); // two plans from the same file share ids
+    const T = addPlan(src),
+      S = addPlan(src); // two plans from the same file share ids
     // The target once deleted an item whose id the source still uses: it must not come back as that id.
     const T0 = readPlan(T.id);
     const ghost = uid();
@@ -3139,7 +5415,8 @@ window.moreTests = async ({ step, assert }) => {
     // A relation pointing at nothing is left behind.
     db.relations.push({ id: uid(), from: db.activities[0].id, to: 'missing', type: 'contributes' });
     save();
-    const sBefore = clone(db), tIds = new Set(allIds(T0));
+    const sBefore = clone(db),
+      tIds = new Set(allIds(T0));
     mergePlanInto(S.id, T.id);
     const ids = allIds(db);
     eq(new Set(ids).size, ids.length, 'all ids unique');
@@ -3147,8 +5424,13 @@ window.moreTests = async ({ step, assert }) => {
     eq(db.relations.length, 2, 'the copied relation added, the dangling one dropped');
     const copy = db.relations.find(r => !tIds.has(r.id));
     assert(copy, 'copied relation has a new id');
-    const from = db.activities.find(a => a.id === copy.from), to = db.goals.find(g => g.id === copy.to);
-    eq([from?.title, to?.title, copy.type], ['Training plan', 'Run 10 km', 'contributes'], 'copied relation connects the same items');
+    const from = db.activities.find(a => a.id === copy.from),
+      to = db.goals.find(g => g.id === copy.to);
+    eq(
+      [from?.title, to?.title, copy.type],
+      ['Training plan', 'Run 10 km', 'contributes'],
+      'copied relation connects the same items',
+    );
     assert(!tIds.has(copy.from) && !tIds.has(copy.to), '…the copies, not the target’s own');
     const g2 = db.states.find(s => s.title === 'Ghost');
     assert(g2 && g2.id !== ghost, 'an id the target deleted is replaced');
@@ -3162,8 +5444,10 @@ window.moreTests = async ({ step, assert }) => {
   await step('merge: the open plan can be the source, the target or another plan', () => {
     for (const open of ['source', 'target', 'other']) {
       const O = addPlan({ name: 'Other', data: emptyDb() });
-      const T = addPlan(targetPlan()), tBefore = clone(db);
-      const S = addPlan(progressPlan()), sBefore = clone(db);
+      const T = addPlan(targetPlan()),
+        tBefore = clone(db);
+      const S = addPlan(progressPlan()),
+        sBefore = clone(db);
       openPlan({ source: S, target: T, other: O }[open].id);
       mergePlanInto(S.id, T.id);
       assert(plans.current === T.id, `${open}: target open`);
@@ -3177,14 +5461,27 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('merge: deleting the source afterwards', () => {
     const T = addPlan(targetPlan());
-    const S = addPlan(progressPlan()), sBefore = clone(db);
+    const S = addPlan(progressPlan()),
+      sBefore = clone(db);
     const n0 = plans.list.length;
     mergePlanInto(S.id, T.id, true);
     assert(plans.current === T.id && plans.list.length === n0 - 1, 'source gone, target open');
-    assert(!plans.list.some(p => p.id === S.id) && localStorage.getItem(planKey(S.id)) === null, 'source removed from storage');
+    assert(
+      !plans.list.some(p => p.id === S.id) && localStorage.getItem(planKey(S.id)) === null,
+      'source removed from storage',
+    );
     assert(plans.deleted?.[S.id], 'deletion recorded for sync');
-    assert(titles(sBefore).every(x => titles(db).includes(x)), 'its contents live on in the target');
-    eq(JSON.parse(localStorage.getItem(PLANS_KEY)).list.map(p => p.id).includes(S.id), false, 'plan list saved');
+    assert(
+      titles(sBefore).every(x => titles(db).includes(x)),
+      'its contents live on in the target',
+    );
+    eq(
+      JSON.parse(localStorage.getItem(PLANS_KEY))
+        .list.map(p => p.id)
+        .includes(S.id),
+      false,
+      'plan list saved',
+    );
     // An empty source merges nothing and can still be deleted.
     const E = addPlan({ name: 'Empty', data: emptyDb() });
     const before = clone(readPlan(T.id));
@@ -3196,8 +5493,10 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('merge dialog: pick a target, optionally delete, cancel changes nothing', () => {
-    const T = addPlan(targetPlan()), U = addPlan({ name: 'Unrelated', data: emptyDb() });
-    const S = addPlan(progressPlan()), sBefore = clone(db);
+    const T = addPlan(targetPlan()),
+      U = addPlan({ name: 'Unrelated', data: emptyDb() });
+    const S = addPlan(progressPlan()),
+      sBefore = clone(db);
     const btn = () => $('[data-plan="merge"]');
     assert(btn() && !btn().disabled && btn().title === t('plan.merge'), 'merge beside the plan actions');
 
@@ -3215,7 +5514,13 @@ window.moreTests = async ({ step, assert }) => {
     const sel = $('#mergeTarget');
     eq([...sel.options].map(o => o.value).includes(S.id), false, 'the source is not offered');
     eq([...sel.options].length, plans.list.length - 1, 'every other plan offered');
-    for (const s of [tp('planDel.goals', 3), tp('planDel.states', 2), tp('planDel.measurements', 2), tp('planDel.activities', 4), tp('planDel.relations', 1)])
+    for (const s of [
+      tp('planDel.goals', 3),
+      tp('planDel.states', 2),
+      tp('planDel.measurements', 2),
+      tp('planDel.activities', 4),
+      tp('planDel.relations', 1),
+    ])
       assert(mrg.textContent.includes(s), `lists “${s}”`);
     assert(!$('#mergeRemove').checked, 'keeps the source by default');
 
@@ -3237,17 +5542,26 @@ window.moreTests = async ({ step, assert }) => {
     $('#mergeTarget').dispatchEvent(new Event('change', { bubbles: true }));
     $('#mergeBtn').click();
     assert(!mrg.open && plans.current === T.id, 'merged and switched to the target');
-    assert(titles(sBefore).every(x => titles(db).includes(x)), 'contents moved');
+    assert(
+      titles(sBefore).every(x => titles(db).includes(x)),
+      'contents moved',
+    );
     eq(readPlan(U.id).goals.length, 0, 'the plan not chosen is untouched');
     eq($('#toast').textContent, t('toast.merged', { from: S.name, to: T.name }), 'toast');
-    assert(plans.list.some(p => p.id === S.id), 'source kept');
+    assert(
+      plans.list.some(p => p.id === S.id),
+      'source kept',
+    );
 
     openPlan(S.id);
     btn().click();
     $('#mergeTarget').value = U.id;
     $('#mergeRemove').click();
     $('#mergeBtn').click();
-    assert(plans.current === U.id && !plans.list.some(p => p.id === S.id), 'merged into the chosen plan and deleted the source');
+    assert(
+      plans.current === U.id && !plans.list.some(p => p.id === S.id),
+      'merged into the chosen plan and deleted the source',
+    );
     eq($('#toast').textContent, t('toast.mergedDeleted', { from: S.name, to: U.name }), 'toast says it was deleted');
     btn().click();
     assert(!$('#mergeRemove').checked, 'delete is off again next time');
@@ -3258,7 +5572,8 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('delete dialog: merge into another plan instead', () => {
     const T = addPlan(targetPlan());
-    const S = addPlan(progressPlan()), sBefore = clone(db);
+    const S = addPlan(progressPlan()),
+      sBefore = clone(db);
     $('[data-plan="delete"]').click();
     const instead = () => $('[data-plan-merge-instead]');
     assert(instead() && instead().textContent === t('planDel.merge'), 'offered in the delete dialog');
@@ -3267,8 +5582,14 @@ window.moreTests = async ({ step, assert }) => {
     assert($('#mergeRemove').checked, 'with delete afterwards ticked');
     $('#mergeTarget').value = T.id;
     $('#mergeBtn').click();
-    assert(plans.current === T.id && !plans.list.some(p => p.id === S.id), 'merged and deleted without typing the name');
-    assert(titles(sBefore).every(x => titles(db).includes(x)), 'nothing lost');
+    assert(
+      plans.current === T.id && !plans.list.some(p => p.id === S.id),
+      'merged and deleted without typing the name',
+    );
+    assert(
+      titles(sBefore).every(x => titles(db).includes(x)),
+      'nothing lost',
+    );
 
     // Not offered for an empty plan, nor when there is no other plan.
     addPlan({ name: 'Empty', data: emptyDb() });
@@ -3299,7 +5620,10 @@ window.moreTests = async ({ step, assert }) => {
     $('#mergeTarget').value = T.id;
     $('#mergeBtn').click();
     eq($('#toast').textContent, t('toast.merged', { from: S.name, to: T.name }), 'toast in Slovenian');
-    assert(t('toast.merged', { from: 'a', to: 'b' }) !== fill(I18N.en.strings['toast.merged'], { from: 'a', to: 'b' }), 'translated');
+    assert(
+      t('toast.merged', { from: 'a', to: 'b' }) !== fill(I18N.en.strings['toast.merged'], { from: 'a', to: 'b' }),
+      'translated',
+    );
     cleanup(T.name, S.name);
     changeLanguage('en');
     return text.slice(0, 120);
@@ -3314,39 +5638,87 @@ window.moreTests = async ({ step, assert }) => {
   const shownDays = r => days(r).map(b => b.dataset.date);
 
   // Runs `fn` as if today were `iso` (the app reads the date through today()).
-  const onDay = (iso, fn) => { const real = window.today; window.today = () => iso; try { return fn(); } finally { window.today = real; } };
-  const MON = '2026-11-02', TUE = '2026-11-03', WED = '2026-11-04', THU = '2026-11-05', FRI = '2026-11-06', SAT = '2026-11-07', SUN = '2026-11-08';
+  const onDay = (iso, fn) => {
+    const real = window.today;
+    window.today = () => iso;
+    try {
+      return fn();
+    } finally {
+      window.today = real;
+    }
+  };
+  const MON = '2026-11-02',
+    TUE = '2026-11-03',
+    WED = '2026-11-04',
+    THU = '2026-11-05',
+    FRI = '2026-11-06',
+    SAT = '2026-11-07',
+    SUN = '2026-11-08';
 
   await step('routines: late only until ticked again, however many days were missed; the plan badge follows', () => {
     fresh('Late rule');
-    const daily = mk('activity', { title: 'Daily', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] }, checkins: {} });
-    const badge = () => { render(); return planHealth(db); };
-    const set = (...days) => { daily.checkins = Object.fromEntries(days.map(d => [d, 1])); };
+    const daily = mk('activity', {
+      title: 'Daily',
+      startDate: '2026-10-01',
+      repeat: { every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] },
+      checkins: {},
+    });
+    const badge = () => {
+      render();
+      return planHealth(db);
+    };
+    const set = (...days) => {
+      daily.checkins = Object.fromEntries(days.map(d => [d, 1]));
+    };
     onDay(THU, () => {
       set(MON, TUE, WED);
-      assert(routineState(daily) === 'doing' && routineToday(daily) === 'due' && badge() === 'today', 'on track, due today');
+      assert(
+        routineState(daily) === 'doing' && routineToday(daily) === 'due' && badge() === 'today',
+        'on track, due today',
+      );
       set(MON);
       assert(routineState(daily) === 'late' && badge() === 'late', 'two days missed, not ticked since: late');
       set(MON, THU);
-      assert(routineState(daily) === 'doing' && badge() === 'ok', 'ticked today after two missed days: back on track, green');
+      assert(
+        routineState(daily) === 'doing' && badge() === 'ok',
+        'ticked today after two missed days: back on track, green',
+      );
       set(THU);
       assert(routineState(daily) === 'doing' && badge() === 'ok', 'three missed, then ticked: still fine');
       set(TUE);
       assert(routineState(daily) === 'late', 'a day missed after the last tick is late again');
       set(WED);
-      assert(routineState(daily) === 'doing' && badge() === 'today', 'ticked yesterday after missing Mon and Tue: not late, only due today');
+      assert(
+        routineState(daily) === 'doing' && badge() === 'today',
+        'ticked yesterday after missing Mon and Tue: not late, only due today',
+      );
       // A miss in last week does not count this week; a tick on a day it is not due still counts.
-      const monThu = mk('activity', { title: 'Strength', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: { '2026-10-26': 1 } });
+      const monThu = mk('activity', {
+        title: 'Strength',
+        startDate: '2026-10-01',
+        repeat: { every: 1, unit: 'week', days: [0, 3] },
+        checkins: { '2026-10-26': 1 },
+      });
       eq(routineState(monThu), 'late', 'Monday missed: late');
       monThu.checkins[TUE] = 1;
-      eq(routineState(monThu), 'todo', 'ticked on Tuesday (not due) after it: not late (and the tick does not count toward Monday)');
+      eq(
+        routineState(monThu),
+        'todo',
+        'ticked on Tuesday (not due) after it: not late (and the tick does not count toward Monday)',
+      );
       setView('activities');
       assert(!$(`.card.routine[data-open="${monThu.id}"]`).classList.contains('st-late'), 'card not red');
-      delete monThu.checkins[TUE]; render();
+      delete monThu.checkins[TUE];
+      render();
       assert($(`.card.routine[data-open="${monThu.id}"]`).classList.contains('st-late'), 'red while late');
     });
     // Flexible: behind once the days left cannot reach the target; a tick after that clears it.
-    const flex = mk('activity', { title: 'Run', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
+    const flex = mk('activity', {
+      title: 'Run',
+      startDate: '2026-10-01',
+      repeat: { every: 1, unit: 'week', times: 3 },
+      checkins: {},
+    });
     db.activities = [flex];
     onDay(SUN, () => {
       eq(routineState(flex), 'late', 'Sunday, none of three done: late');
@@ -3355,7 +5727,11 @@ window.moreTests = async ({ step, assert }) => {
       eq(routineState(flex), 'doing', 'ticked on Sunday: not late any more, though the target is out of reach');
       eq(badge(), 'ok', 'green badge');
       flex.checkins = { [FRI]: 1 };
-      eq(routineState(flex), 'late', 'ticked on Friday, then behind on Sunday (Saturday skipped) without a tick since: late');
+      eq(
+        routineState(flex),
+        'late',
+        'ticked on Friday, then behind on Sunday (Saturday skipped) without a tick since: late',
+      );
       flex.checkins = { [MON]: 1 };
       eq(routineState(flex), 'late', 'one early tick, then behind since Saturday without a tick: late');
       flex.checkins[SAT] = 1;
@@ -3379,97 +5755,209 @@ window.moreTests = async ({ step, assert }) => {
     deletePlan(plans.current);
   });
 
-  await step('routines: the week strip shows due, missed, not-due and today’s days; the card says what today asks', () => {
-    fresh('Strip days');
-    const r = mk('activity', { title: 'Strength', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: {} });
-    const flex = mk('activity', { title: 'Run', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', times: 3 }, checkins: { [TUE]: 1 } });
-    save();
-    const card = a => $(`.card.routine[data-open="${a.id}"]`);
-    const day = (a, iso) => card(a).querySelector(`[data-checkin][data-date="${iso}"]`);
-    const has = (a, iso, ...cls) => cls.every(c => day(a, iso).classList.contains(c));
-    onDay(THU, () => {
-      setView('activities');
-      assert(has(r, MON, 'due', 'missed') && !has(r, MON, 'on'), 'Monday: due and missed');
-      assert(has(r, TUE, 'rest') && has(r, WED, 'rest') && !has(r, TUE, 'due'), 'Tue and Wed: not due');
-      assert(has(r, THU, 'due', 'today') && !has(r, THU, 'missed'), 'Thursday: due today, not missed yet');
-      assert(has(r, FRI, 'rest') && day(r, FRI).getAttribute('aria-disabled') === 'true', 'Friday: not due, to come');
-      eq(day(r, MON).title, t('rt.dayMissed', { date: longDate(MON) }), 'missed day says so');
-      eq(day(r, TUE).title, t('rt.dayRest', { date: longDate(TUE) }), 'not-due day says so');
-      eq(day(r, THU).title, t('rt.dayToday', { label: t('rt.dayDue', { date: longDate(THU) }) }), 'today: due, not done, today');
-      eq(card(r).querySelector('[data-today]').dataset.today, 'due', 'tag: due today');
-      eq(card(r).querySelector('[data-today]').textContent, t('rt.today.due'), 'reads Due today');
-      assert(card(r).querySelector('[data-today]').classList.contains('warn'), 'due today stands out');
-      // Looks: missed is hatched and dashed, in greys, not red; today is ringed; due today is filled.
-      const cs = getComputedStyle(day(r, MON)), bad = getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();
-      assert(cs.borderTopStyle === 'dashed' && cs.backgroundImage.includes('repeating-linear-gradient') && cs.textDecorationLine.includes('line-through'), 'missed: dashed, hatched, crossed out');
-      const toRgb = c => { const x = document.createElement('i'); x.style.color = c; document.body.append(x); const v = getComputedStyle(x).color; x.remove(); return v; };
-      assert(cs.borderTopColor !== toRgb(bad) && cs.color !== toRgb(bad), 'missed is not red');
-      assert(getComputedStyle(day(r, THU)).outlineStyle === 'solid' && getComputedStyle(day(r, THU)).backgroundColor !== getComputedStyle(day(r, WED)).backgroundColor, 'today ringed and filled while due');
-      assert(getComputedStyle(day(r, TUE)).borderTopStyle === 'dotted' && getComputedStyle(day(r, MON)).borderTopStyle === 'dashed' && getComputedStyle(day(r, THU)).borderTopStyle === 'solid', 'not due dotted, missed dashed, due solid');
-      assert(getComputedStyle(document.querySelector('.rt-legend .rt-swatch.rest')).borderTopStyle === 'dotted', 'legend matches the strip');
-      assert(Number(getComputedStyle(day(r, MON)).opacity) === 1 && Number(getComputedStyle(day(r, FRI)).opacity) < 0.7 && Number(getComputedStyle(day(r, FRI)).opacity) >= 0.5, 'past days clear, days to come fainter but readable on the glass');
-      // Tick today: done, ringed, tag says so; ticking Monday later clears the miss.
-      day(r, THU).click();
-      assert(has(r, THU, 'on', 'today') && !has(r, MON, 'on'), 'Thursday done');
-      eq(card(r).querySelector('[data-today]').textContent, t('rt.today.done'), 'tag: done today');
-      assert(!card(r).classList.contains('st-late'), 'not late after a tick');
-      day(r, MON).click();
-      assert(has(r, MON, 'on') && !has(r, MON, 'missed'), 'Monday filled in: no longer missed');
-      // A flexible routine has no due, missed or not-due days, and says any day.
-      assert([MON, WED, THU].every(d => !has(flex, d, 'due') && !has(flex, d, 'missed') && !has(flex, d, 'rest')), 'flexible: days all alike');
-      assert(has(flex, TUE, 'on') && has(flex, THU, 'today'), 'flexible: ticks and today');
-      eq(card(flex).querySelector('[data-today]').dataset.today, 'any', 'flexible tag: any day');
-      // Earlier weeks show their misses too.
-      ui.rtWeek[r.id] = '2026-10-26'; render();
-      assert(has(r, '2026-10-26', 'missed') && has(r, '2026-10-29', 'missed'), 'last week’s misses shown');
-      ui.rtWeek = {}; render();
-      // The legend names the kinds of day, matching the strip.
-      const legend = [...$('.rt-legend').querySelectorAll('span')].map(s => s.textContent);
-      eq(legend, ['on', 'due', 'missed', 'rest', 'today'].map(k => t('rt.legend.' + k)), 'legend');
-      assert([...$('.rt-legend').querySelectorAll('i')].every(i => i.getAttribute('aria-hidden') === 'true'), 'swatches hidden from screen readers');
-    });
-    onDay(WED, () => {
-      render();
-      eq(card(r).querySelector('[data-today]').textContent, t('rt.today.restNext', { date: fmtDay(THU, { weekday: 'short', day: 'numeric', month: 'short' }) }), 'not due today: says when next');
-      assert(!card(r).querySelector('[data-today]').classList.contains('warn'), 'quietly');
-    });
-    // Its last due day passed: not due today, nothing next.
-    const ending = mk('activity', { title: 'Ending', startDate: '2026-10-01', dueDate: SAT, repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: { [THU]: 1 } });
-    onDay(FRI, () => { render(); eq(card(ending).querySelector('[data-today]').textContent, t('rt.today.rest'), 'no next due day: just not today'); });
-    // With only flexible routines, the legend leaves out the days they do not have.
-    db.activities = [flex]; save();
-    onDay(THU, () => { render(); eq([...$('.rt-legend').querySelectorAll('span')].map(s => s.textContent), [t('rt.legend.on'), t('rt.legend.today')], 'flexible only: done and today'); });
-    // Slovenian.
-    db.activities = [r]; r.checkins = {}; save();
-    changeLanguage('sl');
-    onDay(THU, () => {
-      render();
-      eq(card(r).querySelector('[data-today]').textContent, I18N.sl.strings['rt.today.due'], 'Slovenian tag');
-      eq($('.rt-legend span:nth-child(3)').textContent, I18N.sl.strings['rt.legend.missed'], 'Slovenian legend');
-      assert(day(r, MON).title.endsWith(I18N.sl.strings['rt.dayMissed'].split('}')[1]), 'Slovenian missed label');
-    });
-    changeLanguage('en');
-    // Help explains the days.
-    onDay(THU, () => { setHelp(true); render(); });
-    $('[data-help-tip="routines"]').click();
-    assert($('#helpTip').textContent.includes('hatched') && $('#helpTip').textContent.includes('late only until'), 'help tip explains the days and the late rule');
-    setHelp(false);
-    deletePlan(plans.current);
-  });
+  await step(
+    'routines: the week strip shows due, missed, not-due and today’s days; the card says what today asks',
+    () => {
+      fresh('Strip days');
+      const r = mk('activity', {
+        title: 'Strength',
+        startDate: '2026-10-01',
+        repeat: { every: 1, unit: 'week', days: [0, 3] },
+        checkins: {},
+      });
+      const flex = mk('activity', {
+        title: 'Run',
+        startDate: '2026-10-01',
+        repeat: { every: 1, unit: 'week', times: 3 },
+        checkins: { [TUE]: 1 },
+      });
+      save();
+      const card = a => $(`.card.routine[data-open="${a.id}"]`);
+      const day = (a, iso) => card(a).querySelector(`[data-checkin][data-date="${iso}"]`);
+      const has = (a, iso, ...cls) => cls.every(c => day(a, iso).classList.contains(c));
+      onDay(THU, () => {
+        setView('activities');
+        assert(has(r, MON, 'due', 'missed') && !has(r, MON, 'on'), 'Monday: due and missed');
+        assert(has(r, TUE, 'rest') && has(r, WED, 'rest') && !has(r, TUE, 'due'), 'Tue and Wed: not due');
+        assert(has(r, THU, 'due', 'today') && !has(r, THU, 'missed'), 'Thursday: due today, not missed yet');
+        assert(has(r, FRI, 'rest') && day(r, FRI).getAttribute('aria-disabled') === 'true', 'Friday: not due, to come');
+        eq(day(r, MON).title, t('rt.dayMissed', { date: longDate(MON) }), 'missed day says so');
+        eq(day(r, TUE).title, t('rt.dayRest', { date: longDate(TUE) }), 'not-due day says so');
+        eq(
+          day(r, THU).title,
+          t('rt.dayToday', { label: t('rt.dayDue', { date: longDate(THU) }) }),
+          'today: due, not done, today',
+        );
+        eq(card(r).querySelector('[data-today]').dataset.today, 'due', 'tag: due today');
+        eq(card(r).querySelector('[data-today]').textContent, t('rt.today.due'), 'reads Due today');
+        assert(card(r).querySelector('[data-today]').classList.contains('warn'), 'due today stands out');
+        // Looks: missed is hatched and dashed, in greys, not red; today is ringed; due today is filled.
+        const cs = getComputedStyle(day(r, MON)),
+          bad = getComputedStyle(document.documentElement).getPropertyValue('--bad').trim();
+        assert(
+          cs.borderTopStyle === 'dashed' &&
+            cs.backgroundImage.includes('repeating-linear-gradient') &&
+            cs.textDecorationLine.includes('line-through'),
+          'missed: dashed, hatched, crossed out',
+        );
+        const toRgb = c => {
+          const x = document.createElement('i');
+          x.style.color = c;
+          document.body.append(x);
+          const v = getComputedStyle(x).color;
+          x.remove();
+          return v;
+        };
+        assert(cs.borderTopColor !== toRgb(bad) && cs.color !== toRgb(bad), 'missed is not red');
+        assert(
+          getComputedStyle(day(r, THU)).outlineStyle === 'solid' &&
+            getComputedStyle(day(r, THU)).backgroundColor !== getComputedStyle(day(r, WED)).backgroundColor,
+          'today ringed and filled while due',
+        );
+        assert(
+          getComputedStyle(day(r, TUE)).borderTopStyle === 'dotted' &&
+            getComputedStyle(day(r, MON)).borderTopStyle === 'dashed' &&
+            getComputedStyle(day(r, THU)).borderTopStyle === 'solid',
+          'not due dotted, missed dashed, due solid',
+        );
+        assert(
+          getComputedStyle(document.querySelector('.rt-legend .rt-swatch.rest')).borderTopStyle === 'dotted',
+          'legend matches the strip',
+        );
+        assert(
+          Number(getComputedStyle(day(r, MON)).opacity) === 1 &&
+            Number(getComputedStyle(day(r, FRI)).opacity) < 0.7 &&
+            Number(getComputedStyle(day(r, FRI)).opacity) >= 0.5,
+          'past days clear, days to come fainter but readable on the glass',
+        );
+        // Tick today: done, ringed, tag says so; ticking Monday later clears the miss.
+        day(r, THU).click();
+        assert(has(r, THU, 'on', 'today') && !has(r, MON, 'on'), 'Thursday done');
+        eq(card(r).querySelector('[data-today]').textContent, t('rt.today.done'), 'tag: done today');
+        assert(!card(r).classList.contains('st-late'), 'not late after a tick');
+        day(r, MON).click();
+        assert(has(r, MON, 'on') && !has(r, MON, 'missed'), 'Monday filled in: no longer missed');
+        // A flexible routine has no due, missed or not-due days, and says any day.
+        assert(
+          [MON, WED, THU].every(d => !has(flex, d, 'due') && !has(flex, d, 'missed') && !has(flex, d, 'rest')),
+          'flexible: days all alike',
+        );
+        assert(has(flex, TUE, 'on') && has(flex, THU, 'today'), 'flexible: ticks and today');
+        eq(card(flex).querySelector('[data-today]').dataset.today, 'any', 'flexible tag: any day');
+        // Earlier weeks show their misses too.
+        ui.rtWeek[r.id] = '2026-10-26';
+        render();
+        assert(has(r, '2026-10-26', 'missed') && has(r, '2026-10-29', 'missed'), 'last week’s misses shown');
+        ui.rtWeek = {};
+        render();
+        // The legend names the kinds of day, matching the strip.
+        const legend = [...$('.rt-legend').querySelectorAll('span')].map(s => s.textContent);
+        eq(
+          legend,
+          ['on', 'due', 'missed', 'rest', 'today'].map(k => t('rt.legend.' + k)),
+          'legend',
+        );
+        assert(
+          [...$('.rt-legend').querySelectorAll('i')].every(i => i.getAttribute('aria-hidden') === 'true'),
+          'swatches hidden from screen readers',
+        );
+      });
+      onDay(WED, () => {
+        render();
+        eq(
+          card(r).querySelector('[data-today]').textContent,
+          t('rt.today.restNext', { date: fmtDay(THU, { weekday: 'short', day: 'numeric', month: 'short' }) }),
+          'not due today: says when next',
+        );
+        assert(!card(r).querySelector('[data-today]').classList.contains('warn'), 'quietly');
+      });
+      // Its last due day passed: not due today, nothing next.
+      const ending = mk('activity', {
+        title: 'Ending',
+        startDate: '2026-10-01',
+        dueDate: SAT,
+        repeat: { every: 1, unit: 'week', days: [0, 3] },
+        checkins: { [THU]: 1 },
+      });
+      onDay(FRI, () => {
+        render();
+        eq(
+          card(ending).querySelector('[data-today]').textContent,
+          t('rt.today.rest'),
+          'no next due day: just not today',
+        );
+      });
+      // With only flexible routines, the legend leaves out the days they do not have.
+      db.activities = [flex];
+      save();
+      onDay(THU, () => {
+        render();
+        eq(
+          [...$('.rt-legend').querySelectorAll('span')].map(s => s.textContent),
+          [t('rt.legend.on'), t('rt.legend.today')],
+          'flexible only: done and today',
+        );
+      });
+      // Slovenian.
+      db.activities = [r];
+      r.checkins = {};
+      save();
+      changeLanguage('sl');
+      onDay(THU, () => {
+        render();
+        eq(card(r).querySelector('[data-today]').textContent, I18N.sl.strings['rt.today.due'], 'Slovenian tag');
+        eq($('.rt-legend span:nth-child(3)').textContent, I18N.sl.strings['rt.legend.missed'], 'Slovenian legend');
+        assert(day(r, MON).title.endsWith(I18N.sl.strings['rt.dayMissed'].split('}')[1]), 'Slovenian missed label');
+      });
+      changeLanguage('en');
+      // Help explains the days.
+      onDay(THU, () => {
+        setHelp(true);
+        render();
+      });
+      $('[data-help-tip="routines"]').click();
+      assert(
+        $('#helpTip').textContent.includes('hatched') && $('#helpTip').textContent.includes('late only until'),
+        'help tip explains the days and the late rule',
+      );
+      setHelp(false);
+      deletePlan(plans.current);
+    },
+  );
 
   await step('routines: the strip fits a phone, with the today ring inside the card', async () => {
-    const r = { id: 'p1', title: 'Strength', startDate: '2026-10-01', repeat: { every: 1, unit: 'week', days: [0, 3] }, checkins: { [MON]: 1 } };
+    const r = {
+      id: 'p1',
+      title: 'Strength',
+      startDate: '2026-10-01',
+      repeat: { every: 1, unit: 'week', days: [0, 3] },
+      checkins: { [MON]: 1 },
+    };
     fresh('Strip phone');
     db.activities.push(r);
     const html = onDay(THU, () => routineCard(r));
     for (const theme of ['light', 'dark']) {
       const frame = document.createElement('iframe');
-      Object.assign(frame.style, { width: '390px', height: '500px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+      Object.assign(frame.style, {
+        width: '390px',
+        height: '500px',
+        position: 'fixed',
+        left: '-9999px',
+        top: '0',
+        border: '0',
+      });
       frame.srcdoc = `<!doctype html><html data-theme="${theme}"><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px">${html}</body></html>`;
-      await new Promise(res => { frame.onload = res; document.body.append(frame); });
-      const doc = frame.contentDocument, c = doc.querySelector('.card').getBoundingClientRect();
+      await new Promise(res => {
+        frame.onload = res;
+        document.body.append(frame);
+      });
+      const doc = frame.contentDocument,
+        c = doc.querySelector('.card').getBoundingClientRect();
       const ds = [...doc.querySelectorAll('.rt-day')].map(b => b.getBoundingClientRect());
-      assert(ds.length === 7 && ds.every(b => b.width >= 28 && b.height >= 32), `${theme}: seven days, big enough to tap`);
+      assert(
+        ds.length === 7 && ds.every(b => b.width >= 28 && b.height >= 32),
+        `${theme}: seven days, big enough to tap`,
+      );
       const t4 = doc.querySelector('.rt-day.today').getBoundingClientRect();
       assert(t4.left - 4 >= c.left && t4.right + 4 <= c.right, `${theme}: the ring stays inside the card`);
       assert(doc.documentElement.scrollWidth <= 390, `${theme}: no sideways scroll`);
@@ -3480,8 +5968,13 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('routine week strip: every day shows its date on hover; days that cannot be ticked say so too', () => {
     fresh('Week strip');
-    const now = today(), mon = mondayAt(now);
-    const r = mk('activity', { title: 'Run', repeat: { every: 1, unit: 'week', times: 3 }, startDate: addDays(mon, -17) });
+    const now = today(),
+      mon = mondayAt(now);
+    const r = mk('activity', {
+      title: 'Run',
+      repeat: { every: 1, unit: 'week', times: 3 },
+      startDate: addDays(mon, -17),
+    });
     setView('activities');
     eq(shownDays(r), daysBetween(mon, addDays(mon, 6)), 'this week shown at first');
     days(r).forEach(b => {
@@ -3497,7 +5990,9 @@ window.moreTests = async ({ step, assert }) => {
       future.click();
       assert(!checkedOn(r, future.dataset.date) && !modal.open, 'clicking a future day does nothing');
     }
-    days(r).find(b => b.dataset.date === now).click();
+    days(r)
+      .find(b => b.dataset.date === now)
+      .click();
     const todayBtn = days(r).find(b => b.dataset.date === now);
     eq(todayBtn.title, t('rt.dayToday', { label: t('rt.dayOn', { date: longDate(now) }) }), 'ticked day says done');
     assert(document.activeElement === todayBtn, 'focus stays on the day');
@@ -3505,14 +6000,22 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('routine week strip: arrows browse back to the start week and forward to this week', () => {
-    const now = today(), mon = mondayAt(now);
+    const now = today(),
+      mon = mondayAt(now);
     const r = db.activities.find(a => a.title === 'Run');
     const first = addDays(mon, -21);
-    const other = mk('activity', { title: 'Stretch', repeat: { every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] }, startDate: addDays(mon, -60) });
+    const other = mk('activity', {
+      title: 'Stretch',
+      repeat: { every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] },
+      startDate: addDays(mon, -60),
+    });
     render();
     assert(arrow(r, -1) && arrow(r, 1), 'arrows on both sides of the days');
     const strip = rcard(r).querySelector('.rt-week');
-    assert(arrow(r, -1).nextElementSibling === strip && strip.nextElementSibling === arrow(r, 1), 'left arrow, days, right arrow');
+    assert(
+      arrow(r, -1).nextElementSibling === strip && strip.nextElementSibling === arrow(r, 1),
+      'left arrow, days, right arrow',
+    );
     assert(!arrow(r, -1).disabled && arrow(r, 1).disabled, 'can go back, not forward past this week');
     eq([arrow(r, -1).title, arrow(r, 1).title], [t('rt.prevWeek'), t('rt.nextWeek')], 'arrow titles');
     eq(arrow(r, -1).getAttribute('aria-label'), t('rt.prevWeek'), 'arrow label');
@@ -3520,14 +6023,21 @@ window.moreTests = async ({ step, assert }) => {
     eq(shownDays(r)[0], addDays(mon, -7), 'one week back');
     assert(document.activeElement === arrow(r, -1), 'focus stays on the arrow');
     eq(shownDays(other)[0], mon, 'other routines stay on this week');
-    arrow(r, -1).click(); arrow(r, -1).click();
+    arrow(r, -1).click();
+    arrow(r, -1).click();
     eq(shownDays(r)[0], first, 'back to the week the routine started in');
     assert(arrow(r, -1).disabled && !arrow(r, 1).disabled, 'no further back');
     assert(document.activeElement === arrow(r, 1), 'focus moves to the arrow that still works');
     arrow(r, -1).click();
     shiftRoutineWeek(r.id, -1);
     eq(shownDays(r)[0], first, 'cannot go before the start, even directly');
-    days(r).forEach(b => eq(b.getAttribute('aria-disabled'), b.dataset.date < r.startDate ? 'true' : null, `${b.dataset.date} before the start`));
+    days(r).forEach(b =>
+      eq(
+        b.getAttribute('aria-disabled'),
+        b.dataset.date < r.startDate ? 'true' : null,
+        `${b.dataset.date} before the start`,
+      ),
+    );
     const before = days(r).find(b => b.dataset.date < r.startDate);
     before.click();
     assert(!checkedOn(r, before.dataset.date), 'a day before the start cannot be ticked');
@@ -3538,25 +6048,41 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('routine week strip: ticking an earlier week saves it, stays there and shows that week', () => {
-    const now = today(), mon = mondayAt(now);
+    const now = today(),
+      mon = mondayAt(now);
     const r = db.activities.find(a => a.title === 'Run');
-    const w2 = addDays(mon, -14), w1 = addDays(mon, -7);
+    const w2 = addDays(mon, -14),
+      w1 = addDays(mon, -7);
     shiftRoutineWeek(r.id, -2);
     eq(shownDays(r)[0], w2, 'two weeks back');
     const label = () => rcard(r).querySelector('.rt-progress')?.textContent;
     const range = fmtRange(w2, addDays(w2, 6));
-    assert(range.includes(String(Number(w2.slice(8)))) && range.includes(String(Number(addDays(w2, 6).slice(8)))), `range ${range} names both ends`);
+    assert(
+      range.includes(String(Number(w2.slice(8)))) && range.includes(String(Number(addDays(w2, 6).slice(8)))),
+      `range ${range} names both ends`,
+    );
     eq(label(), t('rt.past', { range, done: 0, target: 3 }), 'the bar shows that week');
     $('#toast').textContent = '';
-    [0, 2, 4].forEach(i => days(r).find(b => b.dataset.date === addDays(w2, i)).click());
-    assert([0, 2, 4].every(i => r.checkins[addDays(w2, i)] === 1), 'ticked');
+    [0, 2, 4].forEach(i =>
+      days(r)
+        .find(b => b.dataset.date === addDays(w2, i))
+        .click(),
+    );
+    assert(
+      [0, 2, 4].every(i => r.checkins[addDays(w2, i)] === 1),
+      'ticked',
+    );
     eq(readPlan(plans.current).activities.find(a => a.id === r.id).checkins, r.checkins, 'saved');
     eq(shownDays(r)[0], w2, 'still on that week');
     assert(document.activeElement?.dataset.date === addDays(w2, 4), 'focus on the last ticked day');
     eq(label(), t('rt.past', { range, done: 3, target: 3 }), 'that week met');
     assert($('#toast').textContent !== t('rt.metWeek'), 'no “this week done” for an earlier week');
     arrow(r, 1).click();
-    [1, 3, 5].forEach(i => days(r).find(b => b.dataset.date === addDays(w1, i)).click());
+    [1, 3, 5].forEach(i =>
+      days(r)
+        .find(b => b.dataset.date === addDays(w1, i))
+        .click(),
+    );
     assert(rcard(r).textContent.includes(tp('rt.streak.week', 2)), 'streak counts the filled-in weeks');
     arrow(r, 1).click();
     eq(label(), periodText(r), 'this week shows as before');
@@ -3564,14 +6090,30 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('routine week strip: an ended routine opens on its last week; a future one cannot move', () => {
-    const now = today(), mon = mondayAt(now);
-    const ended = mk('activity', { title: 'Old', repeat: { every: 1, unit: 'week', days: [0, 2, 4] }, startDate: addDays(mon, -35), dueDate: addDays(mon, -10) });
-    const later = mk('activity', { title: 'Later', repeat: { every: 1, unit: 'week', days: [1] }, startDate: addDays(mon, 14) });
+    const now = today(),
+      mon = mondayAt(now);
+    const ended = mk('activity', {
+      title: 'Old',
+      repeat: { every: 1, unit: 'week', days: [0, 2, 4] },
+      startDate: addDays(mon, -35),
+      dueDate: addDays(mon, -10),
+    });
+    const later = mk('activity', {
+      title: 'Later',
+      repeat: { every: 1, unit: 'week', days: [1] },
+      startDate: addDays(mon, 14),
+    });
     render();
     const last = mondayAt(ended.dueDate);
     eq(shownDays(ended)[0], last, 'ended routine shows the week it ended in');
     assert(arrow(ended, 1).disabled && !arrow(ended, -1).disabled, 'only back');
-    days(ended).forEach(b => eq(b.getAttribute('aria-disabled'), b.dataset.date > ended.dueDate ? 'true' : null, `${b.dataset.date} after the end`));
+    days(ended).forEach(b =>
+      eq(
+        b.getAttribute('aria-disabled'),
+        b.dataset.date > ended.dueDate ? 'true' : null,
+        `${b.dataset.date} after the end`,
+      ),
+    );
     const after = days(ended).find(b => b.dataset.date > ended.dueDate);
     after.click();
     assert(!checkedOn(ended, after.dataset.date), 'a day after the end cannot be ticked');
@@ -3579,35 +6121,64 @@ window.moreTests = async ({ step, assert }) => {
     eq(shownDays(ended)[0], addDays(mon, -35), 'back to its start week');
     eq(shownDays(later)[0], mon, 'a routine that has not started shows this week');
     assert(arrow(later, -1).disabled && arrow(later, 1).disabled, 'both arrows off');
-    assert(days(later).every(b => b.getAttribute('aria-disabled') === 'true'), 'no day can be ticked');
-    assert(rcard(later).textContent.includes(t('rt.starts', { date: fmtDate(later.startDate) })), 'says when it starts');
+    assert(
+      days(later).every(b => b.getAttribute('aria-disabled') === 'true'),
+      'no day can be ticked',
+    );
+    assert(
+      rcard(later).textContent.includes(t('rt.starts', { date: fmtDate(later.startDate) })),
+      'says when it starts',
+    );
     // A routine whose end date is in the future still stops at this week.
-    const open = mk('activity', { title: 'Open', repeat: { every: 1, unit: 'week', times: 1 }, startDate: addDays(mon, -7), dueDate: addDays(mon, 60) });
+    const open = mk('activity', {
+      title: 'Open',
+      repeat: { every: 1, unit: 'week', times: 1 },
+      startDate: addDays(mon, -7),
+      dueDate: addDays(mon, 60),
+    });
     render();
     assert(arrow(open, 1).disabled && shownDays(open)[0] === mon, 'stops at this week, not the end date');
     return `${ended.startDate}–${ended.dueDate}`;
   });
 
   await step('routine week strip: every-2-weeks and monthly routines show their own period', () => {
-    const now = today(), mon = mondayAt(now);
-    const two = mk('activity', { title: 'Fortnight', repeat: { every: 2, unit: 'week', times: 2 }, startDate: addDays(mon, -28) });
-    const month = mk('activity', { title: 'Monthly', repeat: { every: 1, unit: 'month', on: 'day' }, startDate: addDays(mon, -70) });
+    const now = today(),
+      mon = mondayAt(now);
+    const two = mk('activity', {
+      title: 'Fortnight',
+      repeat: { every: 2, unit: 'week', times: 2 },
+      startDate: addDays(mon, -28),
+    });
+    const month = mk('activity', {
+      title: 'Monthly',
+      repeat: { every: 1, unit: 'month', on: 'day' },
+      startDate: addDays(mon, -70),
+    });
     render();
     const label = r => rcard(r).querySelector('.rt-progress')?.textContent;
     shiftRoutineWeek(two.id, -1);
     const p2 = periodProgress(two, addDays(mon, -1));
-    eq(label(two), t(p2.target ? 'rt.past' : 'rt.pastNone', { range: fmtRange(p2.from, p2.to), done: p2.done, target: p2.target }), 'fortnight label');
+    eq(
+      label(two),
+      t(p2.target ? 'rt.past' : 'rt.pastNone', { range: fmtRange(p2.from, p2.to), done: p2.done, target: p2.target }),
+      'fortnight label',
+    );
     eq(dayNum(p2.to) - dayNum(p2.from), 13, 'its period is two weeks');
     for (let i = 0; i < 6; i++) shiftRoutineWeek(month.id, -1);
     const shown = shownDays(month)[0];
     const pm = periodProgress(month, addDays(shown, 6));
-    eq(label(month), t(pm.target ? 'rt.past' : 'rt.pastNone', { range: fmtRange(pm.from, pm.to), done: pm.done, target: pm.target }), 'month label');
+    eq(
+      label(month),
+      t(pm.target ? 'rt.past' : 'rt.pastNone', { range: fmtRange(pm.from, pm.to), done: pm.done, target: pm.target }),
+      'month label',
+    );
     eq([pm.from.slice(8), Number(pm.to.slice(8)) >= 28], ['01', true], 'its period is the calendar month');
     return `${label(two)} | ${label(month)}`;
   });
 
   await step('routine week strip: weeks reset when switching plans; overview unchanged; Slovenian', () => {
-    const now = today(), mon = mondayAt(now);
+    const now = today(),
+      mon = mondayAt(now);
     const r = db.activities.find(a => a.title === 'Run');
     const here = plans.current;
     shiftRoutineWeek(r.id, -2);
@@ -3618,7 +6189,8 @@ window.moreTests = async ({ step, assert }) => {
     eq(shownDays(r)[0], mon, 'back on this week after switching plans');
 
     // Nothing ticked this week, so the overview lists it whatever earlier steps ticked.
-    const live = db.activities.find(a => a.id === r.id), kept = live.checkins;
+    const live = db.activities.find(a => a.id === r.id),
+      kept = live.checkins;
     live.checkins = {};
     setView('dashboard');
     const row = $(`.routine-row[data-open="${r.id}"]`);
@@ -3628,11 +6200,30 @@ window.moreTests = async ({ step, assert }) => {
 
     changeLanguage('sl');
     setView('activities');
-    eq([arrow(r, -1).title, arrow(r, 1).title], [I18N.sl.strings['rt.prevWeek'], I18N.sl.strings['rt.nextWeek']], 'arrows in Slovenian');
+    eq(
+      [arrow(r, -1).title, arrow(r, 1).title],
+      [I18N.sl.strings['rt.prevWeek'], I18N.sl.strings['rt.nextWeek']],
+      'arrows in Slovenian',
+    );
     const d = days(r)[0].dataset.date;
     const said = fill(I18N.sl.strings[checkedOn(r, d) ? 'rt.dayOn' : 'rt.dayOff'], { date: longDate(d) });
-    eq(days(r)[0].title, d === now ? fill(I18N.sl.strings['rt.dayToday'], { label: said }) : said, 'day title in Slovenian');
-    assert(/[a-zčšž]/.test(longDate(d)) && longDate(d) !== new Date(d + 'T00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }), 'Slovenian date');
+    eq(
+      days(r)[0].title,
+      d === now ? fill(I18N.sl.strings['rt.dayToday'], { label: said }) : said,
+      'day title in Slovenian',
+    );
+    assert(
+      /[a-zčšž]/.test(longDate(d)) &&
+        longDate(d) !==
+          new Date(d + 'T00:00Z').toLocaleDateString('en-GB', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'UTC',
+          }),
+      'Slovenian date',
+    );
     shiftRoutineWeek(r.id, -1);
     assert(rcard(r).querySelector('.rt-progress').textContent.includes('/'), 'earlier week label in Slovenian');
     const sl = days(r)[0].title;
@@ -3643,100 +6234,263 @@ window.moreTests = async ({ step, assert }) => {
   });
   /* ---------- Monthly routines: a chosen day, the last day, or the n-th weekday ---------- */
 
-  const dueIn = (repeat, from, to, startDate = from) => daysBetween(from, to).filter(d => isDueDay({ repeat, startDate }, d));
-  const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+  const dueIn = (repeat, from, to, startDate = from) =>
+    daysBetween(from, to).filter(d => isDueDay({ repeat, startDate }, d));
+  const change = (id, value) => {
+    $(id).value = value;
+    $(id).dispatchEvent(new Event('change', { bubbles: true }));
+  };
   const lastOfMonth = iso => isoOf(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0);
 
   await step('monthly routines: a day of the month, clamped to shorter months', () => {
-    eq(dueIn({ every: 1, unit: 'month', on: 'day', day: 15 }, '2027-01-01', '2027-12-31').map(d => d.slice(5)),
-      ['01-15', '02-15', '03-15', '04-15', '05-15', '06-15', '07-15', '08-15', '09-15', '10-15', '11-15', '12-15'], 'the 15th');
-    eq(dueIn({ every: 1, unit: 'month', on: 'day', day: 31 }, '2027-01-01', '2027-12-31').map(d => d.slice(5)),
-      ['01-31', '02-28', '03-31', '04-30', '05-31', '06-30', '07-31', '08-31', '09-30', '10-31', '11-30', '12-31'], 'day 31 falls on the last day of shorter months');
-    eq(dueIn({ every: 1, unit: 'month', on: 'day', day: 30 }, '2028-02-01', '2028-03-31').map(d => d.slice(5)), ['02-29', '03-30'], 'leap February');
-    eq(dueIn({ every: 1, unit: 'month', on: 'day', day: 29 }, '2027-02-01', '2027-03-31').map(d => d.slice(5)), ['02-28', '03-29'], 'non-leap February');
-    eq(dueIn({ every: 3, unit: 'month', on: 'day', day: 10 }, '2027-01-20', '2027-12-31').map(d => d.slice(5)), ['04-10', '07-10', '10-10'], 'every 3 months, counted from the start month');
+    eq(
+      dueIn({ every: 1, unit: 'month', on: 'day', day: 15 }, '2027-01-01', '2027-12-31').map(d => d.slice(5)),
+      ['01-15', '02-15', '03-15', '04-15', '05-15', '06-15', '07-15', '08-15', '09-15', '10-15', '11-15', '12-15'],
+      'the 15th',
+    );
+    eq(
+      dueIn({ every: 1, unit: 'month', on: 'day', day: 31 }, '2027-01-01', '2027-12-31').map(d => d.slice(5)),
+      ['01-31', '02-28', '03-31', '04-30', '05-31', '06-30', '07-31', '08-31', '09-30', '10-31', '11-30', '12-31'],
+      'day 31 falls on the last day of shorter months',
+    );
+    eq(
+      dueIn({ every: 1, unit: 'month', on: 'day', day: 30 }, '2028-02-01', '2028-03-31').map(d => d.slice(5)),
+      ['02-29', '03-30'],
+      'leap February',
+    );
+    eq(
+      dueIn({ every: 1, unit: 'month', on: 'day', day: 29 }, '2027-02-01', '2027-03-31').map(d => d.slice(5)),
+      ['02-28', '03-29'],
+      'non-leap February',
+    );
+    eq(
+      dueIn({ every: 3, unit: 'month', on: 'day', day: 10 }, '2027-01-20', '2027-12-31').map(d => d.slice(5)),
+      ['04-10', '07-10', '10-10'],
+      'every 3 months, counted from the start month',
+    );
     // Stored without a day (older routines): the start's day of the month.
-    eq(dueIn({ every: 1, unit: 'month', on: 'day' }, '2027-01-12', '2027-03-31').map(d => d.slice(5)), ['01-12', '02-12', '03-12'], 'no day: the start’s');
-    eq(dueIn({ every: 1, unit: 'month' }, '2027-01-12', '2027-02-28').map(d => d.slice(5)), ['01-12', '02-12'], 'no on at all: the start’s day');
+    eq(
+      dueIn({ every: 1, unit: 'month', on: 'day' }, '2027-01-12', '2027-03-31').map(d => d.slice(5)),
+      ['01-12', '02-12', '03-12'],
+      'no day: the start’s',
+    );
+    eq(
+      dueIn({ every: 1, unit: 'month' }, '2027-01-12', '2027-02-28').map(d => d.slice(5)),
+      ['01-12', '02-12'],
+      'no on at all: the start’s day',
+    );
     return 'ok';
   });
 
   await step('monthly routines: the last day of the month', () => {
     const got = dueIn({ every: 1, unit: 'month', on: 'lastDay' }, '2027-01-01', '2028-12-31');
     eq(got.length, 24, 'one a month');
-    assert(got.every(d => d === lastOfMonth(d)), 'always the last day');
-    assert(got.includes('2027-02-28') && got.includes('2028-02-29') && got.includes('2027-04-30'), 'short and leap months');
-    eq(dueIn({ every: 2, unit: 'month', on: 'lastDay' }, '2027-01-15', '2027-07-31').map(d => d.slice(5)), ['01-31', '03-31', '05-31', '07-31'], 'every 2 months');
+    assert(
+      got.every(d => d === lastOfMonth(d)),
+      'always the last day',
+    );
+    assert(
+      got.includes('2027-02-28') && got.includes('2028-02-29') && got.includes('2027-04-30'),
+      'short and leap months',
+    );
+    eq(
+      dueIn({ every: 2, unit: 'month', on: 'lastDay' }, '2027-01-15', '2027-07-31').map(d => d.slice(5)),
+      ['01-31', '03-31', '05-31', '07-31'],
+      'every 2 months',
+    );
     return got.slice(0, 3).join(', ');
   });
 
   await step('monthly routines: the n-th or last weekday, for every weekday', () => {
-    const from = '2027-01-01', to = '2027-12-31';
+    const from = '2027-01-01',
+      to = '2027-12-31';
     for (let wd = 0; wd < 7; wd++) {
       const all = daysBetween(from, to).filter(d => weekday(d) === wd);
-      const byMonth = Object.values(Object.groupBy ? Object.groupBy(all, d => d.slice(0, 7)) : all.reduce((m, d) => ((m[d.slice(0, 7)] ||= []).push(d), m), {}));
-      for (const nth of [1, 2, 3, 4]) eq(dueIn({ every: 1, unit: 'month', on: 'nth', nth, weekday: wd }, from, to), byMonth.map(m => m[nth - 1]), `${nth}. ${weekdayName(wd)}`);
-      eq(dueIn({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: wd }, from, to), byMonth.map(m => m[m.length - 1]), `last ${weekdayName(wd)}`);
+      const byMonth = Object.values(
+        Object.groupBy
+          ? Object.groupBy(all, d => d.slice(0, 7))
+          : all.reduce((m, d) => ((m[d.slice(0, 7)] ||= []).push(d), m), {}),
+      );
+      for (const nth of [1, 2, 3, 4])
+        eq(
+          dueIn({ every: 1, unit: 'month', on: 'nth', nth, weekday: wd }, from, to),
+          byMonth.map(m => m[nth - 1]),
+          `${nth}. ${weekdayName(wd)}`,
+        );
+      eq(
+        dueIn({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: wd }, from, to),
+        byMonth.map(m => m[m.length - 1]),
+        `last ${weekdayName(wd)}`,
+      );
     }
     // The second Friday every month, and a fifth one only in months that have five.
-    eq(dueIn({ every: 1, unit: 'month', on: 'nth', nth: 2, weekday: 4 }, '2027-01-01', '2027-04-30'), ['2027-01-08', '2027-02-12', '2027-03-12', '2027-04-09'], 'second Friday');
-    eq(dueIn({ every: 1, unit: 'month', on: 'nth', nth: 5, weekday: 4 }, '2027-01-01', '2027-06-30'), ['2027-01-29', '2027-04-30'], 'fifth Friday only when there is one');
-    eq(dueIn({ every: 2, unit: 'month', on: 'nth', nth: 1, weekday: 0 }, '2027-01-01', '2027-06-30'), ['2027-01-04', '2027-03-01', '2027-05-03'], 'first Monday every 2 months');
+    eq(
+      dueIn({ every: 1, unit: 'month', on: 'nth', nth: 2, weekday: 4 }, '2027-01-01', '2027-04-30'),
+      ['2027-01-08', '2027-02-12', '2027-03-12', '2027-04-09'],
+      'second Friday',
+    );
+    eq(
+      dueIn({ every: 1, unit: 'month', on: 'nth', nth: 5, weekday: 4 }, '2027-01-01', '2027-06-30'),
+      ['2027-01-29', '2027-04-30'],
+      'fifth Friday only when there is one',
+    );
+    eq(
+      dueIn({ every: 2, unit: 'month', on: 'nth', nth: 1, weekday: 0 }, '2027-01-01', '2027-06-30'),
+      ['2027-01-04', '2027-03-01', '2027-05-03'],
+      'first Monday every 2 months',
+    );
     return 'all weekdays';
   });
 
   await step('monthly routines: older weekday routines keep their days', () => {
     // 'weekday' and 'last' were worked out from the start date; they now read as the same n-th weekday.
     for (const start of ['2027-01-28', '2027-03-15', '2027-05-31', '2027-07-01', '2027-09-29']) {
-      const nth = Math.ceil(monthDay(start) / 7), wd = weekday(start);
-      eq(dueIn({ every: 1, unit: 'month', on: 'weekday' }, start, '2028-06-30'), dueIn({ every: 1, unit: 'month', on: 'nth', nth, weekday: wd }, start, '2028-06-30'), `${start} weekday`);
-      if (lastInMonth(start)) eq(dueIn({ every: 1, unit: 'month', on: 'last' }, start, '2028-06-30'), dueIn({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: wd }, start, '2028-06-30'), `${start} last`);
-      eq(sched({ repeat: { every: 1, unit: 'month', on: 'weekday' }, startDate: start }), { every: 1, unit: 'month', on: 'nth', nth, weekday: wd }, `${start} read as n-th`);
+      const nth = Math.ceil(monthDay(start) / 7),
+        wd = weekday(start);
+      eq(
+        dueIn({ every: 1, unit: 'month', on: 'weekday' }, start, '2028-06-30'),
+        dueIn({ every: 1, unit: 'month', on: 'nth', nth, weekday: wd }, start, '2028-06-30'),
+        `${start} weekday`,
+      );
+      if (lastInMonth(start))
+        eq(
+          dueIn({ every: 1, unit: 'month', on: 'last' }, start, '2028-06-30'),
+          dueIn({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: wd }, start, '2028-06-30'),
+          `${start} last`,
+        );
+      eq(
+        sched({ repeat: { every: 1, unit: 'month', on: 'weekday' }, startDate: start }),
+        { every: 1, unit: 'month', on: 'nth', nth, weekday: wd },
+        `${start} read as n-th`,
+      );
     }
     const old = { repeat: { every: 1, unit: 'month', on: 'last' }, startDate: '2027-01-27' };
-    eq(dueIn(old.repeat, '2027-01-01', '2027-04-30', old.startDate), ['2027-01-27', '2027-02-24', '2027-03-31', '2027-04-28'], 'last Wednesday as before');
+    eq(
+      dueIn(old.repeat, '2027-01-01', '2027-04-30', old.startDate),
+      ['2027-01-27', '2027-02-24', '2027-03-31', '2027-04-28'],
+      'last Wednesday as before',
+    );
     eq(scheduleText(old), 'every month on the last Wednesday', 'same summary');
-    assert(JSON.stringify(old.repeat) === '{"every":1,"unit":"month","on":"last"}', 'reading does not rewrite what is stored');
+    assert(
+      JSON.stringify(old.repeat) === '{"every":1,"unit":"month","on":"last"}',
+      'reading does not rewrite what is stored',
+    );
     return 'ok';
   });
 
   await step('monthly routines: summaries in English and Slovenian', () => {
     const at = repeat => ({ repeat, startDate: '2027-01-07' });
-    eq([
-      at({ every: 1, unit: 'month', on: 'day', day: 15 }), at({ every: 1, unit: 'month', on: 'lastDay' }), at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
-      at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 1 }), at({ every: 3, unit: 'month', on: 'day', day: 31 }),
-    ].map(scheduleText), ['every month on day 15', 'every month on the last day', 'every 2 months on the second Friday', 'every month on the last Tuesday', 'every 3 months on day 31']);
+    eq(
+      [
+        at({ every: 1, unit: 'month', on: 'day', day: 15 }),
+        at({ every: 1, unit: 'month', on: 'lastDay' }),
+        at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
+        at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 1 }),
+        at({ every: 3, unit: 'month', on: 'day', day: 31 }),
+      ].map(scheduleText),
+      [
+        'every month on day 15',
+        'every month on the last day',
+        'every 2 months on the second Friday',
+        'every month on the last Tuesday',
+        'every 3 months on day 31',
+      ],
+    );
     changeLanguage('sl');
-    eq([
-      at({ every: 1, unit: 'month', on: 'day', day: 15 }), at({ every: 1, unit: 'month', on: 'lastDay' }), at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
-      at({ every: 1, unit: 'month', on: 'nth', nth: 2, weekday: 2 }), at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 5 }), at({ every: 1, unit: 'month', on: 'nth', nth: 3, weekday: 6 }),
-      at({ every: 1, unit: 'month', on: 'nth', nth: 1, weekday: 0 }),
-    ].map(scheduleText), ['vsak mesec: 15. dan', 'vsak mesec: zadnji dan v mesecu', 'vsaka 2 meseca: drugi petek v mesecu', 'vsak mesec: druga sreda v mesecu',
-      'vsak mesec: zadnja sobota v mesecu', 'vsak mesec: tretja nedelja v mesecu', 'vsak mesec: prvi ponedeljek v mesecu'], 'Slovenian, with feminine ordinals');
+    eq(
+      [
+        at({ every: 1, unit: 'month', on: 'day', day: 15 }),
+        at({ every: 1, unit: 'month', on: 'lastDay' }),
+        at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
+        at({ every: 1, unit: 'month', on: 'nth', nth: 2, weekday: 2 }),
+        at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 5 }),
+        at({ every: 1, unit: 'month', on: 'nth', nth: 3, weekday: 6 }),
+        at({ every: 1, unit: 'month', on: 'nth', nth: 1, weekday: 0 }),
+      ].map(scheduleText),
+      [
+        'vsak mesec: 15. dan',
+        'vsak mesec: zadnji dan v mesecu',
+        'vsaka 2 meseca: drugi petek v mesecu',
+        'vsak mesec: druga sreda v mesecu',
+        'vsak mesec: zadnja sobota v mesecu',
+        'vsak mesec: tretja nedelja v mesecu',
+        'vsak mesec: prvi ponedeljek v mesecu',
+      ],
+      'Slovenian, with feminine ordinals',
+    );
     changeLanguage('en');
     return 'ok';
   });
 
   await step('routine cards: a short schedule tag that fits, the full one as its tooltip', async () => {
-    const at = (repeat, title = 'R') => ({ id: 'sc' + Math.random().toString(36).slice(2), title, repeat, startDate: '2027-01-07' });
+    const at = (repeat, title = 'R') => ({
+      id: 'sc' + Math.random().toString(36).slice(2),
+      title,
+      repeat,
+      startDate: '2027-01-07',
+    });
     const kinds = [
-      at({ every: 1, unit: 'week', days: [0, 2, 5], makeUp: true }), at({ every: 1, unit: 'week', days: [0, 1, 2, 3, 4] }), at({ every: 1, unit: 'week', days: [5, 6] }),
-      at({ every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] }), at({ every: 1, unit: 'week', days: [0, 1, 3, 4, 5] }), at({ every: 1, unit: 'week', times: 3 }),
-      at({ every: 1, unit: 'month', on: 'lastDay' }), at({ every: 1, unit: 'month', on: 'day', day: 15 }), at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
-      at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 5 }), at({ every: 2, unit: 'week', days: [0, 4] }), at({ every: 1, unit: 'year' }), at({ every: 3, unit: 'day' }),
+      at({ every: 1, unit: 'week', days: [0, 2, 5], makeUp: true }),
+      at({ every: 1, unit: 'week', days: [0, 1, 2, 3, 4] }),
+      at({ every: 1, unit: 'week', days: [5, 6] }),
+      at({ every: 1, unit: 'week', days: [0, 1, 2, 3, 4, 5, 6] }),
+      at({ every: 1, unit: 'week', days: [0, 1, 3, 4, 5] }),
+      at({ every: 1, unit: 'week', times: 3 }),
+      at({ every: 1, unit: 'month', on: 'lastDay' }),
+      at({ every: 1, unit: 'month', on: 'day', day: 15 }),
+      at({ every: 2, unit: 'month', on: 'nth', nth: 2, weekday: 4 }),
+      at({ every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 5 }),
+      at({ every: 2, unit: 'week', days: [0, 4] }),
+      at({ every: 1, unit: 'year' }),
+      at({ every: 3, unit: 'day' }),
     ];
-    eq(kinds.map(shortSchedule), ['Mon, Wed, Sat ↻', 'Mon–Fri', 'Sat, Sun', 'every day', 'Mon, Tue, Thu–Sat', '3× a week', 'monthly: last day', 'monthly: day 15',
-      'every 2 months: second Fri', 'monthly: last Sat', 'every 2 weeks: Mon, Fri', 'yearly: 7 Jan', 'every 3 days']);
+    eq(kinds.map(shortSchedule), [
+      'Mon, Wed, Sat ↻',
+      'Mon–Fri',
+      'Sat, Sun',
+      'every day',
+      'Mon, Tue, Thu–Sat',
+      '3× a week',
+      'monthly: last day',
+      'monthly: day 15',
+      'every 2 months: second Fri',
+      'monthly: last Sat',
+      'every 2 weeks: Mon, Fri',
+      'yearly: 7 Jan',
+      'every 3 days',
+    ]);
     changeLanguage('sl');
-    eq(kinds.map(shortSchedule), ['pon., sre., sob. ↻', 'pon.–pet.', 'sob., ned.', 'vsak dan', 'pon., tor., čet.–sob.', '3-krat na teden', 'mesečno: zadnji dan', 'mesečno: 15. dan',
-      'vsaka 2 meseca: drugi pet.', 'mesečno: zadnja sob.', 'vsaka 2 tedna: pon., pet.', 'letno: 7. jan.', 'vsake 3 dni'], 'Slovenian');
-    assert(kinds.every(a => shortSchedule(a).length <= scheduleText(a).length), 'never longer than the full text');
+    eq(
+      kinds.map(shortSchedule),
+      [
+        'pon., sre., sob. ↻',
+        'pon.–pet.',
+        'sob., ned.',
+        'vsak dan',
+        'pon., tor., čet.–sob.',
+        '3-krat na teden',
+        'mesečno: zadnji dan',
+        'mesečno: 15. dan',
+        'vsaka 2 meseca: drugi pet.',
+        'mesečno: zadnja sob.',
+        'vsaka 2 tedna: pon., pet.',
+        'letno: 7. jan.',
+        'vsake 3 dni',
+      ],
+      'Slovenian',
+    );
+    assert(
+      kinds.every(a => shortSchedule(a).length <= scheduleText(a).length),
+      'never longer than the full text',
+    );
     fresh('Short tags');
-    kinds[0].title = '3 zmenki'; kinds[6].title = 'Mesečni pregled';
+    kinds[0].title = '3 zmenki';
+    kinds[6].title = 'Mesečni pregled';
     // A tag too long to fit even when short: every 3 weeks on four scattered days.
     const long = at({ every: 3, unit: 'week', days: [0, 2, 4, 6], makeUp: true }, 'V službi najkasneje');
     db.activities.push(...kinds, long);
-    save(); setView('activities');
+    save();
+    setView('activities');
     const tag = a => $(`.card.routine[data-open="${a.id}"] .rt-sched`);
     eq(tag(kinds[0]).textContent, 'pon., sre., sob. ↻', 'the card shows the short text');
     eq(tag(kinds[0]).title, 'vsak pon., sre., sob. ali drug dan', 'the full text as its tooltip');
@@ -3744,14 +6498,32 @@ window.moreTests = async ({ step, assert }) => {
     const wordy = at({ every: 1, unit: 'week', days: [1, 3] }, 'A routine with a title long enough to wrap');
     const html = [kinds[0], kinds[6], long, wordy].map(routineCard).join('');
     const frame = document.createElement('iframe');
-    Object.assign(frame.style, { width: '260px', height: '900px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    Object.assign(frame.style, {
+      width: '260px',
+      height: '900px',
+      position: 'fixed',
+      left: '-9999px',
+      top: '0',
+      border: '0',
+    });
     frame.srcdoc = `<!doctype html><html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0">${html}</body></html>`;
-    await new Promise(res => { frame.onload = res; document.body.append(frame); });
+    await new Promise(res => {
+      frame.onload = res;
+      document.body.append(frame);
+    });
     [...frame.contentDocument.querySelectorAll('.card')].forEach(c => {
-      const card = c.getBoundingClientRect(), h = c.querySelector('h3').getBoundingClientRect(), g = c.querySelector('.rt-sched').getBoundingClientRect();
-      assert(g.right <= card.right + 0.5 && g.left >= h.right, `${c.querySelector('h3').textContent}: the tag stays inside the card, beside the title`);
+      const card = c.getBoundingClientRect(),
+        h = c.querySelector('h3').getBoundingClientRect(),
+        g = c.querySelector('.rt-sched').getBoundingClientRect();
+      assert(
+        g.right <= card.right + 0.5 && g.left >= h.right,
+        `${c.querySelector('h3').textContent}: the tag stays inside the card, beside the title`,
+      );
       const oneLine = h.height < parseFloat(getComputedStyle(c.querySelector('h3')).lineHeight) * 1.5;
-      assert(c.querySelector('h3').textContent === wordy.title ? h.width >= (card.width - 40) * 0.6 : oneLine, `${c.querySelector('h3').textContent}: a short title stays on one line, a long one keeps most of the row`);
+      assert(
+        c.querySelector('h3').textContent === wordy.title ? h.width >= (card.width - 40) * 0.6 : oneLine,
+        `${c.querySelector('h3').textContent}: a short title stays on one line, a long one keeps most of the row`,
+      );
     });
     const longTag = frame.contentDocument.querySelectorAll('.rt-sched')[2];
     assert(longTag.scrollWidth > longTag.clientWidth, 'the long tag is cut with an ellipsis');
@@ -3763,7 +6535,11 @@ window.moreTests = async ({ step, assert }) => {
   await step('monthly routines: the form shows the right fields and saves each option', () => {
     fresh('Monthly');
     const shown = sel => !$(sel).closest('[hidden]');
-    const start = d => { $('#f-startDate').value = dateInput(d); $('#f-startDate').dispatchEvent(new Event('input', { bubbles: true })); $('#f-startDate').dispatchEvent(new Event('change', { bubbles: true })); };
+    const start = d => {
+      $('#f-startDate').value = dateInput(d);
+      $('#f-startDate').dispatchEvent(new Event('input', { bubbles: true }));
+      $('#f-startDate').dispatchEvent(new Event('change', { bubbles: true }));
+    };
     const make = (title, setup) => {
       openForm('activity', null, { repeat: 'once' });
       $('#f-title').value = title;
@@ -3778,7 +6554,13 @@ window.moreTests = async ({ step, assert }) => {
     let checks = {};
     const a1 = make('Rent', () => {
       change('#f-on', 'day');
-      checks.day = [shown('#repMonthDay'), shown('#repNth'), shown('#repTimes'), shown('#repDays'), $('#f-monthDay').value];
+      checks.day = [
+        shown('#repMonthDay'),
+        shown('#repNth'),
+        shown('#repTimes'),
+        shown('#repDays'),
+        $('#f-monthDay').value,
+      ];
       $('#f-monthDay').value = '31';
     });
     eq(checks.day, [true, false, false, false, '10'], 'day field only, the start’s day by default');
@@ -3791,7 +6573,13 @@ window.moreTests = async ({ step, assert }) => {
     eq(a2.repeat, { every: 1, unit: 'month', on: 'lastDay' }, 'last day saved');
     const a3 = make('Club', () => {
       change('#f-on', 'nth');
-      checks.nth = [shown('#repMonthDay'), shown('#repNth'), $('#f-nth').value, $('#f-weekday').value, [...$('#f-nth').options].map(o => o.value)];
+      checks.nth = [
+        shown('#repMonthDay'),
+        shown('#repNth'),
+        $('#f-nth').value,
+        $('#f-weekday').value,
+        [...$('#f-nth').options].map(o => o.value),
+      ];
       change('#f-nth', '2');
       change('#f-weekday', '4');
     });
@@ -3805,14 +6593,21 @@ window.moreTests = async ({ step, assert }) => {
       $('#f-monthDay').value = bad;
       submitForm();
       const err = modal.querySelector('[data-field="monthDay"] .err').textContent;
-      assert(modal.open && err === t(bad === 'x' ? 'err.number' : 'err.times', { max: 31 }), `day “${bad}” refused: ${err}`);
+      assert(
+        modal.open && err === t(bad === 'x' ? 'err.number' : 'err.times', { max: 31 }),
+        `day “${bad}” refused: ${err}`,
+      );
       modal.close();
     }
     eq(a1.repeat.day, 31, 'unchanged after refusals');
 
     // Reopening shows what was saved.
     openForm('activity', a3.id);
-    eq([$('#f-repeat').value, $('#f-unit').value, $('#f-on').value, $('#f-nth').value, $('#f-weekday').value], ['custom', 'month', 'nth', '2', '4'], 'n-th reopened');
+    eq(
+      [$('#f-repeat').value, $('#f-unit').value, $('#f-on').value, $('#f-nth').value, $('#f-weekday').value],
+      ['custom', 'month', 'nth', '2', '4'],
+      'n-th reopened',
+    );
     modal.close();
     openForm('activity', a1.id);
     eq([$('#f-on').value, $('#f-monthDay').value], ['day', '31'], 'day reopened');
@@ -3822,20 +6617,44 @@ window.moreTests = async ({ step, assert }) => {
     modal.close();
 
     // An older routine opens with its days chosen, and saves in the new form.
-    const old = mk('activity', { title: 'Old monthly', status: 'todo', startDate: '2027-01-27', dueDate: '2027-12-31', repeat: { every: 1, unit: 'month', on: 'last' } });
+    const old = mk('activity', {
+      title: 'Old monthly',
+      status: 'todo',
+      startDate: '2027-01-27',
+      dueDate: '2027-12-31',
+      repeat: { every: 1, unit: 'month', on: 'last' },
+    });
     openForm('activity', old.id);
-    eq([$('#f-on').value, $('#f-nth').value, $('#f-weekday').value], ['nth', '-1', '2'], 'old “last Wednesday” shown as such');
+    eq(
+      [$('#f-on').value, $('#f-nth').value, $('#f-weekday').value],
+      ['nth', '-1', '2'],
+      'old “last Wednesday” shown as such',
+    );
     submitForm();
     eq(old.repeat, { every: 1, unit: 'month', on: 'nth', nth: -1, weekday: 2 }, 'saved the new way, same days');
-    const oldDay = mk('activity', { title: 'Old day', status: 'todo', startDate: '2027-01-12', repeat: { every: 1, unit: 'month', on: 'day' } });
+    const oldDay = mk('activity', {
+      title: 'Old day',
+      status: 'todo',
+      startDate: '2027-01-12',
+      repeat: { every: 1, unit: 'month', on: 'day' },
+    });
     openForm('activity', oldDay.id);
     eq($('#f-monthDay').value, '12', 'old day routine shows its start’s day');
     modal.close();
 
     // A fifth weekday from an old routine stays selectable.
-    const fifth = mk('activity', { title: 'Fifth', status: 'todo', startDate: '2027-01-29', repeat: { every: 1, unit: 'month', on: 'weekday' } });
+    const fifth = mk('activity', {
+      title: 'Fifth',
+      status: 'todo',
+      startDate: '2027-01-29',
+      repeat: { every: 1, unit: 'month', on: 'weekday' },
+    });
     openForm('activity', fifth.id);
-    eq([$('#f-nth').value, [...$('#f-nth').options].map(o => o.value).includes('5')], ['5', true], 'a fifth Friday kept');
+    eq(
+      [$('#f-nth').value, [...$('#f-nth').options].map(o => o.value).includes('5')],
+      ['5', true],
+      'a fifth Friday kept',
+    );
     modal.close();
 
     // Changing the start date moves the defaults until they are chosen by hand.
@@ -3845,7 +6664,11 @@ window.moreTests = async ({ step, assert }) => {
     change('#f-unit', 'month');
     change('#f-on', 'nth');
     start('2027-06-25'); // the fourth Friday
-    eq([$('#f-nth').value, $('#f-weekday').value, $('#f-monthDay').value], ['4', '4', '25'], 'defaults follow the start date');
+    eq(
+      [$('#f-nth').value, $('#f-weekday').value, $('#f-monthDay').value],
+      ['4', '4', '25'],
+      'defaults follow the start date',
+    );
     change('#f-nth', '1');
     start('2027-06-02');
     eq($('#f-nth').value, '1', 'a choice made by hand stays');
@@ -3854,8 +6677,14 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('monthly routines: check-ins, streaks and the week strip', () => {
-    const now = today(), lastDay = lastOfMonth(now);
-    const r = mk('activity', { title: 'Month end', status: 'todo', startDate: addDays(now, -120), repeat: { every: 1, unit: 'month', on: 'lastDay' } });
+    const now = today(),
+      lastDay = lastOfMonth(now);
+    const r = mk('activity', {
+      title: 'Month end',
+      status: 'todo',
+      startDate: addDays(now, -120),
+      repeat: { every: 1, unit: 'month', on: 'lastDay' },
+    });
     const done = daysBetween(r.startDate, addDays(now, -1)).filter(d => isDueDay(r, d));
     assert(done.length >= 3 && done.every(d => d === lastOfMonth(d)), 'past due days are month ends');
     done.forEach(d => (r.checkins = { ...r.checkins, [d]: 1 }));
@@ -3865,13 +6694,21 @@ window.moreTests = async ({ step, assert }) => {
     eq(nextDueDay(r), lastDay, 'next due is this month’s last day');
     setView('activities');
     const card = $(`.card.routine[data-open="${r.id}"]`);
-    assert(card.textContent.includes('monthly: last day') && card.querySelector('.rt-sched').title === 'every month on the last day', 'card summary');
+    assert(
+      card.textContent.includes('monthly: last day') &&
+        card.querySelector('.rt-sched').title === 'every month on the last day',
+      'card summary',
+    );
     const strip = [...card.querySelectorAll('[data-checkin]')].map(b => b.dataset.date);
-    if (strip.includes(lastDay)) assert(card.querySelector(`[data-date="${lastDay}"]`).classList.contains('due'), 'the last day is outlined');
+    if (strip.includes(lastDay))
+      assert(card.querySelector(`[data-date="${lastDay}"]`).classList.contains('due'), 'the last day is outlined');
     // Browse back to a past month end and see it ticked.
     shiftRoutineWeek(r.id, -(dayNum(mondayAt(now)) - dayNum(mondayAt(done[done.length - 1]))) / 7);
     const b = $(`.card.routine[data-open="${r.id}"] [data-date="${done[done.length - 1]}"]`);
-    assert(b && b.classList.contains('due') && b.getAttribute('aria-pressed') === 'true', 'past month end shown ticked');
+    assert(
+      b && b.classList.contains('due') && b.getAttribute('aria-pressed') === 'true',
+      'past month end shown ticked',
+    );
     deletePlan(plans.current);
     return `${done.length} months`;
   });
@@ -3879,7 +6716,10 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('routine start date: filled in visibly, never silently today', () => {
     fresh('Start dates');
-    const change = (id, value) => { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    const change = (id, value) => {
+      $(id).value = value;
+      $(id).dispatchEvent(new Event('change', { bubbles: true }));
+    };
     const now = today();
     // A new activity starts today, in plain sight; choosing how it repeats fills an emptied start date again.
     for (const preset of ['week', 'month', 'days', 'custom']) {
@@ -3905,13 +6745,23 @@ window.moreTests = async ({ step, assert }) => {
     $('#f-title').value = 'Plain';
     $('#f-startDate').value = '';
     submitForm();
-    assert(modal.open && modal.querySelector('[data-field="startDate"] .err').textContent === t('err.startRequired'), 'a start is needed');
+    assert(
+      modal.open && modal.querySelector('[data-field="startDate"] .err').textContent === t('err.startRequired'),
+      'a start is needed',
+    );
     $('#f-startDate').value = dateInput(now);
     submitForm();
-    assert(modal.open && modal.querySelector('[data-field="dueDate"] .err').textContent === t('err.dueRequired'), 'a due date is needed');
+    assert(
+      modal.open && modal.querySelector('[data-field="dueDate"] .err').textContent === t('err.dueRequired'),
+      'a due date is needed',
+    );
     $('#f-dueDate').value = dateInput(addDays(now, 3));
     submitForm();
-    eq([db.activities.find(a => a.title === 'Plain')?.startDate, db.activities.find(a => a.title === 'Plain')?.dueDate], [now, addDays(now, 3)], 'saved with both');
+    eq(
+      [db.activities.find(a => a.title === 'Plain')?.startDate, db.activities.find(a => a.title === 'Plain')?.dueDate],
+      [now, addDays(now, 3)],
+      'saved with both',
+    );
     // Filled in and changed before saving: the change is what is saved.
     openForm('activity', null, { repeat: 'once' });
     $('#f-title').value = 'Earlier';
@@ -3924,8 +6774,15 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('routine start date: an older routine without one keeps the day it was created', () => {
-    const now = today(), created = addDays(today(), -40);
-    const old = mk('activity', { title: 'Legacy', status: 'todo', createdAt: created, repeat: { every: 1, unit: 'week', times: 2 }, checkins: { [addDays(now, -30)]: 1 } });
+    const now = today(),
+      created = addDays(today(), -40);
+    const old = mk('activity', {
+      title: 'Legacy',
+      status: 'todo',
+      createdAt: created,
+      repeat: { every: 1, unit: 'week', times: 2 },
+      checkins: { [addDays(now, -30)]: 1 },
+    });
     delete old.startDate;
     save();
     eq(routineStart(old), created, 'runs from the day it was created');
@@ -3933,7 +6790,10 @@ window.moreTests = async ({ step, assert }) => {
     eq($('#f-startDate').value, dateInput(created), 'the form shows that day');
     // It never ended; now it needs an end before it saves.
     submitForm();
-    assert(modal.open && modal.querySelector('[data-field="endDate"] .err').textContent === t('err.endDate'), 'asked for an end when edited');
+    assert(
+      modal.open && modal.querySelector('[data-field="endDate"] .err').textContent === t('err.endDate'),
+      'asked for an end when edited',
+    );
     $('#f-endDate').value = dateInput(addDays(now, 30));
     submitForm();
     eq([old.startDate, old.dueDate], [created, addDays(now, 30)], 'saving keeps the start, not today');
@@ -3941,13 +6801,20 @@ window.moreTests = async ({ step, assert }) => {
     openForm('activity', old.id);
     $('#f-startDate').value = '';
     submitForm();
-    assert(modal.open && modal.querySelector('[data-field="startDate"] .err').textContent === t('err.startRequired'), 'a cleared start is refused');
+    assert(
+      modal.open && modal.querySelector('[data-field="startDate"] .err').textContent === t('err.startRequired'),
+      'a cleared start is refused',
+    );
     modal.close();
     eq(old.startDate, created, 'the old start stays');
     assert(checkedOn(old, addDays(now, -30)), 'its old check-ins still count');
     setView('activities');
     shiftRoutineWeek(old.id, -10);
-    eq($(`.card.routine[data-open="${old.id}"] [data-checkin]`).dataset.date, addDays(created, -weekday(created)), 'the strip still reaches back to the start');
+    eq(
+      $(`.card.routine[data-open="${old.id}"] [data-checkin]`).dataset.date,
+      addDays(created, -weekday(created)),
+      'the strip still reaches back to the start',
+    );
     deletePlan(plans.current);
     return created;
   });
@@ -3964,13 +6831,22 @@ window.moreTests = async ({ step, assert }) => {
       const s = mk('state', { title: 'Longest run', unit: 'km', description: 'My own words stay as they were.' });
       openForm('state', s.id);
       eq(modal.querySelector('[data-field="description"] label').textContent, labels[code][0], `${code} label`);
-      assert(labels[code][1].test($('#f-description').placeholder), `${code} placeholder: ${$('#f-description').placeholder}`);
+      assert(
+        labels[code][1].test($('#f-description').placeholder),
+        `${code} placeholder: ${$('#f-description').placeholder}`,
+      );
       eq($('#f-description').value, 'My own words stay as they were.', `${code}: existing text kept`);
       submitForm();
       eq(s.description, 'My own words stay as they were.', `${code}: saved unchanged`);
       // The help no longer asks to describe where you stand today.
-      assert(!/where you stand today|kje ste danes/i.test(t('help.view.states') + t('tour.states.text')), `${code}: help and tour updated`);
-      assert(/measure|meri/i.test(t('help.view.states')) && /measure|meri/i.test(t('tour.states.text')), `${code}: they talk about measuring`);
+      assert(
+        !/where you stand today|kje ste danes/i.test(t('help.view.states') + t('tour.states.text')),
+        `${code}: help and tour updated`,
+      );
+      assert(
+        /measure|meri/i.test(t('help.view.states')) && /measure|meri/i.test(t('tour.states.text')),
+        `${code}: they talk about measuring`,
+      );
       deletePlan(plans.current);
     }
     changeLanguage('en');
@@ -3986,9 +6862,18 @@ window.moreTests = async ({ step, assert }) => {
       for (const s of db.states) {
         assert(s.description && s.description.length > 20, `${code} ${s.title}: has a description`);
         // A lasting description does not repeat a reading: no measured value or change appears in it.
-        const values = (s.history || []).map(h => h.value).concat(s.value).filter(Boolean);
-        assert(!values.some(v => new RegExp(`(^|\\D)${v}(\\D|$)`).test(s.description)), `${code} ${s.title}: no reading in “${s.description}”`);
-        assert(!/\b(so far|still|down \d|last month|doslej|še vedno|prejšnji mesec|shujšal)\b/i.test(s.description), `${code} ${s.title}: no snapshot wording in “${s.description}”`);
+        const values = (s.history || [])
+          .map(h => h.value)
+          .concat(s.value)
+          .filter(Boolean);
+        assert(
+          !values.some(v => new RegExp(`(^|\\D)${v}(\\D|$)`).test(s.description)),
+          `${code} ${s.title}: no reading in “${s.description}”`,
+        );
+        assert(
+          !/\b(so far|still|down \d|last month|doslej|še vedno|prejšnji mesec|shujšal)\b/i.test(s.description),
+          `${code} ${s.title}: no snapshot wording in “${s.description}”`,
+        );
       }
       out.push(db.states[0].description);
       deletePlan(plans.current);
@@ -4004,22 +6889,33 @@ window.moreTests = async ({ step, assert }) => {
     const on = (days, run) => {
       const shift = days * 86400000;
       window.Date = class extends RealDate {
-        constructor(...a) { super(...(a.length ? a : [RealDate.now() + shift])); }
-        static now() { return RealDate.now() + shift; }
+        constructor(...a) {
+          super(...(a.length ? a : [RealDate.now() + shift]));
+        }
+        static now() {
+          return RealDate.now() + shift;
+        }
       };
-      try { return run(); } finally { window.Date = RealDate; }
+      try {
+        return run();
+      } finally {
+        window.Date = RealDate;
+      }
     };
-    const offsets = data => [...data.goals, ...data.activities].flatMap(x => ['startDate', 'deadline', 'dueDate'].map(k => x[k]))
-      // A total's date is its last run's, which follows the weekdays like the check-ins below.
-      .concat(data.states.filter(s => !s.cumulative).flatMap(s => [s.date, ...(s.history || []).map(h => h.date)]))
-      .map(d => (d ? dayNum(d) - dayNum(today()) : null));
+    const offsets = data =>
+      [...data.goals, ...data.activities]
+        .flatMap(x => ['startDate', 'deadline', 'dueDate'].map(k => x[k]))
+        // A total's date is its last run's, which follows the weekdays like the check-ins below.
+        .concat(data.states.filter(s => !s.cumulative).flatMap(s => [s.date, ...(s.history || []).map(h => h.date)]))
+        .map(d => (d ? dayNum(d) - dayNum(today()) : null));
     const results = [];
     let first = null;
     for (const days of [0, 37, 400, -200]) {
       on(days, () => {
         const now = today();
         loadSample();
-        const id = plans.current, data = clone(db);
+        const id = plans.current,
+          data = clone(db);
         const offs = offsets(data);
         // The same plan, the same distances from whichever day it was loaded on.
         if (!first) first = offs;
@@ -4027,27 +6923,49 @@ window.moreTests = async ({ step, assert }) => {
         // Routine check-ins follow weekdays, so which days they fall on depends on the day it is loaded:
         // all in the five weeks before it, and a fixed-day routine only on its own days.
         const ticks = data.activities.flatMap(a => Object.keys(a.checkins || {}));
-        assert(ticks.length > 10 && ticks.every(d => d < now && d >= addDays(now, -35)), `${days}: check-ins in the weeks before the day it was loaded`);
-        data.activities.filter(a => a.repeat?.days).forEach(a =>
-          assert(Object.keys(a.checkins).every(d => a.repeat.days.includes(weekday(d))), `${days}: ${a.title} ticked on its own days`));
+        assert(
+          ticks.length > 10 && ticks.every(d => d < now && d >= addDays(now, -35)),
+          `${days}: check-ins in the weeks before the day it was loaded`,
+        );
+        data.activities
+          .filter(a => a.repeat?.days)
+          .forEach(a =>
+            assert(
+              Object.keys(a.checkins).every(d => a.repeat.days.includes(weekday(d))),
+              `${days}: ${a.title} ticked on its own days`,
+            ),
+          );
         // Late, waiting and done items are as the sample means them on that day.
-        assert(data.activities.some(a => a.status !== 'done' && a.dueDate && a.dueDate < now), `${days}: something is late`);
-        assert(data.goals.some(g => g.deadline > now), `${days}: goals still ahead`);
+        assert(
+          data.activities.some(a => a.status !== 'done' && a.dueDate && a.dueDate < now),
+          `${days}: something is late`,
+        );
+        assert(
+          data.goals.some(g => g.deadline > now),
+          `${days}: goals still ahead`,
+        );
         results.push(`${days}: ${now}`);
         deletePlan(id);
       });
     }
     // Once loaded, a sample plan is an ordinary plan: opening it later moves nothing.
     loadSample();
-    const id = plans.current, before = clone(db);
+    const id = plans.current,
+      before = clone(db);
     on(30, () => {
       openPlan(plans.list.find(p => p.id !== id).id);
       openPlan(id);
       // Activities whose start date came meanwhile are in progress now; nothing else changes.
       const acts = list => list.map(({ status, autoStarted, updatedAt, ...rest }) => rest);
-      eq(JSON.stringify({ goals: db.goals, states: db.states, activities: acts(db.activities) }),
-        JSON.stringify({ goals: before.goals, states: before.states, activities: acts(before.activities) }), 'a month later its dates are where they were');
-      assert(db.activities.some(a => a.status === 'doing' && before.activities.find(b => b.id === a.id).status === 'todo'), 'an activity that started meanwhile is in progress');
+      eq(
+        JSON.stringify({ goals: db.goals, states: db.states, activities: acts(db.activities) }),
+        JSON.stringify({ goals: before.goals, states: before.states, activities: acts(before.activities) }),
+        'a month later its dates are where they were',
+      );
+      assert(
+        db.activities.some(a => a.status === 'doing' && before.activities.find(b => b.id === a.id).status === 'todo'),
+        'an activity that started meanwhile is in progress',
+      );
     });
     deletePlan(id);
     return results.join(' | ');
@@ -4060,12 +6978,15 @@ window.moreTests = async ({ step, assert }) => {
     const a = mk('activity', { title: 'Train' });
     const b = mk('activity', { title: 'Buy shoes' });
     const s = mk('state', { title: 'Distance' });
-    rel(a, g, 'contributes'); rel(b, g, 'contributes'); rel(s, g, 'measures');
+    rel(a, g, 'contributes');
+    rel(b, g, 'contributes');
+    rel(s, g, 'measures');
     save();
     setView('map');
     return { g, a, b, s };
   };
-  const clickEl = (el, detail = 1) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail }));
+  const clickEl = (el, detail = 1) =>
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail }));
   const edge = id => $(`[data-rel-edit="${id}"]`);
   const nodeEl = id => $(`[data-map-node="${id}"]`);
   const press = (key, target = document.activeElement || document.body) => {
@@ -4078,59 +6999,109 @@ window.moreTests = async ({ step, assert }) => {
   await step('map: lines go straight past rows with nothing in the way, and never through a box', () => {
     loadSample();
     setView('map');
-    const boxes = [...document.querySelectorAll('[data-map-node]')].map(g => ({ id: g.dataset.mapNode, r: g.getBoundingClientRect() }));
+    const boxes = [...document.querySelectorAll('[data-map-node]')].map(g => ({
+      id: g.dataset.mapNode,
+      r: g.getBoundingClientRect(),
+    }));
     let crossed = 0;
     for (const g of document.querySelectorAll('.edge-g')) {
-      const r = db.relations.find(x => x.id === g.dataset.relEdit), path = g.querySelector('.edge');
-      const m = path.getScreenCTM(), len = path.getTotalLength();
+      const r = db.relations.find(x => x.id === g.dataset.relEdit),
+        path = g.querySelector('.edge');
+      const m = path.getScreenCTM(),
+        len = path.getTotalLength();
       for (let k = 1; k < 40; k++) {
-        const p = new DOMPoint(...Object.values(path.getPointAtLength(len * k / 40)).slice(0, 2)).matrixTransform(m);
-        if (boxes.some(b => b.id !== r.from && b.id !== r.to && p.x > b.r.left + 2 && p.x < b.r.right - 2 && p.y > b.r.top + 2 && p.y < b.r.bottom - 2)) { crossed++; break; }
+        const p = new DOMPoint(...Object.values(path.getPointAtLength((len * k) / 40)).slice(0, 2)).matrixTransform(m);
+        if (
+          boxes.some(
+            b =>
+              b.id !== r.from &&
+              b.id !== r.to &&
+              p.x > b.r.left + 2 &&
+              p.x < b.r.right - 2 &&
+              p.y > b.r.top + 2 &&
+              p.y < b.r.bottom - 2,
+          )
+        ) {
+          crossed++;
+          break;
+        }
       }
     }
     eq(crossed, 0, 'no line crosses another box');
     // Lines never pass so close that they seem to touch, away from where they start and end. And laying
     // the sample out stays quick.
-    const lines = [...document.querySelectorAll('.edge-g')].map(g => {
-      const path = g.querySelector('.edge'), len = path.getTotalLength();
-      const pts = Array.from({ length: 121 }, (_, k) => { const p = path.getPointAtLength(len * k / 120); return [p.x, p.y]; }).sort((p, q) => p[1] - q[1]);
-      return { r: db.relations.find(x => x.id === g.dataset.relEdit), pts };
-    }).filter(l => l.pts.at(-1)[1] - l.pts[0][1] > MAP.NH);
-    const xAt = (l, y) => { for (let i = 1; i < l.length; i++) if (y >= l[i - 1][1] && y <= l[i][1]) return l[i - 1][0] + (l[i][0] - l[i - 1][0]) * ((y - l[i - 1][1]) / ((l[i][1] - l[i - 1][1]) || 1)); return null; };
+    const lines = [...document.querySelectorAll('.edge-g')]
+      .map(g => {
+        const path = g.querySelector('.edge'),
+          len = path.getTotalLength();
+        const pts = Array.from({ length: 121 }, (_, k) => {
+          const p = path.getPointAtLength((len * k) / 120);
+          return [p.x, p.y];
+        }).sort((p, q) => p[1] - q[1]);
+        return { r: db.relations.find(x => x.id === g.dataset.relEdit), pts };
+      })
+      .filter(l => l.pts.at(-1)[1] - l.pts[0][1] > MAP.NH);
+    const xAt = (l, y) => {
+      for (let i = 1; i < l.length; i++)
+        if (y >= l[i - 1][1] && y <= l[i][1])
+          return l[i - 1][0] + (l[i][0] - l[i - 1][0]) * ((y - l[i - 1][1]) / (l[i][1] - l[i - 1][1] || 1));
+      return null;
+    };
     const grazes = [];
-    lines.forEach((c, i) => lines.slice(i + 1).forEach(o => {
-      const a = c.pts, b = o.pts, signs = new Set();
-      let min = Infinity;
-      for (let y = Math.max(a[0][1], b[0][1]) + 24; y <= Math.min(a.at(-1)[1], b.at(-1)[1]) - 24; y += 3) {
-        const xa = xAt(a, y), xb = xAt(b, y);
-        if (xa === null || xb === null) continue;
-        if (Math.abs(xa - xb) > 1) signs.add(Math.sign(xa - xb));
-        min = Math.min(min, Math.abs(xa - xb));
-      }
-      if (min < 6 && signs.size === 1) grazes.push(`${relText(c.r)} | ${relText(o.r)}`);
-    }));
+    lines.forEach((c, i) =>
+      lines.slice(i + 1).forEach(o => {
+        const a = c.pts,
+          b = o.pts,
+          signs = new Set();
+        let min = Infinity;
+        for (let y = Math.max(a[0][1], b[0][1]) + 24; y <= Math.min(a.at(-1)[1], b.at(-1)[1]) - 24; y += 3) {
+          const xa = xAt(a, y),
+            xb = xAt(b, y);
+          if (xa === null || xb === null) continue;
+          if (Math.abs(xa - xb) > 1) signs.add(Math.sign(xa - xb));
+          min = Math.min(min, Math.abs(xa - xb));
+        }
+        if (min < 6 && signs.size === 1) grazes.push(`${relText(c.r)} | ${relText(o.r)}`);
+      }),
+    );
     eq(grazes, [], 'no lines grazing each other');
     // (Its draw time is checked in perf.js: the clock stands still here.)
     deletePlan(plans.current);
 
     // A state measuring a goal crosses three rows of activities; nothing is in its way, so one curve.
     fresh('Straight lines');
-    const g = mk('goal', { title: 'G' }), s = mk('state', { title: 'S' });
-    const a = mk('activity', { title: 'A' }), b = mk('activity', { title: 'B' }), c = mk('activity', { title: 'C' });
-    rel(a, g, 'contributes'); rel(b, a, 'subactivity'); rel(c, b, 'subactivity'); rel(s, g, 'measures');
-    save(); setView('map');
+    const g = mk('goal', { title: 'G' }),
+      s = mk('state', { title: 'S' });
+    const a = mk('activity', { title: 'A' }),
+      b = mk('activity', { title: 'B' }),
+      c = mk('activity', { title: 'C' });
+    rel(a, g, 'contributes');
+    rel(b, a, 'subactivity');
+    rel(c, b, 'subactivity');
+    rel(s, g, 'measures');
+    save();
+    setView('map');
     const d = $(`[data-rel-edit="${db.relations.find(x => x.from === s.id).id}"] .edge`).getAttribute('d');
     const xs = [...d.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(m => +m[1]);
-    assert(xs.every((x, i) => !i || (x - xs[i - 1]) * (xs.at(-1) - xs[0]) >= -0.5), 'no zigzag, it bends one way only: ' + d);
+    assert(
+      xs.every((x, i) => !i || (x - xs[i - 1]) * (xs.at(-1) - xs[0]) >= -0.5),
+      'no zigzag, it bends one way only: ' + d,
+    );
     assert((d.match(/C/g) || []).length <= 2, 'straight down its column, curving only at the ends: ' + d);
     deletePlan(plans.current);
 
     // Goals sit as low as they can, next to the activities; parents still above their sub-goals.
     fresh('Low goals');
-    const top = mk('goal', { title: 'Parent' }), sub = mk('goal', { title: 'Sub' }), lone = mk('goal', { title: 'Lone' });
-    const mid = mk('goal', { title: 'Mid' }), deep = mk('goal', { title: 'Deep' });
-    rel(sub, top, 'subgoal'); rel(mid, top, 'subgoal'); rel(deep, mid, 'subgoal');
-    save(); setView('map');
+    const top = mk('goal', { title: 'Parent' }),
+      sub = mk('goal', { title: 'Sub' }),
+      lone = mk('goal', { title: 'Lone' });
+    const mid = mk('goal', { title: 'Mid' }),
+      deep = mk('goal', { title: 'Deep' });
+    rel(sub, top, 'subgoal');
+    rel(mid, top, 'subgoal');
+    rel(deep, mid, 'subgoal');
+    save();
+    setView('map');
     const y = it => Math.round($(`[data-map-node="${it.id}"]`).getBoundingClientRect().top);
     assert(y(top) < y(mid) && y(mid) < y(deep), 'a chain of sub-goals keeps its order');
     eq([y(lone), y(sub)], [y(deep), y(deep)], 'a goal with nothing below it sits in the lowest goal row');
@@ -4142,21 +7113,49 @@ window.moreTests = async ({ step, assert }) => {
     fresh('By deadline');
     const now = today();
     const none = mk('goal', { title: 'No deadline', status: 'active' });
-    const late = mk('goal', { title: 'Late', deadline: addDays(now, 90), startDate: addDays(now, -30), status: 'active' });
-    const soon = mk('goal', { title: 'Soon', deadline: addDays(now, 10), startDate: addDays(now, 5), status: 'active' });
-    const mid = mk('goal', { title: 'Mid', deadline: addDays(now, 40), startDate: addDays(now, -60), status: 'active' });
+    const late = mk('goal', {
+      title: 'Late',
+      deadline: addDays(now, 90),
+      startDate: addDays(now, -30),
+      status: 'active',
+    });
+    const soon = mk('goal', {
+      title: 'Soon',
+      deadline: addDays(now, 10),
+      startDate: addDays(now, 5),
+      status: 'active',
+    });
+    const mid = mk('goal', {
+      title: 'Mid',
+      deadline: addDays(now, 40),
+      startDate: addDays(now, -60),
+      status: 'active',
+    });
     // A group: an activity for Mid and a state measuring it.
     const a = mk('activity', { title: 'For mid', startDate: now, dueDate: addDays(now, 20) });
     const s = mk('state', { title: 'Mid state', history: [] });
-    rel(a, mid, 'contributes'); rel(s, mid, 'measures');
+    rel(a, mid, 'contributes');
+    rel(s, mid, 'measures');
     save();
     const want = ['Soon', 'Mid', 'Late', 'No deadline'];
     setView('goals');
-    eq([...document.querySelectorAll('.card.goal h3')].map(h => h.textContent), want, 'Goals view, no deadline last');
+    eq(
+      [...document.querySelectorAll('.card.goal h3')].map(h => h.textContent),
+      want,
+      'Goals view, no deadline last',
+    );
     setView('dashboard');
-    eq([...document.querySelectorAll('.card.goal h3')].map(h => h.textContent), want, 'Overview');
+    eq(
+      [...document.querySelectorAll('.card.goal h3')].map(h => h.textContent),
+      want,
+      'Overview',
+    );
     setView('timeline');
-    eq([...document.querySelectorAll('.tl-row.goal .tl-title')].map(x => x.textContent), want, 'Timeline: by deadline, not start');
+    eq(
+      [...document.querySelectorAll('.tl-row.goal .tl-title')].map(x => x.textContent),
+      want,
+      'Timeline: by deadline, not start',
+    );
     setView('map');
     const x = it => $(`[data-map-node="${it.id}"]`).getBoundingClientRect().left;
     const nearest = (b, gs) => gs.reduce((m, g) => (Math.abs(x(g) - x(b)) < Math.abs(x(m) - x(b)) ? g : m));
@@ -4165,54 +7164,97 @@ window.moreTests = async ({ step, assert }) => {
     // Dates play no part in the map: other deadlines leave every box where it was.
     const places = () => goals4.map(x).map(Math.round);
     const wasPlaces = places();
-    soon.deadline = addDays(now, 300); none.deadline = addDays(now, 1); save(); render();
+    soon.deadline = addDays(now, 300);
+    none.deadline = addDays(now, 1);
+    save();
+    render();
     eq(places(), wasPlaces, 'map: changing deadlines moves nothing');
-    delete none.deadline; soon.deadline = addDays(now, 10); save(); render();
-    eq([...$('[data-goal-select]').options].slice(1).map(o => o.textContent), want, 'goal filter list');
+    delete none.deadline;
+    soon.deadline = addDays(now, 10);
+    save();
+    render();
+    eq(
+      [...$('[data-goal-select]').options].slice(1).map(o => o.textContent),
+      want,
+      'goal filter list',
+    );
     deletePlan(plans.current);
     // Goals linked to each other stay together, wherever their dates fall; sharing an activity does not link them.
     fresh('Goal trees');
-    const top = mk('goal', { title: 'Top', deadline: addDays(now, 100) }), sub = mk('goal', { title: 'Sub', deadline: addDays(now, 5) });
-    const early = mk('goal', { title: 'Early', deadline: addDays(now, 30) }), later = mk('goal', { title: 'Later', deadline: addDays(now, 60) });
+    const top = mk('goal', { title: 'Top', deadline: addDays(now, 100) }),
+      sub = mk('goal', { title: 'Sub', deadline: addDays(now, 5) });
+    const early = mk('goal', { title: 'Early', deadline: addDays(now, 30) }),
+      later = mk('goal', { title: 'Later', deadline: addDays(now, 60) });
     const shared = mk('activity', { title: 'Shared', startDate: now, dueDate: addDays(now, 9) });
-    rel(sub, top, 'subgoal'); rel(shared, early, 'contributes'); rel(shared, later, 'contributes');
-    save(); setView('map');
-    assert(!(Math.min(x(early), x(later)) < x(sub) && x(sub) < Math.max(x(early), x(later))), 'Sub is not between Early and Later, which share an activity');
+    rel(sub, top, 'subgoal');
+    rel(shared, early, 'contributes');
+    rel(shared, later, 'contributes');
+    save();
+    setView('map');
+    assert(
+      !(Math.min(x(early), x(later)) < x(sub) && x(sub) < Math.max(x(early), x(later))),
+      'Sub is not between Early and Later, which share an activity',
+    );
     deletePlan(plans.current);
     // Soon and Late serve one vision, Mid another, so Mid between them would cross a line.
     fresh('Dates and visions');
     const keptVisions = visions;
     visions = { list: [], deleted: {} };
-    const v1 = { id: uid(), title: 'Wide vision', parents: [] }, v2 = { id: uid(), title: 'Other vision', parents: [] };
+    const v1 = { id: uid(), title: 'Wide vision', parents: [] },
+      v2 = { id: uid(), title: 'Other vision', parents: [] };
     visions.list.push(v1, v2);
     const gs = mk('goal', { title: 'Soon', deadline: addDays(now, 10), visions: [v1.id] });
     const gm = mk('goal', { title: 'Mid', deadline: addDays(now, 40), visions: [v2.id] });
     const gl = mk('goal', { title: 'Late', deadline: addDays(now, 90), visions: [v1.id] });
     const gn = mk('goal', { title: 'Free', deadline: addDays(now, 50) });
-    save(); saveVisions(); setView('map');
+    save();
+    saveVisions();
+    setView('map');
     const seg = g => [x(g), x(findVision(g.visions[0]))];
     const cross = (a, b) => (seg(a)[0] - seg(b)[0]) * (seg(a)[1] - seg(b)[1]) < 0;
-    assert(!cross(gs, gm) && !cross(gm, gl) && !cross(gs, gl), `no lines cross: ${[gs, gm, gl].map(g => g.title + ' ' + seg(g).map(Math.round)).join(', ')}`);
+    assert(
+      !cross(gs, gm) && !cross(gm, gl) && !cross(gs, gl),
+      `no lines cross: ${[gs, gm, gl].map(g => g.title + ' ' + seg(g).map(Math.round)).join(', ')}`,
+    );
     assert(!(Math.min(x(gs), x(gl)) < x(gm) && x(gm) < Math.max(x(gs), x(gl))), 'Mid moved out from between them');
     deletePlan(plans.current);
     // When a crossing cannot be avoided, it falls on the activities' lines, not on those to the visions.
     fresh('Visions first');
-    const g1 = mk('goal', { title: 'One', visions: [v1.id] }), g2 = mk('goal', { title: 'Two', visions: [v2.id] }), g3 = mk('goal', { title: 'Three', visions: [v1.id] });
-    const a12 = mk('activity', { title: 'A', startDate: now, dueDate: addDays(now, 9) }), a23 = mk('activity', { title: 'B', startDate: now, dueDate: addDays(now, 9) });
-    rel(a12, g1, 'contributes'); rel(a12, g2, 'contributes'); rel(a23, g2, 'contributes'); rel(a23, g3, 'contributes');
-    save(); setView('map');
-    assert(!(Math.min(x(g1), x(g3)) < x(g2) && x(g2) < Math.max(x(g1), x(g3))), 'the goal of the other vision is not between them');
+    const g1 = mk('goal', { title: 'One', visions: [v1.id] }),
+      g2 = mk('goal', { title: 'Two', visions: [v2.id] }),
+      g3 = mk('goal', { title: 'Three', visions: [v1.id] });
+    const a12 = mk('activity', { title: 'A', startDate: now, dueDate: addDays(now, 9) }),
+      a23 = mk('activity', { title: 'B', startDate: now, dueDate: addDays(now, 9) });
+    rel(a12, g1, 'contributes');
+    rel(a12, g2, 'contributes');
+    rel(a23, g2, 'contributes');
+    rel(a23, g3, 'contributes');
+    save();
+    setView('map');
+    assert(
+      !(Math.min(x(g1), x(g3)) < x(g2) && x(g2) < Math.max(x(g1), x(g3))),
+      'the goal of the other vision is not between them',
+    );
     deletePlan(plans.current);
-    visions = keptVisions; saveVisions();
+    visions = keptVisions;
+    saveVisions();
     return want.join(' < ');
   });
 
   await step('map: right-clicking empty space opens the Add menu there; elsewhere the browser keeps its own', () => {
     const { g } = mapFixture();
-    const rc = (el, x, y) => { const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: x, clientY: y }); el.dispatchEvent(e); return e; };
+    const rc = (el, x, y) => {
+      const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: x, clientY: y });
+      el.dispatchEvent(e);
+      return e;
+    };
     const ev = rc($('.map-wrap svg'), 300, 200);
     assert(ev.defaultPrevented && !ctxMenu.hidden, 'the menu opens instead of the browser menu');
-    eq([...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx), ['new:goal', 'new:activity', 'new:state', 'new:vision'], 'what the Add button offers');
+    eq(
+      [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx),
+      ['new:goal', 'new:activity', 'new:state', 'new:vision'],
+      'what the Add button offers',
+    );
     ctxMenu.style.animation = 'none';
     const m = ctxMenu.getBoundingClientRect();
     assert(Math.abs(m.left - 300) < 1 && Math.abs(m.top - 200) < 1, `at the pointer: ${m.left},${m.top}`);
@@ -4241,13 +7283,37 @@ window.moreTests = async ({ step, assert }) => {
     clickEl(edge(r.id));
     assert(!modal.open, 'a click does not open the form');
     eq([ui.mapRel, ui.mapSelected], [r.id, null], 'the line is selected');
-    assert(edge(r.id).classList.contains('sel') && getComputedStyle(edge(r.id).querySelector('.edge')).filter.includes('line-glow') && $('#line-glow') && [...document.querySelectorAll('.map-wrap .edge-g:not(.sel) .edge')].every(e => getComputedStyle(e).filter === 'none'), 'drawn as selected, glowing, under the boxes');
-    assert([...document.querySelectorAll('[data-rel-edit]')].filter(e => e.dataset.relEdit !== r.id).every(e => e.classList.contains('dim')), 'other lines dimmed');
-    assert(!nodeEl(a.id).classList.contains('dim') && !nodeEl(g.id).classList.contains('dim'), 'its two items stay lit');
+    assert(
+      edge(r.id).classList.contains('sel') &&
+        getComputedStyle(edge(r.id).querySelector('.edge')).filter.includes('line-glow') &&
+        $('#line-glow') &&
+        [...document.querySelectorAll('.map-wrap .edge-g:not(.sel) .edge')].every(
+          e => getComputedStyle(e).filter === 'none',
+        ),
+      'drawn as selected, glowing, under the boxes',
+    );
+    assert(
+      [...document.querySelectorAll('[data-rel-edit]')]
+        .filter(e => e.dataset.relEdit !== r.id)
+        .every(e => e.classList.contains('dim')),
+      'other lines dimmed',
+    );
+    assert(
+      !nodeEl(a.id).classList.contains('dim') && !nodeEl(g.id).classList.contains('dim'),
+      'its two items stay lit',
+    );
     assert(nodeEl(b.id).classList.contains('dim') && nodeEl(s.id).classList.contains('dim'), 'the rest dims');
     const row = $('.map-rel-selection');
-    assert(row && row.textContent.includes('Train') && row.textContent.includes('Run a marathon'), 'a row names the relationship');
-    assert(row.querySelector('[data-rel-open]') && row.querySelector('[data-rel-remove]') && row.querySelector('[data-map-clear]'), 'with Edit, Remove and Clear (for touch screens)');
+    assert(
+      row && row.textContent.includes('Train') && row.textContent.includes('Run a marathon'),
+      'a row names the relationship',
+    );
+    assert(
+      row.querySelector('[data-rel-open]') &&
+        row.querySelector('[data-rel-remove]') &&
+        row.querySelector('[data-map-clear]'),
+      'with Edit, Remove and Clear (for touch screens)',
+    );
     // Selecting an item clears the line, and the other way round.
     clickEl(nodeEl(s.id));
     eq([ui.mapRel, ui.mapSelected], [null, s.id], 'an item click selects the item instead');
@@ -4278,7 +7344,8 @@ window.moreTests = async ({ step, assert }) => {
     eq($('.map-rel-selection [data-map-clear]').textContent, 'Deselect', 'the button says Deselect');
     $('.map-rel-selection [data-map-clear]').click();
     eq(ui.mapRel, null, 'Deselect deselects it');
-    ui.mapSelected = a.id; render();
+    ui.mapSelected = a.id;
+    render();
     eq($('[data-map-clear]').textContent, 'Deselect', 'an item’s row says Deselect too');
     changeLanguage('sl');
     eq($('[data-map-clear]').textContent, 'Prekliči izbiro', 'in Slovenian');
@@ -4292,7 +7359,10 @@ window.moreTests = async ({ step, assert }) => {
     eq(ui.mapSelected, a.id, 'item selected');
     press('Escape', nodeEl(a.id));
     eq(ui.mapSelected, null, 'Escape deselects an item too');
-    assert(!nodeEl(g.id).classList.contains('dim') && !nodeEl(s.id).classList.contains('dim'), 'nothing dimmed after Escape');
+    assert(
+      !nodeEl(g.id).classList.contains('dim') && !nodeEl(s.id).classList.contains('dim'),
+      'nothing dimmed after Escape',
+    );
     clickEl(nodeEl(a.id));
     openForm('goal', g.id);
     press('Escape', document.body);
@@ -4307,11 +7377,16 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('map: Delete or Backspace removes the selected line at once', () => {
     const { g, a, b, s } = mapFixture();
-    const n0 = db.relations.length, r = relOf(a, g), keep = clone(db.relations.filter(x => x.id !== r.id));
+    const n0 = db.relations.length,
+      r = relOf(a, g),
+      keep = clone(db.relations.filter(x => x.id !== r.id));
     clickEl(edge(r.id));
     let asked = 0;
     const realConfirm = window.confirm;
-    window.confirm = () => { asked++; return true; };
+    window.confirm = () => {
+      asked++;
+      return true;
+    };
     try {
       assert(press('Delete', document.body), 'Delete is handled');
       eq(asked, 0, 'no question for a line');
@@ -4332,7 +7407,9 @@ window.moreTests = async ({ step, assert }) => {
       press('Delete', edge(last.id));
       assert(!relOf(s, g), 'Delete on a focused line removes it');
       eq(db.relations.length, 0, 'all gone');
-    } finally { window.confirm = realConfirm; }
+    } finally {
+      window.confirm = realConfirm;
+    }
     return `${n0} → 0`;
   });
 
@@ -4343,16 +7420,26 @@ window.moreTests = async ({ step, assert }) => {
     try {
       clickEl(nodeEl(a.id));
       eq(ui.mapSelected, a.id, 'item selected');
-      window.confirm = q => { question = q; return false; };
+      window.confirm = q => {
+        question = q;
+        return false;
+      };
       assert(press('Delete', document.body), 'Delete is handled');
       eq(question, t('confirm.delete', { name: 'Train' }), 'the delete question names it');
       assert(findEntity(a.id) && relOf(a, g), 'cancel keeps it and its links');
       eq(ui.mapSelected, a.id, 'still selected after cancel');
-      window.confirm = q => { question = q; return true; };
+      window.confirm = q => {
+        question = q;
+        return true;
+      };
       press('Backspace', document.body);
       assert(!findEntity(a.id) && !relOf(a, g), 'confirm deletes it and its links');
       assert(findEntity(g.id) && relOf(b, g), 'everything else stays');
-      eq(readPlan(plans.current).activities.map(x => x.id), [b.id], 'saved');
+      eq(
+        readPlan(plans.current).activities.map(x => x.id),
+        [b.id],
+        'saved',
+      );
       eq($('#toast').textContent, t('toast.deleted.activity'), 'says so');
       eq(ui.mapSelected, null, 'selection cleared');
       // A focused item works without clicking it first; each kind gets its own message.
@@ -4365,7 +7452,9 @@ window.moreTests = async ({ step, assert }) => {
       press('Delete', document.body);
       assert(!findEntity(g.id), 'goal deleted');
       eq($('#toast').textContent, t('toast.deleted.goal'), 'goal message');
-    } finally { window.confirm = realConfirm; }
+    } finally {
+      window.confirm = realConfirm;
+    }
     return question;
   });
 
@@ -4373,7 +7462,10 @@ window.moreTests = async ({ step, assert }) => {
     const { g, a } = mapFixture();
     const realConfirm = window.confirm;
     let asked = 0;
-    window.confirm = () => { asked++; return true; };
+    window.confirm = () => {
+      asked++;
+      return true;
+    };
     const count = () => db.goals.length + db.activities.length + db.states.length + db.relations.length;
     const n0 = count();
     try {
@@ -4410,7 +7502,9 @@ window.moreTests = async ({ step, assert }) => {
       press('Delete', document.body);
       eq([count(), asked], [n0, 0], 'other views ignore it');
       setView('map');
-    } finally { window.confirm = realConfirm; }
+    } finally {
+      window.confirm = realConfirm;
+    }
     return 'ok';
   });
 
@@ -4421,16 +7515,23 @@ window.moreTests = async ({ step, assert }) => {
     assert(modal.open && formCtx.kind === 'activity' && formCtx.id === a.id, 'double-click opens the activity');
     eq(ui.mapSelected, a.id, 'and leaves it selected');
     modal.close();
-    for (const [x, kind] of [[g, 'goal'], [s, 'state']]) {
-      clickEl(nodeEl(x.id), 1); clickEl(nodeEl(x.id), 2);
+    for (const [x, kind] of [
+      [g, 'goal'],
+      [s, 'state'],
+    ]) {
+      clickEl(nodeEl(x.id), 1);
+      clickEl(nodeEl(x.id), 2);
       assert(modal.open && formCtx.kind === kind && formCtx.id === x.id, `double-click opens the ${kind}`);
       modal.close();
     }
     // Two clicks on different items, or slow clicks, just select.
-    ui.mapSelected = null; render();
-    clickEl(nodeEl(a.id)); clickEl(nodeEl(g.id));
+    ui.mapSelected = null;
+    render();
+    clickEl(nodeEl(a.id));
+    clickEl(nodeEl(g.id));
     assert(!modal.open && ui.mapSelected === g.id, 'two items: just selects the second');
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     const realNow = performance.now.bind(performance);
     let shift = 0;
     performance.now = () => realNow() + shift;
@@ -4439,10 +7540,17 @@ window.moreTests = async ({ step, assert }) => {
       shift = 2000;
       clickEl(nodeEl(a.id));
       assert(!modal.open && ui.mapSelected === null, 'a slow second click deselects as before');
-    } finally { performance.now = realNow; }
+    } finally {
+      performance.now = realNow;
+    }
     // Enter or Space on an item selects it; on the selected item they open it. Neither counts toward a double-click.
-    for (const [first, second] of [['Enter', 'Enter'], [' ', ' '], ['Enter', ' ']]) {
-      ui.mapSelected = null; render();
+    for (const [first, second] of [
+      ['Enter', 'Enter'],
+      [' ', ' '],
+      ['Enter', ' '],
+    ]) {
+      ui.mapSelected = null;
+      render();
       nodeEl(a.id).focus();
       press(first, nodeEl(a.id));
       assert(!modal.open && ui.mapSelected === a.id, `“${first}” selects`);
@@ -4453,7 +7561,9 @@ window.moreTests = async ({ step, assert }) => {
     }
     // With an item selected by a click and the focus elsewhere in the map, Enter or Space opens it too.
     for (const key of ['Enter', ' ']) {
-      ui.mapSelected = g.id; ui.mapRel = null; render();
+      ui.mapSelected = g.id;
+      ui.mapRel = null;
+      render();
       document.activeElement?.blur();
       assert(press(key, document.body), `“${key}” handled`);
       assert(modal.open && formCtx.kind === 'goal' && formCtx.id === g.id, `“${key}” opens the selected item`);
@@ -4467,9 +7577,12 @@ window.moreTests = async ({ step, assert }) => {
     assert(modal.open && formCtx.kind === 'relation' && formCtx.id === line.id, 'Enter opens the selected line');
     modal.close();
     // Nothing selected, typing, or another view: Enter and Space are left alone.
-    ui.mapSelected = null; ui.mapRel = null; render();
+    ui.mapSelected = null;
+    ui.mapRel = null;
+    render();
     assert(!press('Enter', document.body) && !modal.open, 'nothing selected: Enter does nothing');
-    ui.mapSelected = a.id; render();
+    ui.mapSelected = a.id;
+    render();
     const field = document.createElement('input');
     viewEl.append(field);
     field.focus();
@@ -4479,11 +7592,16 @@ window.moreTests = async ({ step, assert }) => {
     assert(!press('Enter', document.body) && !modal.open, 'other views ignore it');
     setView('map');
     // While linking by tapping, a double tap does not open anything.
-    ui.mapLinkFrom = a.id; render();
+    ui.mapLinkFrom = a.id;
+    render();
     clickEl(nodeEl(s.id), 1);
-    assert(!(modal.open && formCtx.kind === 'state'), 'a tap while linking finishes the link instead of opening the item');
+    assert(
+      !(modal.open && formCtx.kind === 'state'),
+      'a tap while linking finishes the link instead of opening the item',
+    );
     if (modal.open) modal.close();
-    ui.mapLinkFrom = null; render();
+    ui.mapLinkFrom = null;
+    render();
     deletePlan(plans.current);
     return 'ok';
   });
@@ -4492,7 +7610,8 @@ window.moreTests = async ({ step, assert }) => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
       const words = { en: [/Delete/, /double-click/i, /Enter/], sl: [/Delete/, /dvojnim klik/i, /Enter/] }[code];
-      for (const key of ['help.view.map', 'tour.map.text']) words.forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
+      for (const key of ['help.view.map', 'tour.map.text'])
+        words.forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
       assert(t('map.relLabel', { rel: 'x' }).includes('x'), `${code} line label`);
     }
     changeLanguage('en');
@@ -4507,7 +7626,9 @@ window.moreTests = async ({ step, assert }) => {
     const a = mk('activity', { title: 'Plan', startDate: addDays(now, -5), dueDate: addDays(now, 5) });
     const b = mk('activity', { title: 'Build', startDate: addDays(now, 6), dueDate: addDays(now, 30) });
     const c = mk('activity', { title: 'Paint', startDate: addDays(now, 31), dueDate: addDays(now, 40) });
-    rel(a, g, 'contributes'); rel(b, a, 'depends'); rel(c, b, 'depends');
+    rel(a, g, 'contributes');
+    rel(b, a, 'depends');
+    rel(c, b, 'depends');
     save();
     ui.tlDeps = true;
     setView('timeline');
@@ -4518,18 +7639,23 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('timeline: double-click or Enter on the selected bar edits it; Esc deselects', () => {
     const { g, a } = tlFixture();
-    clickEl(bar(a.id), 1); clickEl(bar(a.id), 2);
+    clickEl(bar(a.id), 1);
+    clickEl(bar(a.id), 2);
     assert(modal.open && formCtx.kind === 'activity' && formCtx.id === a.id, 'double-click opens the activity');
     eq(ui.mapSelected, a.id, 'left selected');
     modal.close();
-    clickEl(bar(g.id), 1); clickEl(bar(g.id), 2);
+    clickEl(bar(g.id), 1);
+    clickEl(bar(g.id), 2);
     assert(modal.open && formCtx.kind === 'goal' && formCtx.id === g.id, 'double-click opens the goal');
     modal.close();
     // Enter or Space: the first selects, the next opens.
-    ui.mapSelected = null; render();
-    bar(a.id).focus(); press('Enter', bar(a.id));
+    ui.mapSelected = null;
+    render();
+    bar(a.id).focus();
+    press('Enter', bar(a.id));
     assert(!modal.open && ui.mapSelected === a.id, 'Enter selects');
-    bar(a.id).focus(); press(' ', bar(a.id));
+    bar(a.id).focus();
+    press(' ', bar(a.id));
     assert(modal.open && formCtx.id === a.id, 'Space on the selected bar opens it');
     modal.close();
     document.activeElement?.blur();
@@ -4549,12 +7675,18 @@ window.moreTests = async ({ step, assert }) => {
     try {
       // Bars.
       clickEl(bar(c.id));
-      window.confirm = q => { question = q; return false; };
+      window.confirm = q => {
+        question = q;
+        return false;
+      };
       press('Delete', document.body);
       assert(question === t('confirm.delete', { name: 'Paint' }) && findEntity(c.id), 'asks; cancel keeps it');
       window.confirm = () => true;
       press('Backspace', document.body);
-      assert(!findEntity(c.id) && !db.relations.some(r => r.from === c.id || r.to === c.id), 'confirm deletes it and its links');
+      assert(
+        !findEntity(c.id) && !db.relations.some(r => r.from === c.id || r.to === c.id),
+        'confirm deletes it and its links',
+      );
       eq($('#toast').textContent, t('toast.deleted.activity'), 'says so');
       // Dependency arrows: clickable, with a wide hit area, and reachable with Tab.
       const r = db.relations.find(x => x.type === 'depends' && x.from === b.id);
@@ -4564,8 +7696,16 @@ window.moreTests = async ({ step, assert }) => {
       clickEl(dep(r.id));
       eq([ui.mapRel, ui.mapSelected], [r.id, null], 'a click selects it');
       assert(dep(r.id).classList.contains('sel'), 'drawn as selected');
-      assert(!bar(a.id).classList.contains('dim') && !bar(b.id).classList.contains('dim') && bar(g.id).classList.contains('dim'), 'its two bars lit, the rest dimmed');
-      assert($('.map-rel-selection') && $('.map-rel-selection').textContent.includes('Build'), 'the selection row names it');
+      assert(
+        !bar(a.id).classList.contains('dim') &&
+          !bar(b.id).classList.contains('dim') &&
+          bar(g.id).classList.contains('dim'),
+        'its two bars lit, the rest dimmed',
+      );
+      assert(
+        $('.map-rel-selection') && $('.map-rel-selection').textContent.includes('Build'),
+        'the selection row names it',
+      );
       clickEl(dep(r.id), 2);
       assert(modal.open && formCtx.kind === 'relation' && formCtx.id === r.id, 'a second click opens it');
       modal.close();
@@ -4573,27 +7713,44 @@ window.moreTests = async ({ step, assert }) => {
       eq(ui.mapRel, null, 'Esc deselects it');
       clickEl(dep(r.id));
       press('Delete', document.body);
-      assert(!db.relations.some(x => x.id === r.id) && findEntity(a.id) && findEntity(b.id), 'Delete removes the dependency, not the bars');
+      assert(
+        !db.relations.some(x => x.id === r.id) && findEntity(a.id) && findEntity(b.id),
+        'Delete removes the dependency, not the bars',
+      );
       eq($('#toast').textContent, t('toast.relRemoved'), 'says so');
-      eq(readPlan(plans.current).relations.some(x => x.id === r.id), false, 'saved');
+      eq(
+        readPlan(plans.current).relations.some(x => x.id === r.id),
+        false,
+        'saved',
+      );
       // With dependencies hidden there is nothing to select or delete there.
-      rel(b, a, 'depends'); save();
+      rel(b, a, 'depends');
+      save();
       const r2 = db.relations.find(x => x.type === 'depends');
-      ui.mapRel = r2.id; ui.tlDeps = false; render();
+      ui.mapRel = r2.id;
+      ui.tlDeps = false;
+      render();
       press('Delete', document.body);
-      assert(db.relations.some(x => x.id === r2.id), 'a hidden arrow is not deleted');
-      ui.tlDeps = true; ui.mapRel = null;
+      assert(
+        db.relations.some(x => x.id === r2.id),
+        'a hidden arrow is not deleted',
+      );
+      ui.tlDeps = true;
+      ui.mapRel = null;
       // Typing or another view: left alone.
       clickEl(bar(a.id));
       const field = document.createElement('input');
-      viewEl.append(field); field.focus();
+      viewEl.append(field);
+      field.focus();
       press('Delete', field);
       assert(findEntity(a.id), 'nothing deleted while typing');
       field.remove();
       setView('goals');
       press('Delete', document.body);
       assert(findEntity(a.id), 'other views ignore it');
-    } finally { window.confirm = realConfirm; }
+    } finally {
+      window.confirm = realConfirm;
+    }
     deletePlan(plans.current);
     return question;
   });
@@ -4601,7 +7758,8 @@ window.moreTests = async ({ step, assert }) => {
   await step('timeline: help mentions the keys, in both languages', () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
-      for (const key of ['help.view.timeline']) [/Delete/, /Enter/, /Esc/].forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
+      for (const key of ['help.view.timeline'])
+        [/Delete/, /Enter/, /Esc/].forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
     }
     changeLanguage('en');
     return t('tl.hint');
@@ -4620,44 +7778,76 @@ window.moreTests = async ({ step, assert }) => {
     const c = mk('activity', { title: 'C', startDate: d(11), dueDate: d(20) });
     const u = mk('activity', { title: 'U', startDate: d(1), dueDate: d(3) });
     rel(g1a, g1, 'subgoal');
-    rel(a, g1, 'contributes'); rel(a, g2, 'contributes'); rel(a1, a, 'subactivity');
-    rel(b, g1, 'contributes'); rel(b, g1a, 'contributes');
-    rel(c, g2, 'contributes'); rel(c, a, 'depends');
+    rel(a, g1, 'contributes');
+    rel(a, g2, 'contributes');
+    rel(a1, a, 'subactivity');
+    rel(b, g1, 'contributes');
+    rel(b, g1a, 'contributes');
+    rel(c, g2, 'contributes');
+    rel(c, a, 'depends');
     save();
-    ui.tlDeps = true; ui.hideDone = false; ui.timelineGoal = '';
+    ui.tlDeps = true;
+    ui.hideDone = false;
+    ui.timelineGoal = '';
     setView('timeline');
     return { g1, g1a, g2, g3, a, a1, b, c, u };
   };
-  const rowsText = rows => rows.map(r => r.kind === 'group' ? `[${r.label}]` : r.item.title).join(' ');
-  const shownRows = () => [...document.querySelectorAll('.tl-body .tl-row')].map(r => r.classList.contains('tl-group') ? '[group]' : r.querySelector('.tl-title').textContent).join(' ');
+  const rowsText = rows => rows.map(r => (r.kind === 'group' ? `[${r.label}]` : r.item.title)).join(' ');
+  const shownRows = () =>
+    [...document.querySelectorAll('.tl-body .tl-row')]
+      .map(r => (r.classList.contains('tl-group') ? '[group]' : r.querySelector('.tl-title').textContent))
+      .join(' ');
   const fold = id => $(`[data-tl-fold="${id}"]`);
   const $$ = sel => [...document.querySelectorAll(sel)];
 
   await step('plan menu badges: green, yellow when something is due today, red when overdue; optional', () => {
     fresh('Badges');
-    const badge = () => { render(); return [...new Set([...document.querySelectorAll(`[data-plan-select] option[value="${plans.current}"]`)].map(o => o.textContent.split(' ')[0]))]; };
+    const badge = () => {
+      render();
+      return [
+        ...new Set(
+          [...document.querySelectorAll(`[data-plan-select] option[value="${plans.current}"]`)].map(
+            o => o.textContent.split(' ')[0],
+          ),
+        ),
+      ];
+    };
     eq(badge(), ['🟢'], 'an empty plan is fine');
     const a = mk('activity', { dueDate: d(0) });
     eq(badge(), ['🟡'], 'activity due today');
-    a.status = 'done'; eq(badge(), ['🟢'], 'done today');
-    a.status = 'todo'; a.dueDate = d(-1); eq(badge(), ['🔴'], 'overdue activity');
+    a.status = 'done';
+    eq(badge(), ['🟢'], 'done today');
+    a.status = 'todo';
+    a.dueDate = d(-1);
+    eq(badge(), ['🔴'], 'overdue activity');
     a.status = 'done';
     const g = mk('goal', { deadline: d(0) });
     eq(badge(), ['🟡'], 'goal deadline today');
-    g.deadline = d(-2); eq(badge(), ['🔴'], 'overdue goal');
-    g.status = 'paused'; eq(badge(), ['🟢'], 'paused goals do not count');
-    g.status = 'achieved'; eq(badge(), ['🟢'], 'nor achieved ones');
-    const r = mk('activity', { startDate: d(-3), repeat: { every: 1, unit: 'day' }, checkins: { [d(-3)]: 1, [d(-2)]: 1, [d(-1)]: 1 } });
+    g.deadline = d(-2);
+    eq(badge(), ['🔴'], 'overdue goal');
+    g.status = 'paused';
+    eq(badge(), ['🟢'], 'paused goals do not count');
+    g.status = 'achieved';
+    eq(badge(), ['🟢'], 'nor achieved ones');
+    const r = mk('activity', {
+      startDate: d(-3),
+      repeat: { every: 1, unit: 'day' },
+      checkins: { [d(-3)]: 1, [d(-2)]: 1, [d(-1)]: 1 },
+    });
     eq(badge(), ['🟡'], 'daily routine not ticked today');
-    r.checkins[d(0)] = 1; eq(badge(), ['🟢'], 'ticked today');
+    r.checkins[d(0)] = 1;
+    eq(badge(), ['🟢'], 'ticked today');
     // A daily routine is late for a day missed this week until it is ticked again; on a Monday
     // yesterday was last week.
-    delete r.checkins[d(-1)]; eq(badge(), ['🟢'], 'a missed day, then ticked today: back on track');
-    delete r.checkins[d(0)]; eq(badge(), [weekday(today()) === 0 ? '🟡' : '🔴'], 'a missed day, not ticked since');
+    delete r.checkins[d(-1)];
+    eq(badge(), ['🟢'], 'a missed day, then ticked today: back on track');
+    delete r.checkins[d(0)];
+    eq(badge(), [weekday(today()) === 0 ? '🟡' : '🔴'], 'a missed day, not ticked since');
     r.checkins[d(0)] = 1;
     r.checkins[d(-1)] = 1;
     // Another plan's badge comes from its saved data.
-    save(); const busy = plans.current;
+    save();
+    const busy = plans.current;
     createPlan('Badges 2');
     const other = () => $(`#planName option[value="${busy}"]`).textContent;
     eq(other(), '🟢 Badges', 'other plan, read from storage');
@@ -4665,49 +7855,88 @@ window.moreTests = async ({ step, assert }) => {
     // On by default; the setting hides them and is remembered.
     eq(SETTINGS.planBadges.get(), true, 'on by default');
     const box = settings.querySelector('[data-setting="planBadges"]');
-    renderSettings(); assert(box.checked, 'switch shows on');
+    renderSettings();
+    assert(box.checked, 'switch shows on');
     box.click();
     assert(!ui.planBadges && prefs.get('planBadges') === false, 'switched off and remembered');
     eq(other(), 'Badges', 'plain names without badges');
     box.click();
     eq(other(), '🟢 Badges', 'back on');
     const name = other();
-    deletePlan(plans.current); deletePlan(busy);
+    deletePlan(plans.current);
+    deletePlan(busy);
     return name;
   });
 
   await step('timeline: prerequisites with no goal of their own sit under the activity that waits for them', () => {
     fresh('Prereqs');
-    const g1 = mk('goal', { title: 'G1' }), g2 = mk('goal', { title: 'G2' });
-    const a = mk('activity', { title: 'A' }), b = mk('activity', { title: 'B' });
-    const p = mk('activity', { title: 'P' }), pp = mk('activity', { title: 'PP' });
-    const top = mk('activity', { title: 'Top' }), part = mk('activity', { title: 'Part' });
-    const owned = mk('activity', { title: 'Owned' }), waiter = mk('activity', { title: 'Waiter' });
-    rel(a, g1, 'contributes'); rel(b, g2, 'contributes'); rel(owned, g2, 'contributes');
-    rel(a, p, 'depends'); rel(p, pp, 'depends');      // a chain of prerequisites
-    rel(part, top, 'subactivity'); rel(a, part, 'depends'); // a prerequisite inside a tree brings the whole tree
-    rel(b, p, 'depends');                              // needed by work under two goals
-    rel(a, owned, 'depends');                          // has its own goal: stays there only
-    rel(waiter, a, 'depends');                         // waits for goal work, but is no prerequisite
+    const g1 = mk('goal', { title: 'G1' }),
+      g2 = mk('goal', { title: 'G2' });
+    const a = mk('activity', { title: 'A' }),
+      b = mk('activity', { title: 'B' });
+    const p = mk('activity', { title: 'P' }),
+      pp = mk('activity', { title: 'PP' });
+    const top = mk('activity', { title: 'Top' }),
+      part = mk('activity', { title: 'Part' });
+    const owned = mk('activity', { title: 'Owned' }),
+      waiter = mk('activity', { title: 'Waiter' });
+    rel(a, g1, 'contributes');
+    rel(b, g2, 'contributes');
+    rel(owned, g2, 'contributes');
+    rel(a, p, 'depends');
+    rel(p, pp, 'depends'); // a chain of prerequisites
+    rel(part, top, 'subactivity');
+    rel(a, part, 'depends'); // a prerequisite inside a tree brings the whole tree
+    rel(b, p, 'depends'); // needed by work under two goals
+    rel(a, owned, 'depends'); // has its own goal: stays there only
+    rel(waiter, a, 'depends'); // waits for goal work, but is no prerequisite
     const rows = timelineRows(null);
     eq(rowsText(rows), `G1 A P PP Top Part G2 B P PP Owned [${t('tl.unlinked')}] Waiter`, 'rows');
     const row = (title, goal) => rows.find(r => r.item?.title === title && r.goal === goal.id);
     const ra = rows.indexOf(row('A', g1));
-    eq([row('P', g1).rel, row('P', g1).parent, row('P', g1).depth], ['depends', ra, row('A', g1).depth + 1], 'P hangs off A');
+    eq(
+      [row('P', g1).rel, row('P', g1).parent, row('P', g1).depth],
+      ['depends', ra, row('A', g1).depth + 1],
+      'P hangs off A',
+    );
     eq(row('PP', g1).parent, rows.indexOf(row('P', g1)), 'PP hangs off P');
-    eq([row('Part', g1).rel, row('Part', g1).parent], ['subactivity', rows.indexOf(row('Top', g1))], 'the tree keeps its shape');
+    eq(
+      [row('Part', g1).rel, row('Part', g1).parent],
+      ['subactivity', rows.indexOf(row('Top', g1))],
+      'the tree keeps its shape',
+    );
     eq(row('P', g1).also, ['G2'], 'listed under both goals, marked as such');
     // Each copy gets its own arrows, paired with the copy under the same goal (arrows need dates).
     [a, b, p, pp].forEach((x, k) => Object.assign(x, { startDate: d(k), dueDate: d(k + 2) }));
-    ui.tlDeps = true; render(); setView('timeline');
+    ui.tlDeps = true;
+    render();
+    setView('timeline');
     const yOf = (title, goal) => rows.indexOf(row(title, goal)) * TL.ROW + TL.ROW / 2;
-    const arrows = [...document.querySelectorAll(`.tl-deps [data-rel-edit]`)].map(g => [g.dataset.relEdit, ...g.querySelector('.tl-dep').getAttribute('d').match(/^M[\d.-]+,([\d.-]+).*?([\d.-]+)\s+H[\d.-]+$/).slice(1).map(Number)]);
+    const arrows = [...document.querySelectorAll(`.tl-deps [data-rel-edit]`)].map(g => [
+      g.dataset.relEdit,
+      ...g
+        .querySelector('.tl-dep')
+        .getAttribute('d')
+        .match(/^M[\d.-]+,([\d.-]+).*?([\d.-]+)\s+H[\d.-]+$/)
+        .slice(1)
+        .map(Number),
+    ]);
     const has = (from, to, goal) => arrows.some(([, y1, y2]) => y1 === yOf(to, goal) && y2 === yOf(from, goal));
-    assert(['G1', 'G2'].every((n, k) => { const g = [g1, g2][k]; return has(n === 'G1' ? 'A' : 'B', 'P', g) && has('P', 'PP', g); }), 'P and PP joined under each goal');
+    assert(
+      ['G1', 'G2'].every((n, k) => {
+        const g = [g1, g2][k];
+        return has(n === 'G1' ? 'A' : 'B', 'P', g) && has('P', 'PP', g);
+      }),
+      'P and PP joined under each goal',
+    );
     ui.tlDeps = false;
-    render(); setView('timeline');
+    render();
+    setView('timeline');
     assert($(`[data-tl-node="${p.id}"] .tl-elbow.dash`), 'drawn with a dashed dependency line');
-    assert([...document.querySelectorAll('.tl-legend span')].some(x => x.textContent === relLabel('depends')), 'the legend names it');
+    assert(
+      [...document.querySelectorAll('.tl-legend span')].some(x => x.textContent === relLabel('depends')),
+      'the legend names it',
+    );
     // A folded goal hides its prerequisites too, without sending them to the unlinked group.
     eq(rowsText(timelineRows(null, new Set([g1.id, g2.id]))), `G1 G2 [${t('tl.unlinked')}] Waiter`, 'folded');
     return rowsText(rows);
@@ -4715,36 +7944,79 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('timeline: an activity that serves several goals is listed under each', () => {
     const { g1, g2, a, b, c } = foldFixture();
-    eq(rowsText(timelineRows(null)), `G1 A A1 B G1a B G2 A A1 C G3 [${t('tl.unlinked')}] U`, 'under each goal, with its sub-activities');
+    eq(
+      rowsText(timelineRows(null)),
+      `G1 A A1 B G1a B G2 A A1 C G3 [${t('tl.unlinked')}] U`,
+      'under each goal, with its sub-activities',
+    );
     eq(document.querySelectorAll(`[data-tl-node="${a.id}"]`).length, 2, 'two rows for A');
     const also = id => [...document.querySelectorAll(`[data-tl-node="${id}"] .tl-also`)].map(x => x.title);
-    eq(also(a.id), [t('tl.alsoUnder', { goals: 'G2' }), t('tl.alsoUnder', { goals: 'G1' })], 'each copy names the other goal');
-    eq(also(b.id), [t('tl.alsoUnder', { goals: 'G1a' }), t('tl.alsoUnder', { goals: 'G1' })], 'a goal and its sub-goal');
+    eq(
+      also(a.id),
+      [t('tl.alsoUnder', { goals: 'G2' }), t('tl.alsoUnder', { goals: 'G1' })],
+      'each copy names the other goal',
+    );
+    eq(
+      also(b.id),
+      [t('tl.alsoUnder', { goals: 'G1a' }), t('tl.alsoUnder', { goals: 'G1' })],
+      'a goal and its sub-goal',
+    );
     eq(also(c.id), [], 'an activity under one goal has no mark');
-    assert($(`[data-tl-node="${a.id}"]`).getAttribute('aria-label').includes(t('tl.alsoUnder', { goals: 'G2' })), 'screen readers hear it too');
+    assert(
+      $(`[data-tl-node="${a.id}"]`)
+        .getAttribute('aria-label')
+        .includes(t('tl.alsoUnder', { goals: 'G2' })),
+      'screen readers hear it too',
+    );
     // One item: selecting a copy lights every copy.
     clickEl($$(`[data-tl-node="${a.id}"]`)[1]);
-    assert([...document.querySelectorAll(`[data-tl-node="${a.id}"]`)].every(r => r.classList.contains('selected')), 'all copies selected');
-    ui.mapSelected = null; render();
+    assert(
+      [...document.querySelectorAll(`[data-tl-node="${a.id}"]`)].every(r => r.classList.contains('selected')),
+      'all copies selected',
+    );
+    ui.mapSelected = null;
+    render();
     // The dependency arrow is drawn for every copy: from each copy of A to the one row of C.
     const rowsNow = [...document.querySelectorAll('.tl-body .tl-row')];
-    const rowY = id => rowsNow.map((r, i) => r.dataset.tlNode === id ? i * TL.ROW + TL.ROW / 2 : null).filter(y => y !== null);
-    const ends = [...document.querySelectorAll('.tl-deps [data-rel-edit] .tl-dep')].map(p => p.getAttribute('d')).map(d => [Number(d.match(/^M[\d.-]+,([\d.-]+)/)[1]), Number(d.match(/([\d.-]+)\s+H[\d.-]+$/)[1])]);
-    eq(ends.map(e => e[0]).sort((x, y) => x - y), rowY(a.id), 'an arrow starts at each copy of A');
-    assert(ends.every(e => e[1] === rowY(c.id)[0]), 'all end at C');
+    const rowY = id =>
+      rowsNow.map((r, i) => (r.dataset.tlNode === id ? i * TL.ROW + TL.ROW / 2 : null)).filter(y => y !== null);
+    const ends = [...document.querySelectorAll('.tl-deps [data-rel-edit] .tl-dep')]
+      .map(p => p.getAttribute('d'))
+      .map(d => [Number(d.match(/^M[\d.-]+,([\d.-]+)/)[1]), Number(d.match(/([\d.-]+)\s+H[\d.-]+$/)[1])]);
+    eq(
+      ends.map(e => e[0]).sort((x, y) => x - y),
+      rowY(a.id),
+      'an arrow starts at each copy of A',
+    );
+    assert(
+      ends.every(e => e[1] === rowY(c.id)[0]),
+      'all end at C',
+    );
     // Editing a copy edits the one activity.
-    openForm('activity', a.id); $('#f-title').value = 'A renamed'; submitForm();
-    eq([...document.querySelectorAll(`[data-tl-node="${a.id}"] .tl-title`)].map(x => x.textContent), ['A renamed', 'A renamed'], 'both copies follow');
+    openForm('activity', a.id);
+    $('#f-title').value = 'A renamed';
+    submitForm();
+    eq(
+      [...document.querySelectorAll(`[data-tl-node="${a.id}"] .tl-title`)].map(x => x.textContent),
+      ['A renamed', 'A renamed'],
+      'both copies follow',
+    );
     eq(db.activities.filter(x => x.title === 'A renamed').length, 1, 'still one activity');
     // A goal filter shows only the goals in scope, so no mark there.
-    ui.timelineGoal = g2.id; render();
+    ui.timelineGoal = g2.id;
+    render();
     eq(document.querySelectorAll(`[data-tl-node="${a.id}"]`).length, 1, 'filtered to G2: one row');
     eq(also(a.id), [], 'and no mark');
-    ui.timelineGoal = ''; render();
+    ui.timelineGoal = '';
+    render();
     // Hide done hides every copy.
-    b.status = 'done'; ui.hideDone = true; render();
+    b.status = 'done';
+    ui.hideDone = true;
+    render();
     eq(document.querySelectorAll(`[data-tl-node="${b.id}"]`).length, 0, 'done copies hidden');
-    ui.hideDone = false; b.status = 'todo'; render();
+    ui.hideDone = false;
+    b.status = 'todo';
+    render();
     return rowsText(timelineRows(null));
   });
 
@@ -4753,16 +8025,24 @@ window.moreTests = async ({ step, assert }) => {
     const titles = () => [...document.querySelectorAll('.tl-row .tl-title')].map(x => x.textContent);
     g1.status = 'achieved';
     setToggle('hideDone', true);
-    assert(!titles().includes('G1') && titles().includes('G1a') && titles().includes('B'), 'timeline: G1 hidden, its sub-goal and open activity shown: ' + titles());
+    assert(
+      !titles().includes('G1') && titles().includes('G1a') && titles().includes('B'),
+      'timeline: G1 hidden, its sub-goal and open activity shown: ' + titles(),
+    );
     eq(timelineRows(null).find(r => r.item?.id === g1a.id).depth, 0, 'its sub-goal moves up to its place');
     setView('map');
-    assert(!$(`[data-map-node="${g1.id}"]`) && $(`[data-map-node="${g1a.id}"]`) && $(`[data-map-node="${a.id}"]`), 'map: achieved goal hidden, the rest shown');
+    assert(
+      !$(`[data-map-node="${g1.id}"]`) && $(`[data-map-node="${g1a.id}"]`) && $(`[data-map-node="${a.id}"]`),
+      'map: achieved goal hidden, the rest shown',
+    );
     eq($('[data-hide-done]').textContent, t('acts.hideDone'), 'the toggle says so');
     setToggle('hideDone', false);
     assert($(`[data-map-node="${g1.id}"]`), 'shown again');
     setView('timeline');
     assert(titles().includes('G1') && b.status !== 'done', 'and on the timeline');
-    changeLanguage('sl'); eq($('[data-hide-done]').textContent, 'Skrij opravljeno in doseženo', 'Slovenian'); changeLanguage('en');
+    changeLanguage('sl');
+    eq($('[data-hide-done]').textContent, 'Skrij opravljeno in doseženo', 'Slovenian');
+    changeLanguage('en');
     deletePlan(plans.current);
   });
 
@@ -4770,16 +8050,32 @@ window.moreTests = async ({ step, assert }) => {
     const { g1, g1a, g2, g3, a, b } = foldFixture();
     assert(fold(g1.id) && fold(g2.id) && fold(g1a.id), 'goals with something under them can fold');
     assert(!fold(g3.id), 'a goal with nothing under it has no fold button');
-    eq([fold(g1.id).getAttribute('aria-expanded'), fold(g1.id).getAttribute('aria-label')], ['true', t('tl.collapse', { name: 'G1' })], 'expanded at first');
+    eq(
+      [fold(g1.id).getAttribute('aria-expanded'), fold(g1.id).getAttribute('aria-label')],
+      ['true', t('tl.collapse', { name: 'G1' })],
+      'expanded at first',
+    );
     fold(g1.id).click();
     eq(shownRows(), 'G1 G2 A A1 C G3 [group] U', 'G1 folded: its activities and sub-goal hidden');
-    eq([fold(g1.id).getAttribute('aria-expanded'), fold(g1.id).getAttribute('aria-label')], ['false', t('tl.expand', { name: 'G1' })], 'says it is folded');
+    eq(
+      [fold(g1.id).getAttribute('aria-expanded'), fold(g1.id).getAttribute('aria-label')],
+      ['false', t('tl.expand', { name: 'G1' })],
+      'says it is folded',
+    );
     assert($(`[data-tl-node="${g1.id}"] .tl-bar`), 'the goal keeps its bar');
     eq(ui.mapSelected, null, 'folding does not select the goal');
     assert(!modal.open, 'nor open it');
     const folded = timelineRows(null, tlCollapsed());
-    eq(folded.slice(folded.findIndex(r => r.kind === 'group') + 1).map(r => r.item.title), ['U'], 'B is still under a goal, so it does not move to the unlinked group');
-    eq($$(`[data-tl-node="${a.id}"] .tl-also`).map(x => x.title), [t('tl.alsoUnder', { goals: 'G1' })], 'the copy under G2 still names folded G1');
+    eq(
+      folded.slice(folded.findIndex(r => r.kind === 'group') + 1).map(r => r.item.title),
+      ['U'],
+      'B is still under a goal, so it does not move to the unlinked group',
+    );
+    eq(
+      $$(`[data-tl-node="${a.id}"] .tl-also`).map(x => x.title),
+      [t('tl.alsoUnder', { goals: 'G1' })],
+      'the copy under G2 still names folded G1',
+    );
     // Remembered: on redraw, per plan, and after switching plans.
     render();
     eq(fold(g1.id).getAttribute('aria-expanded'), 'false', 'kept on redraw');
@@ -4787,9 +8083,12 @@ window.moreTests = async ({ step, assert }) => {
     const other = addPlan({ name: 'Other fold', data: clone(db) });
     setView('timeline');
     eq(fold(g1.id).getAttribute('aria-expanded'), 'true', 'another plan has its own folds');
-    openPlan(here); setView('timeline');
+    openPlan(here);
+    setView('timeline');
     eq(fold(g1.id).getAttribute('aria-expanded'), 'false', 'back in this plan, still folded');
-    deletePlan(other.id); openPlan(here); setView('timeline');
+    deletePlan(other.id);
+    openPlan(here);
+    setView('timeline');
     fold(g1.id).click();
     eq(shownRows(), 'G1 A A1 B G1a B G2 A A1 C G3 [group] U', 'expanded again');
     // A sub-goal folds on its own.
@@ -4803,7 +8102,10 @@ window.moreTests = async ({ step, assert }) => {
     eq(shownRows(), 'G1 A A1 B G1a B G2 A A1 C G3 [group]', 'group folded');
     $('[data-tl-fold="rest"]').click();
     // Collapse all / Expand all: one button, reading Expand all only while everything is folded.
-    const foldAll = () => $$('[data-tl-fold-all]').map(b => `${b.dataset.tlFoldAll}:${b.textContent}`).join(',');
+    const foldAll = () =>
+      $$('[data-tl-fold-all]')
+        .map(b => `${b.dataset.tlFoldAll}:${b.textContent}`)
+        .join(',');
     eq(foldAll(), `collapse:${t('tl.collapseAll')}`, 'nothing folded: Collapse all only');
     fold(g1.id).click();
     eq(foldAll(), `collapse:${t('tl.collapseAll')}`, 'some folded: still Collapse all');
@@ -4848,7 +8150,12 @@ window.moreTests = async ({ step, assert }) => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
       for (const k of ['tl.collapseAll', 'tl.expandAll']) assert(t(k) && t(k) !== k, `${code} ${k}`);
-      assert(t('tl.collapse', { name: 'X' }).includes('X') && t('tl.expand', { name: 'X' }).includes('X') && t('tl.alsoUnder', { goals: 'X' }).includes('X'), `${code} names`);
+      assert(
+        t('tl.collapse', { name: 'X' }).includes('X') &&
+          t('tl.expand', { name: 'X' }).includes('X') &&
+          t('tl.alsoUnder', { goals: 'X' }).includes('X'),
+        `${code} names`,
+      );
       assert(/↻/.test(t('tl.hint')) || /fold|collapse|strn/i.test(t('tl.hint')), `${code} hint mentions folding`);
       assert(/collapse|strn/i.test(t('help.view.timeline')), `${code} help mentions folding`);
     }
@@ -4859,14 +8166,26 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('touch: after a long-press, the first tap on a menu item works (no click ends the press)', async () => {
     fresh('Long press');
-    const g = mk('goal', { title: 'Goal' }), g2 = mk('goal', { title: 'Other goal' });
+    const g = mk('goal', { title: 'Goal' }),
+      g2 = mk('goal', { title: 'Other goal' });
     save();
     setView('map');
     const node = id => $(`[data-map-node="${id}"]`);
-    const touch = (type, el, x = 50, y = 50) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7, clientX: x, clientY: y }));
+    const touch = (type, el, x = 50, y = 50) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'touch',
+          pointerId: 7,
+          clientX: x,
+          clientY: y,
+        }),
+      );
     const tapMenu = act => {
       const b = ctxMenu.querySelector(`[data-ctx="${act}"]`);
-      touch('pointerdown', b); touch('pointerup', b);
+      touch('pointerdown', b);
+      touch('pointerup', b);
       b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     };
     const longPress = async (el, withClick) => {
@@ -4877,22 +8196,35 @@ window.moreTests = async ({ step, assert }) => {
       if (withClick) el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     };
     for (const withClick of [false, true]) {
-      ui.mapSelected = null; ui.mapLinkFrom = null; render();
+      ui.mapSelected = null;
+      ui.mapLinkFrom = null;
+      render();
       await longPress(node(g2.id), withClick);
-      assert(!ctxMenu.hidden && ctxMenu.dataset.id === g2.id, `${withClick ? 'with' : 'without'} a lifting click: menu open`);
+      assert(
+        !ctxMenu.hidden && ctxMenu.dataset.id === g2.id,
+        `${withClick ? 'with' : 'without'} a lifting click: menu open`,
+      );
       eq(ui.mapSelected, null, 'the press itself does not select the box');
       tapMenu('link');
-      assert(ui.mapLinkFrom === g2.id && ctxMenu.hidden, `${withClick ? 'with' : 'without'} a lifting click: one tap on “Link to…” starts linking`);
-      ui.mapLinkFrom = null; render();
+      assert(
+        ui.mapLinkFrom === g2.id && ctxMenu.hidden,
+        `${withClick ? 'with' : 'without'} a lifting click: one tap on “Link to…” starts linking`,
+      );
+      ui.mapLinkFrom = null;
+      render();
       // Any menu item, not only Link to…
       await longPress(node(g.id), withClick);
       tapMenu('edit');
-      assert(modal.open && formCtx.id === g.id, `${withClick ? 'with' : 'without'} a lifting click: one tap on Edit opens it`);
+      assert(
+        modal.open && formCtx.id === g.id,
+        `${withClick ? 'with' : 'without'} a lifting click: one tap on Edit opens it`,
+      );
       modal.close();
     }
     // A scroll that arrives just after the menu opens (one a redraw made before the press, delivered on
     // the next frame) does not close it; a scroll later does.
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     await longPress(node(g2.id), false);
     document.dispatchEvent(new Event('scroll'));
     $('.map-wrap').dispatchEvent(new Event('scroll'));
@@ -4900,16 +8232,22 @@ window.moreTests = async ({ step, assert }) => {
     await new Promise(r => setTimeout(r, 450));
     // On a short screen (a phone held sideways) the menu scrolls inside itself, and that keeps it open.
     ctxMenu.style.maxHeight = '120px';
-    assert(ctxMenu.scrollHeight > ctxMenu.clientHeight && getComputedStyle(ctxMenu).overflowY === 'auto', 'a menu taller than the screen scrolls');
+    assert(
+      ctxMenu.scrollHeight > ctxMenu.clientHeight && getComputedStyle(ctxMenu).overflowY === 'auto',
+      'a menu taller than the screen scrolls',
+    );
     assert(ctxMenu.querySelector('button').offsetHeight >= 30, 'its items keep their height');
-    ctxMenu.scrollTop = 40; ctxMenu.dispatchEvent(new Event('scroll'));
+    ctxMenu.scrollTop = 40;
+    ctxMenu.dispatchEvent(new Event('scroll'));
     assert(!ctxMenu.hidden && ctxMenu.scrollTop > 0, 'scrolling the menu leaves it open');
     ctxMenu.style.maxHeight = '';
     $('.map-wrap').dispatchEvent(new Event('scroll'));
     assert(ctxMenu.hidden, 'a scroll later closes it');
     // A short tap still selects as before.
-    ui.mapSelected = null; render();
-    touch('pointerdown', node(g.id)); touch('pointerup', node(g.id));
+    ui.mapSelected = null;
+    render();
+    touch('pointerdown', node(g.id));
+    touch('pointerup', node(g.id));
     node(g.id).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     eq(ui.mapSelected, g.id, 'a short tap selects');
     deletePlan(plans.current);
@@ -4919,17 +8257,35 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('lines: a long-press, right-click or menu key opens Edit, Remove and Deselect', async () => {
     fresh('Line menu');
-    const g = mk('goal', { title: 'Goal' }), a = mk('activity', { title: 'Act' }), b = mk('activity', { title: 'Other' });
-    rel(a, g, 'contributes'); rel(b, g, 'contributes');
+    const g = mk('goal', { title: 'Goal' }),
+      a = mk('activity', { title: 'Act' }),
+      b = mk('activity', { title: 'Other' });
+    rel(a, g, 'contributes');
+    rel(b, g, 'contributes');
     save();
     setView('map');
     const r = () => db.relations.find(x => x.from === a.id);
     const line = () => $(`[data-rel-edit="${r().id}"]`);
-    const touch = (type, el) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 9, clientX: 60, clientY: 60 }));
-    const longPress = async el => { touch('pointerdown', el); await new Promise(res => setTimeout(res, LONG_PRESS_MS + 80)); touch('pointerup', el); };
+    const touch = (type, el) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'touch',
+          pointerId: 9,
+          clientX: 60,
+          clientY: 60,
+        }),
+      );
+    const longPress = async el => {
+      touch('pointerdown', el);
+      await new Promise(res => setTimeout(res, LONG_PRESS_MS + 80));
+      touch('pointerup', el);
+    };
     const tapMenu = act => {
       const btn = ctxMenu.querySelector(`[data-ctx="${act}"]`);
-      touch('pointerdown', btn); touch('pointerup', btn);
+      touch('pointerdown', btn);
+      touch('pointerup', btn);
       btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     };
     const items = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(x => x.textContent);
@@ -4940,12 +8296,22 @@ window.moreTests = async ({ step, assert }) => {
     // Opened by a finger, the menu takes focus but marks no item; the arrow keys still reach them.
     const btns = () => [...ctxMenu.querySelectorAll('[data-ctx]')];
     assert(document.activeElement === ctxMenu, 'the menu itself focused');
-    eq(btns().map(b => getComputedStyle(b).backgroundColor), btns().map(() => 'rgba(0, 0, 0, 0)'), 'no item marked');
+    eq(
+      btns().map(b => getComputedStyle(b).backgroundColor),
+      btns().map(() => 'rgba(0, 0, 0, 0)'),
+      'no item marked',
+    );
     press('ArrowUp', ctxMenu);
     assert(document.activeElement === btns().at(-1), 'Up from the menu: last item');
-    ctxMenu.focus(); press('ArrowDown', ctxMenu);
+    ctxMenu.focus();
+    press('ArrowDown', ctxMenu);
     assert(document.activeElement === btns()[0], 'Down from the menu: first item');
-    assert(ctxMenu.textContent.includes('Act') && ctxMenu.textContent.includes('Goal') && ctxMenu.textContent.includes(t('kind.relation')), 'names the relationship');
+    assert(
+      ctxMenu.textContent.includes('Act') &&
+        ctxMenu.textContent.includes('Goal') &&
+        ctxMenu.textContent.includes(t('kind.relation')),
+      'names the relationship',
+    );
     eq(ui.mapRel, r().id, 'the line is selected too');
     assert(line().classList.contains('sel'), 'drawn as selected');
     // Selecting redraws the map, which puts its scroll back; that must not close the menu.
@@ -4956,7 +8322,10 @@ window.moreTests = async ({ step, assert }) => {
     assert(ctxMenu.hidden, 'a real scroll later still closes it');
     await longPress(line());
     tapMenu('rel-edit');
-    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'relation' && formCtx.id === r().id, 'one tap on Edit opens it');
+    assert(
+      ctxMenu.hidden && modal.open && formCtx.kind === 'relation' && formCtx.id === r().id,
+      'one tap on Edit opens it',
+    );
     modal.close();
 
     await longPress(line());
@@ -4974,7 +8343,10 @@ window.moreTests = async ({ step, assert }) => {
     line().focus();
     press('ContextMenu', line());
     assert(!ctxMenu.hidden && items().length === 3, 'the menu key opens it');
-    assert(document.activeElement === ctxMenu.querySelector('[data-ctx]'), 'from the keyboard, the first item is focused');
+    assert(
+      document.activeElement === ctxMenu.querySelector('[data-ctx]'),
+      'from the keyboard, the first item is focused',
+    );
     closeCtxMenu();
 
     await longPress(line());
@@ -4987,17 +8359,31 @@ window.moreTests = async ({ step, assert }) => {
     // Boxes keep their own menu.
     const box = $(`[data-map-node="${a.id}"]`);
     await longPress(box);
-    assert(!ctxMenu.hidden && ctxMenu.querySelector('[data-ctx="edit"]') && !ctxMenu.querySelector('[data-ctx="rel-edit"]'), 'a box still opens the item menu');
+    assert(
+      !ctxMenu.hidden && ctxMenu.querySelector('[data-ctx="edit"]') && !ctxMenu.querySelector('[data-ctx="rel-edit"]'),
+      'a box still opens the item menu',
+    );
     closeCtxMenu();
 
     // Timeline dependency arrows have the same menu.
     rel(b, a, 'depends');
-    a.startDate = d(-3); a.dueDate = d(3); b.startDate = d(4); b.dueDate = d(9); g.startDate = d(-5); g.deadline = d(30);
-    save(); ui.tlDeps = true; setView('timeline');
+    a.startDate = d(-3);
+    a.dueDate = d(3);
+    b.startDate = d(4);
+    b.dueDate = d(9);
+    g.startDate = d(-5);
+    g.deadline = d(30);
+    save();
+    ui.tlDeps = true;
+    setView('timeline');
     const dep = $('.tl-deps [data-rel-edit]');
     await longPress(dep);
     assert(!ctxMenu.hidden && items().length === 3, 'timeline arrow: menu');
-    eq(ctxMenu.querySelector('.ctx-head strong').title, relText(db.relations.find(x => x.type === 'depends')), 'a line menu heading shows the whole text on hover');
+    eq(
+      ctxMenu.querySelector('.ctx-head strong').title,
+      relText(db.relations.find(x => x.type === 'depends')),
+      'a line menu heading shows the whole text on hover',
+    );
     tapMenu('rel-remove');
     assert(!db.relations.some(x => x.type === 'depends'), 'timeline arrow removed');
     deletePlan(plans.current);
@@ -5008,7 +8394,8 @@ window.moreTests = async ({ step, assert }) => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
       for (const k of ['map.hint', 'tl.hint']) assert(t(k).length <= 150, `${code} ${k} is ${t(k).length} characters`);
-      for (const k of ['help.view.map', 'help.view.timeline']) [/Delete/, /Enter/, /Esc/, /Ctrl/].forEach(w => assert(w.test(t(k)), `${code} ${k} mentions ${w}`));
+      for (const k of ['help.view.map', 'help.view.timeline'])
+        [/Delete/, /Enter/, /Esc/, /Ctrl/].forEach(w => assert(w.test(t(k)), `${code} ${k} mentions ${w}`));
       assert(/collapse|strn/i.test(t('help.view.timeline')), `${code}: folding in the timeline help`);
     }
     changeLanguage('en');
@@ -5026,23 +8413,53 @@ window.moreTests = async ({ step, assert }) => {
     const m = mk('activity', { title: 'Milestone', dueDate: addDays(now, 8) });
     const r = mk('activity', { title: 'Routine', startDate: now, repeat: { every: 1, unit: 'day', count: 5 } });
     r.dueDate = lastOccurrence(r, 5);
-    rel(a, g, 'contributes'); rel(m, g, 'contributes');
+    rel(a, g, 'contributes');
+    rel(m, g, 'contributes');
     save();
-    ui.tlPx = TL.ZOOM.week; ui.tlDeps = true;
+    ui.tlPx = TL.ZOOM.week;
+    ui.tlDeps = true;
     setView('timeline');
     const px = ui.tlPx;
     // Selected with its dates open for changing, as a click on its bar does.
-    const sel = id => { ui.mapSelected = ui.tlDates = id; ui.mapRel = null; render(); };
+    const sel = id => {
+      ui.mapSelected = ui.tlDates = id;
+      ui.mapRel = null;
+      render();
+    };
     const row = id => $(`[data-tl-node="${id}"]`);
-    const mouse = (type, el, x, y = 100) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 3, pointerType: 'mouse', button: 0, clientX: x, clientY: y }));
-    const touch = (type, el, x, y = 100) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 4, pointerType: 'touch', clientX: x, clientY: y }));
+    const mouse = (type, el, x, y = 100) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 3,
+          pointerType: 'mouse',
+          button: 0,
+          clientX: x,
+          clientY: y,
+        }),
+      );
+    const touch = (type, el, x, y = 100) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 4,
+          pointerType: 'touch',
+          clientX: x,
+          clientY: y,
+        }),
+      );
     const click = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     // A single click, not read as the second of a double-click.
-    const click1 = el => { lastNodeClick = { id: null, t: 0 }; click(el); };
+    const click1 = el => {
+      lastNodeClick = { id: null, t: 0 };
+      click(el);
+    };
     const wait = ms => new Promise(res => setTimeout(res, ms));
     const drag = (el, days, steps = 3) => {
       mouse('pointerdown', el, 400);
-      for (let k = 1; k <= steps; k++) mouse('pointermove', document, 400 + days * px * k / steps);
+      for (let k = 1; k <= steps; k++) mouse('pointermove', document, 400 + (days * px * k) / steps);
       mouse('pointerup', document, 400 + days * px);
       click(el);
     };
@@ -5052,10 +8469,16 @@ window.moreTests = async ({ step, assert }) => {
     click1(row(a.id).querySelector('.tl-label'));
     assert(ui.mapSelected === a.id && row(a.id).classList.contains('selected'), 'a click on the row selects it');
     assert(!$('[data-tl-drag]') && !$('.tl-grip'), 'but offers no dates to drag');
-    assert(viewEl.textContent.includes(t('tl.datesHint')) && !viewEl.textContent.includes(t('tl.dragHint')), 'the hint says to tap the bar');
+    assert(
+      viewEl.textContent.includes(t('tl.datesHint')) && !viewEl.textContent.includes(t('tl.dragHint')),
+      'the hint says to tap the bar',
+    );
     click1(row(a.id).querySelector('.tl-bar'));
     assert(ui.mapSelected === a.id && ui.tlDates === a.id, 'a click on its bar keeps it selected, now with its dates');
-    assert(row(a.id).querySelector('.tl-bar.tl-drag') && row(a.id).querySelectorAll('.tl-grip').length === 2, 'grips appear');
+    assert(
+      row(a.id).querySelector('.tl-bar.tl-drag') && row(a.id).querySelectorAll('.tl-grip').length === 2,
+      'grips appear',
+    );
     click1(row(a.id).querySelector('.tl-grip'));
     assert(!ui.mapSelected && !ui.tlDates, 'a grip is part of the bar: a second click there deselects');
     click1(row(a.id).querySelector('.tl-bar'));
@@ -5065,24 +8488,32 @@ window.moreTests = async ({ step, assert }) => {
     click(row(a.id).querySelector('.tl-bar'));
     assert(modal.open, 'a double-click on the bar still edits');
     modal.close();
-    ui.mapSelected = ui.tlDates = a.id; render();
+    ui.mapSelected = ui.tlDates = a.id;
+    render();
     click1(row(a.id).querySelector('.tl-bar'));
     assert(!ui.mapSelected && !ui.tlDates, 'a second click on the bar deselects');
     click1(row(m.id).querySelector('.tl-milestone'));
     assert(ui.tlDates === m.id && row(m.id).querySelector('.tl-milestone.tl-drag'), 'a milestone counts as its bar');
     // Selected another way (the menu, Show in): selecting only.
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     runCtxAction('highlight', a.id);
     assert(ui.mapSelected === a.id && !$('[data-tl-drag]'), 'highlighting from the menu: no dates');
     // On a touch screen, a long-press on the bar of a row that is only selected opens the menu.
     touch('pointerdown', row(a.id).querySelector('.tl-bar'), 400);
     await wait(LONG_PRESS_MS + 80);
     touch('pointerup', document, 400);
-    assert(!ctxMenu.hidden && !$('.tl-scroll').classList.contains('tl-dragging'), 'long-press on a selected row: the menu, not a drag');
+    assert(
+      !ctxMenu.hidden && !$('.tl-scroll').classList.contains('tl-dragging'),
+      'long-press on a selected row: the menu, not a drag',
+    );
     closeCtxMenu();
     await wait(20);
     sel(a.id);
-    assert(row(a.id).querySelector('.tl-bar.tl-drag') && row(a.id).querySelectorAll('.tl-grip').length === 2, 'the selected bar and its two grips');
+    assert(
+      row(a.id).querySelector('.tl-bar.tl-drag') && row(a.id).querySelectorAll('.tl-grip').length === 2,
+      'the selected bar and its two grips',
+    );
     assert(viewEl.textContent.includes(t('tl.dragHint')), 'the hint says how');
 
     // Moving the whole bar: the view follows during the drag, before it is let go.
@@ -5092,25 +8523,46 @@ window.moreTests = async ({ step, assert }) => {
     eq(a.startDate, now, 'a 2px wobble does not drag');
     mouse('pointermove', document, 400 + 3 * px + 3);
     eq(parseFloat(row(a.id).querySelector('.tl-bar').style.left), left0 + 3 * px, 'the bar follows at once');
-    eq(row(a.id).querySelector('.tl-dates').textContent, `${fmtDate(addDays(now, 3))} – ${fmtDate(addDays(now, 8))}`, 'its dates follow at once');
+    eq(
+      row(a.id).querySelector('.tl-dates').textContent,
+      `${fmtDate(addDays(now, 3))} – ${fmtDate(addDays(now, 8))}`,
+      'its dates follow at once',
+    );
     eq(a.startDate, now, 'not saved until let go');
-    eq($('.tl-drag-tip')?.textContent, `${fmtDate(addDays(now, 3))} – ${fmtDate(addDays(now, 8))}`, 'a label above shows the new dates');
-    const tipR = $('.tl-drag-tip').getBoundingClientRect(), barR = row(a.id).querySelector('.tl-bar').getBoundingClientRect();
+    eq(
+      $('.tl-drag-tip')?.textContent,
+      `${fmtDate(addDays(now, 3))} – ${fmtDate(addDays(now, 8))}`,
+      'a label above shows the new dates',
+    );
+    const tipR = $('.tl-drag-tip').getBoundingClientRect(),
+      barR = row(a.id).querySelector('.tl-bar').getBoundingClientRect();
     assert(tipR.bottom <= barR.top && tipR.width > 0, 'the label sits above the bar');
     mouse('pointerup', document, 400 + 3 * px + 3);
     click(row(a.id));
     eq([a.startDate, a.dueDate], [addDays(now, 3), addDays(now, 8)], 'moved by three days');
     eq(ui.mapSelected, a.id, 'still selected after the drag');
-    assert(JSON.parse(localStorage.getItem(planKey(plans.current))).activities.find(x => x.id === a.id).startDate === addDays(now, 3), 'saved');
+    assert(
+      JSON.parse(localStorage.getItem(planKey(plans.current))).activities.find(x => x.id === a.id).startDate ===
+        addDays(now, 3),
+      'saved',
+    );
     assert(row(a.id).querySelector('.tl-bar.tl-drag'), 'redrawn and still draggable');
 
     assert(!$('.tl-drag-tip'), 'the label goes when the bar is let go');
     // A grip changes one end only, and never past the other end; the label names that date.
     mouse('pointerdown', row(a.id).querySelector('[data-tl-edge="end"]'), 400);
     mouse('pointermove', document, 400 + 6);
-    eq($('.tl-drag-tip')?.textContent, `${t('f.dueDate')}: ${fmtDate(addDays(now, 8))}`, 'the label shows from the start of the drag');
+    eq(
+      $('.tl-drag-tip')?.textContent,
+      `${t('f.dueDate')}: ${fmtDate(addDays(now, 8))}`,
+      'the label shows from the start of the drag',
+    );
     mouse('pointermove', document, 400 + 2 * px);
-    eq($('.tl-drag-tip').textContent, `${t('f.dueDate')}: ${fmtDate(addDays(now, 10))}`, 'end grip: the label names the due date');
+    eq(
+      $('.tl-drag-tip').textContent,
+      `${t('f.dueDate')}: ${fmtDate(addDays(now, 10))}`,
+      'end grip: the label names the due date',
+    );
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     mouse('pointerup', document, 400 + 2 * px);
     assert(!$('.tl-drag-tip') && a.dueDate === addDays(now, 8), 'Esc removes the label and keeps the date');
@@ -5126,7 +8578,11 @@ window.moreTests = async ({ step, assert }) => {
     eq([g.startDate, g.deadline], [addDays(now, 19), addDays(now, 20)], 'a goal keeps its start before the deadline');
     mouse('pointerdown', row(g.id).querySelector('[data-tl-edge="end"]'), 400);
     mouse('pointermove', document, 400 + px);
-    eq($('.tl-drag-tip').textContent, `${t('f.deadline')}: ${fmtDate(addDays(now, 21))}`, 'the end of a goal is its deadline');
+    eq(
+      $('.tl-drag-tip').textContent,
+      `${t('f.deadline')}: ${fmtDate(addDays(now, 21))}`,
+      'the end of a goal is its deadline',
+    );
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     mouse('pointerup', document, 400 + px);
 
@@ -5143,19 +8599,27 @@ window.moreTests = async ({ step, assert }) => {
 
     // A plain click on the selected bar still deselects it, and nothing moves.
     const before = JSON.stringify(a);
-    mouse('pointerdown', row(a.id).querySelector('.tl-bar'), 400); mouse('pointerup', document, 400); click1(row(a.id).querySelector('.tl-bar'));
+    mouse('pointerdown', row(a.id).querySelector('.tl-bar'), 400);
+    mouse('pointerup', document, 400);
+    click1(row(a.id).querySelector('.tl-bar'));
     eq(ui.mapSelected, null, 'a click deselects');
     eq(JSON.stringify(a), before, 'a click changes nothing');
 
     // A milestone (one date) moves that date.
     sel(m.id);
-    assert(row(m.id).querySelector('.tl-milestone.tl-drag') && !row(m.id).querySelector('.tl-grip'), 'a milestone moves whole');
+    assert(
+      row(m.id).querySelector('.tl-milestone.tl-drag') && !row(m.id).querySelector('.tl-grip'),
+      'a milestone moves whole',
+    );
     drag(row(m.id).querySelector('.tl-milestone'), -2);
     eq([m.startDate || '', m.dueDate], ['', addDays(now, 6)], 'the milestone moved, no start date added');
 
     // A routine that runs a set number of times only moves; its end follows its start.
     sel(r.id);
-    assert(!row(r.id).querySelector('.tl-grip') && viewEl.textContent.includes(t('tl.dragHintMove')), 'no grips on a counted routine');
+    assert(
+      !row(r.id).querySelector('.tl-grip') && viewEl.textContent.includes(t('tl.dragHintMove')),
+      'no grips on a counted routine',
+    );
     drag(row(r.id).querySelector('.tl-bar'), 2);
     eq([r.startDate, r.dueDate], [addDays(now, 2), addDays(now, 6)], 'the routine moved with its end');
 
@@ -5166,12 +8630,15 @@ window.moreTests = async ({ step, assert }) => {
     eq(a.dueDate, dayStr(to), 'stops at the end of the timeline');
 
     // Unselected bars pan as before.
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     const scroll = $('.tl-scroll');
     scroll.setPointerCapture = () => {}; // a synthetic pointer cannot be captured
     scroll.scrollLeft = (scroll.scrollWidth - scroll.clientWidth) / 2;
     const sl = scroll.scrollLeft;
-    mouse('pointerdown', row(g.id).querySelector('.tl-bar'), 400); mouse('pointermove', document, 300); mouse('pointerup', document, 300);
+    mouse('pointerdown', row(g.id).querySelector('.tl-bar'), 400);
+    mouse('pointermove', document, 300);
+    mouse('pointerup', document, 300);
     assert(scroll.scrollLeft !== sl, 'an unselected bar pans the timeline');
     eq(g.deadline, addDays(now, 20), 'and keeps its dates');
 
@@ -5228,26 +8695,54 @@ window.moreTests = async ({ step, assert }) => {
     fresh('Routine days');
     const g = mk('goal', { startDate: d(-20), deadline: d(30) });
     // Every day from 6 days ago to 3 days ahead: two done, today not yet.
-    const a = mk('activity', { title: 'Stretch', repeat: { every: 1, unit: 'day' }, startDate: d(-6), dueDate: d(3), checkins: { [d(-6)]: 1, [d(-2)]: 1 } });
+    const a = mk('activity', {
+      title: 'Stretch',
+      repeat: { every: 1, unit: 'day' },
+      startDate: d(-6),
+      dueDate: d(3),
+      checkins: { [d(-6)]: 1, [d(-2)]: 1 },
+    });
     const open = mk('activity', { title: 'Weigh in', repeat: { every: 1, unit: 'week' }, startDate: d(-14) });
     const flex = mk('activity', { title: 'Run', repeat: { times: 3, per: 'week' }, startDate: d(-6), dueDate: d(3) });
-    [a, open, flex].forEach(x => rel(x, g, 'contributes')); save();
+    [a, open, flex].forEach(x => rel(x, g, 'contributes'));
+    save();
     setView('timeline');
-    ui.tlPx = TL.ZOOM.week; render();
+    ui.tlPx = TL.ZOOM.week;
+    render();
     const marks = id => [...$(`[data-tl-node="${id}"]`).querySelectorAll('.tl-day')];
     const kinds = id => marks(id).map(m => m.classList[1]);
-    eq(kinds(a.id), ['done', 'missed', 'missed', 'missed', 'done', 'missed', 'due', 'due', 'due', 'due'], 'each day in order');
-    const from = Number($('.tl-scroll').dataset.from), x0 = Number(marks(a.id)[0].style.left.slice(0, -2));
+    eq(
+      kinds(a.id),
+      ['done', 'missed', 'missed', 'missed', 'done', 'missed', 'due', 'due', 'due', 'due'],
+      'each day in order',
+    );
+    const from = Number($('.tl-scroll').dataset.from),
+      x0 = Number(marks(a.id)[0].style.left.slice(0, -2));
     assert(Math.abs(x0 - ((dayNum(d(-6)) - from) * TL.ZOOM.week + 1)) < 0.01, `on its own day: ${x0}`);
     eq(marks(flex.id).length, 0, 'a flexible routine has no set days');
-    const ends = Number($('.tl-scroll').dataset.to), weeks = kinds(open.id);
-    assert(weeks.length === Math.floor((ends - dayNum(d(-14))) / 7) + 1 && weeks.slice(0, 2).join() === 'missed,missed', `without an end: every week to the timeline's end (${weeks.length})`);
+    const ends = Number($('.tl-scroll').dataset.to),
+      weeks = kinds(open.id);
+    assert(
+      weeks.length === Math.floor((ends - dayNum(d(-14))) / 7) + 1 && weeks.slice(0, 2).join() === 'missed,missed',
+      `without an end: every week to the timeline's end (${weeks.length})`,
+    );
     // Narrow days merge into a band; the legend names the colours.
-    ui.tlPx = TL.MIN; render();
+    ui.tlPx = TL.MIN;
+    render();
     const w = marks(a.id).map(m => m.style.width);
-    assert(w.every(x => x === `${TL.MIN}px`), `merged: ${w[0]}`);
-    eq([...$$('.tl-legend .swatch.tl-day')].map(s => s.classList[2]), ['done', 'missed', 'due'], 'legend');
-    a.repeat = { times: 3, per: 'week' }; open.repeat = { times: 1, per: 'week' }; save(); render();
+    assert(
+      w.every(x => x === `${TL.MIN}px`),
+      `merged: ${w[0]}`,
+    );
+    eq(
+      [...$$('.tl-legend .swatch.tl-day')].map(s => s.classList[2]),
+      ['done', 'missed', 'due'],
+      'legend',
+    );
+    a.repeat = { times: 3, per: 'week' };
+    open.repeat = { times: 1, per: 'week' };
+    save();
+    render();
     assert(!$('.tl-legend .tl-day'), 'no legend without routines on set days');
     ui.tlPx = TL.ZOOM.month;
     return weeks.length + ' weeks';
@@ -5255,20 +8750,38 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('graphs: zoom stretches the time axis around the pointer, within limits; today is a column', async () => {
     fresh('Graph zoom');
-    const s = mk('state', { title: 'Weight', history: [{ date: d(-60), value: '1' }, { date: d(-30), value: '3' }, { date: d(0), value: '5' }] });
+    const s = mk('state', {
+      title: 'Weight',
+      history: [
+        { date: d(-60), value: '1' },
+        { date: d(-30), value: '3' },
+        { date: d(0), value: '5' },
+      ],
+    });
     save();
     setView('graphs');
-    const plot = () => $(`[data-gr="${s.id}"] .gr-plot`), svg = () => plot().querySelector('svg'), W = () => Number(svg().getAttribute('width'));
-    const c = () => grCharts[s.id], el = plot(), w0 = W(), todayN = dayNum(today());
+    const plot = () => $(`[data-gr="${s.id}"] .gr-plot`),
+      svg = () => plot().querySelector('svg'),
+      W = () => Number(svg().getAttribute('width'));
+    const c = () => grCharts[s.id],
+      el = plot(),
+      w0 = W(),
+      todayN = dayNum(today());
     assert(!el.classList.contains('scroll'), 'unzoomed it fits the card');
     // Today: a column a day wide around today's measurement, inside the plot.
-    const col = svg().querySelector('.gr-today'), cw = Number(col.getAttribute('width')), cx0 = Number(col.getAttribute('x'));
+    const col = svg().querySelector('.gr-today'),
+      cw = Number(col.getAttribute('width')),
+      cx0 = Number(col.getAttribute('x'));
     const dayW = c().px(todayN + 0.5) - c().px(todayN - 0.5);
-    assert(Math.abs(cw - Math.max(dayW, 3)) < 0.01 && Math.abs(cx0 + cw / 2 - c().px(todayN)) < 0.01, `today column ${cw.toFixed(1)} px for a ${dayW.toFixed(1)} px day`);
+    assert(
+      Math.abs(cw - Math.max(dayW, 3)) < 0.01 && Math.abs(cx0 + cw / 2 - c().px(todayN)) < 0.01,
+      `today column ${cw.toFixed(1)} px for a ${dayW.toFixed(1)} px day`,
+    );
     assert(cx0 + cw <= w0 - GR.R + 0.01, 'not cut off at the edge');
     // Limits: never narrower than the card, never more than TL.MAX px a day.
     zoomGraph(el, 1e6, svg().getBoundingClientRect().left + 100);
-    const max = W(), days = c().points.length && (60.5);
+    const max = W(),
+      days = c().points.length && 60.5;
     assert(max === Math.round(GR.L + GR.R + days * TL.MAX), `zoomed all the way in: ${max}`);
     assert(plot() === el && el.classList.contains('scroll'), 'same element, now scrolls');
     zoomGraph(el, 1e-6, svg().getBoundingClientRect().left + 100);
@@ -5277,18 +8790,39 @@ window.moreTests = async ({ step, assert }) => {
     const at = () => svg().getBoundingClientRect().left + c().px(dayNum(d(-30)));
     const x = at();
     zoomGraph(el, 4, x);
-    assert(Math.abs(at() - x) < 1.5 && el.scrollLeft > 0, `anchored: ${x.toFixed(1)} → ${at().toFixed(1)}, scrolled ${el.scrollLeft}`);
+    assert(
+      Math.abs(at() - x) < 1.5 && el.scrollLeft > 0,
+      `anchored: ${x.toFixed(1)} → ${at().toFixed(1)}, scrolled ${el.scrollLeft}`,
+    );
     // Zoomed, the values stay at the left and more dates show; unzoomed, only the ends and today.
-    const yax = el.querySelector('.gr-yaxis'), dates = el.querySelectorAll(`svg:not(.gr-yaxis) .gr-axis[y="${GR.H - 6}"]`).length;
-    assert(yax && Math.abs(yax.getBoundingClientRect().left - el.getBoundingClientRect().left) < 2, 'value axis pinned while scrolled');
+    const yax = el.querySelector('.gr-yaxis'),
+      dates = el.querySelectorAll(`svg:not(.gr-yaxis) .gr-axis[y="${GR.H - 6}"]`).length;
+    assert(
+      yax && Math.abs(yax.getBoundingClientRect().left - el.getBoundingClientRect().left) < 2,
+      'value axis pinned while scrolled',
+    );
     assert(dates > 3, `dates along a zoomed axis: ${dates}`);
     // A redraw keeps the zoom and the scroll; ctrl + wheel and + / − zoom too.
-    const zoomed = W(), left = el.scrollLeft;
+    const zoomed = W(),
+      left = el.scrollLeft;
     render();
-    assert(W() === zoomed && Math.abs(plot().scrollLeft - left) < 1, `kept over a redraw: ${plot().scrollLeft} vs ${left}`);
+    assert(
+      W() === zoomed && Math.abs(plot().scrollLeft - left) < 1,
+      `kept over a redraw: ${plot().scrollLeft} vs ${left}`,
+    );
     const r = plot().getBoundingClientRect();
-    plot().dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100, clientX: r.left + 200, clientY: r.top + 50 }));
-    await tick(); await tick();
+    plot().dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: true,
+        deltaY: -100,
+        clientX: r.left + 200,
+        clientY: r.top + 50,
+      }),
+    );
+    await tick();
+    await tick();
     assert(W() > zoomed, `ctrl + wheel zooms in: ${zoomed} → ${W()}`);
     const wheeled = W();
     plot().focus();
@@ -5299,35 +8833,71 @@ window.moreTests = async ({ step, assert }) => {
     plot().blur();
 
     // Bars: today's column covers today's day, less the bars' 1 px gap at each side.
-    const rt = mk('activity', { title: 'Run', repeat: { times: 1, per: 'week' }, checkins: { [d(-8)]: 1, [d(0)]: 1 }, startDate: d(-20) });
-    save(); render();
-    const bc = grCharts[rt.id], bcol = $(`[data-gr="${rt.id}"] .gr-today`), bw = Number(bcol.getAttribute('width'));
+    const rt = mk('activity', {
+      title: 'Run',
+      repeat: { times: 1, per: 'week' },
+      checkins: { [d(-8)]: 1, [d(0)]: 1 },
+      startDate: d(-20),
+    });
+    save();
+    render();
+    const bc = grCharts[rt.id],
+      bcol = $(`[data-gr="${rt.id}"] .gr-today`),
+      bw = Number(bcol.getAttribute('width'));
     const bday = bc.px(todayN + 1) - bc.px(todayN);
-    assert(Math.abs(Number(bcol.getAttribute('x')) + bw / 2 - (bc.px(todayN) + bday / 2)) < 0.01 && Math.abs(bw - Math.max(bday - 2, 3)) < 0.01, `bar chart today ${bw.toFixed(1)} px`);
+    assert(
+      Math.abs(Number(bcol.getAttribute('x')) + bw / 2 - (bc.px(todayN) + bday / 2)) < 0.01 &&
+        Math.abs(bw - Math.max(bday - 2, 3)) < 0.01,
+      `bar chart today ${bw.toFixed(1)} px`,
+    );
 
     // Timeline: the column is a day wide, at least 3 px, behind the bars.
-    const g = mk('goal', { startDate: d(-5), deadline: d(30) }); save();
+    const g = mk('goal', { startDate: d(-5), deadline: d(30) });
+    save();
     setView('timeline');
-    const widths = [30, 8, 1.5].map(p => { ui.tlPx = p; render(); return $('.tl-today').getBoundingClientRect().width; });
-    assert(Math.abs(widths[0] - 30) < 0.5 && Math.abs(widths[1] - 8) < 0.5 && Math.abs(widths[2] - 3) < 0.5, `timeline today ${widths.join(', ')}`);
+    const widths = [30, 8, 1.5].map(p => {
+      ui.tlPx = p;
+      render();
+      return $('.tl-today').getBoundingClientRect().width;
+    });
+    assert(
+      Math.abs(widths[0] - 30) < 0.5 && Math.abs(widths[1] - 8) < 0.5 && Math.abs(widths[2] - 3) < 0.5,
+      `timeline today ${widths.join(', ')}`,
+    );
     assert(getComputedStyle($('.tl-today')).zIndex === 'auto', 'drawn behind the bars');
-    ui.tlPx = TL.ZOOM.month; ui.grZoom = {};
+    ui.tlPx = TL.ZOOM.month;
+    ui.grZoom = {};
     return `card ${w0}, max ${max}, wheel ${wheeled}, today ${cw.toFixed(1)}/${bw.toFixed(1)} px, timeline ${widths.join('/')}`;
   });
 
   await step('activities: on its start date a to-do activity is in progress, once per start date', () => {
     fresh('Auto start');
-    const past = mk('activity', { startDate: d(-3) }), now = mk('activity', { startDate: d(0) }), soon = mk('activity', { startDate: d(1) });
-    const none = mk('activity'), done = mk('activity', { status: 'done', startDate: d(-5) });
+    const past = mk('activity', { startDate: d(-3) }),
+      now = mk('activity', { startDate: d(0) }),
+      soon = mk('activity', { startDate: d(1) });
+    const none = mk('activity'),
+      done = mk('activity', { status: 'done', startDate: d(-5) });
     const routine = mk('activity', { startDate: d(-10), repeat: { every: 1, unit: 'week', times: 2 }, checkins: {} });
     setView('activities');
-    eq([past, now, soon, none, done, routine].map(a => a.status), ['doing', 'doing', 'todo', 'todo', 'done', 'todo'], 'statuses');
+    eq(
+      [past, now, soon, none, done, routine].map(a => a.status),
+      ['doing', 'doing', 'todo', 'todo', 'done', 'todo'],
+      'statuses',
+    );
     eq(past.autoStarted, past.startDate, 'remembers the start date it acted on');
-    assert($(`.col-doing [data-open="${past.id}"]`) && $(`.col-todo [data-open="${soon.id}"]`), 'cards sit in their columns');
-    eq(JSON.parse(localStorage.getItem(planKey(plans.current))).activities.find(a => a.id === now.id).status, 'doing', 'and it is saved');
+    assert(
+      $(`.col-doing [data-open="${past.id}"]`) && $(`.col-todo [data-open="${soon.id}"]`),
+      'cards sit in their columns',
+    );
+    eq(
+      JSON.parse(localStorage.getItem(planKey(plans.current))).activities.find(a => a.id === now.id).status,
+      'doing',
+      'and it is saved',
+    );
     // Set back by hand, it stays; a new start date starts it again.
     runCtxAction('status:todo', past.id);
-    setView('dashboard'); setView('activities');
+    setView('dashboard');
+    setView('activities');
     eq(past.status, 'todo', 'set back to to do, it stays');
     past.startDate = d(-1);
     render();
@@ -5343,7 +8913,10 @@ window.moreTests = async ({ step, assert }) => {
     eq(progressCounts(db).started, 1, 'started by hand is');
     // A plan shared as a template starts over.
     const tpl = resetProgress(db);
-    assert(tpl.activities.every(a => a.status === 'todo' && !('autoStarted' in a)), 'templates forget it');
+    assert(
+      tpl.activities.every(a => a.status === 'todo' && !('autoStarted' in a)),
+      'templates forget it',
+    );
     // A new activity starts today unless changed, so it is in progress at once; editing one without
     // a start date leaves it empty.
     openForm('activity', null, { repeat: 'once' });
@@ -5360,51 +8933,102 @@ window.moreTests = async ({ step, assert }) => {
     deletePlan(plans.current);
   });
 
-  await step('layout: a phone held sideways gets a slim icon rail and a title bar that scrolls away; no tab bar', async () => {
-    // The app's markup and stylesheet in a frame of each size (headless Chrome's window cannot shrink that far).
-    const sizes = { portrait: [390, 844], landscape: [844, 390], 'small landscape': [736, 360], 'large landscape': [932, 430], desktop: [1280, 900], 'desktop collapsed': [1280, 900] };
-    const out = [];
-    for (const [name, [w, h]] of Object.entries(sizes)) {
-      const frame = document.createElement('iframe');
-      Object.assign(frame.style, { width: `${w}px`, height: `${h}px`, position: 'fixed', left: '-9999px', top: '0', border: '0' });
-      const app = $('.app').cloneNode(true);
-      app.classList.toggle('nav-collapsed', name === 'desktop collapsed');
-      frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body>${app.outerHTML}</body>`;
-      await new Promise(res => { frame.onload = res; document.body.append(frame); });
-      const doc = frame.contentDocument, css = sel => frame.contentWindow.getComputedStyle(doc.querySelector(sel));
-      const nav = doc.querySelector('.nav').getBoundingClientRect(), tabs = [...doc.querySelectorAll('.nav-item[data-view]')];
-      const kind = css('.nav').position === 'fixed' ? 'tabs' : nav.width < 80 ? 'rail' : 'sidebar';
-      out.push(`${name}=${kind}`);
-      if (name === 'portrait') { frame.remove(); continue; }
-      if (name.endsWith('landscape')) {
-        eq(kind, 'rail', `${name}: a rail at the side, not a tab bar`);
-        assert(nav.width <= 64 && nav.height >= h - 1, `${name}: slim and full height (${nav.width}×${nav.height})`);
-        eq(css('.nav').overflowY, 'auto', `${name}: the rail scrolls if the icons do not fit`);
-        assert(tabs.every(b => b.getBoundingClientRect().bottom <= h + 1), `${name}: every view's icon is on screen`);
-        assert(tabs.every(b => b.querySelector('span').getBoundingClientRect().width <= 1 && b.title !== undefined), `${name}: icons only`);
-        assert(['.brand span', '.nav .plan-switch', '.nav-footer', '#navMore'].every(sel => css(sel).display === 'none' || doc.querySelector(sel).getBoundingClientRect().width <= 1), `${name}: no name, plan switcher, collapse toggle or More button in the rail`);
-        assert(css('.plan-name').display !== 'none', `${name}: the plan switcher sits above the title`);
-        eq(css('.topbar').position, 'static', `${name}: the title bar scrolls away`);
-        assert(doc.querySelector('.topbar').getBoundingClientRect().height <= 80, `${name}: and is compact`);
-      } else {
-        eq(kind, name === 'desktop' ? 'sidebar' : 'rail', `${name}: unchanged`);
-        eq(css('.topbar').position, 'sticky', `${name}: the title bar stays`);
-        assert(css('.plan-name').display === 'none', `${name}: the plan switcher is in the sidebar`);
+  await step(
+    'layout: a phone held sideways gets a slim icon rail and a title bar that scrolls away; no tab bar',
+    async () => {
+      // The app's markup and stylesheet in a frame of each size (headless Chrome's window cannot shrink that far).
+      const sizes = {
+        portrait: [390, 844],
+        landscape: [844, 390],
+        'small landscape': [736, 360],
+        'large landscape': [932, 430],
+        desktop: [1280, 900],
+        'desktop collapsed': [1280, 900],
+      };
+      const out = [];
+      for (const [name, [w, h]] of Object.entries(sizes)) {
+        const frame = document.createElement('iframe');
+        Object.assign(frame.style, {
+          width: `${w}px`,
+          height: `${h}px`,
+          position: 'fixed',
+          left: '-9999px',
+          top: '0',
+          border: '0',
+        });
+        const app = $('.app').cloneNode(true);
+        app.classList.toggle('nav-collapsed', name === 'desktop collapsed');
+        frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body>${app.outerHTML}</body>`;
+        await new Promise(res => {
+          frame.onload = res;
+          document.body.append(frame);
+        });
+        const doc = frame.contentDocument,
+          css = sel => frame.contentWindow.getComputedStyle(doc.querySelector(sel));
+        const nav = doc.querySelector('.nav').getBoundingClientRect(),
+          tabs = [...doc.querySelectorAll('.nav-item[data-view]')];
+        const kind = css('.nav').position === 'fixed' ? 'tabs' : nav.width < 80 ? 'rail' : 'sidebar';
+        out.push(`${name}=${kind}`);
+        if (name === 'portrait') {
+          frame.remove();
+          continue;
+        }
+        if (name.endsWith('landscape')) {
+          eq(kind, 'rail', `${name}: a rail at the side, not a tab bar`);
+          assert(nav.width <= 64 && nav.height >= h - 1, `${name}: slim and full height (${nav.width}×${nav.height})`);
+          eq(css('.nav').overflowY, 'auto', `${name}: the rail scrolls if the icons do not fit`);
+          assert(
+            tabs.every(b => b.getBoundingClientRect().bottom <= h + 1),
+            `${name}: every view's icon is on screen`,
+          );
+          assert(
+            tabs.every(b => b.querySelector('span').getBoundingClientRect().width <= 1 && b.title !== undefined),
+            `${name}: icons only`,
+          );
+          assert(
+            ['.brand span', '.nav .plan-switch', '.nav-footer', '#navMore'].every(
+              sel => css(sel).display === 'none' || doc.querySelector(sel).getBoundingClientRect().width <= 1,
+            ),
+            `${name}: no name, plan switcher, collapse toggle or More button in the rail`,
+          );
+          assert(css('.plan-name').display !== 'none', `${name}: the plan switcher sits above the title`);
+          eq(css('.topbar').position, 'static', `${name}: the title bar scrolls away`);
+          assert(doc.querySelector('.topbar').getBoundingClientRect().height <= 80, `${name}: and is compact`);
+        } else {
+          eq(kind, name === 'desktop' ? 'sidebar' : 'rail', `${name}: unchanged`);
+          eq(css('.topbar').position, 'sticky', `${name}: the title bar stays`);
+          assert(css('.plan-name').display === 'none', `${name}: the plan switcher is in the sidebar`);
+        }
+        frame.remove();
       }
-      frame.remove();
-    }
-    eq(out[0], 'portrait=tabs', 'phones held upright keep the tab bar');
-    return out.join(' ');
-  });
+      eq(out[0], 'portrait=tabs', 'phones held upright keep the tab bar');
+      return out.join(' ');
+    },
+  );
 
   await step('activities: a long-press (or right-click) on a card opens its menu', async () => {
     fresh('Card menu');
     const a = mk('activity', { title: 'Paint the fence' });
-    const r = mk('activity', { title: 'Stretch', startDate: d(-7), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
+    const r = mk('activity', {
+      title: 'Stretch',
+      startDate: d(-7),
+      repeat: { every: 1, unit: 'week', times: 3 },
+      checkins: {},
+    });
     save();
     setView('activities');
     const card = id => $(`.board [data-ctx-item="${id}"], .routines [data-ctx-item="${id}"]`);
-    const touch = (type, el, x = 60, y = 60) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 11, clientX: x, clientY: y }));
+    const touch = (type, el, x = 60, y = 60) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'touch',
+          pointerId: 11,
+          clientX: x,
+          clientY: y,
+        }),
+      );
     const click = el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     const wait = ms => new Promise(res => setTimeout(res, ms));
     const longPress = async (el, withClick) => {
@@ -5414,12 +9038,34 @@ window.moreTests = async ({ step, assert }) => {
       if (withClick) click(el);
     };
     const acts = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
-    const tapMenu = act => { const b = ctxMenu.querySelector(`[data-ctx="${act}"]`); touch('pointerdown', b); touch('pointerup', b); click(b); };
+    const tapMenu = act => {
+      const b = ctxMenu.querySelector(`[data-ctx="${act}"]`);
+      touch('pointerdown', b);
+      touch('pointerup', b);
+      click(b);
+    };
     for (const withClick of [false, true]) {
       await longPress(card(a.id).querySelector('h3'), withClick);
-      assert(!ctxMenu.hidden && ctxMenu.dataset.id === a.id, `${withClick ? 'with' : 'without'} a lifting click: menu open`);
+      assert(
+        !ctxMenu.hidden && ctxMenu.dataset.id === a.id,
+        `${withClick ? 'with' : 'without'} a lifting click: menu open`,
+      );
       assert(!modal.open, 'the press does not also open the form');
-      eq(acts(), ['edit', 'status:todo', 'status:doing', 'status:done', 'add:activity:subactivity', 'show:map', 'show:timeline', 'link', 'delete'], 'activity options, no highlighting');
+      eq(
+        acts(),
+        [
+          'edit',
+          'status:todo',
+          'status:doing',
+          'status:done',
+          'add:activity:subactivity',
+          'show:map',
+          'show:timeline',
+          'link',
+          'delete',
+        ],
+        'activity options, no highlighting',
+      );
       tapMenu('status:' + (withClick ? 'todo' : 'doing'));
       assert(ctxMenu.hidden, 'one tap runs the item');
       eq(a.status, withClick ? 'todo' : 'doing', 'status set from the menu');
@@ -5427,19 +9073,26 @@ window.moreTests = async ({ step, assert }) => {
     assert($(`.col-todo [data-ctx-item="${a.id}"]`), 'the card moved column');
     // Routines: tick today off from the menu.
     await longPress(card(r.id));
-    assert(!ctxMenu.hidden && ctxMenu.dataset.id === r.id && acts().includes('checkin') && !acts().includes('status:done'), 'routine menu');
+    assert(
+      !ctxMenu.hidden && ctxMenu.dataset.id === r.id && acts().includes('checkin') && !acts().includes('status:done'),
+      'routine menu',
+    );
     tapMenu('checkin');
     assert(checkedOn(r, today()), 'ticked off today');
     // A short tap still opens the form; a swipe opens nothing.
-    touch('pointerdown', card(a.id)); touch('pointerup', card(a.id)); click(card(a.id));
+    touch('pointerdown', card(a.id));
+    touch('pointerup', card(a.id));
+    click(card(a.id));
     assert(modal.open && formCtx.id === a.id && ctxMenu.hidden, 'a short tap opens the form');
     modal.close();
-    touch('pointerdown', card(a.id), 60, 60); touch('pointermove', card(a.id), 60, 90);
+    touch('pointerdown', card(a.id), 60, 60);
+    touch('pointermove', card(a.id), 60, 90);
     await wait(LONG_PRESS_MS + 80);
     touch('pointerup', card(a.id), 60, 90);
     assert(ctxMenu.hidden, 'a swipe (scrolling the board) opens no menu');
     // On a touch screen the card is not picked up by the browser's drag and drop; with a mouse it is.
-    touch('pointerdown', card(a.id)); touch('pointerup', card(a.id));
+    touch('pointerdown', card(a.id));
+    touch('pointerup', card(a.id));
     assert(card(a.id).draggable === false, 'no native drag on touch');
     card(a.id).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 }));
     assert(card(a.id).draggable === true, 'mouse drags');
@@ -5459,34 +9112,64 @@ window.moreTests = async ({ step, assert }) => {
   await step('pinch: zooming the timeline or the map with two fingers opens no menu', async () => {
     fresh('Pinch');
     const g = mk('goal', { title: 'Goal', startDate: d(-5), deadline: d(30) });
-    const a = mk('activity', { title: 'First', startDate: d(-2), dueDate: d(10) }), b = mk('activity', { title: 'Second', startDate: d(1), dueDate: d(20) });
-    rel(a, g, 'contributes'); rel(b, g, 'contributes');
+    const a = mk('activity', { title: 'First', startDate: d(-2), dueDate: d(10) }),
+      b = mk('activity', { title: 'Second', startDate: d(1), dueDate: d(20) });
+    rel(a, g, 'contributes');
+    rel(b, g, 'contributes');
     save();
     const wait = ms => new Promise(res => setTimeout(res, ms));
-    const ptr = (type, el, id, x, y) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: id, isPrimary: id === 31, clientX: x, clientY: y }));
-    const tch = (type, el, fingers) => el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true,
-      touches: type === 'touchend' ? [] : fingers.map(([target, x, y], i) => new Touch({ identifier: i, target, clientX: x, clientY: y })) }));
+    const ptr = (type, el, id, x, y) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'touch',
+          pointerId: id,
+          isPrimary: id === 31,
+          clientX: x,
+          clientY: y,
+        }),
+      );
+    const tch = (type, el, fingers) =>
+      el.dispatchEvent(
+        new TouchEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          touches:
+            type === 'touchend'
+              ? []
+              : fingers.map(([target, x, y], i) => new Touch({ identifier: i, target, clientX: x, clientY: y })),
+        }),
+      );
     // Two fingers down (each on its own item, or the second off any item), held, spread, lifted.
     const pinchOn = async (el1, el2) => {
-      const r1 = el1.getBoundingClientRect(), r2 = el2.getBoundingClientRect();
-      const f1 = [el1, r1.left + 20, r1.top + 5], f2 = [el2, r2.left + 30, r2.top + 5];
-      ptr('pointerdown', el1, 31, f1[1], f1[2]); tch('touchstart', el1, [f1]);
-      ptr('pointerdown', el2, 32, f2[1], f2[2]); tch('touchstart', el2, [f1, f2]);
+      const r1 = el1.getBoundingClientRect(),
+        r2 = el2.getBoundingClientRect();
+      const f1 = [el1, r1.left + 20, r1.top + 5],
+        f2 = [el2, r2.left + 30, r2.top + 5];
+      ptr('pointerdown', el1, 31, f1[1], f1[2]);
+      tch('touchstart', el1, [f1]);
+      ptr('pointerdown', el2, 32, f2[1], f2[2]);
+      tch('touchstart', el2, [f1, f2]);
       await wait(LONG_PRESS_MS + 80);
       // Phones may also report the still finger as a long-press.
       const cm = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: f1[1], clientY: f1[2] });
       el1.dispatchEvent(cm);
       // Checked while the fingers are still: zooming redraws the view, which would close a menu.
-      const menu = !ctxMenu.hidden, prevented = cm.defaultPrevented;
+      const menu = !ctxMenu.hidden,
+        prevented = cm.defaultPrevented;
       tch('touchmove', el1, [f1, [el2, f2[1] + 60, f2[2]]]);
       await wait(20);
-      ptr('pointerup', el2, 32, f2[1], f2[2]); tch('touchend', el2, []);
-      ptr('pointerup', el1, 31, f1[1], f1[2]); tch('touchend', el1, []);
+      ptr('pointerup', el2, 32, f2[1], f2[2]);
+      tch('touchend', el2, []);
+      ptr('pointerup', el1, 31, f1[1], f1[2]);
+      tch('touchend', el1, []);
       await wait(LONG_PRESS_MS + 80);
       return { menu: menu || !ctxMenu.hidden, prevented };
     };
     setView('timeline');
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     const row = id => $(`[data-tl-node="${id}"]`);
     let px = ui.tlPx;
     let res = await pinchOn(row(a.id), row(b.id));
@@ -5496,14 +9179,19 @@ window.moreTests = async ({ step, assert }) => {
     res = await pinchOn(row(a.id), $('.tl-scroll .tl-scale') || $('.tl-scroll'));
     assert(!res.menu, 'second finger off any row: no menu');
     // With a bar selected, a pinch that starts on it does not pick it up.
-    ui.mapSelected = ui.tlDates = a.id; render();
+    ui.mapSelected = ui.tlDates = a.id;
+    render();
     const start = a.startDate;
     res = await pinchOn(row(a.id).querySelector('.tl-bar'), row(b.id));
-    assert(!res.menu && !tlDrag && !$('.tl-scroll').classList.contains('tl-dragging'), 'selected bar: not picked up, no menu');
+    assert(
+      !res.menu && !tlDrag && !$('.tl-scroll').classList.contains('tl-dragging'),
+      'selected bar: not picked up, no menu',
+    );
     eq(a.startDate, start, 'its dates stay');
     // The map, the same.
     setView('map');
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     px = ui.mapScale;
     res = await pinchOn($(`[data-map-node="${a.id}"]`), $(`[data-map-node="${b.id}"]`));
     assert(!res.menu, 'map: no menu');
@@ -5525,15 +9213,24 @@ window.moreTests = async ({ step, assert }) => {
     const out = [];
     for (const v of ['map', 'timeline']) {
       setView(v);
-      if (v === 'timeline') { ui.tlDeps = true; render(); }
+      if (v === 'timeline') {
+        ui.tlDeps = true;
+        render();
+      }
       const els = [...viewEl.querySelectorAll('[data-rel-edit], [data-map-node], [data-tl-node]')];
-      assert(els.some(el => el.matches('[data-rel-edit]')), `${v}: has lines`);
+      assert(
+        els.some(el => el.matches('[data-rel-edit]')),
+        `${v}: has lines`,
+      );
       const shown = els.filter(el => clear(el) !== 'rgba(0, 0, 0, 0)');
       assert(!shown.length, `${v}: ${shown.length} with a highlight, e.g. ${shown[0] && clear(shown[0])}`);
       const line = viewEl.querySelector('[data-rel-edit]');
       line.focus();
       const cs = getComputedStyle(line);
-      assert(document.activeElement === line && cs.outlineStyle === 'none', `${v}: a focused line draws no box (${cs.outlineStyle})`);
+      assert(
+        document.activeElement === line && cs.outlineStyle === 'none',
+        `${v}: a focused line draws no box (${cs.outlineStyle})`,
+      );
       out.push(`${v}: ${els.length}`);
     }
     // Elsewhere the browser's highlight is untouched.
@@ -5544,16 +9241,21 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('overview: next actions show what is due by today, then what else is in progress', () => {
-    fresh('Due today'); changeLanguage('en'); setView('dashboard');
+    fresh('Due today');
+    changeLanguage('en');
+    setView('dashboard');
     ui.nextAll = false;
     const shown = () => [...$('#view').querySelectorAll('.list:not(.routine-list) > .row')].map(r => r.dataset.open);
     const more = () => $('[data-next-more]');
     const ids = xs => xs.map(a => a.id).join();
     // Due by today (overdue, today – one of them in progress), in progress but due later or undated,
     // and not started yet.
-    const over = mk('activity', { dueDate: d(-9) }), todayA = mk('activity', { dueDate: d(0), status: 'doing' });
-    const doingLater = mk('activity', { dueDate: d(6), status: 'doing' }), doingUndated = mk('activity', { status: 'doing' });
-    const later = mk('activity', { dueDate: d(1) }), undated = mk('activity');
+    const over = mk('activity', { dueDate: d(-9) }),
+      todayA = mk('activity', { dueDate: d(0), status: 'doing' });
+    const doingLater = mk('activity', { dueDate: d(6), status: 'doing' }),
+      doingUndated = mk('activity', { status: 'doing' });
+    const later = mk('activity', { dueDate: d(1) }),
+      undated = mk('activity');
     // Neither finished activities nor routines count.
     mk('activity', { dueDate: d(-2), status: 'done' });
     mk('activity', { dueDate: d(-3), repeat: { times: 1, per: 'week' }, checkins: {} });
@@ -5561,40 +9263,69 @@ window.moreTests = async ({ step, assert }) => {
     assert(shown().join() === ids([over, todayA]), `collapsed: only those due by today, got ${shown().length}`);
     assert(more()?.textContent === t('dash.showAll', { n: 4 }), 'show all counts the active ones');
     more().click();
-    assert(shown().join() === ids([over, todayA, doingLater, doingUndated]), 'expanded: also the others in progress, by due date');
+    assert(
+      shown().join() === ids([over, todayA, doingLater, doingUndated]),
+      'expanded: also the others in progress, by due date',
+    );
     assert(!shown().includes(later.id) && !shown().includes(undated.id), 'never those not started');
     more().click();
     assert(shown().join() === ids([over, todayA]), 'collapsed back');
     // Nothing due, some in progress: a note, and the button for them.
-    [over, todayA].forEach(a => (a.status = 'done')); render();
-    assert(!shown().length && viewEl.textContent.includes(t('dash.noneDue')) && more()?.textContent === t('dash.showAll', { n: 2 }), 'none due: says so, the rest behind the button');
+    [over, todayA].forEach(a => (a.status = 'done'));
+    render();
+    assert(
+      !shown().length &&
+        viewEl.textContent.includes(t('dash.noneDue')) &&
+        more()?.textContent === t('dash.showAll', { n: 2 }),
+      'none due: says so, the rest behind the button',
+    );
     more().click();
     assert(shown().join() === ids([doingLater, doingUndated]), 'the ones in progress');
     more().click();
     // Nothing active, but not all done.
-    [doingLater, doingUndated].forEach(a => (a.status = 'done')); render();
-    assert(!shown().length && viewEl.textContent.includes(t('dash.noneActive')) && !more(), 'none active: says so, no button');
+    [doingLater, doingUndated].forEach(a => (a.status = 'done'));
+    render();
+    assert(
+      !shown().length && viewEl.textContent.includes(t('dash.noneActive')) && !more(),
+      'none active: says so, no button',
+    );
     assert(!viewEl.textContent.includes(t('dash.allDone')), 'not "nothing left to do"');
     // Everything done.
-    [later, undated].forEach(a => (a.status = 'done')); render();
-    assert(viewEl.textContent.includes(t('dash.allDone')) && !more() && !viewEl.textContent.includes(t('dash.noneActive')), 'all done');
+    [later, undated].forEach(a => (a.status = 'done'));
+    render();
+    assert(
+      viewEl.textContent.includes(t('dash.allDone')) && !more() && !viewEl.textContent.includes(t('dash.noneActive')),
+      'all done',
+    );
     // An activity whose start date comes is started: listed once expanded, or at once if due.
-    const starts = mk('activity', { startDate: d(0), dueDate: d(9) }); render();
+    const starts = mk('activity', { startDate: d(0), dueDate: d(9) });
+    render();
     assert(starts.status === 'doing' && !shown().length && more(), 'started today, due later: behind the button');
-    starts.dueDate = d(-1); render();
+    starts.dueDate = d(-1);
+    render();
     assert(shown().join() === starts.id && !more(), 'and once due, listed, with no button');
     deletePlan(plans.current);
     return 'ok';
   });
 
   await step('item menu: show in another view, selected there', () => {
-    fresh('Show in'); changeLanguage('en');
+    fresh('Show in');
+    changeLanguage('en');
     const g = mk('goal', { startDate: d(-5), deadline: d(30) });
     const a = mk('activity', { startDate: d(-2), dueDate: d(4) });
     const done = mk('activity', { dueDate: d(-1), status: 'done' });
-    const s = mk('state', { value: 4, date: d(-1), history: [{ date: d(-9), value: 2 }, { date: d(-1), value: 4 }] });
+    const s = mk('state', {
+      value: 4,
+      date: d(-1),
+      history: [
+        { date: d(-9), value: 2 },
+        { date: d(-1), value: 4 },
+      ],
+    });
     const bare = mk('state');
-    rel(a, g, 'contributes'); rel(done, g, 'contributes'); rel(s, g, 'measures');
+    rel(a, g, 'contributes');
+    rel(done, g, 'contributes');
+    rel(s, g, 'measures');
     const rightClick = el => {
       const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 });
       el.dispatchEvent(e);
@@ -5606,71 +9337,237 @@ window.moreTests = async ({ step, assert }) => {
     setView('goals');
     eq(rightClick($(`.card[data-open="${g.id}"]`)), ['map', 'timeline'], 'goal card');
     const showMap = ctxMenu.querySelector('[data-ctx="show:map"]');
-    assert(showMap.textContent === t('nav.map') && showMap.querySelector('svg').outerHTML === $('.nav-item[data-view="map"] svg').outerHTML, 'the map icon and name');
-    assert(showMap.getAttribute('aria-label') === t('ctx.showInView', { view: t('nav.map') }) && showMap.title === 'Show in Map view', 'named in full');
+    assert(
+      showMap.textContent === t('nav.map') &&
+        showMap.querySelector('svg').outerHTML === $('.nav-item[data-view="map"] svg').outerHTML,
+      'the map icon and name',
+    );
+    assert(
+      showMap.getAttribute('aria-label') === t('ctx.showInView', { view: t('nav.map') }) &&
+        showMap.title === 'Show in Map view',
+      'named in full',
+    );
     ctxMenu.querySelector('[data-ctx-sub]').click();
     const box = showMap.querySelector('svg').getBoundingClientRect();
-    assert(box.width === 18 && box.height === 18 && getComputedStyle(showMap.querySelector('svg')).fill === 'none', 'icon drawn like in the navigation');
+    assert(
+      box.width === 18 && box.height === 18 && getComputedStyle(showMap.querySelector('svg')).fill === 'none',
+      'icon drawn like in the navigation',
+    );
     const all = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
-    eq(all(), ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'show:map', 'show:timeline', 'link', 'delete'], 'goal options: no highlight or focus outside the map and timeline');
+    eq(
+      all(),
+      [
+        'edit',
+        'status:achieved',
+        'add:goal:subgoal',
+        'add:activity:contributes',
+        'show:map',
+        'show:timeline',
+        'link',
+        'delete',
+      ],
+      'goal options: no highlight or focus outside the map and timeline',
+    );
     pick('map');
     const node = $(`[data-map-node="${g.id}"]`);
     assert(ui.view === 'map' && ui.mapSelected === g.id && ctxMenu.hidden, 'map, goal selected');
-    assert(node.querySelector('rect').style.strokeWidth === '' && document.activeElement === node, 'box drawn selected and focused');
-    assert(node.classList.contains('sel') && [...document.querySelectorAll('.map-wrap .node.sel')].length === 1 && (() => {
-      const lift = getComputedStyle(node.querySelector('.node-lift')), other = getComputedStyle($('.map-wrap .node:not(.sel) .node-lift'));
-      return lift.stroke === 'none' && lift.filter.includes('node-glow') && lift.fill === getComputedStyle(node).getPropertyValue('--tint').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(', ')})`) && other.filter === 'none';
-    })() && $('#node-glow feComposite[operator="out"]'), 'only the selected box glows, in its own colour, outside its face, with no outline');
-    assert([...document.querySelectorAll('.map-wrap .node')].every(n => n.querySelector('.node-lift')) && [...document.querySelectorAll('.map-wrap marker')].every(m => m.getAttribute('markerUnits') === 'userSpaceOnUse'), 'every box can glow; arrowheads keep one size whatever the line width');
+    assert(
+      node.querySelector('rect').style.strokeWidth === '' && document.activeElement === node,
+      'box drawn selected and focused',
+    );
+    assert(
+      node.classList.contains('sel') &&
+        [...document.querySelectorAll('.map-wrap .node.sel')].length === 1 &&
+        (() => {
+          const lift = getComputedStyle(node.querySelector('.node-lift')),
+            other = getComputedStyle($('.map-wrap .node:not(.sel) .node-lift'));
+          return (
+            lift.stroke === 'none' &&
+            lift.filter.includes('node-glow') &&
+            lift.fill ===
+              getComputedStyle(node)
+                .getPropertyValue('--tint')
+                .trim()
+                .replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(', ')})`) &&
+            other.filter === 'none'
+          );
+        })() &&
+        $('#node-glow feComposite[operator="out"]'),
+      'only the selected box glows, in its own colour, outside its face, with no outline',
+    );
+    assert(
+      [...document.querySelectorAll('.map-wrap .node')].every(n => n.querySelector('.node-lift')) &&
+        [...document.querySelectorAll('.map-wrap marker')].every(
+          m => m.getAttribute('markerUnits') === 'userSpaceOnUse',
+        ),
+      'every box can glow; arrowheads keep one size whatever the line width',
+    );
     // Under each box's face, its glass slab: one drawing per colour and thickness, defined once.
-    const boxes = [...document.querySelectorAll('.map-wrap .node')], uses = boxes.map(n => n.querySelector('use'));
-    assert(uses.every((u, i) => u && u.nextElementSibling === boxes[i].querySelector('rect') && document.querySelector(u.getAttribute('href'))), 'every box has its slab, right under its face');
+    const boxes = [...document.querySelectorAll('.map-wrap .node')],
+      uses = boxes.map(n => n.querySelector('use'));
+    assert(
+      uses.every(
+        (u, i) =>
+          u &&
+          u.nextElementSibling === boxes[i].querySelector('rect') &&
+          document.querySelector(u.getAttribute('href')),
+      ),
+      'every box has its slab, right under its face',
+    );
     const slabs = [...document.querySelectorAll('.map-wrap defs > g[id^="glass-"]')];
     eq(slabs.length, new Set(uses.map(u => u.getAttribute('href'))).size, 'one slab per colour and thickness used');
-    assert([...document.querySelectorAll('.map-wrap filter')].map(f => f.id).join() === 'node-glow,line-glow' && [...document.querySelectorAll('.map-wrap .node:not(.sel) *')].every(x => getComputedStyle(x).filter === 'none') && getComputedStyle(node.querySelector('rect')).stroke === 'none', 'no edge; the only blur is the glow of what is selected');
+    assert(
+      [...document.querySelectorAll('.map-wrap filter')].map(f => f.id).join() === 'node-glow,line-glow' &&
+        [...document.querySelectorAll('.map-wrap .node:not(.sel) *')].every(
+          x => getComputedStyle(x).filter === 'none',
+        ) &&
+        getComputedStyle(node.querySelector('rect')).stroke === 'none',
+      'no edge; the only blur is the glow of what is selected',
+    );
     // Goals are cut from thicker glass; the slab reaches down and to the right of the face, and casts no shadow.
-    const reach = n => { const b = n.querySelector('use').getBBox(); return [b.x + b.width, b.y + b.height]; };
-    const goalBox = boxes.find(n => n.classList.contains('goal')), actBox = boxes.find(n => n.classList.contains('activity'));
-    assert(reach(actBox)[0] > MAP.NW && reach(actBox)[1] > MAP.NH && reach(goalBox)[1] > reach(actBox)[1], `goals thicker: ${reach(goalBox)} vs ${reach(actBox)}`);
-    assert(slabs.every(g => !g.querySelector('[opacity]')) && reach(goalBox)[1] <= MAP.NH + GLASS.DEPTH.goal + .5 && reach(actBox)[0] <= MAP.NW + GLASS.DEPTH.other + .5, `no cast shadow: ${reach(goalBox)} vs ${reach(actBox)}`);
-    eq([actBox, goalBox].map(n => getComputedStyle(n.querySelector('text')).fontWeight), ['400', '500'], 'box titles in lighter type');
+    const reach = n => {
+      const b = n.querySelector('use').getBBox();
+      return [b.x + b.width, b.y + b.height];
+    };
+    const goalBox = boxes.find(n => n.classList.contains('goal')),
+      actBox = boxes.find(n => n.classList.contains('activity'));
+    assert(
+      reach(actBox)[0] > MAP.NW && reach(actBox)[1] > MAP.NH && reach(goalBox)[1] > reach(actBox)[1],
+      `goals thicker: ${reach(goalBox)} vs ${reach(actBox)}`,
+    );
+    assert(
+      slabs.every(g => !g.querySelector('[opacity]')) &&
+        reach(goalBox)[1] <= MAP.NH + GLASS.DEPTH.goal + 0.5 &&
+        reach(actBox)[0] <= MAP.NW + GLASS.DEPTH.other + 0.5,
+      `no cast shadow: ${reach(goalBox)} vs ${reach(actBox)}`,
+    );
+    eq(
+      [actBox, goalBox].map(n => getComputedStyle(n.querySelector('text')).fontWeight),
+      ['400', '500'],
+      'box titles in lighter type',
+    );
     // The side is lit from the left: the bottom (shaded from the corner to its left end) is lighter at its left end,
     // and the right side is darker still. Each is one strip with a gradient; the corners are small pieces.
-    const slab = goalBox.querySelector('use').getAttribute('href'), lums = run => [...document.querySelectorAll(`${slab}-${run} stop`)].map(x => x.getAttribute('stop-color').match(/\d+/g).reduce((sum, v) => sum + +v, 0));
-    const bottom = lums('b'), right = lums('r');
-    assert(bottom.length > 10 && right.length > 5 && bottom.at(-1) > bottom[0] && Math.max(...right) < bottom.at(-1) && $(slab).querySelectorAll('path').length < 20, `side shaded by the light: bottom ${bottom[0]} → ${bottom.at(-1)}, right ${Math.max(...right)}`);
+    const slab = goalBox.querySelector('use').getAttribute('href'),
+      lums = run =>
+        [...document.querySelectorAll(`${slab}-${run} stop`)].map(x =>
+          x
+            .getAttribute('stop-color')
+            .match(/\d+/g)
+            .reduce((sum, v) => sum + +v, 0),
+        );
+    const bottom = lums('b'),
+      right = lums('r');
+    assert(
+      bottom.length > 10 &&
+        right.length > 5 &&
+        bottom.at(-1) > bottom[0] &&
+        Math.max(...right) < bottom.at(-1) &&
+        $(slab).querySelectorAll('path').length < 20,
+      `side shaded by the light: bottom ${bottom[0]} → ${bottom.at(-1)}, right ${Math.max(...right)}`,
+    );
     // Lines meet a box's bottom below its glass, so no arrowhead hides under the slab.
-    const at = b => b.getAttribute('transform').match(/[-\d.]+/g).map(Number);
-    const ends = [...document.querySelectorAll('.map-wrap .edge')].flatMap(e => { const v = e.getAttribute('d').match(/[-\d.]+/g).map(Number); return [v.slice(0, 2), v.slice(-2)]; });
-    const hidden = ends.filter(([x, y]) => boxes.some(b => { const [bx, by] = at(b), d = b.classList.contains('goal') ? GLASS.DEPTH.goal : GLASS.DEPTH.other;
-      return x > bx && x < bx + MAP.NW && y > by + MAP.NH - .5 && y < by + MAP.NH + d - .5; }));
+    const at = b =>
+      b
+        .getAttribute('transform')
+        .match(/[-\d.]+/g)
+        .map(Number);
+    const ends = [...document.querySelectorAll('.map-wrap .edge')].flatMap(e => {
+      const v = e
+        .getAttribute('d')
+        .match(/[-\d.]+/g)
+        .map(Number);
+      return [v.slice(0, 2), v.slice(-2)];
+    });
+    const hidden = ends.filter(([x, y]) =>
+      boxes.some(b => {
+        const [bx, by] = at(b),
+          d = b.classList.contains('goal') ? GLASS.DEPTH.goal : GLASS.DEPTH.other;
+        return x > bx && x < bx + MAP.NW && y > by + MAP.NH - 0.5 && y < by + MAP.NH + d - 0.5;
+      }),
+    );
     eq(hidden, [], 'no line ends under a slab');
     // Every line ends with a straight stretch, so its arrowhead sits in line with it; the line stops inside the
     // arrowhead's wide back (TIP short of where it points), so even a thick line never shows past the head's tip.
-    const bent = [...document.querySelectorAll('.map-wrap .edge')].map(e => e.getAttribute('d')).filter(d => {
-      const v = d.match(/[-\d.]+/g).map(Number), [x1, y1, x2, y2] = v.slice(-4);
-      return !/L[-\d.]+,[-\d.]+$/.test(d) || Math.hypot(x2 - x1, y2 - y1) < MAP.LEAD - MAP.TIP - .5;
-    });
+    const bent = [...document.querySelectorAll('.map-wrap .edge')]
+      .map(e => e.getAttribute('d'))
+      .filter(d => {
+        const v = d.match(/[-\d.]+/g).map(Number),
+          [x1, y1, x2, y2] = v.slice(-4);
+        return !/L[-\d.]+,[-\d.]+$/.test(d) || Math.hypot(x2 - x1, y2 - y1) < MAP.LEAD - MAP.TIP - 0.5;
+      });
     eq(bent, [], 'lines end straight into their arrowheads');
-    assert([...document.querySelectorAll('.map-wrap marker')].every(m => +m.getAttribute('refX') === 10 - MAP.TIP), 'arrowheads reach the rest of the way');
+    assert(
+      [...document.querySelectorAll('.map-wrap marker')].every(m => +m.getAttribute('refX') === 10 - MAP.TIP),
+      'arrowheads reach the rest of the way',
+    );
     // Down the layers a line stops exactly TIP short of the box (or slab) it points at, so the head's tip just touches it.
-    const tipGaps = [...document.querySelectorAll('.map-wrap .edge')].map(e => e.getAttribute('d').match(/[-\d.]+/g).map(Number).slice(-4))
-      .filter(([x1, , x2]) => x1 === x2).map(([, , x, y]) => Math.min(...boxes.filter(b => x > at(b)[0] && x < at(b)[0] + MAP.NW)
-        .flatMap(b => { const by = at(b)[1], d = b.classList.contains('goal') ? GLASS.DEPTH.goal : GLASS.DEPTH.other; return [Math.abs(y - by), Math.abs(y - (by + MAP.NH + d))]; })));
-    assert(tipGaps.length && tipGaps.every(g => Math.abs(g - MAP.TIP) < .01), `lines stop TIP short: ${tipGaps}`);
+    const tipGaps = [...document.querySelectorAll('.map-wrap .edge')]
+      .map(e =>
+        e
+          .getAttribute('d')
+          .match(/[-\d.]+/g)
+          .map(Number)
+          .slice(-4),
+      )
+      .filter(([x1, , x2]) => x1 === x2)
+      .map(([, , x, y]) =>
+        Math.min(
+          ...boxes
+            .filter(b => x > at(b)[0] && x < at(b)[0] + MAP.NW)
+            .flatMap(b => {
+              const by = at(b)[1],
+                d = b.classList.contains('goal') ? GLASS.DEPTH.goal : GLASS.DEPTH.other;
+              return [Math.abs(y - by), Math.abs(y - (by + MAP.NH + d))];
+            }),
+        ),
+      );
+    assert(tipGaps.length && tipGaps.every(g => Math.abs(g - MAP.TIP) < 0.01), `lines stop TIP short: ${tipGaps}`);
     // Lines are fine and their colours muted toward grey, arrowheads and the legend's keys alike.
     const lines = [...document.querySelectorAll('.map-wrap .edge')];
-    assert(lines.every(e => parseFloat(e.style.strokeWidth) <= 1.6 && e.style.stroke.includes('color-mix')) && [...document.querySelectorAll('.map-wrap marker path, .rel-toggle i')].every(x => x.getAttribute('style').includes('color-mix')), 'fine, muted lines');
-    assert([...document.querySelectorAll('.map-wrap .col-label')].every(l => l.compareDocumentPosition($('.map-wrap .edge-g')) & Node.DOCUMENT_POSITION_PRECEDING), 'band labels drawn over the lines');
+    assert(
+      lines.every(e => parseFloat(e.style.strokeWidth) <= 1.6 && e.style.stroke.includes('color-mix')) &&
+        [...document.querySelectorAll('.map-wrap marker path, .rel-toggle i')].every(x =>
+          x.getAttribute('style').includes('color-mix'),
+        ),
+      'fine, muted lines',
+    );
+    assert(
+      [...document.querySelectorAll('.map-wrap .col-label')].every(
+        l => l.compareDocumentPosition($('.map-wrap .edge-g')) & Node.DOCUMENT_POSITION_PRECEDING,
+      ),
+      'band labels drawn over the lines',
+    );
     assert(!$(`[data-map-node="${a.id}"]`).classList.contains('dim'), 'neighbours not dimmed');
     // Map → timeline: the same item stays selected; a different one replaces the selection.
     rightClick(node);
-    eq(all(), ['edit', 'highlight', 'focus', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'show:goals', 'show:timeline', 'link', 'delete'], 'goal options on the map');
+    eq(
+      all(),
+      [
+        'edit',
+        'highlight',
+        'focus',
+        'status:achieved',
+        'add:goal:subgoal',
+        'add:activity:contributes',
+        'show:goals',
+        'show:timeline',
+        'link',
+        'delete',
+      ],
+      'goal options on the map',
+    );
     closeCtxMenu();
     eq(rightClick($(`[data-map-node="${a.id}"]`)), ['activities', 'timeline'], 'activity box');
     pick('timeline');
     const row = $(`[data-tl-node="${a.id}"]`);
-    assert(ui.view === 'timeline' && ui.mapSelected === a.id && row.classList.contains('selected') && document.activeElement === row, 'timeline row selected');
+    assert(
+      ui.view === 'timeline' &&
+        ui.mapSelected === a.id &&
+        row.classList.contains('selected') &&
+        document.activeElement === row,
+      'timeline row selected',
+    );
     assert(!row.querySelector('.tl-drag'), 'its dates are not offered for dragging yet');
     // Timeline → activities: the card is brought into view and glows.
     eq(rightClick(row), ['activities', 'map'], 'timeline row');
@@ -5690,8 +9587,12 @@ window.moreTests = async ({ step, assert }) => {
     pick('states');
     assert(ui.view === 'states' && $(`.card[data-open="${s.id}"]`).classList.contains('flash'), 'state card flashes');
     const plot = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
-    setView('graphs'); $(`[data-gr="${s.id}"] .gr-plot`).dispatchEvent(plot);
-    assert(plot.defaultPrevented && !ctxMenu.hidden && ctxMenu.dataset.id === s.id, 'the chart itself opens the menu too');
+    setView('graphs');
+    $(`[data-gr="${s.id}"] .gr-plot`).dispatchEvent(plot);
+    assert(
+      plot.defaultPrevented && !ctxMenu.hidden && ctxMenu.dataset.id === s.id,
+      'the chart itself opens the menu too',
+    );
     closeCtxMenu();
     // Overview rows have the menu too (the activity is in progress, not due yet: listed once expanded).
     ui.nextAll = true;
@@ -5703,63 +9604,151 @@ window.moreTests = async ({ step, assert }) => {
     // A done item hidden with the done ones: they are shown again, and it is selected.
     setToggle('hideDone', true);
     setView('activities');
-    openCtxMenu(done.id, 10, 10); pick('map');
-    assert(ui.view === 'map' && !ui.hideDone && prefs.get('hideDone') === false && $(`[data-map-node="${done.id}"]`) === document.activeElement, 'done shown again, box focused');
+    openCtxMenu(done.id, 10, 10);
+    pick('map');
+    assert(
+      ui.view === 'map' &&
+        !ui.hideDone &&
+        prefs.get('hideDone') === false &&
+        $(`[data-map-node="${done.id}"]`) === document.activeElement,
+      'done shown again, box focused',
+    );
     setToggle('hideDone', false);
     changeLanguage('sl');
-    setView('goals'); rightClick($(`.card[data-open="${g.id}"]`));
-    assert(ctxMenu.querySelector('[data-ctx-sub]').textContent === 'Prikaži v …' && ctxMenu.querySelector('[data-ctx="show:map"]').textContent === 'Zemljevid' && ctxMenu.querySelector('[data-ctx="show:map"]').getAttribute('aria-label') === 'Prikaži v pogledu Zemljevid', 'Slovenian');
-    closeCtxMenu(); changeLanguage('en');
+    setView('goals');
+    rightClick($(`.card[data-open="${g.id}"]`));
+    assert(
+      ctxMenu.querySelector('[data-ctx-sub]').textContent === 'Prikaži v …' &&
+        ctxMenu.querySelector('[data-ctx="show:map"]').textContent === 'Zemljevid' &&
+        ctxMenu.querySelector('[data-ctx="show:map"]').getAttribute('aria-label') === 'Prikaži v pogledu Zemljevid',
+      'Slovenian',
+    );
+    closeCtxMenu();
+    changeLanguage('en');
     deletePlan(plans.current);
   });
 
   await step('item menu: "Show in…" opens its views in place', async () => {
-    fresh('Show in place'); changeLanguage('en');
+    fresh('Show in place');
+    changeLanguage('en');
     const g = mk('goal', { startDate: d(-5), deadline: d(30) });
     const bare = mk('state');
     save();
     const style = document.head.appendChild(document.createElement('style'));
     style.textContent = '.ctx-menu { animation: none }';
     const wait = ms => new Promise(res => setTimeout(res, ms));
-    const touch = (type, el) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 12, clientX: 60, clientY: 60 }));
-    const tap = el => { touch('pointerdown', el); touch('pointerup', el); el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 })); };
+    const touch = (type, el) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'touch',
+          pointerId: 12,
+          clientX: 60,
+          clientY: 60,
+        }),
+      );
+    const tap = el => {
+      touch('pointerdown', el);
+      touch('pointerup', el);
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    };
     const key = k => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
-    const parent = () => ctxMenu.querySelector('[data-ctx-sub]'), sub = () => $('#ctxSub');
-    const seen = () => [...ctxMenu.querySelectorAll('button')].filter(b => b.offsetHeight).map(b => b.dataset.ctx || 'parent');
-    const inView = () => { const r = ctxMenu.getBoundingClientRect(); return r.top >= 8 && r.bottom <= innerHeight - 8; };
+    const parent = () => ctxMenu.querySelector('[data-ctx-sub]'),
+      sub = () => $('#ctxSub');
+    const seen = () =>
+      [...ctxMenu.querySelectorAll('button')].filter(b => b.offsetHeight).map(b => b.dataset.ctx || 'parent');
+    const inView = () => {
+      const r = ctxMenu.getBoundingClientRect();
+      return r.top >= 8 && r.bottom <= innerHeight - 8;
+    };
     setView('goals');
     // Closed: one "Show in…" entry with a chevron, its views hidden.
     openCtxMenu(g.id, 60, 60);
-    eq(seen(), ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'parent', 'link', 'delete'], 'one entry for the views');
-    assert(parent().textContent === 'Show in…' && parent().querySelector('.ctx-chev') && parent().getAttribute('aria-expanded') === 'false' && parent().getAttribute('aria-controls') === 'ctxSub' && sub().hidden, 'closed, with a chevron');
+    eq(
+      seen(),
+      ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'parent', 'link', 'delete'],
+      'one entry for the views',
+    );
+    assert(
+      parent().textContent === 'Show in…' &&
+        parent().querySelector('.ctx-chev') &&
+        parent().getAttribute('aria-expanded') === 'false' &&
+        parent().getAttribute('aria-controls') === 'ctxSub' &&
+        sub().hidden,
+      'closed, with a chevron',
+    );
     // A tap opens it in place and keeps the menu open (also after the scroll guard has run out).
     tap(parent());
     assert(!ctxMenu.hidden && parent().getAttribute('aria-expanded') === 'true' && !sub().hidden, 'opened by a tap');
-    eq(seen(), ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'parent', 'show:map', 'show:timeline', 'link', 'delete'], 'views below it');
-    eq([...sub().querySelectorAll('button')].map(b => b.textContent), ['Map', 'Timeline'], 'named like the navigation');
-    assert(sub().querySelector('button').getBoundingClientRect().left > parent().getBoundingClientRect().left + 20 && getComputedStyle(parent().querySelector('.ctx-chev')).transform !== 'none', 'indented; the chevron turned');
+    eq(
+      seen(),
+      [
+        'edit',
+        'status:achieved',
+        'add:goal:subgoal',
+        'add:activity:contributes',
+        'parent',
+        'show:map',
+        'show:timeline',
+        'link',
+        'delete',
+      ],
+      'views below it',
+    );
+    eq(
+      [...sub().querySelectorAll('button')].map(b => b.textContent),
+      ['Map', 'Timeline'],
+      'named like the navigation',
+    );
+    assert(
+      sub().querySelector('button').getBoundingClientRect().left > parent().getBoundingClientRect().left + 20 &&
+        getComputedStyle(parent().querySelector('.ctx-chev')).transform !== 'none',
+      'indented; the chevron turned',
+    );
     await wait(450);
     ctxMenu.dispatchEvent(new Event('scroll'));
     assert(!ctxMenu.hidden, 'still open');
     tap(parent());
-    assert(!ctxMenu.hidden && sub().hidden && parent().getAttribute('aria-expanded') === 'false', 'a second tap closes it, not the menu');
+    assert(
+      !ctxMenu.hidden && sub().hidden && parent().getAttribute('aria-expanded') === 'false',
+      'a second tap closes it, not the menu',
+    );
     // A sub-item picked: the view, with the item shown there.
-    tap(parent()); tap(ctxMenu.querySelector('[data-ctx="show:map"]'));
-    assert(ctxMenu.hidden && ui.view === 'map' && ui.mapSelected === g.id && document.activeElement === $(`[data-map-node="${g.id}"]`), 'shown in the map');
+    tap(parent());
+    tap(ctxMenu.querySelector('[data-ctx="show:map"]'));
+    assert(
+      ctxMenu.hidden &&
+        ui.view === 'map' &&
+        ui.mapSelected === g.id &&
+        document.activeElement === $(`[data-map-node="${g.id}"]`),
+      'shown in the map',
+    );
     // Keyboard: hidden views are skipped; Right opens onto the first, Left and Escape go back.
     setView('goals');
     openCtxMenu(g.id, 60, 60, true);
     while (document.activeElement !== parent()) key('ArrowDown');
     key('ArrowDown');
     eq(document.activeElement.dataset.ctx, 'link', 'Down skips the closed views');
-    key('ArrowUp'); key('ArrowRight');
-    assert(parent().getAttribute('aria-expanded') === 'true' && document.activeElement.dataset.ctx === 'show:map', 'Right opens onto the first view');
-    key('ArrowDown'); eq(document.activeElement.dataset.ctx, 'show:timeline', 'Down moves through them');
-    key('ArrowDown'); eq(document.activeElement.dataset.ctx, 'link', 'and on past them');
-    key('ArrowUp'); key('ArrowLeft');
+    key('ArrowUp');
+    key('ArrowRight');
+    assert(
+      parent().getAttribute('aria-expanded') === 'true' && document.activeElement.dataset.ctx === 'show:map',
+      'Right opens onto the first view',
+    );
+    key('ArrowDown');
+    eq(document.activeElement.dataset.ctx, 'show:timeline', 'Down moves through them');
+    key('ArrowDown');
+    eq(document.activeElement.dataset.ctx, 'link', 'and on past them');
+    key('ArrowUp');
+    key('ArrowLeft');
     assert(sub().hidden && document.activeElement === parent() && !ctxMenu.hidden, 'Left closes back onto the parent');
-    key('ArrowRight'); key('Escape');
-    assert(sub().hidden && document.activeElement === parent() && !ctxMenu.hidden, 'Escape on a view closes them, not the menu');
+    key('ArrowRight');
+    key('Escape');
+    assert(
+      sub().hidden && document.activeElement === parent() && !ctxMenu.hidden,
+      'Escape on a view closes them, not the menu',
+    );
     parent().click();
     assert(!sub().hidden && document.activeElement === parent(), 'Enter or Space (a click) opens it, focus stays');
     key('ArrowLeft');
@@ -5771,34 +9760,51 @@ window.moreTests = async ({ step, assert }) => {
     const top = ctxMenu.getBoundingClientRect().top;
     assert(inView(), 'on screen');
     tap(parent());
-    assert(inView() && ctxMenu.getBoundingClientRect().top < top, `moved up: ${top} → ${ctxMenu.getBoundingClientRect().top}`);
+    assert(
+      inView() && ctxMenu.getBoundingClientRect().top < top,
+      `moved up: ${top} → ${ctxMenu.getBoundingClientRect().top}`,
+    );
     closeCtxMenu();
     // Taller than the screen: the menu scrolls to show the opened views, and stays open.
     openCtxMenu(g.id, 60, 60);
     ctxMenu.style.maxHeight = '200px';
     tap(parent());
     ctxMenu.dispatchEvent(new Event('scroll'));
-    const last = sub().lastElementChild.getBoundingClientRect(), box = ctxMenu.getBoundingClientRect();
-    assert(!ctxMenu.hidden && ctxMenu.scrollTop > 0 && last.bottom <= box.bottom && last.top >= box.top, 'scrolled to the views');
+    const last = sub().lastElementChild.getBoundingClientRect(),
+      box = ctxMenu.getBoundingClientRect();
+    assert(
+      !ctxMenu.hidden && ctxMenu.scrollTop > 0 && last.bottom <= box.bottom && last.top >= box.top,
+      'scrolled to the views',
+    );
     ctxMenu.style.maxHeight = '';
     closeCtxMenu();
     // Only one other view: offered directly.
     setView('states');
     openCtxMenu(bare.id, 60, 60);
     const one = ctxMenu.querySelector('[data-ctx="show:map"]');
-    assert(!parent() && one.offsetHeight && one.textContent === 'Show in Map view' && one.querySelector('svg'), 'one view: a direct item');
+    assert(
+      !parent() && one.offsetHeight && one.textContent === 'Show in Map view' && one.querySelector('svg'),
+      'one view: a direct item',
+    );
     tap(one);
     assert(ui.view === 'map' && ui.mapSelected === bare.id, 'and it shows the item there');
     // Slovenian.
-    changeLanguage('sl'); setView('goals'); openCtxMenu(g.id, 60, 60);
-    assert(parent().textContent === 'Prikaži v …' && $('#ctxSub').getAttribute('aria-label') === 'Prikaži v …', 'Slovenian');
-    closeCtxMenu(); changeLanguage('en');
+    changeLanguage('sl');
+    setView('goals');
+    openCtxMenu(g.id, 60, 60);
+    assert(
+      parent().textContent === 'Prikaži v …' && $('#ctxSub').getAttribute('aria-label') === 'Prikaži v …',
+      'Slovenian',
+    );
+    closeCtxMenu();
+    changeLanguage('en');
     style.remove();
     deletePlan(plans.current);
   });
 
   await step('item menu: show in sets the filters that would hide the item there', () => {
-    fresh('Show in filters'); changeLanguage('en');
+    fresh('Show in filters');
+    changeLanguage('en');
     const work = mk('goal', { category: 'Work', startDate: d(-5), deadline: d(30) });
     const home = mk('goal', { category: 'Home', startDate: d(-5), deadline: d(30) });
     const won = mk('goal', { category: 'Work', status: 'achieved', startDate: d(-20), deadline: d(-2) });
@@ -5807,97 +9813,172 @@ window.moreTests = async ({ step, assert }) => {
     const done = mk('activity', { startDate: d(-9), dueDate: d(-1), status: 'done' });
     const free = mk('activity', { startDate: d(-1), dueDate: d(3) });
     const homeAct = mk('activity', { startDate: d(-1), dueDate: d(5) });
-    const ended = mk('activity', { startDate: d(-30), dueDate: d(-3), repeat: { every: 1, unit: 'day' }, checkins: { [d(-4)]: 1 } });
-    const s = mk('state', { value: 4, date: d(-1), history: [{ date: d(-9), value: 2 }, { date: d(-1), value: 4 }] });
-    rel(a, work, 'contributes'); rel(done, work, 'contributes'); rel(homeAct, home, 'contributes'); rel(ended, home, 'contributes'); rel(s, work, 'measures');
+    const ended = mk('activity', {
+      startDate: d(-30),
+      dueDate: d(-3),
+      repeat: { every: 1, unit: 'day' },
+      checkins: { [d(-4)]: 1 },
+    });
+    const s = mk('state', {
+      value: 4,
+      date: d(-1),
+      history: [
+        { date: d(-9), value: 2 },
+        { date: d(-1), value: 4 },
+      ],
+    });
+    rel(a, work, 'contributes');
+    rel(done, work, 'contributes');
+    rel(homeAct, home, 'contributes');
+    rel(ended, home, 'contributes');
+    rel(s, work, 'measures');
     save();
-    const show = (id, view) => { closeCtxMenu(); openCtxMenu(id, 10, 10); ctxMenu.querySelector(`[data-ctx="show:${view}"]`).click(); };
-    const filters = () => [ui.category, ui.goalFilter, ui.hideDone, ui.activityGoal, ui.mapGoal, ui.timelineGoal, ui.graphGoal];
-    const reset = (p = {}) => Object.assign(ui, { category: '', goalFilter: 'active', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', ...p });
+    const show = (id, view) => {
+      closeCtxMenu();
+      openCtxMenu(id, 10, 10);
+      ctxMenu.querySelector(`[data-ctx="show:${view}"]`).click();
+    };
+    const filters = () => [
+      ui.category,
+      ui.goalFilter,
+      ui.hideDone,
+      ui.activityGoal,
+      ui.mapGoal,
+      ui.timelineGoal,
+      ui.graphGoal,
+    ];
+    const reset = (p = {}) =>
+      Object.assign(ui, {
+        category: '',
+        goalFilter: 'active',
+        activityGoal: '',
+        mapGoal: '',
+        timelineGoal: '',
+        graphGoal: '',
+        ...p,
+      });
     // Goals view: an achieved goal of another category, while active goals of Home are shown.
-    setView('map'); reset({ category: 'Home' });
+    setView('map');
+    reset({ category: 'Home' });
     show(won.id, 'goals');
     eq(filters(), ['Work', 'all', false, '', '', '', ''], 'own category, all statuses');
     eq(prefs.get('category'), 'Work', 'the category is remembered, like a chip tap');
     assert($(`.card[data-open="${won.id}"]`).classList.contains('flash'), 'goal card shown and flashing');
     // Filters that do not hide it stay: Work and active for an active Work goal.
-    setView('map'); reset({ category: 'Work' });
+    setView('map');
+    reset({ category: 'Work' });
     show(work.id, 'goals');
     eq(filters().slice(0, 2), ['Work', 'active'], 'nothing changed when it is shown anyway');
     // A goal without a category: all categories.
-    setView('map'); reset({ category: 'Home' });
+    setView('map');
+    reset({ category: 'Home' });
     show(loose.id, 'goals');
     eq(ui.category, '', 'no category: all');
     assert($(`.card[data-open="${loose.id}"]`), 'card there');
     // A category no goal has any more.
-    setView('map'); reset({ category: 'Gone' });
+    setView('map');
+    reset({ category: 'Gone' });
     show(work.id, 'goals');
-    eq(ui.category, 'Work', 'stale category: the goal\'s own');
+    eq(ui.category, 'Work', "stale category: the goal's own");
     // Activities: another goal picked in another category → the goal filter cleared, the category of its goal.
-    setView('map'); reset({ category: 'Home', activityGoal: home.id });
+    setView('map');
+    reset({ category: 'Home', activityGoal: home.id });
     show(a.id, 'activities');
     eq(filters(), ['Work', 'active', false, '', '', '', ''], 'activities: category of its goal, no goal picked');
     assert($(`.card[data-open="${a.id}"]`).classList.contains('flash'), 'activity card flashes');
     // Its own goal picked: kept.
-    setView('map'); reset({ category: 'Work', activityGoal: work.id });
+    setView('map');
+    reset({ category: 'Work', activityGoal: work.id });
     show(a.id, 'activities');
     eq([ui.category, ui.activityGoal], ['Work', work.id], 'own goal picked: kept');
     // A picked goal in the category that does not hold it, the category does: only the goal cleared.
-    const other = mk('goal', { category: 'Work', startDate: d(-5), deadline: d(30) }); save();
-    setView('map'); reset({ category: 'Work', activityGoal: other.id });
+    const other = mk('goal', { category: 'Work', startDate: d(-5), deadline: d(30) });
+    save();
+    setView('map');
+    reset({ category: 'Work', activityGoal: other.id });
     show(a.id, 'activities');
     eq([ui.category, ui.activityGoal], ['Work', ''], 'goal cleared, category kept');
     // An activity under no goal: all categories.
-    setView('map'); reset({ category: 'Work' });
+    setView('map');
+    reset({ category: 'Work' });
     show(free.id, 'activities');
     eq(ui.category, '', 'unlinked activity: all');
     assert($(`.card[data-open="${free.id}"]`), 'unlinked card there');
     // Done items hidden: a done one shows them; one not done leaves the toggle on.
-    setView('map'); reset(); setToggle('hideDone', true);
+    setView('map');
+    reset();
+    setToggle('hideDone', true);
     show(done.id, 'activities');
     assert(!ui.hideDone && $(`.card[data-open="${done.id}"]`), 'done activity: done shown again');
-    setView('map'); setToggle('hideDone', true);
+    setView('map');
+    setToggle('hideDone', true);
     show(a.id, 'activities');
     assert(ui.hideDone && $(`.card[data-open="${a.id}"]`), 'not done: still hiding done');
     // A routine that has ended counts as done there.
-    setView('map'); setToggle('hideDone', true);
+    setView('map');
+    setToggle('hideDone', true);
     show(ended.id, 'activities');
     assert(!ui.hideDone && $(`.card[data-open="${ended.id}"]`), 'ended routine: done shown again');
     // Map focused on another goal: the focus goes; focused on its own goal it stays.
-    setView('activities'); reset({ mapGoal: home.id });
+    setView('activities');
+    reset({ mapGoal: home.id });
     show(a.id, 'map');
-    assert(ui.mapGoal === '' && document.activeElement === $(`[data-map-node="${a.id}"]`), 'map focus cleared, box focused');
-    setView('activities'); reset({ mapGoal: work.id });
+    assert(
+      ui.mapGoal === '' && document.activeElement === $(`[data-map-node="${a.id}"]`),
+      'map focus cleared, box focused',
+    );
+    setView('activities');
+    reset({ mapGoal: work.id });
     show(a.id, 'map');
     assert(ui.mapGoal === work.id && $(`[data-map-node="${a.id}"]`), 'own goal focus kept');
     // Achieved goal hidden on the map with the done items, in another category.
-    setView('goals'); reset({ category: 'Home', goalFilter: 'all' }); setToggle('hideDone', true);
+    setView('goals');
+    reset({ category: 'Home', goalFilter: 'all' });
+    setToggle('hideDone', true);
     show(won.id, 'map');
     assert(!ui.hideDone && ui.category === 'Work' && $(`[data-map-node="${won.id}"]`), 'achieved goal on the map');
     // Timeline: only the fold that hides it opens; another goal stays folded.
     setTlCollapsed([work.id, home.id]);
-    setView('activities'); reset();
+    setView('activities');
+    reset();
     show(a.id, 'timeline');
     eq(tlCollapsed().has(work.id) || !tlCollapsed().has(home.id), false, 'its goal unfolded, the other stays folded');
-    assert(ui.mapSelected === a.id && document.activeElement === $(`[data-tl-node="${a.id}"]`), 'timeline row selected');
+    assert(
+      ui.mapSelected === a.id && document.activeElement === $(`[data-tl-node="${a.id}"]`),
+      'timeline row selected',
+    );
     // A folded goal itself keeps its row: nothing unfolds.
     setTlCollapsed([work.id]);
-    setView('activities'); show(work.id, 'timeline');
+    setView('activities');
+    show(work.id, 'timeline');
     assert(tlCollapsed().has(work.id) && $(`[data-tl-node="${work.id}"]`), 'folded goal: row there, still folded');
     setTlCollapsed([]);
     // Timeline: another goal picked and done hidden.
-    setView('activities'); reset({ timelineGoal: home.id }); setToggle('hideDone', true);
+    setView('activities');
+    reset({ timelineGoal: home.id });
+    setToggle('hideDone', true);
     show(done.id, 'timeline');
-    assert(ui.timelineGoal === '' && !ui.hideDone && $(`[data-tl-node="${done.id}"]`), 'timeline: goal cleared, done shown');
+    assert(
+      ui.timelineGoal === '' && !ui.hideDone && $(`[data-tl-node="${done.id}"]`),
+      'timeline: goal cleared, done shown',
+    );
     // Graphs: a state measuring a Work goal while a Home goal is picked.
-    setView('states'); reset({ category: 'Home', graphGoal: home.id });
+    setView('states');
+    reset({ category: 'Home', graphGoal: home.id });
     show(s.id, 'graphs');
-    assert(ui.graphGoal === '' && ui.category === 'Work' && $(`[data-gr="${s.id}"]`), 'graphs: goal cleared, category of its goal');
+    assert(
+      ui.graphGoal === '' && ui.category === 'Work' && $(`[data-gr="${s.id}"]`),
+      'graphs: goal cleared, category of its goal',
+    );
     // The search is cleared on the way.
-    setView('states'); ui.search = 'nothing like it'; render(); reset();
+    setView('states');
+    ui.search = 'nothing like it';
+    render();
+    reset();
     show(s.id, 'map');
     assert(ui.search === '' && $(`[data-map-node="${s.id}"]`), 'search cleared');
-    reset(); setToggle('hideDone', false);
+    reset();
+    setToggle('hideDone', false);
     deletePlan(plans.current);
   });
 
@@ -5906,26 +9987,46 @@ window.moreTests = async ({ step, assert }) => {
     // A map larger than the view, so it can scroll to keep the tapped point in place.
     loadSample();
     const g = mk('goal', { title: 'Goal', startDate: d(-40), deadline: d(60) });
-    const a = mk('activity', { title: 'First', startDate: d(-2), dueDate: d(10) }), b = mk('activity', { title: 'Second', startDate: d(1), dueDate: d(20) });
-    rel(a, g, 'contributes'); rel(b, g, 'contributes');
+    const a = mk('activity', { title: 'First', startDate: d(-2), dueDate: d(10) }),
+      b = mk('activity', { title: 'Second', startDate: d(1), dueDate: d(20) });
+    rel(a, g, 'contributes');
+    rel(b, g, 'contributes');
     save();
     const wait = ms => new Promise(res => setTimeout(res, ms));
     // One finger: touch events, with the pointer events a browser sends alongside.
     const touch = (type, el, x, y) => {
       const f = new Touch({ identifier: 7, target: el, clientX: x, clientY: y });
-      const ev = new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [f], changedTouches: [f] });
+      const ev = new TouchEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        touches: type === 'touchend' ? [] : [f],
+        changedTouches: [f],
+      });
       el.dispatchEvent(ev);
       return ev;
     };
-    const ptr = (type, el, x, y) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7, isPrimary: true, clientX: x, clientY: y }));
+    const ptr = (type, el, x, y) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'touch',
+          pointerId: 7,
+          isPrimary: true,
+          clientX: x,
+          clientY: y,
+        }),
+      );
     const clickAt = (el, x, y) => {
       const ev = new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1, clientX: x, clientY: y });
       el.dispatchEvent(ev);
       return ev;
     };
     const tap = (el, x, y) => {
-      ptr('pointerdown', el, x, y); touch('touchstart', el, x, y);
-      ptr('pointerup', el, x, y); touch('touchend', el, x, y);
+      ptr('pointerdown', el, x, y);
+      touch('touchstart', el, x, y);
+      ptr('pointerup', el, x, y);
+      touch('touchend', el, x, y);
       clickAt(el, x, y);
     };
     // Tap, then touch again and drag by dy in steps. `get` finds the element under the finger; touch
@@ -5933,14 +10034,17 @@ window.moreTests = async ({ step, assert }) => {
     const tapDrag = async (get, x, y, dy, { gap = 50, second = [x, y] } = {}) => {
       tap(get(), x, y);
       await wait(gap);
-      const el = get(), [x2, y2] = second;
-      ptr('pointerdown', el, x2, y2); touch('touchstart', el, x2, y2);
+      const el = get(),
+        [x2, y2] = second;
+      ptr('pointerdown', el, x2, y2);
+      touch('touchstart', el, x2, y2);
       let prevented = true;
       for (let i = 1; i <= 5; i++) {
-        prevented = touch('touchmove', el, x2, y2 + dy * i / 5).defaultPrevented && prevented;
+        prevented = touch('touchmove', el, x2, y2 + (dy * i) / 5).defaultPrevented && prevented;
         await wait(20);
       }
-      touch('touchend', el, x2, y2 + dy); ptr('pointerup', el, x2, y2 + dy);
+      touch('touchend', el, x2, y2 + dy);
+      ptr('pointerup', el, x2, y2 + dy);
       const click = clickAt(el, x2, y2 + dy);
       await wait(20);
       return { prevented, clickSwallowed: click.defaultPrevented };
@@ -5949,12 +10053,19 @@ window.moreTests = async ({ step, assert }) => {
 
     // Map: down zooms in around the tapped point, up zooms out.
     setView('map');
-    ui.mapScale = 1; ui.mapSelected = null; render();
+    ui.mapScale = 1;
+    ui.mapSelected = null;
+    render();
     const wrap = () => $('.map-wrap');
     // A point on the drawing (it is centred in the view while smaller than it).
-    const sr = $('.map-wrap svg').getBoundingClientRect(), wr = wrap().getBoundingClientRect();
-    const x = Math.max(sr.left, wr.left) + 60, y = Math.max(sr.top, wr.top) + 60;
-    const svgPoint = () => { const bx = $('.map-wrap svg').getBoundingClientRect(); return [(x - bx.left) / ui.mapScale, (y - bx.top) / ui.mapScale]; };
+    const sr = $('.map-wrap svg').getBoundingClientRect(),
+      wr = wrap().getBoundingClientRect();
+    const x = Math.max(sr.left, wr.left) + 60,
+      y = Math.max(sr.top, wr.top) + 60;
+    const svgPoint = () => {
+      const bx = $('.map-wrap svg').getBoundingClientRect();
+      return [(x - bx.left) / ui.mapScale, (y - bx.top) / ui.mapScale];
+    };
     const p0 = svgPoint();
     let res = await tapDrag(wrap, x, y, 100);
     assert(ui.mapScale > 1.5, `zoomed in: ${ui.mapScale}`);
@@ -5966,36 +10077,49 @@ window.moreTests = async ({ step, assert }) => {
     await tapDrag(wrap, x, y, -60);
     assert(ui.mapScale < zoomedIn, `up zooms out: ${zoomedIn} → ${ui.mapScale}`);
     out.push(`map ${zoomedIn.toFixed(2)} → ${ui.mapScale.toFixed(2)}`);
-    deletePlan(plans.current); openPlan(plan0);
+    deletePlan(plans.current);
+    openPlan(plan0);
     fresh('Tap zoom');
     // The same three items on their own, for the rest.
-    collection('goal').push(g); collection('activity').push(a, b);
-    rel(a, g, 'contributes'); rel(b, g, 'contributes');
+    collection('goal').push(g);
+    collection('activity').push(a, b);
+    rel(a, g, 'contributes');
+    rel(b, g, 'contributes');
     save();
 
     // Started on a box: the second touch neither toggles nor opens it, nor brings up its menu.
     await wait(400);
     const node = () => $(`[data-map-node="${a.id}"]`);
-    ui.mapScale = 1; ui.mapSelected = null; render();
+    ui.mapScale = 1;
+    ui.mapSelected = null;
+    render();
     let nr = node().getBoundingClientRect();
-    const nx = nr.left + 20, ny = nr.top + 10, before = ui.mapScale;
+    const nx = nr.left + 20,
+      ny = nr.top + 10,
+      before = ui.mapScale;
     tap(node(), nx, ny);
     const selectedByFirst = ui.mapSelected;
     await wait(50);
     const n2 = node();
-    ptr('pointerdown', n2, nx, ny); touch('touchstart', n2, nx, ny);
+    ptr('pointerdown', n2, nx, ny);
+    touch('touchstart', n2, nx, ny);
     touch('touchmove', n2, nx, ny + 40);
     await wait(LONG_PRESS_MS + 80);
-    touch('touchend', n2, nx, ny + 40); ptr('pointerup', n2, nx, ny + 40);
+    touch('touchend', n2, nx, ny + 40);
+    ptr('pointerup', n2, nx, ny + 40);
     const click = clickAt(n2, nx, ny + 40);
     await wait(20);
     assert(ui.mapScale > before, 'zoomed from a box');
     assert(ctxMenu.hidden, 'no long-press menu while zooming');
-    assert(click.defaultPrevented && ui.mapSelected === selectedByFirst && !modal.open, 'the lifted finger neither toggles nor opens the box');
+    assert(
+      click.defaultPrevented && ui.mapSelected === selectedByFirst && !modal.open,
+      'the lifted finger neither toggles nor opens the box',
+    );
 
     // A plain double-tap on a box still opens it.
     await wait(400);
-    ui.mapSelected = null; render();
+    ui.mapSelected = null;
+    render();
     nr = node().getBoundingClientRect();
     tap(node(), nr.left + 20, nr.top + 10);
     await wait(50);
@@ -6004,7 +10128,10 @@ window.moreTests = async ({ step, assert }) => {
     modal.close();
 
     // Not a tap-and-drag: a second touch too late, too far away, or after a swipe.
-    for (const [why, opts] of [['too late', { gap: 400 }], ['too far', { second: [x + 80, y] }]]) {
+    for (const [why, opts] of [
+      ['too late', { gap: 400 }],
+      ['too far', { second: [x + 80, y] }],
+    ]) {
       await wait(400);
       const s0 = ui.mapScale;
       res = await tapDrag(wrap, x, y, 100, opts);
@@ -6012,7 +10139,8 @@ window.moreTests = async ({ step, assert }) => {
     }
     await wait(400);
     let s0 = ui.mapScale;
-    ptr('pointerdown', wrap(), x, y); touch('touchstart', wrap(), x, y);
+    ptr('pointerdown', wrap(), x, y);
+    touch('touchstart', wrap(), x, y);
     touch('touchmove', wrap(), x, y + 40);
     touch('touchend', wrap(), x, y + 40);
     await wait(50);
@@ -6025,9 +10153,12 @@ window.moreTests = async ({ step, assert }) => {
     // Timeline: the days stretch around the tapped one; the rows are redrawn during the drag.
     await wait(400);
     setView('timeline');
-    ui.tlPx = 8; ui.mapSelected = null; render();
+    ui.tlPx = 8;
+    ui.mapSelected = null;
+    render();
     const sc = () => $('.tl-scroll');
-    const tx = $('.tl-corner').getBoundingClientRect().right + 120, ty = $(`[data-tl-node="${b.id}"]`).getBoundingClientRect().top + 10;
+    const tx = $('.tl-corner').getBoundingClientRect().right + 120,
+      ty = $(`[data-tl-node="${b.id}"]`).getBoundingClientRect().top + 10;
     const dayAt = () => (tx - $('.tl-scale').getBoundingClientRect().left) / ui.tlPx + Number(sc().dataset.from);
     const under = () => document.elementFromPoint(tx, ty) || sc();
     const day0 = dayAt();
@@ -6063,67 +10194,157 @@ window.moreTests = async ({ step, assert }) => {
     eq(calPeriod('month', '2028-02-10'), { from: '2028-02-01', to: '2028-02-29' }, 'a leap February');
     eq(calPeriod('year', '2026-12-31'), { from: '2026-01-01', to: '2026-12-31' }, 'year');
     eq(calPeriod('day', '2026-03-29'), { from: '2026-03-29', to: '2026-03-29' }, 'day');
-    const wk = { cumulative: true, entries: [entry('2026-10-25', 5), entry('2026-10-26', 3), entry('2026-10-26', 2.5), entry('2026-11-01', 1)] };
+    const wk = {
+      cumulative: true,
+      entries: [entry('2026-10-25', 5), entry('2026-10-26', 3), entry('2026-10-26', 2.5), entry('2026-11-01', 1)],
+    };
     assert(stateTotal(wk, 'week', '2026-10-25') === 5, 'Sunday belongs to the week before');
-    assert(stateTotal(wk, 'week', '2026-10-28') === 6.5, `Monday starts a new week; two entries on one day add up: ${stateTotal(wk, 'week', '2026-10-28')}`);
+    assert(
+      stateTotal(wk, 'week', '2026-10-28') === 6.5,
+      `Monday starts a new week; two entries on one day add up: ${stateTotal(wk, 'week', '2026-10-28')}`,
+    );
     assert(lastPeriodTotal(wk, 'week', '2026-10-28') === 5, 'the week before');
-    const mo = { cumulative: true, entries: [entry('2026-01-31', 1), entry('2026-02-01', 2), entry('2026-12-31', 4), entry('2027-01-01', 8)] };
-    assert(stateTotal(mo, 'month', '2026-01-15') === 1 && stateTotal(mo, 'month', '2026-02-28') === 2 && stateTotal(mo, 'month', '2026-12-01') === 4 && stateTotal(mo, 'month', '2027-01-31') === 8, 'month ends');
+    const mo = {
+      cumulative: true,
+      entries: [entry('2026-01-31', 1), entry('2026-02-01', 2), entry('2026-12-31', 4), entry('2027-01-01', 8)],
+    };
+    assert(
+      stateTotal(mo, 'month', '2026-01-15') === 1 &&
+        stateTotal(mo, 'month', '2026-02-28') === 2 &&
+        stateTotal(mo, 'month', '2026-12-01') === 4 &&
+        stateTotal(mo, 'month', '2027-01-31') === 8,
+      'month ends',
+    );
     assert(stateTotal(mo, 'year', '2026-06-01') === 7 && stateTotal(mo, 'year', '2027-06-01') === 8, 'year ends');
-    const day = { cumulative: true, entries: [entry('2026-05-05', 0.1), entry('2026-05-05', 0.2), entry('2026-05-06', 1)] };
-    assert(stateTotal(day, 'day', '2026-05-05') === 0.3, `per day, and 0.1 + 0.2 is 0.3: ${stateTotal(day, 'day', '2026-05-05')}`);
-    const all = { cumulative: true, entries: [entry('2026-01-01', 100), entry('2026-06-01', 50.5), entry('2099-01-01', 7)] };
-    assert(stateTotal(all, 'total', '2026-12-31') === 150.5 && stateTotal(all, undefined, '2026-12-31') === 150.5, 'in total: everything up to the day');
+    const day = {
+      cumulative: true,
+      entries: [entry('2026-05-05', 0.1), entry('2026-05-05', 0.2), entry('2026-05-06', 1)],
+    };
+    assert(
+      stateTotal(day, 'day', '2026-05-05') === 0.3,
+      `per day, and 0.1 + 0.2 is 0.3: ${stateTotal(day, 'day', '2026-05-05')}`,
+    );
+    const all = {
+      cumulative: true,
+      entries: [entry('2026-01-01', 100), entry('2026-06-01', 50.5), entry('2099-01-01', 7)],
+    };
+    assert(
+      stateTotal(all, 'total', '2026-12-31') === 150.5 && stateTotal(all, undefined, '2026-12-31') === 150.5,
+      'in total: everything up to the day',
+    );
     // Entries without a date or a number are left out.
-    assert(stateTotal({ cumulative: true, entries: [entry('', 5), { id: 'x', date: '2026-01-01', amount: 'abc' }] }) === 0, 'bad entries ignored');
+    assert(
+      stateTotal({ cumulative: true, entries: [entry('', 5), { id: 'x', date: '2026-01-01', amount: 'abc' }] }) === 0,
+      'bad entries ignored',
+    );
     return 'week, month, year, day, total';
   });
 
   await step('cumulative: the value is the running total, fresh when a period ends without an edit', () => {
-    const now = today(), y = addDays(now, -1);
+    const now = today(),
+      y = addDays(now, -1);
     const s = { cumulative: true, scale: 'day', entries: [entry(y, 4)] };
-    assert(stateTotal(s, 'day') === 0 && lastPeriodTotal(s, 'day') === 4, 'yesterday’s amount is no longer today’s total');
+    assert(
+      stateTotal(s, 'day') === 0 && lastPeriodTotal(s, 'day') === 4,
+      'yesterday’s amount is no longer today’s total',
+    );
     assert(stateValue(s) === 4, 'the value is the total, whatever the scale');
     s.entries.push(entry(now, 2.5));
     assert(stateTotal(s, 'day') === 2.5 && stateDate(s) === now, 'today');
-    assert(stateValue({ cumulative: true, entries: [] }) === '' && stateDate({ cumulative: true }) === '', 'no entries: no value yet');
+    assert(
+      stateValue({ cumulative: true, entries: [] }) === '' && stateDate({ cumulative: true }) === '',
+      'no entries: no value yet',
+    );
     assert(stateValue(s) === 6.5, 'in total');
     refreshTotal(s);
     assert(s.value === '6.5' && s.date === now, 'stored copy');
     // Plain states are unchanged: one value per date, a new one replaces it.
     const p = { history: [] };
-    recordMeasurement(p, now, '5'); recordMeasurement(p, now, '7');
+    recordMeasurement(p, now, '5');
+    recordMeasurement(p, now, '7');
     assert(p.history.length === 1 && stateValue(p) === '7', 'plain: same date replaces');
     const periods = periodTotals({ cumulative: true, entries: [entry(addDays(now, -15), 1), entry(now, 2)] }, 'week');
     assert(!periodTotals({ cumulative: true, entries: [entry(now, 2)] }, 'total').length, 'no bars in total');
-    assert(periods.length >= 3 && periods.some(p => p.total === 0) && periods.at(-1).total === 2, `empty weeks included: ${periods.map(p => p.total)}`);
+    assert(
+      periods.length >= 3 && periods.some(p => p.total === 0) && periods.at(-1).total === 2,
+      `empty weeks included: ${periods.map(p => p.total)}`,
+    );
     return `${periods.length} weeks`;
   });
 
   await step('cumulative: old states migrate to adds up + scale; their goals keep the period', () => {
-    const old = { states: [
-        { id: 'w', cumulative: 'week', entries: [{ id: 'e1', date: '2020-01-06', amount: '18' }, { id: 'e2', date: '2020-02-03', amount: '5' }], value: '5', date: '2020-02-03' }, { id: 'n', cumulative: 'none', entries: [] }, { id: 'x', cumulative: 'fortnight', entries: [] },
-        { id: 'p', value: '3' }],
+    const old = {
+      states: [
+        {
+          id: 'w',
+          cumulative: 'week',
+          entries: [
+            { id: 'e1', date: '2020-01-06', amount: '18' },
+            { id: 'e2', date: '2020-02-03', amount: '5' },
+          ],
+          value: '5',
+          date: '2020-02-03',
+        },
+        { id: 'n', cumulative: 'none', entries: [] },
+        { id: 'x', cumulative: 'fortnight', entries: [] },
+        { id: 'p', value: '3' },
+      ],
       goals: [{ id: 'g1' }, { id: 'g2' }, { id: 'g3', period: 'month' }, { id: 'g4' }],
-      relations: [{ id: 'r1', from: 'w', to: 'g1', type: 'measures' }, { id: 'r2', from: 'n', to: 'g2', type: 'measures' },
-        { id: 'r3', from: 'w', to: 'g3', type: 'measures' }] };
+      relations: [
+        { id: 'r1', from: 'w', to: 'g1', type: 'measures' },
+        { id: 'r2', from: 'n', to: 'g2', type: 'measures' },
+        { id: 'r3', from: 'w', to: 'g3', type: 'measures' },
+      ],
+    };
     const d = normalize(old);
-    eq(d.states.map(s => [s.cumulative, s.scale]), [[true, 'week'], [true, 'total'], [true, 'total'], [undefined, undefined]], 'states');
-    eq(d.goals.map(g => g.period), ['week', 'total', 'month', undefined], 'goals get the old period; one set already is kept');
-    eq([d.states[0].value, d.states[0].date], ['23', '2020-02-03'], 'the stored copy is the total now, not the old week’s');
+    eq(
+      d.states.map(s => [s.cumulative, s.scale]),
+      [
+        [true, 'week'],
+        [true, 'total'],
+        [true, 'total'],
+        [undefined, undefined],
+      ],
+      'states',
+    );
+    eq(
+      d.goals.map(g => g.period),
+      ['week', 'total', 'month', undefined],
+      'goals get the old period; one set already is kept',
+    );
+    eq(
+      [d.states[0].value, d.states[0].date],
+      ['23', '2020-02-03'],
+      'the stored copy is the total now, not the old week’s',
+    );
     eq(normalize(JSON.parse(JSON.stringify(d))), d, 'running it again changes nothing');
-    eq([stateScale({ scale: 'bogus' }), goalPeriod({ period: 'total' }), goalPeriod({})], ['total', 'total', 'total'], 'defaults');
+    eq(
+      [stateScale({ scale: 'bogus' }), goalPeriod({ period: 'total' }), goalPeriod({})],
+      ['total', 'total', 'total'],
+      'defaults',
+    );
     return d.goals.map(g => g.period).join(',');
   });
 
   await step('cumulative: goals use the higher of this and the last period; reached only by a complete one', () => {
     fresh('Cumulative goals');
-    const now = today(), lastWeek = addDays(now, -7);
+    const now = today(),
+      lastWeek = addDays(now, -7);
     const s = mk('state', { cumulative: true, scale: 'month', entries: [entry(lastWeek, 20)] });
-    const g = mk('goal', { title: 'Run 30 km a week', unit: 'km', baseline: '10', target: '30', metric: 'Weekly km', period: 'week' });
+    const g = mk('goal', {
+      title: 'Run 30 km a week',
+      unit: 'km',
+      baseline: '10',
+      target: '30',
+      metric: 'Weekly km',
+      period: 'week',
+    });
     rel(s, g, 'measures');
     refreshTotal(s);
-    assert(goalCurrent(g) === 20 && Math.round(goalProgress(g)) === 50, `last week counts while this week is behind: ${goalCurrent(g)}`);
+    assert(
+      goalCurrent(g) === 20 && Math.round(goalProgress(g)) === 50,
+      `last week counts while this week is behind: ${goalCurrent(g)}`,
+    );
     s.entries.push(entry(now, 25));
     assert(goalCurrent(g) === 25, 'this week counts once it is ahead');
     assert(!goalReached(g), 'not reached');
@@ -6132,8 +10353,18 @@ window.moreTests = async ({ step, assert }) => {
     s.entries.push(entry(lastWeek, 11));
     assert(goalReached(g), 'a complete week at the target is');
     // A goal that goes down: a month under way only counts once it is worse than the last full one.
-    const sp = mk('state', { cumulative: true, entries: [entry(addDays(calPeriod('month', now).from, -1), 350), entry(now, 50)] });
-    const h = mk('goal', { title: 'Spend less', unit: '€', baseline: '400', target: '300', metric: 'Spending', period: 'month' });
+    const sp = mk('state', {
+      cumulative: true,
+      entries: [entry(addDays(calPeriod('month', now).from, -1), 350), entry(now, 50)],
+    });
+    const h = mk('goal', {
+      title: 'Spend less',
+      unit: '€',
+      baseline: '400',
+      target: '300',
+      metric: 'Spending',
+      period: 'month',
+    });
     rel(sp, h, 'measures');
     assert(goalCurrent(h) === 350 && Math.round(goalProgress(h)) === 50, `last month: ${goalCurrent(h)}`);
     sp.entries.push(entry(now, 330));
@@ -6141,18 +10372,35 @@ window.moreTests = async ({ step, assert }) => {
     // Before entries reach back into a complete month, nothing counts: the month under way (or an empty one
     // before it) is well under target, but says nothing yet.
     const sq = mk('state', { cumulative: true, entries: [entry(now, 50)] });
-    const q = mk('goal', { title: 'Spend less, just begun', unit: '€', baseline: '400', target: '300', metric: 'Spending', period: 'month' });
+    const q = mk('goal', {
+      title: 'Spend less, just begun',
+      unit: '€',
+      baseline: '400',
+      target: '300',
+      metric: 'Spending',
+      period: 'month',
+    });
     rel(sq, q, 'measures');
-    assert(goalCurrent(q) === 400 && goalProgress(q) === 0 && !goalReached(q), `first month: ${goalCurrent(q)}, ${goalProgress(q)} %`);
+    assert(
+      goalCurrent(q) === 400 && goalProgress(q) === 0 && !goalReached(q),
+      `first month: ${goalCurrent(q)}, ${goalProgress(q)} %`,
+    );
     sq.entries.push(entry(addDays(calPeriod('month', now).from, -1), 280));
     assert(goalCurrent(q) === 280 && goalReached(q), 'a full month under target reaches it');
     // The same state counted in total by another goal.
-    const k = mk('goal', { title: 'Spend under 1000 in all', unit: '€', baseline: '0', target: '1000', metric: 'Spending' });
+    const k = mk('goal', {
+      title: 'Spend under 1000 in all',
+      unit: '€',
+      baseline: '0',
+      target: '1000',
+      metric: 'Spending',
+    });
     rel(sp, k, 'measures');
     assert(goalCurrent(k) === 730 && goalPeriod(k) === 'total' && !goalReached(k), `in total: ${goalCurrent(k)}`);
     // Goal card: the two periods side by side.
     setView('goals');
-    ui.goalFilter = 'all'; render();
+    ui.goalFilter = 'all';
+    render();
     const line = $(`.card.goal[data-open="${g.id}"] .cu-periods`).textContent;
     assert(line === 'This week: 35 km · last week: 31 km', line);
     // An in-total state suggests its total as the starting value.
@@ -6168,29 +10416,65 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('cumulative: a goal picks how it counts a state that adds up', () => {
     fresh('Goal counts');
-    const now = today(), lastWeek = addDays(calPeriod('week', now).from, -1);
-    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'month', entries: [entry(lastWeek, 24), entry(now, 6)] });
-    const g = mk('goal', { title: 'Run 30 a week', specific: 'Run thirty kilometres every week.', achievable: 'Three short runs.', relevant: 'For the marathon.', unit: 'km', baseline: '0', target: '30', metric: 'Km', startDate: addDays(now, -30), deadline: addDays(now, 60) });
+    const now = today(),
+      lastWeek = addDays(calPeriod('week', now).from, -1);
+    const km = mk('state', {
+      title: 'Km',
+      unit: 'km',
+      cumulative: true,
+      scale: 'month',
+      entries: [entry(lastWeek, 24), entry(now, 6)],
+    });
+    const g = mk('goal', {
+      title: 'Run 30 a week',
+      specific: 'Run thirty kilometres every week.',
+      achievable: 'Three short runs.',
+      relevant: 'For the marathon.',
+      unit: 'km',
+      baseline: '0',
+      target: '30',
+      metric: 'Km',
+      startDate: addDays(now, -30),
+      deadline: addDays(now, 60),
+    });
     // A new state that adds up, nothing added yet: the goal can already pick how it counts.
     const empty = mk('state', { title: 'New km', unit: 'km', cumulative: true, entries: [] });
     const g0 = mk('goal', { title: 'Run 20 a week' });
     rel(empty, g0, 'measures');
     openForm('goal', g0.id);
-    assert($('#f-period') && $('[data-field="period"] .hint').textContent.includes('New km'), 'Counts before the first amount');
+    assert(
+      $('#f-period') && $('[data-field="period"] .hint').textContent.includes('New km'),
+      'Counts before the first amount',
+    );
     modal.close();
     rel(km, g, 'measures');
     save();
     openForm('goal', g.id);
-    eq([...$('#f-period').options].map(o => o.value), ['total', 'day', 'week', 'month', 'year'], 'Counts: in total or per period');
-    assert($('#f-period').value === 'total' && $('[data-field="baseline"] .hint').textContent, 'in total by default, with the baseline hint');
+    eq(
+      [...$('#f-period').options].map(o => o.value),
+      ['total', 'day', 'week', 'month', 'year'],
+      'Counts: in total or per period',
+    );
+    assert(
+      $('#f-period').value === 'total' && $('[data-field="baseline"] .hint').textContent,
+      'in total by default, with the baseline hint',
+    );
     $('#f-period').value = 'week';
     submitForm();
     assert(g.period === 'week' && goalCurrent(g) === 24, `per week: ${goalCurrent(g)}`);
     setView('goals');
-    ui.goalFilter = 'all'; render();
-    eq($(`.card.goal[data-open="${g.id}"] .cu-periods`).textContent, 'This week: 6 km · last week: 24 km', 'goal card line');
+    ui.goalFilter = 'all';
+    render();
+    eq(
+      $(`.card.goal[data-open="${g.id}"] .cu-periods`).textContent,
+      'This week: 6 km · last week: 24 km',
+      'goal card line',
+    );
     openForm('goal', g.id);
-    assert($('#f-period').value === 'week' && !$('[data-field="baseline"] .hint')?.textContent, 'per week: no baseline hint');
+    assert(
+      $('#f-period').value === 'week' && !$('[data-field="baseline"] .hint')?.textContent,
+      'per week: no baseline hint',
+    );
     modal.close();
     // Several states: the most recently updated one counts, and it adds up.
     const old = mk('state', { title: 'Old', history: [] });
@@ -6211,73 +10495,109 @@ window.moreTests = async ({ step, assert }) => {
     return g.period;
   });
 
-  await step('cumulative: a tick asks how much; untick, delete and an amount on the state keep both in step', async () => {
-    fresh('Cumulative routines');
-    const now = today(), y = addDays(now, -1);
-    const run = mk('activity', { title: 'Run', startDate: addDays(now, -30), repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
-    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [] });
-    const longest = mk('state', { title: 'Longest', history: [] });
-    rel(run, km, 'improves'); rel(run, longest, 'improves');
-    save();
-    setView('activities');
-    const day = iso => $(`.card.routine[data-open="${run.id}"] [data-checkin][data-date="${iso}"]`);
-    day(now).click();
-    const pop = $('.amount-pop');
-    assert(pop && pop.querySelectorAll('[data-amount]').length === 1 && document.activeElement === pop.querySelector('[data-amount]'), 'one field (plain states are not asked), focused');
-    assert(!checkedOn(run, now), 'nothing ticked yet');
-    pop.querySelector('[data-amount]').value = 'abc';
-    pop.requestSubmit();
-    assert($('.amount-pop .amount-err').textContent === t('err.number') && !km.entries.length, 'a wrong number is refused');
-    $('.amount-pop [data-amount]').value = '7,5';
-    $('.amount-pop').requestSubmit();
-    assert(!$('.amount-pop') && checkedOn(run, now), 'ticked');
-    eq(km.entries.map(e => [e.date, e.amount, e.routine]), [[now, '7.5', run.id]], 'entry tagged with the routine');
-    assert(!longest.history.length, 'plain state untouched');
-    // Escape (or "Just tick") only ticks.
-    if (runsOn(run, y)) {
-      ui.rtWeek[run.id] = mondayOf(y); render();
-      day(y).click();
-      $('.amount-pop [data-amount]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      assert(checkedOn(run, y) && km.entries.length === 1, 'Escape ticks only');
-      day(y).click();
-      assert(!checkedOn(run, y) && !$('.amount-pop'), 'unticking asks nothing');
-    }
-    // A click elsewhere leaves it unticked.
-    ui.rtWeek = {}; render();
-    // Unticking removes the routine's amounts that day.
-    day(now).click();
-    assert(!checkedOn(run, now) && !km.entries.length && Object.keys(km.droppedEntries).length === 1, 'untick drops the entry, remembered for sync');
-    assert(km.value === '' , 'total follows');
-    // An amount added on the state ticks the routine, tagged.
-    const e1 = addEntry(km, y, 5);
-    assert(checkedOn(run, y) && e1.routine === run.id, 'entry on the state ticks the routine');
-    const e2 = addEntry(km, y, 3);
-    deleteEntry(km, e1.id);
-    assert(checkedOn(run, y), 'another entry that day keeps the tick');
-    deleteEntry(km, e2.id);
-    assert(!checkedOn(run, y), 'deleting the last one unticks');
-    // Not before the routine starts, and not in the future.
-    const early = addEntry(km, addDays(now, -60), 4), later = addEntry(km, addDays(now, 3), 4);
-    assert(!checkedOn(run, addDays(now, -60)) && !early.routine && !later.routine, 'outside the routine’s days: no tick, no tag');
-    // With two routines feeding it, an entry ticks both, tagged with neither.
-    const bike = mk('activity', { title: 'Bike', startDate: addDays(now, -30), repeat: { every: 1, unit: 'week', times: 2 }, checkins: {} });
-    rel(bike, km, 'improves');
-    const both = addEntry(km, now, 10);
-    assert(checkedOn(run, now) && checkedOn(bike, now) && !both.routine, 'two routines: both ticked, untagged');
-    // Overview rows ask the same (a routine ticked today is not on the overview).
-    setView('dashboard');
-    assert(!$(`.routine-row[data-open="${bike.id}"]`), 'ticked today: not on the overview');
-    setView('activities');
-    $(`.card.routine[data-open="${bike.id}"] [data-checkin][data-date="${now}"]`).click();
-    assert(!checkedOn(bike, now) && !$('.amount-pop'), 'unticking asks nothing');
-    setView('dashboard');
-    $(`.routine-row[data-open="${bike.id}"] [data-checkin]`).click();
-    assert($('.amount-pop'), 'ticking from the overview asks');
-    $('.amount-pop [data-amount-skip]').click();
-    assert(checkedOn(bike, now) && !$('.amount-pop'), '"Just tick"');
-    deletePlan(plans.current);
-    return `${km.entries.length} entries left`;
-  });
+  await step(
+    'cumulative: a tick asks how much; untick, delete and an amount on the state keep both in step',
+    async () => {
+      fresh('Cumulative routines');
+      const now = today(),
+        y = addDays(now, -1);
+      const run = mk('activity', {
+        title: 'Run',
+        startDate: addDays(now, -30),
+        repeat: { every: 1, unit: 'week', times: 3 },
+        checkins: {},
+      });
+      const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [] });
+      const longest = mk('state', { title: 'Longest', history: [] });
+      rel(run, km, 'improves');
+      rel(run, longest, 'improves');
+      save();
+      setView('activities');
+      const day = iso => $(`.card.routine[data-open="${run.id}"] [data-checkin][data-date="${iso}"]`);
+      day(now).click();
+      const pop = $('.amount-pop');
+      assert(
+        pop &&
+          pop.querySelectorAll('[data-amount]').length === 1 &&
+          document.activeElement === pop.querySelector('[data-amount]'),
+        'one field (plain states are not asked), focused',
+      );
+      assert(!checkedOn(run, now), 'nothing ticked yet');
+      pop.querySelector('[data-amount]').value = 'abc';
+      pop.requestSubmit();
+      assert(
+        $('.amount-pop .amount-err').textContent === t('err.number') && !km.entries.length,
+        'a wrong number is refused',
+      );
+      $('.amount-pop [data-amount]').value = '7,5';
+      $('.amount-pop').requestSubmit();
+      assert(!$('.amount-pop') && checkedOn(run, now), 'ticked');
+      eq(
+        km.entries.map(e => [e.date, e.amount, e.routine]),
+        [[now, '7.5', run.id]],
+        'entry tagged with the routine',
+      );
+      assert(!longest.history.length, 'plain state untouched');
+      // Escape (or "Just tick") only ticks.
+      if (runsOn(run, y)) {
+        ui.rtWeek[run.id] = mondayOf(y);
+        render();
+        day(y).click();
+        $('.amount-pop [data-amount]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert(checkedOn(run, y) && km.entries.length === 1, 'Escape ticks only');
+        day(y).click();
+        assert(!checkedOn(run, y) && !$('.amount-pop'), 'unticking asks nothing');
+      }
+      // A click elsewhere leaves it unticked.
+      ui.rtWeek = {};
+      render();
+      // Unticking removes the routine's amounts that day.
+      day(now).click();
+      assert(
+        !checkedOn(run, now) && !km.entries.length && Object.keys(km.droppedEntries).length === 1,
+        'untick drops the entry, remembered for sync',
+      );
+      assert(km.value === '', 'total follows');
+      // An amount added on the state ticks the routine, tagged.
+      const e1 = addEntry(km, y, 5);
+      assert(checkedOn(run, y) && e1.routine === run.id, 'entry on the state ticks the routine');
+      const e2 = addEntry(km, y, 3);
+      deleteEntry(km, e1.id);
+      assert(checkedOn(run, y), 'another entry that day keeps the tick');
+      deleteEntry(km, e2.id);
+      assert(!checkedOn(run, y), 'deleting the last one unticks');
+      // Not before the routine starts, and not in the future.
+      const early = addEntry(km, addDays(now, -60), 4),
+        later = addEntry(km, addDays(now, 3), 4);
+      assert(
+        !checkedOn(run, addDays(now, -60)) && !early.routine && !later.routine,
+        'outside the routine’s days: no tick, no tag',
+      );
+      // With two routines feeding it, an entry ticks both, tagged with neither.
+      const bike = mk('activity', {
+        title: 'Bike',
+        startDate: addDays(now, -30),
+        repeat: { every: 1, unit: 'week', times: 2 },
+        checkins: {},
+      });
+      rel(bike, km, 'improves');
+      const both = addEntry(km, now, 10);
+      assert(checkedOn(run, now) && checkedOn(bike, now) && !both.routine, 'two routines: both ticked, untagged');
+      // Overview rows ask the same (a routine ticked today is not on the overview).
+      setView('dashboard');
+      assert(!$(`.routine-row[data-open="${bike.id}"]`), 'ticked today: not on the overview');
+      setView('activities');
+      $(`.card.routine[data-open="${bike.id}"] [data-checkin][data-date="${now}"]`).click();
+      assert(!checkedOn(bike, now) && !$('.amount-pop'), 'unticking asks nothing');
+      setView('dashboard');
+      $(`.routine-row[data-open="${bike.id}"] [data-checkin]`).click();
+      assert($('.amount-pop'), 'ticking from the overview asks');
+      $('.amount-pop [data-amount-skip]').click();
+      assert(checkedOn(bike, now) && !$('.amount-pop'), '"Just tick"');
+      deletePlan(plans.current);
+      return `${km.entries.length} entries left`;
+    },
+  );
 
   await step('cumulative: + on the state card adds an amount with its date', () => {
     fresh('Cumulative card');
@@ -6286,17 +10606,28 @@ window.moreTests = async ({ step, assert }) => {
     setView('states');
     assert($(`.card.state[data-open="${s.id}"]`).textContent.includes(t('cu.noEntries')), 'nothing added yet');
     $(`[data-add-amount="${s.id}"]`).click();
-    assert(!modal.open && $('.amount-pop [data-amount-date]').value === dateInput(today()), 'opens by the button, not the form; today');
+    assert(
+      !modal.open && $('.amount-pop [data-amount-date]').value === dateInput(today()),
+      'opens by the button, not the form; today',
+    );
     $('.amount-pop [data-amount]').value = '120';
     $('.amount-pop [data-amount-date]').value = '31/02/2026';
     $('.amount-pop').requestSubmit();
     assert($('.amount-pop .amount-err').textContent === t('err.date'), 'a wrong date is refused');
     $('.amount-pop [data-amount-date]').value = '01/02/2026';
     $('.amount-pop').requestSubmit();
-    eq(s.entries.map(e => [e.date, e.amount]), [['2026-02-01', '120']], 'added');
+    eq(
+      s.entries.map(e => [e.date, e.amount]),
+      [['2026-02-01', '120']],
+      'added',
+    );
     assert($('#toast').textContent === t('cu.added', { value: '120 €', name: 'Saved' }), $('#toast').textContent);
     const card = $(`.card.state[data-open="${s.id}"]`);
-    assert(card.querySelector('.cu-total').textContent === '120 € in total' && document.activeElement === $(`[data-add-amount="${s.id}"]`), 'total on the card, focus back on +');
+    assert(
+      card.querySelector('.cu-total').textContent === '120 € in total' &&
+        document.activeElement === $(`[data-add-amount="${s.id}"]`),
+      'total on the card, focus back on +',
+    );
     // Empty adds nothing; a click elsewhere closes.
     $(`[data-add-amount="${s.id}"]`).click();
     $('.amount-pop').requestSubmit();
@@ -6310,13 +10641,24 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('cumulative: the card shows the total, and this period’s sum when the graph shows periods', () => {
     fresh('Cumulative scale card');
-    const s = mk('state', { title: 'Run', unit: 'km', cumulative: true, scale: 'week', entries: [entry(addDays(calPeriod('week', today()).from, -1), 12)] });
+    const s = mk('state', {
+      title: 'Run',
+      unit: 'km',
+      cumulative: true,
+      scale: 'week',
+      entries: [entry(addDays(calPeriod('week', today()).from, -1), 12)],
+    });
     save();
     setView('states');
     const card = () => $(`.card.state[data-open="${s.id}"]`);
-    eq([card().querySelector('.cu-total').textContent, card().querySelector('.cu-now').textContent], ['12 km in total', '0 km this week'], 'total, and nothing yet this week');
+    eq(
+      [card().querySelector('.cu-total').textContent, card().querySelector('.cu-now').textContent],
+      ['12 km in total', '0 km this week'],
+      'total, and nothing yet this week',
+    );
     eq(scaleText(s, 'week'), '0 km this week', 'scaleText');
-    s.scale = 'total'; render();
+    s.scale = 'total';
+    render();
     assert(!card().querySelector('.cu-now'), 'in total: just the total');
     const text = card().querySelector('.cu-total').textContent;
     deletePlan(plans.current);
@@ -6325,22 +10667,45 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('dates: today, tomorrow and yesterday where an item’s date is shown, in both languages', () => {
     const now = today();
-    eq([-1, 0, 1, 2].map(n => fmtRel(addDays(now, n))), ['yesterday', 'today', 'tomorrow', fmtDate(addDays(now, 2))], 'words for the three days only');
-    eq([fmtRel(now, true), fmtRel(''), fmtSpan(now, addDays(now, 1), true)], ['Today', '', 'Today – tomorrow'], 'capitalised alone; a span');
+    eq(
+      [-1, 0, 1, 2].map(n => fmtRel(addDays(now, n))),
+      ['yesterday', 'today', 'tomorrow', fmtDate(addDays(now, 2))],
+      'words for the three days only',
+    );
+    eq(
+      [fmtRel(now, true), fmtRel(''), fmtSpan(now, addDays(now, 1), true)],
+      ['Today', '', 'Today – tomorrow'],
+      'capitalised alone; a span',
+    );
     fresh('Relative dates');
     const due = mk('activity', { title: 'Due', startDate: addDays(now, -5), dueDate: addDays(now, 1) });
-    const done = mk('activity', { title: 'Done', status: 'done', startDate: addDays(now, -5), dueDate: addDays(now, -1) });
+    const done = mk('activity', {
+      title: 'Done',
+      status: 'done',
+      startDate: addDays(now, -5),
+      dueDate: addDays(now, -1),
+    });
     const s = mk('state', { title: 'Weight', unit: 'kg', history: [] });
     recordMeasurement(s, now, '80');
     save();
     setView('activities');
     const tags = id => [...$(`[data-open="${id}"]`).querySelectorAll('.tag')].map(x => x.textContent);
-    assert(tags(due.id).includes('Tomorrow') && tags(done.id).includes('Yesterday'), 'deadline tags: ' + tags(due.id) + ' / ' + tags(done.id));
+    assert(
+      tags(due.id).includes('Tomorrow') && tags(done.id).includes('Yesterday'),
+      'deadline tags: ' + tags(due.id) + ' / ' + tags(done.id),
+    );
     setView('states');
-    assert($(`.card.state[data-open="${s.id}"]`).textContent.includes(t('states.asOf', { date: 'today' })), 'As of today');
+    assert(
+      $(`.card.state[data-open="${s.id}"]`).textContent.includes(t('states.asOf', { date: 'today' })),
+      'As of today',
+    );
     changeLanguage('sl');
     assert($(`.card.state[data-open="${s.id}"]`).textContent.includes('Izmerjeno danes'), 'Izmerjeno danes');
-    eq([-1, 0, 1].map(n => fmtRel(addDays(now, n), true)), ['Včeraj', 'Danes', 'Jutri'], 'Slovenian words');
+    eq(
+      [-1, 0, 1].map(n => fmtRel(addDays(now, n), true)),
+      ['Včeraj', 'Danes', 'Jutri'],
+      'Slovenian words',
+    );
     changeLanguage('en');
     deletePlan(plans.current);
     return fmtSpan(now, addDays(now, 1), true);
@@ -6357,8 +10722,19 @@ window.moreTests = async ({ step, assert }) => {
     const card = id => $(`.card.state[data-open="${id}"]`);
     card(s.id).click();
     assert(!modal.open && $('.amount-pop'), 'a popup, not the form');
-    eq([$('.amount-pop .amount-title').textContent, $('.amount-pop .amount-hint').textContent, $('.amount-pop [data-amount-date]').value],
-      [t('sv.title', { name: 'Weight' }), t('sv.latest', { value: '80 kg', date: fmtDate(addDays(now, -3)) }), dateInput(now)], 'title, latest value, today');
+    eq(
+      [
+        $('.amount-pop .amount-title').textContent,
+        $('.amount-pop .amount-hint').textContent,
+        $('.amount-pop [data-amount-date]').value,
+      ],
+      [
+        t('sv.title', { name: 'Weight' }),
+        t('sv.latest', { value: '80 kg', date: fmtDate(addDays(now, -3)) }),
+        dateInput(now),
+      ],
+      'title, latest value, today',
+    );
     $('.amount-pop [data-amount]').value = 'lots';
     $('.amount-pop').requestSubmit();
     assert($('.amount-pop .amount-err').textContent === t('err.number'), 'not a number: refused');
@@ -6368,29 +10744,45 @@ window.moreTests = async ({ step, assert }) => {
     eq($('#toast').textContent, t('sv.saved', { value: '78.5 kg', name: 'Weight' }), 'says so');
     assert(card(s.id).querySelector('.tag.state').textContent === '78.5 kg', 'the card shows it');
     // Empty saves nothing; Escape closes.
-    card(s.id).click(); $('.amount-pop').requestSubmit();
+    card(s.id).click();
+    $('.amount-pop').requestSubmit();
     assert(!$('.amount-pop') && s.history.length === 2, 'empty: nothing');
     card(s.id).click();
-    $('.amount-pop input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    $('.amount-pop input').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    );
     assert(!$('.amount-pop'), 'Escape closes');
     // A state that adds up asks for an amount.
     card(sum.id).click();
-    assert($('.amount-pop .amount-title').textContent === t('cu.addTo', { name: 'Run' }) && !$('.amount-pop .amount-hint'), 'an amount for one that adds up');
+    assert(
+      $('.amount-pop .amount-title').textContent === t('cu.addTo', { name: 'Run' }) && !$('.amount-pop .amount-hint'),
+      'an amount for one that adds up',
+    );
     closeAmountPop();
     // Editing is in the card's menu.
-    card(s.id).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+    card(s.id).dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }),
+    );
     ctxMenu.querySelector('[data-ctx="edit"]').click();
     assert(ctxMenu.hidden && modal.open && formCtx.kind === 'state' && formCtx.id === s.id, 'Edit opens the form');
     modal.close();
     // So is adding: a value, or an amount for one that adds up; on the map too.
-    const menuOn = el => el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+    const menuOn = el =>
+      el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
     menuOn(card(s.id));
     eq(ctxMenu.querySelector('[data-ctx="value"]').textContent, t('ctx.addValue'), 'Add a value in the menu');
     ctxMenu.querySelector('[data-ctx="value"]').click();
-    assert(ctxMenu.hidden && !modal.open && $('.amount-pop .amount-title').textContent === t('sv.title', { name: 'Weight' }), 'it opens the popup');
+    assert(
+      ctxMenu.hidden && !modal.open && $('.amount-pop .amount-title').textContent === t('sv.title', { name: 'Weight' }),
+      'it opens the popup',
+    );
     closeAmountPop();
     menuOn(card(sum.id));
-    eq(ctxMenu.querySelector('[data-ctx="value"]').textContent, t('ctx.addAmount'), 'Add an amount for one that adds up');
+    eq(
+      ctxMenu.querySelector('[data-ctx="value"]').textContent,
+      t('ctx.addAmount'),
+      'Add an amount for one that adds up',
+    );
     ctxMenu.querySelector('[data-ctx="value"]').click();
     assert($('.amount-pop .amount-title').textContent === t('cu.addTo', { name: 'Run' }), 'it asks for an amount');
     closeAmountPop();
@@ -6408,23 +10800,51 @@ window.moreTests = async ({ step, assert }) => {
     fresh('Cumulative form');
     const now = today();
     const s = mk('state', { title: 'Pages', history: [] });
-    recordMeasurement(s, addDays(now, -2), '10'); recordMeasurement(s, now, '20');
+    recordMeasurement(s, addDays(now, -2), '10');
+    recordMeasurement(s, now, '20');
     save();
     openForm('state', s.id);
-    const change = (sel, v) => { $(sel).value = v; $(sel).dispatchEvent(new Event('change', { bubbles: true })); };
+    const change = (sel, v) => {
+      $(sel).value = v;
+      $(sel).dispatchEvent(new Event('change', { bubbles: true }));
+    };
     assert($('[data-field="value"] label').textContent === t('f.value') && !$('#addsUpHint').textContent, 'plain form');
-    eq([...$('#f-addsUp').options].map(o => o.value), ['', 'yes'], 'adds up: no or yes');
+    eq(
+      [...$('#f-addsUp').options].map(o => o.value),
+      ['', 'yes'],
+      'adds up: no or yes',
+    );
     change('#f-addsUp', 'yes');
-    assert($('[data-field="value"] label').textContent === t('cu.addAmount') && $('#addsUpHint').textContent === t('cu.toCumulative'), 'labels follow');
+    assert(
+      $('[data-field="value"] label').textContent === t('cu.addAmount') &&
+        $('#addsUpHint').textContent === t('cu.toCumulative'),
+      'labels follow',
+    );
     let asked = '';
-    window.confirm = m => { asked = m; return false; };
+    window.confirm = m => {
+      asked = m;
+      return false;
+    };
     submitForm();
-    assert(asked === t('cu.confirmToCumulative', { name: 'Pages' }) && !s.cumulative && modal.open, 'asks first; cancelling keeps it');
+    assert(
+      asked === t('cu.confirmToCumulative', { name: 'Pages' }) && !s.cumulative && modal.open,
+      'asks first; cancelling keeps it',
+    );
     window.confirm = () => true;
     $('#f-value').value = '5';
     submitForm();
-    assert(s.cumulative === true && s.entries.length === 3 && stateScale(s) === 'total', `measurements became entries, plus the new amount: ${s.entries.length}`);
-    eq(entriesOf(s).filter(e => e.date === now).map(e => e.amount).sort(), ['20', '5'], 'today: two entries');
+    assert(
+      s.cumulative === true && s.entries.length === 3 && stateScale(s) === 'total',
+      `measurements became entries, plus the new amount: ${s.entries.length}`,
+    );
+    eq(
+      entriesOf(s)
+        .filter(e => e.date === now)
+        .map(e => e.amount)
+        .sort(),
+      ['20', '5'],
+      'today: two entries',
+    );
     // Saving again keeps the graph's scale and the entries.
     s.scale = 'month';
     openForm('state', s.id);
@@ -6435,7 +10855,10 @@ window.moreTests = async ({ step, assert }) => {
     openForm('state', s.id);
     const first = $('[data-drop-entry]');
     first.click();
-    assert(first.getAttribute('aria-pressed') === 'true' && first.closest('.entry').classList.contains('dropped'), 'marked');
+    assert(
+      first.getAttribute('aria-pressed') === 'true' && first.closest('.entry').classList.contains('dropped'),
+      'marked',
+    );
     modal.close();
     assert(s.entries.length === 3, 'cancel keeps it');
     openForm('state', s.id);
@@ -6458,20 +10881,48 @@ window.moreTests = async ({ step, assert }) => {
   await step('cumulative: sync merges entries by id, keeps deletions, recomputes the total', () => {
     const now = today();
     const e = (id, amount, date = now) => ({ id, date, amount: String(amount) });
-    const x = { id: 's', cumulative: true, scale: 'week', updatedAt: '2099-01-01', entries: [e('a', 1), e('b', 2)], value: '3', date: now };
-    const y = { id: 's', cumulative: true, scale: 'week', updatedAt: '2099-02-01', entries: [e('a', 10), e('c', 4)], droppedEntries: { b: 1 }, value: '14', date: now };
+    const x = {
+      id: 's',
+      cumulative: true,
+      scale: 'week',
+      updatedAt: '2099-01-01',
+      entries: [e('a', 1), e('b', 2)],
+      value: '3',
+      date: now,
+    };
+    const y = {
+      id: 's',
+      cumulative: true,
+      scale: 'week',
+      updatedAt: '2099-02-01',
+      entries: [e('a', 10), e('c', 4)],
+      droppedEntries: { b: 1 },
+      value: '14',
+      date: now,
+    };
     const m = mergeState(x, y);
-    eq(m.entries.map(x => `${x.id}=${x.amount}`), ['a=10', 'c=4'], 'b deleted, a from the newer copy, c added');
+    eq(
+      m.entries.map(x => `${x.id}=${x.amount}`),
+      ['a=10', 'c=4'],
+      'b deleted, a from the newer copy, c added',
+    );
     eq(m.droppedEntries, { b: 1 }, 'deletion remembered');
     assert(m.value === '14', `total recomputed: ${m.value}`);
     eq(mergeState(y, x), m, 'symmetric');
     const old = { ...x, updatedAt: '2099-03-01', entries: [e('a', 1), e('b', 2), e('d', 8)] };
-    eq(mergeState(old, y).entries.map(x => x.id), ['a', 'b', 'c', 'd'].filter(id => id !== 'b'), 'a deletion on one side wins over the other side keeping it');
+    eq(
+      mergeState(old, y).entries.map(x => x.id),
+      ['a', 'b', 'c', 'd'].filter(id => id !== 'b'),
+      'a deletion on one side wins over the other side keeping it',
+    );
     // Through whole plans.
-    const p = { ...emptyDb(), states: [x] }, q = { ...emptyDb(), states: [y] };
+    const p = { ...emptyDb(), states: [x] },
+      q = { ...emptyDb(), states: [y] };
     assert(mergePlans(p, q).states[0].entries.length === 2, 'mergePlans');
     // A copy from a device still on the old form is read the new way.
-    const older = normalize({ states: [mergeState({ ...x, cumulative: 'week', scale: undefined, updatedAt: '2099-04-01' }, y)] }).states[0];
+    const older = normalize({
+      states: [mergeState({ ...x, cumulative: 'week', scale: undefined, updatedAt: '2099-04-01' }, y)],
+    }).states[0];
     eq([older.cumulative, older.scale], [true, 'week'], 'old form from sync migrated');
     return m.entries.length + ' entries';
   });
@@ -6479,7 +10930,12 @@ window.moreTests = async ({ step, assert }) => {
   await step('target reached: a toast offers to mark the goal achieved, once, not for an existing plan', async () => {
     const wait = ms => new Promise(r => setTimeout(r, ms));
     // An existing plan with a goal already at its target: no toast on opening it.
-    const done = { ...emptyDb(), goals: [{ id: 'g0', title: 'Already there', status: 'active', baseline: '0', target: '5', current: '5', metric: 'm' }] };
+    const done = {
+      ...emptyDb(),
+      goals: [
+        { id: 'g0', title: 'Already there', status: 'active', baseline: '0', target: '5', current: '5', metric: 'm' },
+      ],
+    };
     createPlan('Reached already', done);
     await wait(10);
     assert(!$('#toast').classList.contains('has-action') && db.goals[0].offeredAt, 'quietly noted');
@@ -6497,15 +10953,24 @@ window.moreTests = async ({ step, assert }) => {
     save();
     await wait(10);
     const box = $('#toast');
-    assert(box.classList.contains('has-action') && box.textContent.startsWith(t('reached.text', { name: 'Sell 3' })), box.textContent);
+    assert(
+      box.classList.contains('has-action') && box.textContent.startsWith(t('reached.text', { name: 'Sell 3' })),
+      box.textContent,
+    );
     // It stays longer than a plain toast.
     await wait(2500);
     assert(box.classList.contains('show'), 'still there after 2.5 s');
     save();
     await wait(10);
-    assert(box.textContent.startsWith(t('reached.text', { name: 'Sell 3' })) && reachedQueue.length === 0, 'offered once');
+    assert(
+      box.textContent.startsWith(t('reached.text', { name: 'Sell 3' })) && reachedQueue.length === 0,
+      'offered once',
+    );
     box.querySelector('.toast-action').click();
-    assert(g.status === 'achieved' && box.textContent === t('ctx.statusSet', { s: t('goal.achieved') }), 'marked achieved');
+    assert(
+      g.status === 'achieved' && box.textContent === t('ctx.statusSet', { s: t('goal.achieved') }),
+      'marked achieved',
+    );
     // Reactivated and dropped below, then reached again: offered again.
     g.status = 'active';
     recordMeasurement(s, today(), '1');
@@ -6517,14 +10982,19 @@ window.moreTests = async ({ step, assert }) => {
     assert($('#toast').classList.contains('has-action'), 'offered again');
     hideToast();
     // Two goals at once: one toast at a time.
-    const g2 = mk('goal', { title: 'Sell 2', baseline: '0', target: '2', metric: 'Sold' }), g3 = mk('goal', { title: 'Sell 1', baseline: '0', target: '1', metric: 'Sold' });
-    rel(s, g2, 'measures'); rel(s, g3, 'measures');
+    const g2 = mk('goal', { title: 'Sell 2', baseline: '0', target: '2', metric: 'Sold' }),
+      g3 = mk('goal', { title: 'Sell 1', baseline: '0', target: '1', metric: 'Sold' });
+    rel(s, g2, 'measures');
+    rel(s, g3, 'measures');
     save();
     await wait(10);
     const firstText = $('#toast').textContent;
     hideToast();
     await wait(300);
-    assert($('#toast').textContent !== firstText && $('#toast').classList.contains('has-action'), 'the next one follows');
+    assert(
+      $('#toast').textContent !== firstText && $('#toast').classList.contains('has-action'),
+      'the next one follows',
+    );
     hideToast();
     // A goal measured by routines has no target to reach.
     assert(!goalReached({ status: 'active', progress: 'routines' }), 'routines: never');
@@ -6535,90 +11005,207 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('routine graphs: switch to check-ins per day, week, month or year, or in total', () => {
     fresh('Routine scales');
-    const a = mk('activity', { title: 'Swim', repeat: { times: 2, per: 'week' }, startDate: d(-20), checkins: { [d(-15)]: 1, [d(-8)]: 1, [d(-7)]: 1, [d(-6)]: 0, [d(0)]: 1 } });
+    const a = mk('activity', {
+      title: 'Swim',
+      repeat: { times: 2, per: 'week' },
+      startDate: d(-20),
+      checkins: { [d(-15)]: 1, [d(-8)]: 1, [d(-7)]: 1, [d(-6)]: 0, [d(0)]: 1 },
+    });
     save();
     setView('graphs');
-    const card = () => $(`[data-gr="${a.id}"]`), pressed = () => [...card().querySelectorAll('.gr-scale [aria-pressed="true"]')].map(b => b.dataset.grScale);
-    const bars = () => [...card().querySelectorAll('.gr-bar')], tipOf = i => { const p = card().querySelector('.gr-plot'); showGraphPoint(p, i); return p.querySelector('.gr-tip-value').textContent; };
-    eq([...card().querySelectorAll('.gr-scale button')].map(b => b.dataset.grScale), SCALES, 'five scales, as on a state');
+    const card = () => $(`[data-gr="${a.id}"]`),
+      pressed = () => [...card().querySelectorAll('.gr-scale [aria-pressed="true"]')].map(b => b.dataset.grScale);
+    const bars = () => [...card().querySelectorAll('.gr-bar')],
+      tipOf = i => {
+        const p = card().querySelector('.gr-plot');
+        showGraphPoint(p, i);
+        return p.querySelector('.gr-tip-value').textContent;
+      };
+    eq(
+      [...card().querySelectorAll('.gr-scale button')].map(b => b.dataset.grScale),
+      SCALES,
+      'five scales, as on a state',
+    );
     eq(pressed(), [periodUnit(a)], 'starts on its own period');
     assert(card().querySelectorAll('.gr-goal').length === bars().length, 'which shows what each period asks for');
     a.updatedAt = '2000-01-01T00:00:00.000Z';
     card().querySelector('[data-gr-scale="day"]').click();
     assert(a.scale === 'day' && a.updatedAt !== '2000-01-01T00:00:00.000Z', 'kept on the routine and synced');
     eq(pressed(), ['day'], 'day pressed');
-    assert(bars().length === 16 && !card().querySelector('.gr-goal'), `a bar a day from the first check-in: ${bars().length}`);
-    const axis = [...card().querySelectorAll('.gr-axis[text-anchor="end"]')].map(x => x.textContent).filter(x => /^[\d.,]+$/.test(x));
+    assert(
+      bars().length === 16 && !card().querySelector('.gr-goal'),
+      `a bar a day from the first check-in: ${bars().length}`,
+    );
+    const axis = [...card().querySelectorAll('.gr-axis[text-anchor="end"]')]
+      .map(x => x.textContent)
+      .filter(x => /^[\d.,]+$/.test(x));
     assert(axis.length >= 2 && axis.every(x => Number.isInteger(Number(x))), `whole numbers on the axis: ${axis}`);
-    assert(card().querySelectorAll('.gr-bar.now').length === 1 && tipOf(15) === tp('rt.checkins', 1) && tipOf(14) === tp('rt.checkins', 0), 'today lighter; a day unticked counts nothing');
-    eq(card().querySelector('.gr-value').textContent, t('cu.now.day', { value: tp('rt.checkins', 1) }), 'today’s count');
-    assert(!card().querySelector('[data-del-entry]') && card().querySelectorAll('.gr-table tbody tr').length === 16, 'its table lists the days, with nothing to delete');
+    assert(
+      card().querySelectorAll('.gr-bar.now').length === 1 &&
+        tipOf(15) === tp('rt.checkins', 1) &&
+        tipOf(14) === tp('rt.checkins', 0),
+      'today lighter; a day unticked counts nothing',
+    );
+    eq(
+      card().querySelector('.gr-value').textContent,
+      t('cu.now.day', { value: tp('rt.checkins', 1) }),
+      'today’s count',
+    );
+    assert(
+      !card().querySelector('[data-del-entry]') && card().querySelectorAll('.gr-table tbody tr').length === 16,
+      'its table lists the days, with nothing to delete',
+    );
     card().querySelector('[data-gr-scale="week"]').click();
     assert(card().querySelector('.gr-goal'), 'its own period again: what each week asks for');
     // The bars fill their periods, a thin gap apart; today's strip is drawn inside the week under way.
-    const box = el => ['x', 'width'].map(k => Number(el.getAttribute(k))), wk = bars().map(box);
-    assert(wk.slice(1).every(([x], i) => Math.abs(x - (wk[i][0] + wk[i][1])) <= 2.01), `bars side by side: ${JSON.stringify(wk)}`);
-    const [tx, tw] = box(card().querySelector('.gr-today.over')), [nx, nw] = box(card().querySelector('.gr-bar.now'));
-    assert(tx >= nx - 0.01 && tx + tw <= nx + nw + 0.01 && card().querySelector('.gr-bar.now').compareDocumentPosition(card().querySelector('.gr-today')) & Node.DOCUMENT_POSITION_FOLLOWING, 'today inside this week’s bar, over it');
+    const box = el => ['x', 'width'].map(k => Number(el.getAttribute(k))),
+      wk = bars().map(box);
+    assert(
+      wk.slice(1).every(([x], i) => Math.abs(x - (wk[i][0] + wk[i][1])) <= 2.01),
+      `bars side by side: ${JSON.stringify(wk)}`,
+    );
+    const [tx, tw] = box(card().querySelector('.gr-today.over')),
+      [nx, nw] = box(card().querySelector('.gr-bar.now'));
+    assert(
+      tx >= nx - 0.01 &&
+        tx + tw <= nx + nw + 0.01 &&
+        card().querySelector('.gr-bar.now').compareDocumentPosition(card().querySelector('.gr-today')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      'today inside this week’s bar, over it',
+    );
     card().querySelector('[data-gr-scale="month"]').click();
     const sum = bars().reduce((n, b, i) => n + parseInt(tipOf(i), 10), 0);
     assert(sum === 4 && !card().querySelector('.gr-goal'), `monthly bars add up to every check-in: ${sum}`);
     card().querySelector('[data-gr-scale="total"]').click();
-    assert(card().querySelector('.gr-line').getAttribute('d').includes('H') && !card().querySelector('.gr-bar'), 'in total: a step line');
-    eq(card().querySelector('.gr-value').textContent, t('cu.inTotal', { value: tp('rt.checkins', 4) }), 'four in total');
-    eq(card().querySelector('.gr-scale').getAttribute('aria-label'), t('cu.scaleLabelRoutine'), 'the switch counts check-ins');
-    setLanguage('sl'); render();
+    assert(
+      card().querySelector('.gr-line').getAttribute('d').includes('H') && !card().querySelector('.gr-bar'),
+      'in total: a step line',
+    );
+    eq(
+      card().querySelector('.gr-value').textContent,
+      t('cu.inTotal', { value: tp('rt.checkins', 4) }),
+      'four in total',
+    );
+    eq(
+      card().querySelector('.gr-scale').getAttribute('aria-label'),
+      t('cu.scaleLabelRoutine'),
+      'the switch counts check-ins',
+    );
+    setLanguage('sl');
+    render();
     eq(card().querySelector('.gr-value').textContent, '4 izvedbe skupaj', 'in Slovenian');
-    setLanguage('en'); render();
+    setLanguage('en');
+    render();
     return `day 16 bars, month ${sum}, total ok`;
   });
 
   await step('cumulative graphs: bars per period, running total, a graph per routine, Show in', () => {
     loadSample();
     setView('graphs');
-    const km = db.states.find(s => s.cumulative === true && s.scale === 'week'), run = db.activities.find(a => relsFrom(a.id, 'improves').some(r => r.to === km.id) && isRoutine(a));
+    const km = db.states.find(s => s.cumulative === true && s.scale === 'week'),
+      run = db.activities.find(a => relsFrom(a.id, 'improves').some(r => r.to === km.id) && isRoutine(a));
     const card = $(`[data-gr="${km.id}"]`);
-    assert(card.querySelectorAll('.gr-bar').length === periodTotals(km, 'week').length && card.querySelectorAll('.gr-bar.now').length === 1, 'a bar per week, this one lighter');
+    assert(
+      card.querySelectorAll('.gr-bar').length === periodTotals(km, 'week').length &&
+        card.querySelectorAll('.gr-bar.now').length === 1,
+      'a bar per week, this one lighter',
+    );
     assert(card.querySelector('.gr-value').textContent === scaleText(km, 'week'), 'this week');
     const plot = card.querySelector('.gr-plot');
     plot.focus();
-    assert(plot.querySelector('.gr-tip-date').textContent.startsWith('Week of') && plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(stateTotal(km, 'week')), 'km'), plot.querySelector('.gr-tip').textContent);
+    assert(
+      plot.querySelector('.gr-tip-date').textContent.startsWith('Week of') &&
+        plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(stateTotal(km, 'week')), 'km'),
+      plot.querySelector('.gr-tip').textContent,
+    );
     plot.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
-    assert(plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(periodTotals(km, 'week')[0].total), 'km'), 'Home: the first week');
+    assert(
+      plot.querySelector('.gr-tip-value').textContent === withUnit(fmtNum(periodTotals(km, 'week')[0].total), 'km'),
+      'Home: the first week',
+    );
     plot.blur();
     // Every routine with check-ins has a graph; its bars show check-ins against the period's target.
     const rc = $(`[data-gr="${run.id}"]`);
-    assert(rc && rc.querySelectorAll('.gr-bar').length >= 5 && rc.querySelectorAll('.gr-bar.met').length >= 1 && rc.querySelectorAll('.gr-goal').length >= 5, 'routine graph');
+    assert(
+      rc &&
+        rc.querySelectorAll('.gr-bar').length >= 5 &&
+        rc.querySelectorAll('.gr-bar.met').length >= 1 &&
+        rc.querySelectorAll('.gr-goal').length >= 5,
+      'routine graph',
+    );
     db.activities.filter(isRoutine).forEach(a => assert($(`[data-gr="${a.id}"]`), `${a.title} has a graph`));
     // Delete an entry from the table.
-    const n = km.entries.length, del = card.querySelector('[data-del-entry]');
+    const n = km.entries.length,
+      del = card.querySelector('[data-del-entry]');
     del.click();
-    assert(km.entries.length === n - 1 && $(`[data-gr="${km.id}"] .gr-table`).open, 'deleted from the table, which stays open');
+    assert(
+      km.entries.length === n - 1 && $(`[data-gr="${km.id}"] .gr-table`).open,
+      'deleted from the table, which stays open',
+    );
     // A running total: a step line.
-    km.scale = 'total'; render();
-    assert($(`[data-gr="${km.id}"] .gr-line`).getAttribute('d').includes('H') && $(`[data-gr="${km.id}"] .gr-value`).textContent.endsWith('in total'), 'step line of the total');
-    km.scale = 'week'; render();
+    km.scale = 'total';
+    render();
+    assert(
+      $(`[data-gr="${km.id}"] .gr-line`).getAttribute('d').includes('H') &&
+        $(`[data-gr="${km.id}"] .gr-value`).textContent.endsWith('in total'),
+      'step line of the total',
+    );
+    km.scale = 'week';
+    render();
     // The switch above the graph: per day, week, month or year, or in total; the choice is kept on the state.
     const scaleBtns = () => [...document.querySelectorAll(`[data-gr="${km.id}"] .gr-scale button`)];
-    eq(scaleBtns().map(b => b.dataset.grScale), ['day', 'week', 'month', 'year', 'total'], 'five scales');
-    eq(scaleBtns().filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.grScale), ['week'], 'the current one pressed');
-    eq(scaleBtns().filter(b => b.classList.contains('active')).map(b => b.dataset.grScale), ['week'], 'and shown as selected');
+    eq(
+      scaleBtns().map(b => b.dataset.grScale),
+      ['day', 'week', 'month', 'year', 'total'],
+      'five scales',
+    );
+    eq(
+      scaleBtns()
+        .filter(b => b.getAttribute('aria-pressed') === 'true')
+        .map(b => b.dataset.grScale),
+      ['week'],
+      'the current one pressed',
+    );
+    eq(
+      scaleBtns()
+        .filter(b => b.classList.contains('active'))
+        .map(b => b.dataset.grScale),
+      ['week'],
+      'and shown as selected',
+    );
     const goal = db.goals.find(g => relsFrom(km.id, 'measures').some(r => r.to === g.id));
-    assert(goalPeriod(goal) === 'week' && $(`[data-gr="${km.id}"] .gr-target`), 'a weekly goal’s target on weekly bars');
-    const before = km.updatedAt = '2000-01-01T00:00:00.000Z';
+    assert(
+      goalPeriod(goal) === 'week' && $(`[data-gr="${km.id}"] .gr-target`),
+      'a weekly goal’s target on weekly bars',
+    );
+    const before = (km.updatedAt = '2000-01-01T00:00:00.000Z');
     $(`[data-gr="${km.id}"] [data-gr-scale="month"]`).click();
     assert(km.scale === 'month' && km.updatedAt !== before, 'saved on the state');
     const mc = $(`[data-gr="${km.id}"]`);
-    assert(mc.querySelectorAll('.gr-bar').length === periodTotals(km, 'month').length && mc.querySelector('.gr-period td').textContent === periodLabel('month', calPeriod('month', today()).from, calPeriod('month', today()).to), 'monthly bars');
+    assert(
+      mc.querySelectorAll('.gr-bar').length === periodTotals(km, 'month').length &&
+        mc.querySelector('.gr-period td').textContent ===
+          periodLabel('month', calPeriod('month', today()).from, calPeriod('month', today()).to),
+      'monthly bars',
+    );
     assert(!mc.querySelector('.gr-target'), 'no weekly target on monthly bars');
     assert(document.activeElement === mc.querySelector('[data-gr-scale="month"]'), 'focus stays on the switch');
     mc.querySelector('[data-gr-scale="total"]').click();
-    assert($(`[data-gr="${km.id}"] .gr-line`) && !$(`[data-gr="${km.id}"] .gr-bar`) && !$(`[data-gr="${km.id}"] .gr-target`), 'in total: a line, the weekly target left out');
-    goal.period = 'total'; render();
+    assert(
+      $(`[data-gr="${km.id}"] .gr-line`) && !$(`[data-gr="${km.id}"] .gr-bar`) && !$(`[data-gr="${km.id}"] .gr-target`),
+      'in total: a line, the weekly target left out',
+    );
+    goal.period = 'total';
+    render();
     assert($(`[data-gr="${km.id}"] .gr-target`), 'an in-total goal’s target on the running total');
-    goal.period = 'week'; km.scale = 'week'; render();
+    goal.period = 'week';
+    km.scale = 'week';
+    render();
     setView('states');
-    assert($(`.card.state[data-open="${km.id}"] .cu-now`).textContent === scaleText(km, 'week'), 'the state card follows the scale');
+    assert(
+      $(`.card.state[data-open="${km.id}"] .cu-now`).textContent === scaleText(km, 'week'),
+      'the state card follows the scale',
+    );
     setView('graphs');
     const plain = db.states.find(s => !isCumulative(s) && $(`[data-gr="${s.id}"]`));
     assert(!$(`[data-gr="${plain.id}"] .gr-scale`), 'plain states have no switch');
@@ -6629,7 +11216,9 @@ window.moreTests = async ({ step, assert }) => {
     $('#ctxMenu [data-ctx="show:graphs"]').click();
     assert(ui.view === 'graphs' && $(`[data-gr="${run.id}"]`), 'shown in Graphs');
     // Long daily histories scroll, starting at the latest days.
-    km.scale = 'day'; km.entries.push(entry(addDays(today(), -200), 3)); render();
+    km.scale = 'day';
+    km.entries.push(entry(addDays(today(), -200), 3));
+    render();
     const daily = $(`[data-gr="${km.id}"] .gr-plot`);
     assert(daily.classList.contains('scroll') && daily.scrollLeft > 0, `daily bars scroll: ${daily.scrollLeft}`);
     deletePlan(plans.current);
@@ -6637,12 +11226,30 @@ window.moreTests = async ({ step, assert }) => {
   });
 
   await step('cumulative: an old export imports in the new form, and its goals keep counting per period', () => {
-    const now = today(), lastWeek = addDays(calPeriod('week', now).from, -1);
-    const raw = { name: 'Old export', goals: [{ id: 'g', title: 'Run 30 a week', status: 'active', baseline: '0', target: '30', metric: 'Km' }],
-      states: [{ id: 's', title: 'Km', unit: 'km', cumulative: 'week', entries: [{ id: 'e', date: lastWeek, amount: '30' }], value: '0', date: lastWeek }],
-      relations: [{ id: 'r', from: 's', to: 'g', type: 'measures' }] };
+    const now = today(),
+      lastWeek = addDays(calPeriod('week', now).from, -1);
+    const raw = {
+      name: 'Old export',
+      goals: [{ id: 'g', title: 'Run 30 a week', status: 'active', baseline: '0', target: '30', metric: 'Km' }],
+      states: [
+        {
+          id: 's',
+          title: 'Km',
+          unit: 'km',
+          cumulative: 'week',
+          entries: [{ id: 'e', date: lastWeek, amount: '30' }],
+          value: '0',
+          date: lastWeek,
+        },
+      ],
+      relations: [{ id: 'r', from: 's', to: 'g', type: 'measures' }],
+    };
     const { data } = parsePlanFile(JSON.stringify(raw), 'old.json');
-    eq([data.states[0].cumulative, data.states[0].scale, data.states[0].value, data.goals[0].period], [true, 'week', '30', 'week'], 'migrated on import');
+    eq(
+      [data.states[0].cumulative, data.states[0].scale, data.states[0].value, data.goals[0].period],
+      [true, 'week', '30', 'week'],
+      'migrated on import',
+    );
     createPlan('Imported old', data);
     assert(goalCurrent(db.goals[0]) === 30 && goalReached(db.goals[0]), 'last full week reached the target, as before');
     deletePlan(plans.current);
@@ -6653,11 +11260,32 @@ window.moreTests = async ({ step, assert }) => {
     const now = today();
     const e = (id, amount) => ({ id, date: now, amount: String(amount) });
     // Device A switched the graph to months later; device B added an amount earlier.
-    const a = { id: 's', cumulative: true, scale: 'month', updatedAt: '2099-02-01', entries: [e('x', 1)], value: '1', date: now };
-    const b = { id: 's', cumulative: true, scale: 'week', updatedAt: '2099-01-01', entries: [e('x', 1), e('y', 2)], value: '3', date: now };
+    const a = {
+      id: 's',
+      cumulative: true,
+      scale: 'month',
+      updatedAt: '2099-02-01',
+      entries: [e('x', 1)],
+      value: '1',
+      date: now,
+    };
+    const b = {
+      id: 's',
+      cumulative: true,
+      scale: 'week',
+      updatedAt: '2099-01-01',
+      entries: [e('x', 1), e('y', 2)],
+      value: '3',
+      date: now,
+    };
     const m = mergeState(a, b);
-    eq([m.scale, m.entries.map(x => x.id), m.value], ['month', ['x', 'y'], '3'], 'newer scale, entries from both, total recomputed');
-    const ga = { id: 'g', title: 'G', period: 'week', updatedAt: '2099-03-01' }, gb = { id: 'g', title: 'G', period: 'month', updatedAt: '2099-01-01' };
+    eq(
+      [m.scale, m.entries.map(x => x.id), m.value],
+      ['month', ['x', 'y'], '3'],
+      'newer scale, entries from both, total recomputed',
+    );
+    const ga = { id: 'g', title: 'G', period: 'week', updatedAt: '2099-03-01' },
+      gb = { id: 'g', title: 'G', period: 'month', updatedAt: '2099-01-01' };
     const merged = mergePlans({ ...emptyDb(), goals: [gb], states: [b] }, { ...emptyDb(), goals: [ga], states: [a] });
     eq([merged.goals[0].period, merged.states[0].scale], ['week', 'month'], 'whole plans');
     return m.scale;
@@ -6674,22 +11302,40 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('cumulative: the scale switch and Counts in Slovenian', () => {
     fresh('Slovenian scales');
-    const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'week', entries: [{ id: 'a', date: today(), amount: '5' }] });
+    const km = mk('state', {
+      title: 'Km',
+      unit: 'km',
+      cumulative: true,
+      scale: 'week',
+      entries: [{ id: 'a', date: today(), amount: '5' }],
+    });
     const g = mk('goal', { title: 'Teči' });
     rel(km, g, 'measures');
     save();
     changeLanguage('sl');
     setView('graphs');
-    eq([...document.querySelectorAll(`[data-gr="${km.id}"] .gr-scale button`)].map(b => b.textContent), ['Dan', 'Teden', 'Mesec', 'Leto', 'Skupaj'], 'switch');
+    eq(
+      [...document.querySelectorAll(`[data-gr="${km.id}"] .gr-scale button`)].map(b => b.textContent),
+      ['Dan', 'Teden', 'Mesec', 'Leto', 'Skupaj'],
+      'switch',
+    );
     eq($(`[data-gr="${km.id}"] .gr-scale`).getAttribute('aria-label'), 'Prikaži vsote po', 'its label');
     eq($(`[data-gr="${km.id}"] .gr-value`).textContent, '5 km ta teden', 'this week');
     setView('states');
     eq($(`.card.state[data-open="${km.id}"] .cu-total`).textContent, '5 km skupaj', 'card total');
     openForm('goal', g.id);
-    eq([$('[data-field="period"] label').textContent, $('#f-period').selectedOptions[0].textContent], ['Šteje', 'Skupno'], 'Counts');
+    eq(
+      [$('[data-field="period"] label').textContent, $('#f-period').selectedOptions[0].textContent],
+      ['Šteje', 'Skupno'],
+      'Counts',
+    );
     modal.close();
     openForm('state', km.id);
-    eq([...$('#f-addsUp').options].map(o => o.textContent), ['Ne – vsaka vrednost nadomesti prejšnjo', 'Da – količine se seštevajo'], 'adds up');
+    eq(
+      [...$('#f-addsUp').options].map(o => o.textContent),
+      ['Ne – vsaka vrednost nadomesti prejšnjo', 'Da – količine se seštevajo'],
+      'adds up',
+    );
     modal.close();
     changeLanguage('en');
     deletePlan(plans.current);
@@ -6701,14 +11347,34 @@ window.moreTests = async ({ step, assert }) => {
     for (const lang of ['en', 'sl']) {
       changeLanguage(lang);
       const frame = document.createElement('iframe');
-      Object.assign(frame.style, { width: '390px', height: '300px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+      Object.assign(frame.style, {
+        width: '390px',
+        height: '300px',
+        position: 'fixed',
+        left: '-9999px',
+        top: '0',
+        border: '0',
+      });
       frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px"><article class="card gr-card">${scaleSwitch(km)}</article></body>`;
-      await new Promise(res => { frame.onload = res; document.body.append(frame); });
-      const doc = frame.contentDocument, card = doc.querySelector('.gr-card').getBoundingClientRect();
+      await new Promise(res => {
+        frame.onload = res;
+        document.body.append(frame);
+      });
+      const doc = frame.contentDocument,
+        card = doc.querySelector('.gr-card').getBoundingClientRect();
       const btns = [...doc.querySelectorAll('.gr-scale button')].map(b => b.getBoundingClientRect());
-      assert(btns.length === 5 && btns.every(r => r.left >= card.left - 1 && r.right <= card.right + 1), `${lang}: every chip inside the card`);
-      assert(doc.documentElement.scrollWidth <= 390, `${lang}: no sideways scroll (${doc.documentElement.scrollWidth})`);
-      assert(btns.every(r => r.height >= 24), `${lang}: chips big enough to tap (${Math.min(...btns.map(r => r.height))} px)`);
+      assert(
+        btns.length === 5 && btns.every(r => r.left >= card.left - 1 && r.right <= card.right + 1),
+        `${lang}: every chip inside the card`,
+      );
+      assert(
+        doc.documentElement.scrollWidth <= 390,
+        `${lang}: no sideways scroll (${doc.documentElement.scrollWidth})`,
+      );
+      assert(
+        btns.every(r => r.height >= 24),
+        `${lang}: chips big enough to tap (${Math.min(...btns.map(r => r.height))} px)`,
+      );
       const rows = new Set(btns.map(r => Math.round(r.top))).size;
       assert(rows === 1, `${lang}: one row (${rows})`);
       out.push(`${lang} ${rows} row`);
@@ -6718,37 +11384,67 @@ window.moreTests = async ({ step, assert }) => {
     return out.join(', ');
   });
 
-  await step('cumulative: a state card with both sums keeps its title on one line and everything inside the card', async () => {
-    loadSample();
-    setView('states');
-    const km = db.states.find(s => s.cumulative && s.scale === 'week');
-    const html = $(`.card.state[data-open="${km.id}"]`).outerHTML, out = [];
-    // A phone, and the narrowest column of the desktop grid (320 px).
-    for (const [name, width, pad] of [['phone', 390, 16], ['desktop column', 352, 16]]) {
-      const frame = document.createElement('iframe');
-      Object.assign(frame.style, { width: `${width}px`, height: '400px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
-      frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 ${pad}px">${html}</body>`;
-      await new Promise(res => { frame.onload = res; document.body.append(frame); });
-      const doc = frame.contentDocument, card = doc.querySelector('.card').getBoundingClientRect();
-      const title = doc.querySelector('.card-head h3'), head = doc.querySelector('.cu-head').getBoundingClientRect();
-      const lineH = parseFloat(frame.contentWindow.getComputedStyle(title).lineHeight) || 24;
-      assert(head.right <= card.right + 1 && head.left >= card.left - 1, `${name}: the sums and + inside the card (${Math.round(head.right)} > ${Math.round(card.right)})`);
-      assert(title.getBoundingClientRect().height < lineH * 1.5, `${name}: title on one line (${Math.round(title.getBoundingClientRect().height)} px)`);
-      out.push(`${name} ok`);
-      frame.remove();
-    }
-    deletePlan(plans.current);
-    return out.join(', ');
-  });
+  await step(
+    'cumulative: a state card with both sums keeps its title on one line and everything inside the card',
+    async () => {
+      loadSample();
+      setView('states');
+      const km = db.states.find(s => s.cumulative && s.scale === 'week');
+      const html = $(`.card.state[data-open="${km.id}"]`).outerHTML,
+        out = [];
+      // A phone, and the narrowest column of the desktop grid (320 px).
+      for (const [name, width, pad] of [
+        ['phone', 390, 16],
+        ['desktop column', 352, 16],
+      ]) {
+        const frame = document.createElement('iframe');
+        Object.assign(frame.style, {
+          width: `${width}px`,
+          height: '400px',
+          position: 'fixed',
+          left: '-9999px',
+          top: '0',
+          border: '0',
+        });
+        frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 ${pad}px">${html}</body>`;
+        await new Promise(res => {
+          frame.onload = res;
+          document.body.append(frame);
+        });
+        const doc = frame.contentDocument,
+          card = doc.querySelector('.card').getBoundingClientRect();
+        const title = doc.querySelector('.card-head h3'),
+          head = doc.querySelector('.cu-head').getBoundingClientRect();
+        const lineH = parseFloat(frame.contentWindow.getComputedStyle(title).lineHeight) || 24;
+        assert(
+          head.right <= card.right + 1 && head.left >= card.left - 1,
+          `${name}: the sums and + inside the card (${Math.round(head.right)} > ${Math.round(card.right)})`,
+        );
+        assert(
+          title.getBoundingClientRect().height < lineH * 1.5,
+          `${name}: title on one line (${Math.round(title.getBoundingClientRect().height)} px)`,
+        );
+        out.push(`${name} ok`);
+        frame.remove();
+      }
+      deletePlan(plans.current);
+      return out.join(', ');
+    },
+  );
 
   await step('cumulative: Counts in the goal form has room like the fields around it', () => {
     loadSample();
-    const km = db.states.find(s => s.cumulative), g = db.goals.find(x => relsFrom(km.id, 'measures').some(r => r.to === x.id));
+    const km = db.states.find(s => s.cumulative),
+      g = db.goals.find(x => relsFrom(km.id, 'measures').some(r => r.to === x.id));
     openForm('goal', g.id);
     const field = $('[data-field="period"]').getBoundingClientRect();
-    const above = $('[data-field="unit"]').closest('.row2').getBoundingClientRect(), below = $('[data-field="baseline"]').closest('.row3').getBoundingClientRect();
+    const above = $('[data-field="unit"]').closest('.row2').getBoundingClientRect(),
+      below = $('[data-field="baseline"]').closest('.row3').getBoundingClientRect();
     const gaps = [Math.round(field.top - above.bottom), Math.round(below.top - field.bottom)];
-    assert(gaps.every(px => px >= 10), `gaps above and below Counts: ${gaps}`);
+    assert(
+      gaps.every(px => px >= 10),
+      `gaps above and below Counts: ${gaps}`,
+    );
     modal.close();
     deletePlan(plans.current);
     return gaps.join(', ') + ' px';
@@ -6758,7 +11454,11 @@ window.moreTests = async ({ step, assert }) => {
     // Draw time is not checked here: the test browser runs on virtual time, where the clock stands
     // still during a script (measured outside it: about 0.3 s a render, nearly all of it the table).
     fresh('Long history');
-    const entries = Array.from({ length: 1100 }, (_, i) => ({ id: 'e' + i, date: addDays(today(), -i), amount: String(i % 7) }));
+    const entries = Array.from({ length: 1100 }, (_, i) => ({
+      id: 'e' + i,
+      date: addDays(today(), -i),
+      amount: String(i % 7),
+    }));
     const km = mk('state', { title: 'Km', unit: 'km', cumulative: true, scale: 'day', entries });
     save();
     const bars = {};
@@ -6767,14 +11467,29 @@ window.moreTests = async ({ step, assert }) => {
       setView('graphs');
       bars[scale] = document.querySelectorAll(`[data-gr="${km.id}"] .gr-bar`).length;
     }
-    eq(bars, { day: 1100, week: periodTotals(km, 'week').length, month: periodTotals(km, 'month').length, year: periodTotals(km, 'year').length, total: 0 }, 'a bar per period');
-    assert($(`[data-gr="${km.id}"] .gr-line`) && $(`[data-gr="${km.id}"] .gr-value`).textContent === totalText(km), 'in total: the line');
+    eq(
+      bars,
+      {
+        day: 1100,
+        week: periodTotals(km, 'week').length,
+        month: periodTotals(km, 'month').length,
+        year: periodTotals(km, 'year').length,
+        total: 0,
+      },
+      'a bar per period',
+    );
+    assert(
+      $(`[data-gr="${km.id}"] .gr-line`) && $(`[data-gr="${km.id}"] .gr-value`).textContent === totalText(km),
+      'in total: the line',
+    );
     deletePlan(plans.current);
     return JSON.stringify(bars);
   });
 
   await step('cumulative: wording in both languages', () => {
-    const keys = Object.keys(I18N.en.strings).filter(k => k.startsWith('cu.') || k.startsWith('reached.') || k === 'help.tip.addAmount');
+    const keys = Object.keys(I18N.en.strings).filter(
+      k => k.startsWith('cu.') || k.startsWith('reached.') || k === 'help.tip.addAmount',
+    );
     const missing = keys.filter(k => !(k in I18N.sl.strings));
     assert(keys.length > 50 && !missing.length, `missing in Slovenian: ${missing}`);
     changeLanguage('sl');
@@ -6782,225 +11497,484 @@ window.moreTests = async ({ step, assert }) => {
     const text = scaleText(s, 'week');
     changeLanguage('en');
     assert(text === '3 km ta teden', text);
-    const added = ['cu.opt.yes', 'cu.inTotal', 'cu.now.day', 'cu.now.week', 'cu.now.month', 'cu.now.year', 'cu.scaleLabel',
-      ...SCALES.map(k => 'cu.scale.' + k), 'cu.counts', 'cu.countsHint', ...['total', ...PERIODS].map(k => 'cu.count.' + k), 'cu.legend.total'];
-    const gone = ['cu.opt.day', 'cu.opt.week', 'cu.opt.month', 'cu.opt.year', 'cu.opt.none', 'cu.total.week', 'cu.total.none', 'cu.legend.none'];
-    added.forEach(k => assert(I18N.en.strings[k] && I18N.sl.strings[k] && I18N.en.strings[k] !== I18N.sl.strings[k], `${k} in both languages`));
+    const added = [
+      'cu.opt.yes',
+      'cu.inTotal',
+      'cu.now.day',
+      'cu.now.week',
+      'cu.now.month',
+      'cu.now.year',
+      'cu.scaleLabel',
+      ...SCALES.map(k => 'cu.scale.' + k),
+      'cu.counts',
+      'cu.countsHint',
+      ...['total', ...PERIODS].map(k => 'cu.count.' + k),
+      'cu.legend.total',
+    ];
+    const gone = [
+      'cu.opt.day',
+      'cu.opt.week',
+      'cu.opt.month',
+      'cu.opt.year',
+      'cu.opt.none',
+      'cu.total.week',
+      'cu.total.none',
+      'cu.legend.none',
+    ];
+    added.forEach(k =>
+      assert(
+        I18N.en.strings[k] && I18N.sl.strings[k] && I18N.en.strings[k] !== I18N.sl.strings[k],
+        `${k} in both languages`,
+      ),
+    );
     gone.forEach(k => assert(!(k in I18N.en.strings) && !(k in I18N.sl.strings), `${k} removed`));
     // Help and tour no longer speak of a state adding up per period; they tell of the switch and of goals.
-    const en = I18N.en.strings, sl = I18N.sl.strings;
-    assert(!/per day, week, month or year, or in total/.test(en['help.view.states']) && !/po dnevih, tednih, mesecih ali letih ali skupno:/.test(sl['help.view.states']), 'help.view.states');
-    assert(en['help.view.graphs'].includes('switch above the graph') && sl['help.view.graphs'].includes('preklopite nad grafom'), 'help.view.graphs');
-    assert(!en['help.tip.addAmount'].includes('the better of this period') && !sl['help.tip.addAmount'].includes('boljše od tekočega'), 'help.tip.addAmount');
-    assert(en['tour.goals.text'].includes('picks how it counts') && sl['tour.goals.text'].includes('izbere, kako šteje'), 'tour.goals.text');
-    assert(en['tour.graphs.text'].includes('per day, week, month or year, or in total') && sl['tour.graphs.text'].includes('po dnevih, tednih, mesecih ali letih ali skupno'), 'tour.graphs.text');
+    const en = I18N.en.strings,
+      sl = I18N.sl.strings;
+    assert(
+      !/per day, week, month or year, or in total/.test(en['help.view.states']) &&
+        !/po dnevih, tednih, mesecih ali letih ali skupno:/.test(sl['help.view.states']),
+      'help.view.states',
+    );
+    assert(
+      en['help.view.graphs'].includes('switch above the graph') &&
+        sl['help.view.graphs'].includes('preklopite nad grafom'),
+      'help.view.graphs',
+    );
+    assert(
+      !en['help.tip.addAmount'].includes('the better of this period') &&
+        !sl['help.tip.addAmount'].includes('boljše od tekočega'),
+      'help.tip.addAmount',
+    );
+    assert(
+      en['tour.goals.text'].includes('picks how it counts') && sl['tour.goals.text'].includes('izbere, kako šteje'),
+      'tour.goals.text',
+    );
+    assert(
+      en['tour.graphs.text'].includes('per day, week, month or year, or in total') &&
+        sl['tour.graphs.text'].includes('po dnevih, tednih, mesecih ali letih ali skupno'),
+      'tour.graphs.text',
+    );
     // Sample plan and the Marathon template are in the new form.
-    const sample = sampleData(), dist = sample.states.find(s => s.cumulative);
-    const wk = sample.goals.find(g => sample.relations.some(r => r.type === 'measures' && r.from === dist.id && r.to === g.id));
+    const sample = sampleData(),
+      dist = sample.states.find(s => s.cumulative);
+    const wk = sample.goals.find(g =>
+      sample.relations.some(r => r.type === 'measures' && r.from === dist.id && r.to === g.id),
+    );
     eq([dist.cumulative, dist.scale, wk.period], [true, 'week', 'week'], 'sample');
     const weekly = templateData(TEMPLATES.find(x => x.id === 'marathon')).states.find(s => s.cumulative);
     eq([weekly.cumulative, weekly.scale], [true, 'week'], 'Marathon template');
     return text;
   });
 
-  await step('map and timeline: + asks whether to add a goal, an activity or a current state (on the map also a vision)', () => {
-    fresh('Map add');
-    const g = mk('goal', { title: 'Map goal' }); save();
-    setView('map');
-    const btn = $('#addBtn');
-    eq(btn.getAttribute('aria-label'), t('add.item'), 'the button just says Add');
-    btn.click();
-    const acts = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx).join(',');
-    // The map draws visions too, so it offers one as well.
-    assert(!ctxMenu.hidden && acts() === 'new:goal,new:activity,new:state,new:vision' && !ctxMenu.querySelector('.ctx-head'), `offers the kinds: ${acts()}`);
-    const r = btn.getBoundingClientRect(), m = ctxMenu.getBoundingClientRect();
-    assert(Math.abs(m.right - r.right) < 2 && m.top >= r.bottom, 'opens below the button, lined up with it');
-    ctxMenu.querySelector('[data-ctx="new:activity"]').click();
-    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'activity' && !formCtx.id && modal.querySelectorAll('[data-act-kind]').length === 4, 'Activity asks which kind');
-    modal.close();
-    for (const k of ['goal', 'state']) {
-      btn.click(); ctxMenu.querySelector(`[data-ctx="new:${k}"]`).click();
-      assert(modal.open && formCtx.kind === k && !formCtx.id, `${k}: opens its form`); modal.close();
-    }
-    // From the keyboard: the first item focused; Escape returns to the button.
-    btn.focus(); btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
-    assert(document.activeElement === ctxMenu.querySelector('[data-ctx="new:goal"]'), 'keyboard: first item focused');
-    ctxMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    assert(ctxMenu.hidden && document.activeElement === btn, 'Escape returns to the button');
-    // A box's menu afterwards is still the item's own.
-    $(`[data-map-node="${g.id}"]`).dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
-    $('[data-ctx="edit"]', ctxMenu).click();
-    assert(modal.open && formCtx.id === g.id, 'a box menu still works after'); modal.close();
-    // On phones the button floats at the bottom; the menu opens above it.
-    const phone = document.head.appendChild(document.createElement('style'));
-    phone.textContent = '.ctx-menu { animation: none !important } .topbar { backdrop-filter: none !important } .add-btn { position: fixed !important; right: 16px; bottom: 76px; z-index: 21 }';
-    btn.click();
-    const r2 = btn.getBoundingClientRect(), m2 = ctxMenu.getBoundingClientRect();
-    assert(m2.bottom <= r2.top && m2.right <= innerWidth - 8 + 1, `floating button: menu above it (${m2.bottom} ≤ ${r2.top})`);
-    closeCtxMenu(); phone.remove();
-    // The timeline asks the same.
-    setView('timeline'); eq(btn.getAttribute('aria-label'), t('add.item'), 'timeline: the button just says Add');
-    btn.click();
-    assert(!ctxMenu.hidden && acts() === 'new:goal,new:activity,new:state', `timeline: offers the three kinds: ${acts()}`);
-    ctxMenu.querySelector('[data-ctx="new:goal"]').click();
-    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'goal' && !formCtx.id, 'timeline: Goal opens a new goal'); modal.close();
-    // The other views add straight away; the empty relationship list still adds a relationship.
-    setView('goals'); btn.click();
-    assert(ctxMenu.hidden && modal.open && formCtx.kind === 'goal', 'goals view: + adds a goal directly'); modal.close();
-    changeLanguage('sl'); const sl = t('add.item'); changeLanguage('en');
-    eq(sl, 'Dodaj', 'Slovenian label');
-    deletePlan(plans.current);
-    return acts();
-  });
+  await step(
+    'map and timeline: + asks whether to add a goal, an activity or a current state (on the map also a vision)',
+    () => {
+      fresh('Map add');
+      const g = mk('goal', { title: 'Map goal' });
+      save();
+      setView('map');
+      const btn = $('#addBtn');
+      eq(btn.getAttribute('aria-label'), t('add.item'), 'the button just says Add');
+      btn.click();
+      const acts = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx).join(',');
+      // The map draws visions too, so it offers one as well.
+      assert(
+        !ctxMenu.hidden &&
+          acts() === 'new:goal,new:activity,new:state,new:vision' &&
+          !ctxMenu.querySelector('.ctx-head'),
+        `offers the kinds: ${acts()}`,
+      );
+      const r = btn.getBoundingClientRect(),
+        m = ctxMenu.getBoundingClientRect();
+      assert(Math.abs(m.right - r.right) < 2 && m.top >= r.bottom, 'opens below the button, lined up with it');
+      ctxMenu.querySelector('[data-ctx="new:activity"]').click();
+      assert(
+        ctxMenu.hidden &&
+          modal.open &&
+          formCtx.kind === 'activity' &&
+          !formCtx.id &&
+          modal.querySelectorAll('[data-act-kind]').length === 4,
+        'Activity asks which kind',
+      );
+      modal.close();
+      for (const k of ['goal', 'state']) {
+        btn.click();
+        ctxMenu.querySelector(`[data-ctx="new:${k}"]`).click();
+        assert(modal.open && formCtx.kind === k && !formCtx.id, `${k}: opens its form`);
+        modal.close();
+      }
+      // From the keyboard: the first item focused; Escape returns to the button.
+      btn.focus();
+      btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+      assert(document.activeElement === ctxMenu.querySelector('[data-ctx="new:goal"]'), 'keyboard: first item focused');
+      ctxMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      assert(ctxMenu.hidden && document.activeElement === btn, 'Escape returns to the button');
+      // A box's menu afterwards is still the item's own.
+      $(`[data-map-node="${g.id}"]`).dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
+      $('[data-ctx="edit"]', ctxMenu).click();
+      assert(modal.open && formCtx.id === g.id, 'a box menu still works after');
+      modal.close();
+      // On phones the button floats at the bottom; the menu opens above it.
+      const phone = document.head.appendChild(document.createElement('style'));
+      phone.textContent =
+        '.ctx-menu { animation: none !important } .topbar { backdrop-filter: none !important } .add-btn { position: fixed !important; right: 16px; bottom: 76px; z-index: 21 }';
+      btn.click();
+      const r2 = btn.getBoundingClientRect(),
+        m2 = ctxMenu.getBoundingClientRect();
+      assert(
+        m2.bottom <= r2.top && m2.right <= innerWidth - 8 + 1,
+        `floating button: menu above it (${m2.bottom} ≤ ${r2.top})`,
+      );
+      closeCtxMenu();
+      phone.remove();
+      // The timeline asks the same.
+      setView('timeline');
+      eq(btn.getAttribute('aria-label'), t('add.item'), 'timeline: the button just says Add');
+      btn.click();
+      assert(
+        !ctxMenu.hidden && acts() === 'new:goal,new:activity,new:state',
+        `timeline: offers the three kinds: ${acts()}`,
+      );
+      ctxMenu.querySelector('[data-ctx="new:goal"]').click();
+      assert(ctxMenu.hidden && modal.open && formCtx.kind === 'goal' && !formCtx.id, 'timeline: Goal opens a new goal');
+      modal.close();
+      // The other views add straight away; the empty relationship list still adds a relationship.
+      setView('goals');
+      btn.click();
+      assert(ctxMenu.hidden && modal.open && formCtx.kind === 'goal', 'goals view: + adds a goal directly');
+      modal.close();
+      changeLanguage('sl');
+      const sl = t('add.item');
+      changeLanguage('en');
+      eq(sl, 'Dodaj', 'Slovenian label');
+      deletePlan(plans.current);
+      return acts();
+    },
+  );
 
   await step('every view: items are tinted glass like the map boxes, in lighter type', () => {
     loadSample();
     const css = el => getComputedStyle(el);
-    const views = { dashboard: '.card, .list .row', goals: '.card', activities: '.card', states: '.card', timeline: '.tl-bar, .tl-milestone', graphs: '.card' };
+    const views = {
+      dashboard: '.card, .list .row',
+      goals: '.card',
+      activities: '.card',
+      states: '.card',
+      timeline: '.tl-bar, .tl-milestone',
+      graphs: '.card',
+    };
     for (const [view, sel] of Object.entries(views)) {
       setView(view);
       const items = [...document.querySelectorAll(`#view ${sel}`)];
-      assert(items.length && items.every(x => x.classList.contains('glass')), `${view}: ${items.length} items, all glass`);
+      assert(
+        items.length && items.every(x => x.classList.contains('glass')),
+        `${view}: ${items.length} items, all glass`,
+      );
       // No edge and no grey shadow: the box-shadow is the slab's side, solid steps in its tint, down and to the right.
-      const odd = items.filter(x => { const c = css(x), steps = c.boxShadow.match(/\d+(\.\d+)?px \d+(\.\d+)?px 0px/g) || [];
-        return c.borderTopWidth !== '0px' || c.borderLeftWidth !== '0px' || !steps.length || !c.backgroundImage.includes('linear-gradient') || !c.boxShadow.includes('inset'); });
-      eq(odd.map(x => x.className), [], `${view}: no edge, a side and the light on the face`);
+      const odd = items.filter(x => {
+        const c = css(x),
+          steps = c.boxShadow.match(/\d+(\.\d+)?px \d+(\.\d+)?px 0px/g) || [];
+        return (
+          c.borderTopWidth !== '0px' ||
+          c.borderLeftWidth !== '0px' ||
+          !steps.length ||
+          !c.backgroundImage.includes('linear-gradient') ||
+          !c.boxShadow.includes('inset')
+        );
+      });
+      eq(
+        odd.map(x => x.className),
+        [],
+        `${view}: no edge, a side and the light on the face`,
+      );
     }
     // Tinted by status, else by kind: a late goal red, a goal in progress amber, a state violet; goals cut thicker.
     setView('goals');
-    const card = st => $(`#view .card.goal.st-${st}`), side = el => (css(el).boxShadow.match(/[1-9]\d*px [1-9]\d*px 0px/g) || []).length;
-    assert(card('late') && card('doing') && css(card('late')).backgroundColor !== css(card('doing')).backgroundColor, 'goal cards tinted by status');
+    const card = st => $(`#view .card.goal.st-${st}`),
+      side = el => (css(el).boxShadow.match(/[1-9]\d*px [1-9]\d*px 0px/g) || []).length;
+    assert(
+      card('late') && card('doing') && css(card('late')).backgroundColor !== css(card('doing')).backgroundColor,
+      'goal cards tinted by status',
+    );
     setView('activities');
     const act = $('#view .col .card.activity');
     assert(side(act) === 3, 'activities 3 px of glass');
-    setView('goals'); assert(side(card('doing')) === 5, 'goals 5 px of glass');
+    setView('goals');
+    assert(side(card('doing')) === 5, 'goals 5 px of glass');
     // Milk glass: a solid face that glows from within; hovered, it takes more of its colour.
-    const face = el => css(el).backgroundColor.match(/[\d.]+/g).map(Number);
-    assert((face(card('doing'))[3] ?? 1) === 1 && css(card('doing')).boxShadow.includes('inset'), 'solid milky face, lit inside');
-    const before = css(card('doing')).backgroundColor; card('doing').style.setProperty('--wash', '6%');
-    assert(css(card('doing')).backgroundColor !== before, 'hover takes more colour'); card('doing').style.removeProperty('--wash');
+    const face = el =>
+      css(el)
+        .backgroundColor.match(/[\d.]+/g)
+        .map(Number);
+    assert(
+      (face(card('doing'))[3] ?? 1) === 1 && css(card('doing')).boxShadow.includes('inset'),
+      'solid milky face, lit inside',
+    );
+    const before = css(card('doing')).backgroundColor;
+    card('doing').style.setProperty('--wash', '6%');
+    assert(css(card('doing')).backgroundColor !== before, 'hover takes more colour');
+    card('doing').style.removeProperty('--wash');
     // Grey items still to do take more grey, so they stand out from the page.
     setView('activities');
-    const theme = document.documentElement.dataset.theme; document.documentElement.dataset.theme = 'light'; render();
-    const todo = $('#view .col .card.activity.st-todo'), rootCss = css(document.documentElement);
-    assert(todo && css(todo).getPropertyValue('--glass-tint').trim() === rootCss.getPropertyValue('--glass-tint-quiet').trim() && parseFloat(rootCss.getPropertyValue('--glass-tint-quiet')) > parseFloat(rootCss.getPropertyValue('--glass-tint')), 'to-do activities take more grey by day');
+    const theme = document.documentElement.dataset.theme;
+    document.documentElement.dataset.theme = 'light';
+    render();
+    const todo = $('#view .col .card.activity.st-todo'),
+      rootCss = css(document.documentElement);
+    assert(
+      todo &&
+        css(todo).getPropertyValue('--glass-tint').trim() === rootCss.getPropertyValue('--glass-tint-quiet').trim() &&
+        parseFloat(rootCss.getPropertyValue('--glass-tint-quiet')) >
+          parseFloat(rootCss.getPropertyValue('--glass-tint')),
+      'to-do activities take more grey by day',
+    );
     // And on the map their slab's side too: drawn without the quiet share, it would come out as pale as the rest.
-    const q = GLASS.day.quiet, quietSide = glassDefs(new Set(['--activity|other']));
-    GLASS.day.quiet = 0; const plainSide = glassDefs(new Set(['--activity|other'])); GLASS.day.quiet = q;
+    const q = GLASS.day.quiet,
+      quietSide = glassDefs(new Set(['--activity|other']));
+    GLASS.day.quiet = 0;
+    const plainSide = glassDefs(new Set(['--activity|other']));
+    GLASS.day.quiet = q;
     assert(quietSide !== plainSide, 'to-do map boxes take more grey on their side');
-    if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme; render();
+    if (theme) document.documentElement.dataset.theme = theme;
+    else delete document.documentElement.dataset.theme;
+    render();
     setView('goals');
     // A status tag on glass of its own colour stays visible.
     const late = card('late').querySelector('.tag.bad');
     assert(!late || css(late).backgroundColor !== css(card('late')).backgroundColor, 'late tag shows on a late card');
     // Lighter type: nothing heavier than 600, and headings 600.
     const weights = [...document.querySelectorAll('body *')].map(x => +css(x).fontWeight);
-    assert(Math.max(...weights) <= 600 && css($('.topbar h1')).fontWeight === '600', `heaviest weight ${Math.max(...weights)}`);
+    assert(
+      Math.max(...weights) <= 600 && css($('.topbar h1')).fontWeight === '600',
+      `heaviest weight ${Math.max(...weights)}`,
+    );
     setView('dashboard');
   });
 
-  await step('timeline lines are drawn like on the map, with square corners; menus, dialogs and fields are clear glass', () => {
-    loadSample(); ui.tlDeps = true; setView('timeline');
-    const css = el => getComputedStyle(el), dep = REL_TYPES.depends;
-    const lines = [...document.querySelectorAll('.tl-deps .tl-dep')];
-    assert(lines.length > 3, `${lines.length} dependency arrows`);
-    // The map's muted colour, width and finer dash; only straight runs, each ending with a straight stretch into the head.
-    assert(lines.every(l => l.style.stroke === mapLineColour(dep.color) && parseFloat(l.style.strokeWidth) === (dep.width || 1.1) && l.getAttribute('stroke-dasharray') === '4 3'), 'map line style');
-    const runs = lines.map(l => l.getAttribute('d'));
-    assert(runs.every(d => /^M[\d.-]+,[\d.-]+( (h|H|V)[\d.-]+)+$/.test(d)), 'only horizontal and vertical runs');
-    const tail = d => { const v = d.match(/V([\d.-]+) H([\d.-]+)$/), h = d.match(/H([\d.-]+) V[\d.-]+ H[\d.-]+$/); return +v[2] - +h[1]; };
-    assert(runs.every(d => Math.abs(tail(d) - (MAP.LEAD - MAP.TIP)) < .01), `each ends with a straight stretch: ${runs.map(tail)}`);
-    // The map's arrowhead, one size whatever the line width, its tip TIP beyond the line's end.
-    const head = $('#tl-arrow'), mapHead = 'M1,1.5 L10,5 L1,8.5 L3,5 z';
-    assert(head.getAttribute('markerUnits') === 'userSpaceOnUse' && +head.getAttribute('refX') === 10 - MAP.TIP && head.querySelector('path').getAttribute('d') === mapHead, 'map arrowhead');
-    // Tree lines in the labels: the map's colours and widths, square corners.
-    const elbow = $('.tl-elbow');
-    assert(elbow.style.getPropertyValue('--rel').includes('color-mix') && css(elbow).borderBottomLeftRadius === '0px' && parseFloat(css(elbow).borderLeftWidth) <= 1.6, 'thin muted elbows with square corners');
-    assert([...document.querySelectorAll('.tl-legend .line-key')].every(k => k.style.getPropertyValue('--rel').includes('color-mix')), 'line keys in the map colours');
-    // A selected arrow glows, like a selected map line.
-    ui.mapRel = null; const g = $('.tl-deps [data-rel-edit]'); g.classList.add('sel');
-    assert(css(g.querySelector('.tl-dep')).filter.includes('line-glow') && $('.tl-deps #line-glow'), 'a selected arrow glows');
-    // Menus, dialogs, the calendar and fields: what is behind shows faintly through.
-    const alpha = el => +(css(el).backgroundColor.match(/[\d.]+/g)[3] ?? 1);
-    openCtxMenu(db.goals[0].id, 10, 10);
-    assert(alpha(ctxMenu) > .8 && alpha(ctxMenu) < .95 && css(ctxMenu).backgroundImage.includes('radial-gradient'), `menu see-through: ${alpha(ctxMenu)}`);
-    closeCtxMenu();
-    setView('goals'); $('#view .card').click();
-    const dlg = $('dialog.modal[open]'), field = dlg.querySelector('input[type=text]');
-    assert(alpha(dlg) > .8 && alpha(dlg) < .95 && alpha(field) < alpha(dlg), `dialog ${alpha(dlg)}, field ${alpha(field)}`);
-    // One scrollbar: the body scrolls, the dialog never does; thin, on a clear track.
-    const body = dlg.querySelector('.modal-body');
-    assert(css(dlg).overflowY === 'hidden' && dlg.scrollHeight <= dlg.clientHeight + 1 && css(body).overflowY === 'auto' && css(body).scrollbarWidth === 'thin' && ['transparent', 'rgba(0, 0, 0, 0)'].some(c => css(body).scrollbarColor.endsWith(c)), `one thin scrollbar: ${dlg.scrollHeight}/${dlg.clientHeight} ${css(body).scrollbarColor}`);
-    dlg.close();
-    // A select's open list is solid, not the see-through colour of its field.
-    setView('map');
-    const opt = $('#view select option'), surface = css(document.body).getPropertyValue('--surface').trim();
-    const rgb = h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
-    assert(opt && css(opt).backgroundColor === rgb(surface) && alpha($('#view select')) < 1, `option list ${css(opt).backgroundColor}`);
-    setView('dashboard');
-  });
+  await step(
+    'timeline lines are drawn like on the map, with square corners; menus, dialogs and fields are clear glass',
+    () => {
+      loadSample();
+      ui.tlDeps = true;
+      setView('timeline');
+      const css = el => getComputedStyle(el),
+        dep = REL_TYPES.depends;
+      const lines = [...document.querySelectorAll('.tl-deps .tl-dep')];
+      assert(lines.length > 3, `${lines.length} dependency arrows`);
+      // The map's muted colour, width and finer dash; only straight runs, each ending with a straight stretch into the head.
+      assert(
+        lines.every(
+          l =>
+            l.style.stroke === mapLineColour(dep.color) &&
+            parseFloat(l.style.strokeWidth) === (dep.width || 1.1) &&
+            l.getAttribute('stroke-dasharray') === '4 3',
+        ),
+        'map line style',
+      );
+      const runs = lines.map(l => l.getAttribute('d'));
+      assert(
+        runs.every(d => /^M[\d.-]+,[\d.-]+( (h|H|V)[\d.-]+)+$/.test(d)),
+        'only horizontal and vertical runs',
+      );
+      const tail = d => {
+        const v = d.match(/V([\d.-]+) H([\d.-]+)$/),
+          h = d.match(/H([\d.-]+) V[\d.-]+ H[\d.-]+$/);
+        return +v[2] - +h[1];
+      };
+      assert(
+        runs.every(d => Math.abs(tail(d) - (MAP.LEAD - MAP.TIP)) < 0.01),
+        `each ends with a straight stretch: ${runs.map(tail)}`,
+      );
+      // The map's arrowhead, one size whatever the line width, its tip TIP beyond the line's end.
+      const head = $('#tl-arrow'),
+        mapHead = 'M1,1.5 L10,5 L1,8.5 L3,5 z';
+      assert(
+        head.getAttribute('markerUnits') === 'userSpaceOnUse' &&
+          +head.getAttribute('refX') === 10 - MAP.TIP &&
+          head.querySelector('path').getAttribute('d') === mapHead,
+        'map arrowhead',
+      );
+      // Tree lines in the labels: the map's colours and widths, square corners.
+      const elbow = $('.tl-elbow');
+      assert(
+        elbow.style.getPropertyValue('--rel').includes('color-mix') &&
+          css(elbow).borderBottomLeftRadius === '0px' &&
+          parseFloat(css(elbow).borderLeftWidth) <= 1.6,
+        'thin muted elbows with square corners',
+      );
+      assert(
+        [...document.querySelectorAll('.tl-legend .line-key')].every(k =>
+          k.style.getPropertyValue('--rel').includes('color-mix'),
+        ),
+        'line keys in the map colours',
+      );
+      // A selected arrow glows, like a selected map line.
+      ui.mapRel = null;
+      const g = $('.tl-deps [data-rel-edit]');
+      g.classList.add('sel');
+      assert(
+        css(g.querySelector('.tl-dep')).filter.includes('line-glow') && $('.tl-deps #line-glow'),
+        'a selected arrow glows',
+      );
+      // Menus, dialogs, the calendar and fields: what is behind shows faintly through.
+      const alpha = el => +(css(el).backgroundColor.match(/[\d.]+/g)[3] ?? 1);
+      openCtxMenu(db.goals[0].id, 10, 10);
+      assert(
+        alpha(ctxMenu) > 0.8 && alpha(ctxMenu) < 0.95 && css(ctxMenu).backgroundImage.includes('radial-gradient'),
+        `menu see-through: ${alpha(ctxMenu)}`,
+      );
+      closeCtxMenu();
+      setView('goals');
+      $('#view .card').click();
+      const dlg = $('dialog.modal[open]'),
+        field = dlg.querySelector('input[type=text]');
+      assert(
+        alpha(dlg) > 0.8 && alpha(dlg) < 0.95 && alpha(field) < alpha(dlg),
+        `dialog ${alpha(dlg)}, field ${alpha(field)}`,
+      );
+      // One scrollbar: the body scrolls, the dialog never does; thin, on a clear track.
+      const body = dlg.querySelector('.modal-body');
+      assert(
+        css(dlg).overflowY === 'hidden' &&
+          dlg.scrollHeight <= dlg.clientHeight + 1 &&
+          css(body).overflowY === 'auto' &&
+          css(body).scrollbarWidth === 'thin' &&
+          ['transparent', 'rgba(0, 0, 0, 0)'].some(c => css(body).scrollbarColor.endsWith(c)),
+        `one thin scrollbar: ${dlg.scrollHeight}/${dlg.clientHeight} ${css(body).scrollbarColor}`,
+      );
+      dlg.close();
+      // A select's open list is solid, not the see-through colour of its field.
+      setView('map');
+      const opt = $('#view select option'),
+        surface = css(document.body).getPropertyValue('--surface').trim();
+      const rgb = h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
+      assert(
+        opt && css(opt).backgroundColor === rgb(surface) && alpha($('#view select')) < 1,
+        `option list ${css(opt).backgroundColor}`,
+      );
+      setView('dashboard');
+    },
+  );
 
   await step('graphs: right-click anywhere on a graph opens its item menu; tick boxes are holes in the glass', () => {
-    loadSample(); setView('graphs');
-    const card = $('#view .gr-card'), plot = card.querySelector('.gr-plot');
+    loadSample();
+    setView('graphs');
+    const card = $('#view .gr-card'),
+      plot = card.querySelector('.gr-plot');
     plot.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 200 }));
     const item = findEntity(card.dataset.gr).item;
-    assert(!ctxMenu.hidden && ctxMenu.dataset.id === card.dataset.gr && ctxMenu.querySelector('.ctx-head strong').textContent === item.title, 'menu from the plot');
+    assert(
+      !ctxMenu.hidden &&
+        ctxMenu.dataset.id === card.dataset.gr &&
+        ctxMenu.querySelector('.ctx-head strong').textContent === item.title,
+      'menu from the plot',
+    );
     const acts = [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
     assert(acts.includes('edit') && acts.includes('delete') && !acts.includes('show:graphs'), `graph menu: ${acts}`);
     closeCtxMenu();
     // A value added from the menu opens by the graph's heading, not round the whole tall card.
     const sc = [...document.querySelectorAll('#view .gr-card')].find(c => findEntity(c.dataset.gr).kind === 'state');
-    sc.querySelector('.gr-plot').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 200 }));
+    sc.querySelector('.gr-plot').dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 200 }),
+    );
     ctxMenu.querySelector('[data-ctx="value"]').click();
     assert($('.amount-pop') && amountPop.anchor === sc.querySelector('.card-head'), 'value popup by the heading');
     closeAmountPop();
     assert(t('help.view.graphs').includes('right-click'), 'the help says so');
     // By night a graph is a dark pane cut from the surface, not a light slab of the items' milk.
-    const was = theme; $('#themeSeg [data-theme-set="dark"]').click();
-    const lum = c => c.match(/[\d.]+/g).slice(0, 3).reduce((x, y) => x + +y, 0);
-    const pane = $('#view .gr-card'), surface = getComputedStyle(document.body).getPropertyValue('--surface').trim();
-    assert(getComputedStyle(pane).getPropertyValue('--glass-base').trim() === surface && lum(getComputedStyle(pane).backgroundColor) < lum(getComputedStyle($('#view select')).backgroundColor) + 40, `dark graph pane ${getComputedStyle(pane).backgroundColor}`);
+    const was = theme;
+    $('#themeSeg [data-theme-set="dark"]').click();
+    const lum = c =>
+      c
+        .match(/[\d.]+/g)
+        .slice(0, 3)
+        .reduce((x, y) => x + +y, 0);
+    const pane = $('#view .gr-card'),
+      surface = getComputedStyle(document.body).getPropertyValue('--surface').trim();
+    assert(
+      getComputedStyle(pane).getPropertyValue('--glass-base').trim() === surface &&
+        lum(getComputedStyle(pane).backgroundColor) < lum(getComputedStyle($('#view select')).backgroundColor) + 40,
+      `dark graph pane ${getComputedStyle(pane).backgroundColor}`,
+    );
     $(`#themeSeg [data-theme-set="${was}"]`).click();
     // Tick boxes are holes in the glass, as deep as the card's slab: the page's colour, the far (top and left) inner
     // walls showing, shaded like the slab sides facing the same way: the left one the card's own side colour, the top
     // one (facing down, like the slab's bottom) darker; no ring. Done, a tile of green glass stands out of it.
     setView('activities');
-    const css = el => getComputedStyle(el), open = $('#view .col .card .check:not(.done):not(.doing)'), doing = $('#view .col .card .check.doing'), done = $('#view .col .card .check.done');
+    const css = el => getComputedStyle(el),
+      open = $('#view .col .card .check:not(.done):not(.doing)'),
+      doing = $('#view .col .card .check.doing'),
+      done = $('#view .col .card .check.done');
     const steps = el => (css(el).boxShadow.match(/[1-9]\d*px [1-9]\d*px 0px/g) || []).length;
-    const bg = css(document.body).backgroundColor, depth = css(open.closest('.glass')).getPropertyValue('--depth').trim();
+    const bg = css(document.body).backgroundColor,
+      depth = css(open.closest('.glass')).getPropertyValue('--depth').trim();
     const sh = css(open).boxShadow;
-    const top = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 3px 0px 0px inset/), left = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 3px 0px 0px 0px inset/);
-    assert(open && depth === '3px' && css(open).backgroundColor === bg && css(open).borderTopWidth === '0px' && top && left && lum(top[1]) < lum(left[1]), `an empty box is a hole ${depth} deep, top wall darker: ${sh}`);
+    const top = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 3px 0px 0px inset/),
+      left = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 3px 0px 0px 0px inset/);
+    assert(
+      open &&
+        depth === '3px' &&
+        css(open).backgroundColor === bg &&
+        css(open).borderTopWidth === '0px' &&
+        top &&
+        left &&
+        lum(top[1]) < lum(left[1]),
+      `an empty box is a hole ${depth} deep, top wall darker: ${sh}`,
+    );
     const cardSide = css(open.closest('.glass')).boxShadow.match(/(rgba?\([^)]*\)|color\([^)]*\)) 1px 1px 0px/);
-    assert(cardSide && cardSide[1] === left[1], `the left wall is the card's side: ${left[1]} vs ${cardSide && cardSide[1]}`);
+    assert(
+      cardSide && cardSide[1] === left[1],
+      `the left wall is the card's side: ${left[1]} vs ${cardSide && cardSide[1]}`,
+    );
     assert(doing && css(doing).backgroundColor === bg, 'in progress: no amber floor');
     // The checklist in a routine card is clear, part of the card's glass.
     const list = $('#view .card.routine .li-ticks');
     assert(!list || css(list).backgroundColor === 'rgba(0, 0, 0, 0)', 'routine checklist is clear glass');
-    assert(steps(done) === 2 && !css(done).boxShadow.includes('2px 2px 0px 0px inset'), 'done: a green tile with its side');
-    assert(css(done).backgroundColor === css(document.documentElement).getPropertyValue('--ok').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(', ')})`), 'done tile is green');
+    assert(
+      steps(done) === 2 && !css(done).boxShadow.includes('2px 2px 0px 0px inset'),
+      'done: a green tile with its side',
+    );
+    assert(
+      css(done).backgroundColor ===
+        css(document.documentElement)
+          .getPropertyValue('--ok')
+          .trim()
+          .replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(', ')})`),
+      'done tile is green',
+    );
     setView('dashboard');
   });
 
   await step('map: switching between light and dark redraws the glass in the new theme', () => {
-    loadSample(); setView('map');
-    const slabColours = () => [...document.querySelectorAll('.map-wrap defs > g[id^="glass-"] path, .map-wrap defs linearGradient stop')].map(x => x.getAttribute('fill') || x.getAttribute('stop-color')).join();
+    loadSample();
+    setView('map');
+    const slabColours = () =>
+      [...document.querySelectorAll('.map-wrap defs > g[id^="glass-"] path, .map-wrap defs linearGradient stop')]
+        .map(x => x.getAttribute('fill') || x.getAttribute('stop-color'))
+        .join();
     const pick = k => $(`#themeSeg [data-theme-set="${k}"]`).click();
     const was = theme;
-    pick('light'); const light = slabColours();
-    pick('dark'); const dark = slabColours();
+    pick('light');
+    const light = slabColours();
+    pick('dark');
+    const dark = slabColours();
     assert(dark !== light, 'slabs redrawn when switching to dark');
     // The same as a map first drawn in dark.
-    render(); eq(slabColours(), dark, 'as if drawn in dark from the start');
-    pick('light'); eq(slabColours(), light, 'and back to light');
+    render();
+    eq(slabColours(), dark, 'as if drawn in dark from the start');
+    pick('light');
+    eq(slabColours(), light, 'and back to light');
     // Following the system: a change of the system theme redraws it too.
-    pick('system'); document.documentElement.dataset.theme = 'dark'; darkScheme.dispatchEvent(new Event('change'));
+    pick('system');
+    document.documentElement.dataset.theme = 'dark';
+    darkScheme.dispatchEvent(new Event('change'));
     eq(slabColours(), dark, 'system theme change redraws the map');
     // Other views follow the CSS: nothing is redrawn, so an open popup stays.
     setView('dashboard');
     const first = $('#view').firstElementChild;
-    pick('light'); darkScheme.dispatchEvent(new Event('change'));
+    pick('light');
+    darkScheme.dispatchEvent(new Event('change'));
     assert($('#view').firstElementChild === first, 'other views are not redrawn');
     pick(was);
   });
@@ -7008,33 +11982,73 @@ window.moreTests = async ({ step, assert }) => {
   await step('map: box text stays inside its box, bands sit close, the light on the faces is defined once', () => {
     const { NW } = MAP;
     // Text that ends within 4 px of the box's right edge (inside its border), with its box's title.
-    const overflow = () => [...document.querySelectorAll('.map-wrap .node')].flatMap(n => [...n.querySelectorAll('text')]
-      .filter(x => +x.getAttribute('x') + x.getComputedTextLength() > NW - 4).map(x => `${n.getAttribute('aria-label')}: ${x.textContent} (${Math.round(x.getComputedTextLength())})`));
+    const overflow = () =>
+      [...document.querySelectorAll('.map-wrap .node')].flatMap(n =>
+        [...n.querySelectorAll('text')]
+          .filter(x => +x.getAttribute('x') + x.getComputedTextLength() > NW - 4)
+          .map(x => `${n.getAttribute('aria-label')}: ${x.textContent} (${Math.round(x.getComputedTextLength())})`),
+      );
     for (const code of ['en', 'sl']) {
-      changeLanguage(code); loadSample(); setView('map');
+      changeLanguage(code);
+      loadSample();
+      setView('map');
       eq(overflow(), [], `${code} sample plan: nothing overflows`);
       // Bands: one gap between them, smaller than the gap between rows inside a band.
-      const bands = [...document.querySelectorAll('.map-wrap .band')].map(b => [+b.getAttribute('y'), +b.getAttribute('y') + +b.getAttribute('height')]);
-      assert(bands.length === 3 && bands.slice(1).every(([top], i) => top - bands[i][1] === MAP.BAND_GAP) && MAP.BAND_GAP <= 16 && MAP.BAND_GAP < MAP.VG, `${code}: bands ${MAP.BAND_GAP} px apart`);
+      const bands = [...document.querySelectorAll('.map-wrap .band')].map(b => [
+        +b.getAttribute('y'),
+        +b.getAttribute('y') + +b.getAttribute('height'),
+      ]);
+      assert(
+        bands.length === 3 &&
+          bands.slice(1).every(([top], i) => top - bands[i][1] === MAP.BAND_GAP) &&
+          MAP.BAND_GAP <= 16 &&
+          MAP.BAND_GAP < MAP.VG,
+        `${code}: bands ${MAP.BAND_GAP} px apart`,
+      );
       // Each band's label sits below the boxes of the band above, inside its own band.
       const labels = [...document.querySelectorAll('.map-wrap .col-label')].map(l => l.getBBox());
-      assert(labels.every((l, i) => l.y >= bands[i][0] && l.y + l.height <= bands[i][0] + MAP.HEAD), `${code}: labels in their band's head`);
+      assert(
+        labels.every((l, i) => l.y >= bands[i][0] && l.y + l.height <= bands[i][0] + MAP.HEAD),
+        `${code}: labels in their band's head`,
+      );
       // The light on the face: its reflection and its shading, defined once, used by every box, over its glass.
       const svg = $('.map-wrap svg');
-      assert(svg.querySelectorAll('radialGradient').length === 2 && svg.querySelectorAll('#glass-spec').length === 1 && svg.querySelectorAll('#glass-shade').length === 1 && svg.querySelectorAll('filter').length === 2, `${code}: face light defined once`);
-      assert([...svg.querySelectorAll('.node')].every(n => n.querySelector('rect + .glass-shade + .glass-spec')), `${code}: every box has its light, right over its glass`);
+      assert(
+        svg.querySelectorAll('radialGradient').length === 2 &&
+          svg.querySelectorAll('#glass-spec').length === 1 &&
+          svg.querySelectorAll('#glass-shade').length === 1 &&
+          svg.querySelectorAll('filter').length === 2,
+        `${code}: face light defined once`,
+      );
+      assert(
+        [...svg.querySelectorAll('.node')].every(n => n.querySelector('rect + .glass-shade + .glass-spec')),
+        `${code}: every box has its light, right over its glass`,
+      );
       const spec = getComputedStyle(svg.querySelector('.glass-spec'));
       assert(spec.fill.includes('#glass-spec') && spec.pointerEvents === 'none', `${code}: light fill ${spec.fill}`);
       // Milk glass, solid and tinted by status: a done box green, a late one red; to-do boxes take more grey.
       const rectOf = st => getComputedStyle(svg.querySelector(`.node.activity.st-${st} rect`));
-      assert(+rectOf('done').fillOpacity === 1 && rectOf('done').fill !== rectOf('late').fill, `${code}: glass tinted by status`);
-      assert(getComputedStyle(svg.querySelector('.node.activity.st-todo')).getPropertyValue('--glass-tint').trim() === getComputedStyle(document.documentElement).getPropertyValue('--glass-tint-quiet').trim(), `${code}: to-do boxes take more grey`);
+      assert(
+        +rectOf('done').fillOpacity === 1 && rectOf('done').fill !== rectOf('late').fill,
+        `${code}: glass tinted by status`,
+      );
+      assert(
+        getComputedStyle(svg.querySelector('.node.activity.st-todo')).getPropertyValue('--glass-tint').trim() ===
+          getComputedStyle(document.documentElement).getPropertyValue('--glass-tint-quiet').trim(),
+        `${code}: to-do boxes take more grey`,
+      );
       // By night the glass is drawn on a dark base, and states take more colour than the rest.
       const theme = document.documentElement.dataset.theme;
-      document.documentElement.dataset.theme = 'dark'; render();
+      document.documentElement.dataset.theme = 'dark';
+      render();
       const rootCss = getComputedStyle(document.documentElement);
-      assert(parseFloat(rootCss.getPropertyValue('--glass-tint-state')) > parseFloat(rootCss.getPropertyValue('--glass-tint')) && $('.map-wrap defs > g[id="glass-state-other"]'), `${code}: states take more colour by night`);
-      if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+      assert(
+        parseFloat(rootCss.getPropertyValue('--glass-tint-state')) >
+          parseFloat(rootCss.getPropertyValue('--glass-tint')) && $('.map-wrap defs > g[id="glass-state-other"]'),
+        `${code}: states take more colour by night`,
+      );
+      if (theme) document.documentElement.dataset.theme = theme;
+      else delete document.documentElement.dataset.theme;
       render();
       deletePlan(plans.current);
     }
@@ -7042,42 +12056,95 @@ window.moreTests = async ({ step, assert }) => {
     // Long routine text: short on the box, cut with "…" if still too wide, in full in the tooltip.
     changeLanguage('sl');
     fresh('Long text');
-    const monthly = mk('activity', { title: 'Mesečni pregled financ', startDate: '2026-01-01', repeat: { every: 1, unit: 'month', times: 1 }, checkins: { '2026-09-10': 1, '2026-10-10': 1 } });
-    const weekly = mk('activity', { title: 'Tek trikrat na teden', startDate: '2026-01-01', repeat: { every: 1, unit: 'week', times: 3 }, checkins: {} });
-    const long = mk('activity', { title: 'Zelo dolg naslov aktivnosti, ki gotovo ne gre v okvir', dueDate: d(400), status: 'doing' });
+    const monthly = mk('activity', {
+      title: 'Mesečni pregled financ',
+      startDate: '2026-01-01',
+      repeat: { every: 1, unit: 'month', times: 1 },
+      checkins: { '2026-09-10': 1, '2026-10-10': 1 },
+    });
+    const weekly = mk('activity', {
+      title: 'Tek trikrat na teden',
+      startDate: '2026-01-01',
+      repeat: { every: 1, unit: 'week', times: 3 },
+      checkins: {},
+    });
+    const long = mk('activity', {
+      title: 'Zelo dolg naslov aktivnosti, ki gotovo ne gre v okvir',
+      dueDate: d(400),
+      status: 'doing',
+    });
     const wide = mk('goal', { title: 'WWWWWWWWWWWWWWWWWWWWWWWWWWWW', deadline: d(30) });
-    const state = mk('state', { title: 'Prihranki', value: '1234567890', unit: 'kilometrov in še nekaj', date: d(-1), history: [] });
-    save(); setView('map');
+    const state = mk('state', {
+      title: 'Prihranki',
+      value: '1234567890',
+      unit: 'kilometrov in še nekaj',
+      date: d(-1),
+      history: [],
+    });
+    save();
+    setView('map');
     eq(overflow(), [], 'sl long texts: nothing overflows');
     const node = x => $(`[data-map-node="${x.id}"]`);
-    const sub = x => node(x).querySelector('.sub').textContent, tip = x => node(x).querySelector('title').textContent;
-    const p = periodProgress(monthly), s = routineStreak(monthly);
+    const sub = x => node(x).querySelector('.sub').textContent,
+      tip = x => node(x).querySelector('title').textContent;
+    const p = periodProgress(monthly),
+      s = routineStreak(monthly);
     assert(s.n > 0, `the monthly routine has a streak (${s.n})`);
-    eq(sub(monthly), `${t('map.rt.month', { done: p.done, target: 1 })}, ${t('map.rt.streak', { n: s.n })}`, 'monthly: the short form');
-    assert(tip(monthly).includes(`${periodText(monthly)}, ${streakText(s)}`), `monthly: in full in the tooltip: ${tip(monthly)}`);
+    eq(
+      sub(monthly),
+      `${t('map.rt.month', { done: p.done, target: 1 })}, ${t('map.rt.streak', { n: s.n })}`,
+      'monthly: the short form',
+    );
+    assert(
+      tip(monthly).includes(`${periodText(monthly)}, ${streakText(s)}`),
+      `monthly: in full in the tooltip: ${tip(monthly)}`,
+    );
     eq(sub(weekly), t('map.rt.week', { done: 0, target: 3 }), 'weekly without a streak: just this week');
-    assert(node(long).querySelector('text').textContent.endsWith('…') && tip(long).startsWith(long.title), 'long title: cut with … and whole in the tooltip');
+    assert(
+      node(long).querySelector('text').textContent.endsWith('…') && tip(long).startsWith(long.title),
+      'long title: cut with … and whole in the tooltip',
+    );
     assert(node(wide).querySelector('text').textContent.endsWith('…'), 'wide letters: cut by width, not by count');
-    assert(sub(state).endsWith('…') && tip(state).includes('kilometrov in še nekaj'), `long amount: cut, whole in the tooltip: ${sub(state)}`);
-    changeLanguage('en'); render();
+    assert(
+      sub(state).endsWith('…') && tip(state).includes('kilometrov in še nekaj'),
+      `long amount: cut, whole in the tooltip: ${sub(state)}`,
+    );
+    changeLanguage('en');
+    render();
     eq(overflow(), [], 'en long texts: nothing overflows');
     eq(sub(monthly), `${p.done}/1 this month, ${s.n}× in a row`, 'English short form');
     deletePlan(plans.current);
   });
 
   /* ---------- Visions ---------- */
-  const clearVisions = () => { visions = { list: [], deleted: {} }; saveVisions(); };
-  const mkV = (title, parents = [], p = {}) => { const v = { id: uid(), title, parents: parents.map(x => x.id), ...p }; visions.list.push(v); return v; };
+  const clearVisions = () => {
+    visions = { list: [], deleted: {} };
+    saveVisions();
+  };
+  const mkV = (title, parents = [], p = {}) => {
+    const v = { id: uid(), title, parents: parents.map(x => x.id), ...p };
+    visions.list.push(v);
+    return v;
+  };
   const ids = list => [...list].map(x => x.id || x).sort();
   // Purpose counts the goals of every plan: these steps set the other plans aside while they run.
   let asideList = [];
-  const setAside = () => { asideList = plans.list.filter(p => p.id !== plans.current); plans.list = plans.list.filter(p => p.id === plans.current); };
-  const putBack = () => { plans.list.push(...asideList); asideList = []; };
+  const setAside = () => {
+    asideList = plans.list.filter(p => p.id !== plans.current);
+    plans.list = plans.list.filter(p => p.id === plans.current);
+  };
+  const putBack = () => {
+    plans.list.push(...asideList);
+    asideList = [];
+  };
 
   await step('visions: loops refused, several parents allowed, roots and what is reached', () => {
     clearVisions();
     fresh('Vision rules');
-    const A = mkV('A life of health'), B = mkV('Be fit', [A]), C = mkV('Run well', [B]), D = mkV('Be a good parent');
+    const A = mkV('A life of health'),
+      B = mkV('Be fit', [A]),
+      C = mkV('Run well', [B]),
+      D = mkV('Be a good parent');
     eq(canParent(A.id, C.id), 'err.visionLoop', 'indirect loop refused');
     eq(canParent(A.id, B.id), 'err.visionLoop', 'direct loop refused');
     eq(canParent(A.id, A.id), 'err.self', 'not under itself');
@@ -7090,18 +12157,32 @@ window.moreTests = async ({ step, assert }) => {
     eq(ids(visionAncestors(C.id)), ids([A, B, D]), 'everything above, through both parents');
     eq(ids(visionChildren(B.id)), ids([C]), 'children');
     // A goal serving C reaches C and all above; a sub-goal serves what its parent serves.
-    const g1 = mk('goal', { title: 'Run 10 km', visions: [C.id] }), g2 = mk('goal', { title: 'Run 5 km' });
+    const g1 = mk('goal', { title: 'Run 10 km', visions: [C.id] }),
+      g2 = mk('goal', { title: 'Run 5 km' });
     rel(g2, g1, 'subgoal');
     eq(goalVisionIds(g2), [C.id], 'a sub-goal serves through its parent');
     eq(ids(reachedVisions()), ids([A, B, C, D]), 'reached through the parents of what goals serve');
     C.parents = [B.id];
     eq(ids(reachedVisions()), ids([A, B, C]), 'an unrelated vision is not reached');
     // What works toward a vision.
-    const a1 = mk('activity', { title: 'Train' }), a1c = mk('activity', { title: 'Buy shoes' }), s1 = mk('state', { title: 'Longest run' });
-    const a2 = mk('activity', { title: 'Stretch' }), a3 = mk('activity', { title: 'Waits for training' });
-    const g3 = mk('goal', { title: 'Unrelated goal' }), a4 = mk('activity', { title: 'For the unrelated goal' });
-    rel(a1, g1, 'contributes'); rel(a1c, a1, 'subactivity'); rel(s1, g2, 'measures'); rel(a2, s1, 'improves'); rel(a3, a1, 'depends'); rel(a4, g3, 'contributes');
-    eq(ids(contributingIds()), ids([g1, g2, a1, a1c, s1, a2]), 'goals, sub-goals, activities with sub-activities, measuring states, improving activities; not dependencies');
+    const a1 = mk('activity', { title: 'Train' }),
+      a1c = mk('activity', { title: 'Buy shoes' }),
+      s1 = mk('state', { title: 'Longest run' });
+    const a2 = mk('activity', { title: 'Stretch' }),
+      a3 = mk('activity', { title: 'Waits for training' });
+    const g3 = mk('goal', { title: 'Unrelated goal' }),
+      a4 = mk('activity', { title: 'For the unrelated goal' });
+    rel(a1, g1, 'contributes');
+    rel(a1c, a1, 'subactivity');
+    rel(s1, g2, 'measures');
+    rel(a2, s1, 'improves');
+    rel(a3, a1, 'depends');
+    rel(a4, g3, 'contributes');
+    eq(
+      ids(contributingIds()),
+      ids([g1, g2, a1, a1c, s1, a2]),
+      'goals, sub-goals, activities with sub-activities, measuring states, improving activities; not dependencies',
+    );
     // Dangling ids are ignored.
     g3.visions = ['ghost'];
     eq(goalVisionIds(g3), [], 'a vision that is gone is ignored');
@@ -7116,21 +12197,29 @@ window.moreTests = async ({ step, assert }) => {
     fresh('Purpose A');
     setAside();
     eq(purposeState().on, false, 'no visions: no Purpose');
-    const A = mkV('A meaningful life'), B = mkV('Be fit', [A]), D = mkV('Be kind');
-    const g1 = mk('goal', { title: 'Marathon', visions: [B.id] }), g2 = mk('goal', { title: 'Sub-goal' }), g3 = mk('goal', { title: 'Volunteer' });
+    const A = mkV('A meaningful life'),
+      B = mkV('Be fit', [A]),
+      D = mkV('Be kind');
+    const g1 = mk('goal', { title: 'Marathon', visions: [B.id] }),
+      g2 = mk('goal', { title: 'Sub-goal' }),
+      g3 = mk('goal', { title: 'Volunteer' });
     rel(g2, g1, 'subgoal');
     save();
     let ps = purposeState();
     assert(!ps.on && ps.roots.length === 2, 'two visions at the top: no Purpose');
     D.parents = [A.id];
     ps = purposeState();
-    assert(!ps.on && ps.unlinked.length === 1 && ps.unlinked[0].goal.id === g3.id, 'an active goal serving nothing blocks it (the sub-goal counts through its parent)');
+    assert(
+      !ps.on && ps.unlinked.length === 1 && ps.unlinked[0].goal.id === g3.id,
+      'an active goal serving nothing blocks it (the sub-goal counts through its parent)',
+    );
     g3.status = 'paused';
     ps = purposeState();
     assert(ps.on && ps.root.id === A.id, 'paused goals do not count');
     g3.status = 'achieved';
     assert(purposeState().on, 'achieved goals do not count');
-    g3.status = 'active'; g3.visions = ['ghost'];
+    g3.status = 'active';
+    g3.visions = ['ghost'];
     assert(!purposeState().on, 'a vision that is gone does not count');
     g3.visions = [D.id];
     assert(purposeState().on, 'every active goal serves a vision');
@@ -7141,9 +12230,15 @@ window.moreTests = async ({ step, assert }) => {
     const other = mk('goal', { title: 'Other plan goal' });
     save();
     ps = purposeState();
-    assert(!ps.on && ps.unlinked.some(u => u.goal.id === other.id && u.plan.id === plans.current), 'an unlinked goal in another plan blocks it');
+    assert(
+      !ps.on && ps.unlinked.some(u => u.goal.id === other.id && u.plan.id === plans.current),
+      'an unlinked goal in another plan blocks it',
+    );
     openPlan(first);
-    assert(!purposeState().on && purposeState().unlinked[0].goal.id === other.id, 'also seen from the first plan (read from storage)');
+    assert(
+      !purposeState().on && purposeState().unlinked[0].goal.id === other.id,
+      'also seen from the first plan (read from storage)',
+    );
     const second = plans.list.find(p => p.name === 'Purpose B').id;
     openPlan(second);
     db.goals[0].visions = [A.id];
@@ -7153,7 +12248,10 @@ window.moreTests = async ({ step, assert }) => {
     // No active goals at all.
     db.goals.forEach(g => (g.status = 'paused'));
     save();
-    openPlan(second); db.goals[0].status = 'paused'; save(); openPlan(first);
+    openPlan(second);
+    db.goals[0].status = 'paused';
+    save();
+    openPlan(first);
     ps = purposeState();
     assert(!ps.on && ps.active === 0, 'no active goals: no Purpose');
     putBack();
@@ -7164,23 +12262,38 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('visions: stored, stamped, deleted with tombstones; deleting one lets go of it', () => {
     clearVisions();
-    const A = mkV('Top'), B = mkV('Under', [A]);
+    const A = mkV('Top'),
+      B = mkV('Under', [A]);
     saveVisions();
     assert(A.updatedAt && B.updatedAt, 'stamped on save');
     const stampA = A.updatedAt;
     saveVisions();
     eq(A.updatedAt, stampA, 'unchanged: not stamped again');
     const stored = JSON.parse(localStorage.getItem(VISIONS_KEY));
-    eq(stored.list.map(v => v.title), ['Top', 'Under'], 'in storage');
+    eq(
+      stored.list.map(v => v.title),
+      ['Top', 'Under'],
+      'in storage',
+    );
     deleteVision(A.id);
     assert(visions.deleted[A.id] && !findVision(A.id), 'tombstone');
     eq(findVision(B.id).parents, [], 'the narrower vision lets go of it');
     loadVisions();
     assert(findVision(B.id) && !findVision(A.id) && visions.deleted[A.id], 'loaded back');
     // Bad stored data is cleaned.
-    localStorage.setItem(VISIONS_KEY, JSON.stringify({ list: [{ id: 'ok', title: 'Fine', parents: ['x', '<b>'] }, { id: '<i>', title: 'Bad id' }, { id: 'nt' }, null], deleted: [] }));
+    localStorage.setItem(
+      VISIONS_KEY,
+      JSON.stringify({
+        list: [{ id: 'ok', title: 'Fine', parents: ['x', '<b>'] }, { id: '<i>', title: 'Bad id' }, { id: 'nt' }, null],
+        deleted: [],
+      }),
+    );
     loadVisions();
-    eq(visions.list.map(v => [v.id, v.parents]), [['ok', ['x']]], 'unsafe ids and items without a title are dropped');
+    eq(
+      visions.list.map(v => [v.id, v.parents]),
+      [['ok', ['x']]],
+      'unsafe ids and items without a title are dropped',
+    );
     eq(visions.deleted, {}, 'a broken tombstone list is reset');
     localStorage.setItem(VISIONS_KEY, '{oops');
     loadVisions();
@@ -7190,37 +12303,94 @@ window.moreTests = async ({ step, assert }) => {
 
   await step('visions: sync merges them like plans, repairs loops, keeps the Purpose found first', () => {
     const v = (id, title, at, parents = []) => ({ id, title, parents, updatedAt: at });
-    let m = mergeVisions({ list: [v('a', 'Old', '2026-01-01')], deleted: {} }, { list: [v('a', 'New', '2026-02-01')], deleted: {} });
-    eq(m.list.map(x => x.title), ['New'], 'the newer version wins');
-    m = mergeVisions({ list: [], deleted: { a: '2026-03-01' } }, { list: [v('a', 'Edited', '2026-02-01')], deleted: {} });
+    let m = mergeVisions(
+      { list: [v('a', 'Old', '2026-01-01')], deleted: {} },
+      { list: [v('a', 'New', '2026-02-01')], deleted: {} },
+    );
+    eq(
+      m.list.map(x => x.title),
+      ['New'],
+      'the newer version wins',
+    );
+    m = mergeVisions(
+      { list: [], deleted: { a: '2026-03-01' } },
+      { list: [v('a', 'Edited', '2026-02-01')], deleted: {} },
+    );
     assert(!m.list.length && m.deleted.a, 'deleted after the last edit: gone');
-    m = mergeVisions({ list: [], deleted: { a: '2026-01-01' } }, { list: [v('a', 'Edited', '2026-02-01')], deleted: {} });
+    m = mergeVisions(
+      { list: [], deleted: { a: '2026-01-01' } },
+      { list: [v('a', 'Edited', '2026-02-01')], deleted: {} },
+    );
     assert(m.list.length === 1 && !m.deleted.a, 'edited after deletion: kept');
     // Two devices each put one under the other: the newer link stays.
-    m = mergeVisions({ list: [v('x', 'X', '2026-05-02', ['y']), v('y', 'Y', '2026-05-01')], deleted: {} },
-      { list: [v('x', 'X', '2026-05-01'), v('y', 'Y', '2026-05-01T10:00', ['x'])], deleted: {} });
-    eq(m.list.map(x => [x.id, x.parents]), [['x', ['y']], ['y', []]], 'a loop made by two edits is repaired, newer first');
-    m = mergeVisions({ list: [v('p', 'P', '2026-01-01', ['gone', 'p']), v('q', 'Q', '2026-01-01', ['p', 'p'])], deleted: {} }, null);
-    eq(m.list.map(x => [x.id, x.parents]), [['p', []], ['q', ['p']]], 'parents that are gone, itself or doubled are dropped');
+    m = mergeVisions(
+      { list: [v('x', 'X', '2026-05-02', ['y']), v('y', 'Y', '2026-05-01')], deleted: {} },
+      { list: [v('x', 'X', '2026-05-01'), v('y', 'Y', '2026-05-01T10:00', ['x'])], deleted: {} },
+    );
+    eq(
+      m.list.map(x => [x.id, x.parents]),
+      [
+        ['x', ['y']],
+        ['y', []],
+      ],
+      'a loop made by two edits is repaired, newer first',
+    );
+    m = mergeVisions(
+      { list: [v('p', 'P', '2026-01-01', ['gone', 'p']), v('q', 'Q', '2026-01-01', ['p', 'p'])], deleted: {} },
+      null,
+    );
+    eq(
+      m.list.map(x => [x.id, x.parents]),
+      [
+        ['p', []],
+        ['q', ['p']],
+      ],
+      'parents that are gone, itself or doubled are dropped',
+    );
     // A longer loop: a → b → c → a.
-    m = mergeVisions({ list: [v('a', 'A', '3', ['b']), v('b', 'B', '2', ['c']), v('c', 'C', '1', ['a'])], deleted: {} }, null);
+    m = mergeVisions(
+      { list: [v('a', 'A', '3', ['b']), v('b', 'B', '2', ['c']), v('c', 'C', '1', ['a'])], deleted: {} },
+      null,
+    );
     eq(m.list.find(x => x.id === 'c').parents, [], 'the oldest link of a longer loop goes');
-    m = mergeVisions({ list: [], deleted: {}, purposeFound: '2026-05-01' }, { list: [], deleted: {}, purposeFound: '2026-04-01' });
+    m = mergeVisions(
+      { list: [], deleted: {}, purposeFound: '2026-05-01' },
+      { list: [], deleted: {}, purposeFound: '2026-04-01' },
+    );
     eq(m.purposeFound, '2026-04-01', 'the Purpose found first stays found');
     eq(mergeVisions(undefined, undefined), { list: [], deleted: {} }, 'nothing on either side');
     // Stores: a file without visions, this device's store, merge and apply.
     clearVisions();
-    const A = mkV('Shared'); saveVisions();
+    const A = mkV('Shared');
+    saveVisions();
     const local = localStore();
-    eq(local.visions.list.map(x => x.title), ['Shared'], 'this device sends its visions');
-    const old = parseStore(JSON.stringify({ format: SYNC_FORMAT, version: 1, plans: { list: [], deleted: {} }, data: {} }));
+    eq(
+      local.visions.list.map(x => x.title),
+      ['Shared'],
+      'this device sends its visions',
+    );
+    const old = parseStore(
+      JSON.stringify({ format: SYNC_FORMAT, version: 1, plans: { list: [], deleted: {} }, data: {} }),
+    );
     eq(old.visions, { list: [], deleted: {} }, 'an older file has none');
     const merged = mergeStores(local, old);
-    eq(merged.visions.list.map(x => x.id), [A.id], 'merged with a file without visions: kept');
+    eq(
+      merged.visions.list.map(x => x.id),
+      [A.id],
+      'merged with a file without visions: kept',
+    );
     eq(toFile(merged).visions.list.length, 1, 'written to the file');
-    merged.visions.list.push({ id: 'remote', title: 'From the other device', parents: [A.id], updatedAt: new Date().toISOString() });
+    merged.visions.list.push({
+      id: 'remote',
+      title: 'From the other device',
+      parents: [A.id],
+      updatedAt: new Date().toISOString(),
+    });
     applyStore(merged);
-    assert(findVision('remote') && JSON.parse(localStorage.getItem(VISIONS_KEY)).list.length === 2, 'applied and stored');
+    assert(
+      findVision('remote') && JSON.parse(localStorage.getItem(VISIONS_KEY)).list.length === 2,
+      'applied and stored',
+    );
     applyStore({ plans: merged.plans, data: merged.data });
     assert(findVision('remote'), 'a store without visions leaves them alone');
     clearVisions();
@@ -7230,43 +12400,92 @@ window.moreTests = async ({ step, assert }) => {
     clearVisions();
     fresh('Vision view');
     setView('visions');
-    assert($('#view .empty [data-new="vision"]') && $('#view').textContent.includes(t('vis.shared')), 'empty: explains and offers to add one');
+    assert(
+      $('#view .empty [data-new="vision"]') && $('#view').textContent.includes(t('vis.shared')),
+      'empty: explains and offers to add one',
+    );
     eq($('#addBtn').getAttribute('aria-label'), t('add.vision'), 'the add button adds a vision');
     assert(!$('#view [data-sample], #view [data-templates]'), 'no sample or templates offered for visions');
-    const A = mkV('Zeta life'), B = mkV('Alpha under Zeta', [A]), D = mkV('Beta top'), C = mkV('Child of two', [B, D]);
-    const g = mk('goal', { title: 'Serving goal', visions: [B.id] }), u = mk('goal', { title: 'Lonely goal' });
-    save(); saveVisions(); render();
+    const A = mkV('Zeta life'),
+      B = mkV('Alpha under Zeta', [A]),
+      D = mkV('Beta top'),
+      C = mkV('Child of two', [B, D]);
+    const g = mk('goal', { title: 'Serving goal', visions: [B.id] }),
+      u = mk('goal', { title: 'Lonely goal' });
+    save();
+    saveVisions();
+    render();
     const cards = [...document.querySelectorAll('#view .card.vision')];
-    eq(cards.map(c => c.querySelector('h3').textContent), ['Beta top', 'Zeta life', 'Alpha under Zeta', 'Child of two'], 'roots by title, each child under its first parent');
-    eq(cards.map(c => c.style.getPropertyValue('--level')), ['0', '0', '1', '2'], 'indented by level');
+    eq(
+      cards.map(c => c.querySelector('h3').textContent),
+      ['Beta top', 'Zeta life', 'Alpha under Zeta', 'Child of two'],
+      'roots by title, each child under its first parent',
+    );
+    eq(
+      cards.map(c => c.style.getPropertyValue('--level')),
+      ['0', '0', '1', '2'],
+      'indented by level',
+    );
     const childCard = cards[3];
-    assert(childCard.textContent.includes(t('vis.alsoUnder')) && childCard.querySelector(`.tag.vision[data-open="${D.id}"]`), 'a second parent is named');
+    assert(
+      childCard.textContent.includes(t('vis.alsoUnder')) && childCard.querySelector(`.tag.vision[data-open="${D.id}"]`),
+      'a second parent is named',
+    );
     assert(cards[2].querySelector(`.tag.goal[data-open="${g.id}"]`), 'goals serving it are listed');
-    assert(cards[1].classList.contains('reached') && cards[2].classList.contains('reached') && !cards[0].classList.contains('reached'), 'reached visions are brighter');
+    assert(
+      cards[1].classList.contains('reached') &&
+        cards[2].classList.contains('reached') &&
+        !cards[0].classList.contains('reached'),
+      'reached visions are brighter',
+    );
     const status = $('#view .vis-status').textContent;
-    assert(status.includes(tp('vis.manyRoots', 2, { names: '“Zeta life”, “Beta top”' })), `status names the visions at the top: ${status}`);
+    assert(
+      status.includes(tp('vis.manyRoots', 2, { names: '“Zeta life”, “Beta top”' })),
+      `status names the visions at the top: ${status}`,
+    );
     assert(status.includes('Lonely goal'), 'and the goals serving none');
     // A goal from another plan is listed with its plan's name.
     const here = plans.current;
     fresh('Other plan');
-    mk('goal', { title: 'Far goal', visions: [A.id] }); save();
-    openPlan(here); setView('visions');
-    assert($('#view .tag.other-plan').textContent.includes('Far goal') && $('#view .tag.other-plan').textContent.includes('Other plan'), 'other plans\' goals show their plan');
-    assert($('#view .vis-status').textContent.includes(t('vis.goalInPlan', { goal: 'Lonely goal', plan: 'Vision view' })), 'with several plans, unlinked goals name their plan');
+    mk('goal', { title: 'Far goal', visions: [A.id] });
+    save();
+    openPlan(here);
+    setView('visions');
+    assert(
+      $('#view .tag.other-plan').textContent.includes('Far goal') &&
+        $('#view .tag.other-plan').textContent.includes('Other plan'),
+      "other plans' goals show their plan",
+    );
+    assert(
+      $('#view .vis-status').textContent.includes(t('vis.goalInPlan', { goal: 'Lonely goal', plan: 'Vision view' })),
+      'with several plans, unlinked goals name their plan',
+    );
     deletePlan(plans.list.find(p => p.name === 'Other plan').id);
-    openPlan(here); setView('visions');
+    openPlan(here);
+    setView('visions');
     // Escaping.
-    mkV('<img src=x onerror=alert(1)>'); saveVisions(); render();
+    mkV('<img src=x onerror=alert(1)>');
+    saveVisions();
+    render();
     assert(!$('#view img') && $('#view').textContent.includes('<img'), 'titles are escaped');
-    visions.list.pop(); saveVisions();
+    visions.list.pop();
+    saveVisions();
     // Help mode: no tutorial text for visions, and no raw key either.
     setHelp(true);
-    assert(!$('#view .help-banner') && !$('#view').textContent.includes('help.view'), 'help mode: no banner, no raw key');
+    assert(
+      !$('#view .help-banner') && !$('#view').textContent.includes('help.view'),
+      'help mode: no banner, no raw key',
+    );
     setHelp(false);
     // Slovenian.
-    changeLanguage('sl'); setView('visions');
-    assert($('#viewTitle').textContent === 'Vizije' && $('#view').textContent.includes('Vizije so skupne'), 'Slovenian');
-    changeLanguage('en'); render();
+    changeLanguage('sl');
+    setView('visions');
+    assert(
+      $('#viewTitle').textContent === 'Vizije' && $('#view').textContent.includes('Vizije so skupne'),
+      'Slovenian',
+    );
+    changeLanguage('en');
+    render();
     deletePlan(plans.current);
     clearVisions();
   });
@@ -7275,7 +12494,8 @@ window.moreTests = async ({ step, assert }) => {
     clearVisions();
     fresh('Vision forms');
     setView('visions');
-    const g = mk('goal', { title: 'Goal one' }), g2 = mk('goal', { title: 'Goal two' });
+    const g = mk('goal', { title: 'Goal one' }),
+      g2 = mk('goal', { title: 'Goal two' });
     save();
     $('#view [data-new="vision"]').click();
     assert(modal.open && $('#modalTitle').textContent === t('new.vision'), 'the form opens');
@@ -7291,7 +12511,15 @@ window.moreTests = async ({ step, assert }) => {
     // A narrower one from the card's menu, with its parent picked.
     openCtxMenu(A.id, 10, 10);
     const acts = [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
-    assert(acts.includes('edit') && acts.includes('add:vision:parents') && acts.includes('show:map') && acts.includes('delete') && !acts.includes('link') && !acts.includes('show:visions'), `menu: ${acts}`);
+    assert(
+      acts.includes('edit') &&
+        acts.includes('add:vision:parents') &&
+        acts.includes('show:map') &&
+        acts.includes('delete') &&
+        !acts.includes('link') &&
+        !acts.includes('show:visions'),
+      `menu: ${acts}`,
+    );
     runCtxAction('add:vision:parents', A.id);
     assert(modal.querySelector(`[data-picker="vision"] [data-picked-id="${A.id}"]`), 'the broader vision is picked');
     $('#f-title').value = 'Run';
@@ -7307,7 +12535,11 @@ window.moreTests = async ({ step, assert }) => {
     eq(offered, [], 'neither itself nor the one below it');
     modal.close();
     openForm('vision', B.id);
-    eq([...modal.querySelectorAll('[data-name="parents"] .pick-opt')].map(o => o.dataset.pick), [A.id], 'the narrower one can go under the broader');
+    eq(
+      [...modal.querySelectorAll('[data-name="parents"] .pick-opt')].map(o => o.dataset.pick),
+      [A.id],
+      'the narrower one can go under the broader',
+    );
     // Unpicking the goal takes the link away.
     unpickItem(modal.querySelector('[data-name="goals"]'), g.id);
     submitForm();
@@ -7317,15 +12549,30 @@ window.moreTests = async ({ step, assert }) => {
     save();
     openForm('goal', g2.id);
     const picker = modal.querySelector('[data-picker="vision"][data-name="visions"]');
-    assert(picker && [...picker.querySelectorAll('[data-picked-id]')].map(x => x.dataset.pickedId).join() === A.id, 'the goal form shows the visions it serves');
+    assert(
+      picker && [...picker.querySelectorAll('[data-picked-id]')].map(x => x.dataset.pickedId).join() === A.id,
+      'the goal form shows the visions it serves',
+    );
     pickItem(picker.querySelector(`.pick-opt[data-pick="${B.id}"]`));
-    Object.entries({ specific: 'A specific outcome that is long enough', metric: 'Runs', unit: 'x', baseline: '0', target: '10', achievable: 'Yes it is doable', relevant: 'Matters a lot to me', deadline: '01/01/2099' })
-      .forEach(([k, val]) => { const el = $('#f-' + k); if (el) el.value = val; });
+    Object.entries({
+      specific: 'A specific outcome that is long enough',
+      metric: 'Runs',
+      unit: 'x',
+      baseline: '0',
+      target: '10',
+      achievable: 'Yes it is doable',
+      relevant: 'Matters a lot to me',
+      deadline: '01/01/2099',
+    }).forEach(([k, val]) => {
+      const el = $('#f-' + k);
+      if (el) el.value = val;
+    });
     submitForm();
     assert(!modal.open, 'goal saved: ' + [...modal.querySelectorAll('.field.invalid')].map(f => f.dataset.field));
     eq(g2.visions, [A.id, B.id], 'serves both; the one that is gone is dropped');
     // Without any visions, the goal form has no such field.
-    const kept = visions; visions = { list: [], deleted: {} };
+    const kept = visions;
+    visions = { list: [], deleted: {} };
     openForm('goal', g.id);
     assert(!modal.querySelector('[data-name="visions"]'), 'no visions: no field');
     modal.close();
@@ -7351,35 +12598,95 @@ window.moreTests = async ({ step, assert }) => {
   await step('visions: the map – a band above goals, clouds, lines, hiding unrelated visions, linking', () => {
     clearVisions();
     fresh('Vision map');
-    const A = mkV('Health'), B = mkV('Fitness', [A]), C = mkV('Unrelated');
-    const g = mk('goal', { title: 'Run', visions: [B.id], deadline: d(30) }), g2 = mk('goal', { title: 'Read', deadline: d(40) });
+    const A = mkV('Health'),
+      B = mkV('Fitness', [A]),
+      C = mkV('Unrelated');
+    const g = mk('goal', { title: 'Run', visions: [B.id], deadline: d(30) }),
+      g2 = mk('goal', { title: 'Read', deadline: d(40) });
     const a = mk('activity', { title: 'Train', dueDate: d(5) });
     rel(a, g, 'contributes');
-    save(); saveVisions();
+    save();
+    saveVisions();
     setView('map');
     const svg = $('.map-wrap svg');
-    eq([...svg.querySelectorAll('.band')].map(b => b.classList[1]), ['vision', 'goal', 'activity'], 'visions on top');
-    const y = id => Number(svg.querySelector(`[data-map-node="${id}"]`).getAttribute('transform').match(/,([\d.]+)\)/)[1]);
+    eq(
+      [...svg.querySelectorAll('.band')].map(b => b.classList[1]),
+      ['vision', 'goal', 'activity'],
+      'visions on top',
+    );
+    const y = id =>
+      Number(
+        svg
+          .querySelector(`[data-map-node="${id}"]`)
+          .getAttribute('transform')
+          .match(/,([\d.]+)\)/)[1],
+      );
     assert(y(A.id) < y(B.id) && y(B.id) < y(g.id), 'the broader vision above the narrower, both above goals');
-    assert(svg.querySelectorAll('.node.vision').length === 3 && !svg.querySelector('.node.vision use'), 'visions are clouds, not glass');
+    assert(
+      svg.querySelectorAll('.node.vision').length === 3 && !svg.querySelector('.node.vision use'),
+      'visions are clouds, not glass',
+    );
     assert(svg.querySelector('#vision-cloud') && svg.querySelector('#vision-glow'), 'their filters are defined');
-    eq(getComputedStyle(svg.querySelector(`[data-map-node="${B.id}"] rect.cloud`)).filter.includes('url'), true, 'with blurred edges');
-    assert(svg.querySelector(`[data-map-node="${B.id}"]`).classList.contains('reached') && !svg.querySelector(`[data-map-node="${C.id}"]`).classList.contains('reached'), 'reached visions are brighter');
-    assert(svg.querySelector(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) && svg.querySelector(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'lines to visions');
+    eq(
+      getComputedStyle(svg.querySelector(`[data-map-node="${B.id}"] rect.cloud`)).filter.includes('url'),
+      true,
+      'with blurred edges',
+    );
+    assert(
+      svg.querySelector(`[data-map-node="${B.id}"]`).classList.contains('reached') &&
+        !svg.querySelector(`[data-map-node="${C.id}"]`).classList.contains('reached'),
+      'reached visions are brighter',
+    );
+    assert(
+      svg.querySelector(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) &&
+        svg.querySelector(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`),
+      'lines to visions',
+    );
     // Glow on what works toward a vision.
-    assert(svg.querySelector(`[data-map-node="${g.id}"]`).classList.contains('vglow') && svg.querySelector(`.vglow-halos [data-halo="${a.id}"]`), 'the goal and its activity glow');
+    assert(
+      svg.querySelector(`[data-map-node="${g.id}"]`).classList.contains('vglow') &&
+        svg.querySelector(`.vglow-halos [data-halo="${a.id}"]`),
+      'the goal and its activity glow',
+    );
     // The glow lies under every line and box: its layer comes before them all.
     const layer = svg.querySelector('.vglow-halos');
     const lineLayer = svg.querySelector('.vglow-lines');
-    assert(lineLayer && !svg.querySelector('.edge-g .edge-vglow') && [...svg.querySelectorAll('.edge-g, .node')].every(x => lineLayer.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING), 'lines glow in a layer under all lines and boxes');
-    assert(parseFloat(getComputedStyle(lineLayer.querySelector('.edge-vglow')).strokeWidth) >= 12 && getComputedStyle(lineLayer).filter.includes('vision-line-glow'), 'a wide, soft glow');
-    assert(svg.querySelector('#vision-glow feComposite[operator="out"]'), 'the boxes\' glow is cut away inside every box');
-    assert(!svg.querySelector('.node .node-vglow') && [...svg.querySelectorAll('.edge-g, .node')].every(x => layer.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING), 'the glow is drawn under all lines and boxes');
+    assert(
+      lineLayer &&
+        !svg.querySelector('.edge-g .edge-vglow') &&
+        [...svg.querySelectorAll('.edge-g, .node')].every(
+          x => lineLayer.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ),
+      'lines glow in a layer under all lines and boxes',
+    );
+    assert(
+      parseFloat(getComputedStyle(lineLayer.querySelector('.edge-vglow')).strokeWidth) >= 12 &&
+        getComputedStyle(lineLayer).filter.includes('vision-line-glow'),
+      'a wide, soft glow',
+    );
+    assert(
+      svg.querySelector('#vision-glow feComposite[operator="out"]'),
+      "the boxes' glow is cut away inside every box",
+    );
+    assert(
+      !svg.querySelector('.node .node-vglow') &&
+        [...svg.querySelectorAll('.edge-g, .node')].every(
+          x => layer.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ),
+      'the glow is drawn under all lines and boxes',
+    );
     assert(!svg.querySelector(`[data-map-node="${g2.id}"]`).classList.contains('vglow'), 'an unrelated goal does not');
-    assert(svg.querySelector(`[data-rel-edit="${db.relations[0].id}"]`).classList.contains('vglow') && svg.querySelector(`.vglow-lines [data-line-glow="${visionRelId(g.id, B.id)}"]`), 'and the lines between them');
+    assert(
+      svg.querySelector(`[data-rel-edit="${db.relations[0].id}"]`).classList.contains('vglow') &&
+        svg.querySelector(`.vglow-lines [data-line-glow="${visionRelId(g.id, B.id)}"]`),
+      'and the lines between them',
+    );
     // Toggles for the two link types.
     $('[data-rel-toggle="serves"]').click();
-    assert(!$(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) && $(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'goal → vision lines hidden');
+    assert(
+      !$(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) && $(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`),
+      'goal → vision lines hidden',
+    );
     $('[data-rel-toggle="serves"]').click();
     $('[data-rel-toggle="subvision"]').click();
     assert(!$(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'vision → vision lines hidden');
@@ -7387,21 +12694,45 @@ window.moreTests = async ({ step, assert }) => {
     eq($('[data-rel-toggle="serves"] .count').textContent, '1', 'counted');
     // Hide unrelated visions.
     $('[data-hide-visions]').click();
-    eq([...$('.map-wrap svg').querySelectorAll('.node.vision')].map(n => n.dataset.mapNode).sort(), ids([A, B]), 'only what goals serve, and above it');
-    assert(prefs.get('hideVisions') === true && $('[data-hide-visions]').getAttribute('aria-pressed') === 'true', 'remembered');
+    eq(
+      [...$('.map-wrap svg').querySelectorAll('.node.vision')].map(n => n.dataset.mapNode).sort(),
+      ids([A, B]),
+      'only what goals serve, and above it',
+    );
+    assert(
+      prefs.get('hideVisions') === true && $('[data-hide-visions]').getAttribute('aria-pressed') === 'true',
+      'remembered',
+    );
     $('[data-hide-visions]').click();
     eq($('.map-wrap svg').querySelectorAll('.node.vision').length, 3, 'shown again');
     // One goal picked: only its visions.
-    ui.mapGoal = g2.id; render();
+    ui.mapGoal = g2.id;
+    render();
     eq($('.map-wrap svg').querySelectorAll('.node.vision').length, 0, 'a goal serving none: no visions');
-    ui.mapGoal = g.id; render();
-    eq([...$('.map-wrap svg').querySelectorAll('.node.vision')].map(n => n.dataset.mapNode).sort(), ids([A, B]), 'its visions and those above');
-    ui.mapGoal = ''; render();
+    ui.mapGoal = g.id;
+    render();
+    eq(
+      [...$('.map-wrap svg').querySelectorAll('.node.vision')].map(n => n.dataset.mapNode).sort(),
+      ids([A, B]),
+      'its visions and those above',
+    );
+    ui.mapGoal = '';
+    render();
     // Linking by tapping (or dragging).
-    assert(canLink(g2.id, C.id) && canLink(C.id, g2.id) && !canLink(a.id, A.id) && !canLink(A.id, B.id) && canLink(C.id, A.id), 'which links fit');
+    assert(
+      canLink(g2.id, C.id) &&
+        canLink(C.id, g2.id) &&
+        !canLink(a.id, A.id) &&
+        !canLink(A.id, B.id) &&
+        canLink(C.id, A.id),
+      'which links fit',
+    );
     linkItems(C.id, g2.id);
     eq(g2.visions, [C.id], 'vision then goal: the goal serves it');
-    assert($('#toast').textContent.includes(t('map.visionLinked', { a: 'Read', b: 'Unrelated' })), 'said so, goal first');
+    assert(
+      $('#toast').textContent.includes(t('map.visionLinked', { a: 'Read', b: 'Unrelated' })),
+      'said so, goal first',
+    );
     linkItems(g2.id, C.id);
     assert($('#toast').textContent.includes(t('err.relExists')), 'not twice');
     linkItems(C.id, A.id);
@@ -7413,9 +12744,17 @@ window.moreTests = async ({ step, assert }) => {
     // Selecting a line, editing and removing it.
     const line = visionRelId(g.id, B.id);
     $(`[data-rel-edit="${line}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
-    assert(ui.mapRel === line && $('.map-rel-selection').textContent.includes('Run') && $('.map-rel-selection').textContent.includes(t('rel.serves')), 'selected, and named');
+    assert(
+      ui.mapRel === line &&
+        $('.map-rel-selection').textContent.includes('Run') &&
+        $('.map-rel-selection').textContent.includes(t('rel.serves')),
+      'selected, and named',
+    );
     openForm('relation', line);
-    assert(modal.open && $('#modalTitle').textContent === t('edit.vision') && $('#f-title').value === 'Fitness', 'editing it opens the vision');
+    assert(
+      modal.open && $('#modalTitle').textContent === t('edit.vision') && $('#f-title').value === 'Fitness',
+      'editing it opens the vision',
+    );
     modal.close();
     openRelMenu(line, 20, 20);
     assert(!ctxMenu.hidden && ctxMenu.querySelector('[data-ctx="rel-remove"]'), 'it has a menu');
@@ -7427,12 +12766,23 @@ window.moreTests = async ({ step, assert }) => {
     // A vision's menu on the map links and highlights.
     openCtxMenu(A.id, 10, 10);
     const acts = [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
-    assert(acts.includes('link') && acts.includes('highlight') && acts.includes('show:visions') && !acts.includes('show:map'), `map menu: ${acts}`);
+    assert(
+      acts.includes('link') &&
+        acts.includes('highlight') &&
+        acts.includes('show:visions') &&
+        !acts.includes('show:map'),
+      `map menu: ${acts}`,
+    );
     closeCtxMenu();
     // Shown in the map from the Visions view, with filters that hid it cleared.
-    ui.hideVisions = true; ui.mapGoal = g2.id;
-    setView('visions'); showIn('map', C.id);
-    assert(ui.view === 'map' && $(`[data-map-node="${C.id}"]`) && !ui.hideVisions && !ui.mapGoal, 'show in map reveals it');
+    ui.hideVisions = true;
+    ui.mapGoal = g2.id;
+    setView('visions');
+    showIn('map', C.id);
+    assert(
+      ui.view === 'map' && $(`[data-map-node="${C.id}"]`) && !ui.hideVisions && !ui.mapGoal,
+      'show in map reveals it',
+    );
     // Double-click opens it.
     const n = () => $(`[data-map-node="${A.id}"]`);
     n().dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
@@ -7443,7 +12793,8 @@ window.moreTests = async ({ step, assert }) => {
     fresh('Only visions');
     setView('map');
     assert($('.map-wrap svg .node.vision') && !$('#view > .empty'), 'visions alone are drawn');
-    clearVisions(); render();
+    clearVisions();
+    render();
     assert(!$('[data-hide-visions]') && !$('[data-rel-toggle="serves"]'), 'no visions: no vision chips');
     deletePlan(plans.current);
     deletePlan(plans.list.find(p => p.name === 'Vision map').id);
@@ -7457,29 +12808,70 @@ window.moreTests = async ({ step, assert }) => {
     const g = mk('goal', { title: 'Lead', visions: [A.id], deadline: d(20), startDate: d(-5) });
     const u = mk('goal', { title: 'Loose', deadline: d(25), startDate: d(-5) });
     const a = mk('activity', { title: 'Practise', status: 'doing', dueDate: d(0), startDate: d(-2) });
-    const r = mk('activity', { title: 'Daily habit', startDate: d(-10), repeat: { every: 1, unit: 'day' }, checkins: {} });
-    const s = mk('state', { title: 'Level', value: '3', date: d(-1), history: [{ date: d(-3), value: '1' }, { date: d(-1), value: '3' }] });
+    const r = mk('activity', {
+      title: 'Daily habit',
+      startDate: d(-10),
+      repeat: { every: 1, unit: 'day' },
+      checkins: {},
+    });
+    const s = mk('state', {
+      title: 'Level',
+      value: '3',
+      date: d(-1),
+      history: [
+        { date: d(-3), value: '1' },
+        { date: d(-1), value: '3' },
+      ],
+    });
     const ua = mk('activity', { title: 'Loose work', status: 'doing', dueDate: d(0), startDate: d(-2) });
-    rel(a, g, 'contributes'); rel(r, g, 'contributes'); rel(s, g, 'measures'); rel(ua, u, 'contributes');
-    save(); saveVisions();
-    const glowing = () => [...document.querySelectorAll('#view .vglow')].map(el => el.dataset.ctxItem || el.dataset.tlNode);
+    rel(a, g, 'contributes');
+    rel(r, g, 'contributes');
+    rel(s, g, 'measures');
+    rel(ua, u, 'contributes');
+    save();
+    saveVisions();
+    const glowing = () =>
+      [...document.querySelectorAll('#view .vglow')].map(el => el.dataset.ctxItem || el.dataset.tlNode);
     const per = {};
     for (const v of ['dashboard', 'goals', 'activities', 'states', 'timeline', 'graphs']) {
       setView(v);
       per[v] = glowing();
-      assert(per[v].length && !per[v].includes(u.id) && !per[v].includes(ua.id), `${v}: only what serves a vision glows (${per[v]})`);
+      assert(
+        per[v].length && !per[v].includes(u.id) && !per[v].includes(ua.id),
+        `${v}: only what serves a vision glows (${per[v]})`,
+      );
     }
-    assert(per.goals.includes(g.id) && per.activities.includes(a.id) && per.states.includes(s.id) && per.timeline.includes(g.id) && per.graphs.includes(s.id) && per.dashboard.includes(a.id), JSON.stringify(per));
+    assert(
+      per.goals.includes(g.id) &&
+        per.activities.includes(a.id) &&
+        per.states.includes(s.id) &&
+        per.timeline.includes(g.id) &&
+        per.graphs.includes(s.id) &&
+        per.dashboard.includes(a.id),
+      JSON.stringify(per),
+    );
     // On the timeline the labels beside the bars stay over every bar's glow.
     setView('timeline');
-    const lbl = $('#view .tl-bar-label'), bar = $('#view .tl-row.vglow .tl-bar, #view .tl-row.vglow .tl-milestone');
-    assert(lbl && bar && +getComputedStyle(lbl).zIndex > +getComputedStyle(bar).zIndex, 'timeline labels sit over glowing bars');
-    assert(getComputedStyle(bar).boxShadow.includes('12px'), `a bar's glow stays within its row: ${getComputedStyle(bar).boxShadow}`);
+    const lbl = $('#view .tl-bar-label'),
+      bar = $('#view .tl-row.vglow .tl-bar, #view .tl-row.vglow .tl-milestone');
+    assert(
+      lbl && bar && +getComputedStyle(lbl).zIndex > +getComputedStyle(bar).zIndex,
+      'timeline labels sit over glowing bars',
+    );
+    assert(
+      getComputedStyle(bar).boxShadow.includes('12px'),
+      `a bar's glow stays within its row: ${getComputedStyle(bar).boxShadow}`,
+    );
     setView('goals');
     const card = id => $(`#view .card[data-ctx-item="${id}"]`);
     // The glow lies behind the cards: a layer under the card itself, not a shadow of the card that could cover its neighbours.
     const halo = getComputedStyle(card(g.id), '::before');
-    assert(halo.boxShadow.includes('26px') && halo.zIndex === '-1' && getComputedStyle(card(u.id), '::before').boxShadow === 'none', `the glow is a layer behind the card: ${halo.boxShadow}`);
+    assert(
+      halo.boxShadow.includes('26px') &&
+        halo.zIndex === '-1' &&
+        getComputedStyle(card(u.id), '::before').boxShadow === 'none',
+      `the glow is a layer behind the card: ${halo.boxShadow}`,
+    );
     const withGlow = getComputedStyle(card(g.id)).boxShadow;
     card(g.id).classList.remove('vglow');
     eq(withGlow, getComputedStyle(card(g.id)).boxShadow, 'the card itself looks the same');
@@ -7491,12 +12883,17 @@ window.moreTests = async ({ step, assert }) => {
     const red = logo();
     // Purpose: the loose goal is paused.
     assert(!visions.purposeFound, 'not found yet');
-    u.status = 'paused'; save(); render();
+    u.status = 'paused';
+    save();
+    render();
     assert(document.documentElement.classList.contains('purpose'), 'Purpose');
     const dlg = $('#purposeDlg');
     assert(dlg.open && $('#purposeText').textContent === t('purpose.text', { name: A.title }), 'congratulated');
     eq(visions.purposeFound, today(), 'remembered');
-    assert(getComputedStyle(document.documentElement).getPropertyValue('--vglow').trim() !== silver, 'the glow turns gold');
+    assert(
+      getComputedStyle(document.documentElement).getPropertyValue('--vglow').trim() !== silver,
+      'the glow turns gold',
+    );
     assert(logo() !== red, `the logo turns gold: ${logo()}`);
     dlg.querySelector('button').click();
     await tick();
@@ -7504,22 +12901,48 @@ window.moreTests = async ({ step, assert }) => {
     render();
     assert(!dlg.open, 'not shown again');
     setView('visions');
-    assert($('#view .card.vision.purpose .tag.purpose') && $('#view .vis-status.found').textContent.includes(A.title), 'the Purpose card is gold, tagged, and the status says so');
+    assert(
+      $('#view .card.vision.purpose .tag.purpose') && $('#view .vis-status.found').textContent.includes(A.title),
+      'the Purpose card is gold, tagged, and the status says so',
+    );
     setView('map');
-    assert($(`[data-map-node="${A.id}"]`).classList.contains('purpose') && $(`[data-map-node="${A.id}"] .sub`).textContent.startsWith(t('vis.purpose')), 'gold on the map too');
+    assert(
+      $(`[data-map-node="${A.id}"]`).classList.contains('purpose') &&
+        $(`[data-map-node="${A.id}"] .sub`).textContent.startsWith(t('vis.purpose')),
+      'gold on the map too',
+    );
     // Lost and found again: no second popup.
-    u.status = 'active'; save(); render();
-    assert(!document.documentElement.classList.contains('purpose') && logo() === red, 'lost: silver again, the logo red');
-    u.status = 'paused'; save(); render();
+    u.status = 'active';
+    save();
+    render();
+    assert(
+      !document.documentElement.classList.contains('purpose') && logo() === red,
+      'lost: silver again, the logo red',
+    );
+    u.status = 'paused';
+    save();
+    render();
     assert(document.documentElement.classList.contains('purpose') && !dlg.open, 'found again without a popup');
     // In Slovenian.
-    visions.purposeFound = undefined; changeLanguage('sl'); render();
-    assert(dlg.open && $('#purposeTitle').textContent === 'Našli ste svoj Smisel' && $('#purposeText').textContent.includes('Purposeful life'), 'Slovenian popup');
+    visions.purposeFound = undefined;
+    changeLanguage('sl');
+    render();
+    assert(
+      dlg.open &&
+        $('#purposeTitle').textContent === 'Našli ste svoj Smisel' &&
+        $('#purposeText').textContent.includes('Purposeful life'),
+      'Slovenian popup',
+    );
     dlg.close();
-    changeLanguage('en'); render();
+    changeLanguage('en');
+    render();
     // No visions: nothing glows.
-    clearVisions(); setView('goals');
-    assert(!document.querySelector('#view .vglow') && !document.documentElement.classList.contains('purpose'), 'no visions: no glow');
+    clearVisions();
+    setView('goals');
+    assert(
+      !document.querySelector('#view .vglow') && !document.documentElement.classList.contains('purpose'),
+      'no visions: no glow',
+    );
     putBack();
     deletePlan(plans.current);
   });
@@ -7527,30 +12950,53 @@ window.moreTests = async ({ step, assert }) => {
   await step('visions: phone – cards fit 390 px, the deepest level too', async () => {
     clearVisions();
     fresh('Phone visions');
-    const A = mkV('A long vision title that goes on and on and on'), B = mkV('Narrower', [A]), C = mkV('Narrowest of them all', [B]), D = mkV('Deeper still', [C]);
+    const A = mkV('A long vision title that goes on and on and on'),
+      B = mkV('Narrower', [A]),
+      C = mkV('Narrowest of them all', [B]),
+      D = mkV('Deeper still', [C]);
     mk('goal', { title: 'G', visions: [D.id] });
-    save(); saveVisions();
+    save();
+    saveVisions();
     setView('visions');
     const frame = document.createElement('iframe');
-    Object.assign(frame.style, { width: '390px', height: '900px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    Object.assign(frame.style, {
+      width: '390px',
+      height: '900px',
+      position: 'fixed',
+      left: '-9999px',
+      top: '0',
+      border: '0',
+    });
     frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0;padding:0 16px">${$('#view').innerHTML}</body>`;
-    await new Promise(res => { frame.onload = res; document.body.append(frame); });
-    const doc = frame.contentDocument, cards = [...doc.querySelectorAll('.card.vision')];
+    await new Promise(res => {
+      frame.onload = res;
+      document.body.append(frame);
+    });
+    const doc = frame.contentDocument,
+      cards = [...doc.querySelectorAll('.card.vision')];
     eq(cards.length, 4, 'all four drawn');
-    assert(cards.every(c => c.getBoundingClientRect().right <= 390 - 16 + 0.5 && c.getBoundingClientRect().width > 200), `inside the screen, still wide enough: ${cards.map(c => Math.round(c.getBoundingClientRect().width))}`);
-    assert(cards[3].getBoundingClientRect().left > cards[0].getBoundingClientRect().left, 'deeper visions are indented');
+    assert(
+      cards.every(c => c.getBoundingClientRect().right <= 390 - 16 + 0.5 && c.getBoundingClientRect().width > 200),
+      `inside the screen, still wide enough: ${cards.map(c => Math.round(c.getBoundingClientRect().width))}`,
+    );
+    assert(
+      cards[3].getBoundingClientRect().left > cards[0].getBoundingClientRect().left,
+      'deeper visions are indented',
+    );
     assert(doc.documentElement.scrollWidth <= 390, `no sideways scroll: ${doc.documentElement.scrollWidth}`);
     frame.remove();
     deletePlan(plans.current);
     clearVisions();
   });
 
-
   await step('scrollbars: thin everywhere, like the dialogs', () => {
     loadSample();
-    const thin = el => getComputedStyle(el).scrollbarWidth === 'thin' && ['transparent', 'rgba(0, 0, 0, 0)'].some(c => getComputedStyle(el).scrollbarColor.endsWith(c));
+    const thin = el =>
+      getComputedStyle(el).scrollbarWidth === 'thin' &&
+      ['transparent', 'rgba(0, 0, 0, 0)'].some(c => getComputedStyle(el).scrollbarColor.endsWith(c));
     const seen = { page: document.documentElement, body: document.body, sidebar: $('.nav') || $('nav') };
-    setView('timeline'); seen.timeline = $('.tl-scroll');
+    setView('timeline');
+    seen.timeline = $('.tl-scroll');
     assert(Object.values(seen).every(Boolean), 'all found: ' + Object.keys(seen).filter(k => !seen[k]));
     const off = Object.keys(seen).filter(k => !thin(seen[k]));
     setView('map');
@@ -7563,11 +13009,19 @@ window.moreTests = async ({ step, assert }) => {
 
   // A fake Google: each token belongs to the account picked in the "popup", and each account has its
   // own Drive file. A write with one account's token can only land in that account's file.
-  const G = { accounts: {
-    A: { id: 'perm-A', email: 'ana@example.com', name: 'Ana Novak' },
-    B: { id: 'perm-B', email: 'bor@example.com', name: 'Bor' },
-    C: { id: 'perm-C', email: 'cene@example.com', name: '' },
-  }, files: {}, tokens: {}, pick: 'A', requests: [], n: 0, reads: 0 };
+  const G = {
+    accounts: {
+      A: { id: 'perm-A', email: 'ana@example.com', name: 'Ana Novak' },
+      B: { id: 'perm-B', email: 'bor@example.com', name: 'Bor' },
+      C: { id: 'perm-C', email: 'cene@example.com', name: '' },
+    },
+    files: {},
+    tokens: {},
+    pick: 'A',
+    requests: [],
+    n: 0,
+    reads: 0,
+  };
   const fakeGoogle = () => {
     Object.assign(drive, REAL_DRIVE);
     drive.request = async (hint, prompt) => {
@@ -7590,133 +13044,237 @@ window.moreTests = async ({ step, assert }) => {
     };
     drive.remove = async () => {};
   };
-  const realPrompt = window.prompt, realOffer = offerTour;
-  let prompts = [], offers = 0, nameAnswer = null;
-  window.prompt = (msg, def) => { prompts.push([msg, def]); return nameAnswer ?? def; };
+  const realPrompt = window.prompt,
+    realOffer = offerTour;
+  let prompts = [],
+    offers = 0,
+    nameAnswer = null;
+  window.prompt = (msg, def) => {
+    prompts.push([msg, def]);
+    return nameAnswer ?? def;
+  };
   offerTour = () => offers++;
   const SECRET = { A: 'SECRET-ana-goal', B: 'SECRET-bor-goal', G: 'SECRET-guest-goal', C: 'SECRET-cene-goal' };
   const fileText = acct => JSON.stringify(G.files[acct] || null);
-  const keysText = u => userKeys(u).sort().map(k => `${k}=${localStorage.getItem(k)}`).join('\n');
-  const memText = () => JSON.stringify({ db, plans, visions, other: allPlansData().map(p => p.data) }) + document.querySelector('.app').innerHTML;
+  const keysText = u =>
+    userKeys(u)
+      .sort()
+      .map(k => `${k}=${localStorage.getItem(k)}`)
+      .join('\n');
+  const memText = () =>
+    JSON.stringify({ db, plans, visions, other: allPlansData().map(p => p.data) }) +
+    document.querySelector('.app').innerHTML;
   const byAcct = key => users.list.find(u => u.account?.id === G.accounts[key].id);
-  const addSecret = title => { setView('goals'); mk('goal', { title }); visions.list.push({ id: uid(), title: title + '-vision', parents: [] }); save(); saveVisions(); render(); };
-  const noLeak = (text, keys, where) => keys.forEach(k => assert(!text.includes(SECRET[k]), `${where} holds ${SECRET[k]}`));
-  const settle = async () => { for (let i = 0; i < 5; i++) await tick(); clearTimeout(syncState.timer); syncState.timer = null; };
+  const addSecret = title => {
+    setView('goals');
+    mk('goal', { title });
+    visions.list.push({ id: uid(), title: title + '-vision', parents: [] });
+    save();
+    saveVisions();
+    render();
+  };
+  const noLeak = (text, keys, where) =>
+    keys.forEach(k => assert(!text.includes(SECRET[k]), `${where} holds ${SECRET[k]}`));
+  const settle = async () => {
+    for (let i = 0; i < 5; i++) await tick();
+    clearTimeout(syncState.timer);
+    syncState.timer = null;
+  };
 
   await step('users: storage keys are per user; a tampered user list is not trusted', () => {
     const root = currentUser();
-    assert(users.list.length === 1 && root.id === 'local' && root.ns === '' && !root.account, 'one user, no account, the plain keys');
-    eq([userKey('actionplan.plans'), userKey('other.key')], ['actionplan.plans', 'other.key'], 'first user: keys unchanged');
+    assert(
+      users.list.length === 1 && root.id === 'local' && root.ns === '' && !root.account,
+      'one user, no account, the plain keys',
+    );
+    eq(
+      [userKey('actionplan.plans'), userKey('other.key')],
+      ['actionplan.plans', 'other.key'],
+      'first user: keys unchanged',
+    );
     const saved = localStorage.getItem(USERS_KEY);
-    localStorage.setItem(USERS_KEY, JSON.stringify({ current: 'x', list: [
-      { id: 'x', ns: 'u.y.', name: 'bad', account: null }, { id: 'y"><b', ns: '', account: null },
-      { id: 'z', ns: 'u.z.', name: 5, account: { id: 7 } }] }));
+    localStorage.setItem(
+      USERS_KEY,
+      JSON.stringify({
+        current: 'x',
+        list: [
+          { id: 'x', ns: 'u.y.', name: 'bad', account: null },
+          { id: 'y"><b', ns: '', account: null },
+          { id: 'z', ns: 'u.z.', name: 5, account: { id: 7 } },
+        ],
+      }),
+    );
     const read = readUsers();
-    eq(read.list.map(u => [u.id, u.ns, u.name, u.account]), [['z', 'u.z.', '', null]], 'only well-formed users, each on its own prefix');
+    eq(
+      read.list.map(u => [u.id, u.ns, u.name, u.account]),
+      [['z', 'u.z.', '', null]],
+      'only well-formed users, each on its own prefix',
+    );
     eq(read.current, 'z', 'current falls back to a listed user');
     localStorage.setItem(USERS_KEY, '{oops');
-    eq(readUsers().list.map(u => u.id), ['local'], 'broken list: the first user');
+    eq(
+      readUsers().list.map(u => u.id),
+      ['local'],
+      'broken list: the first user',
+    );
     // A device that synced before users existed is linked to an account the next sync learns.
     localStorage.removeItem(USERS_KEY);
     localStorage.setItem('actionplan.v1.syncConnected', 'true');
     eq(readUsers().list[0].account, { id: '', email: '' }, 'linked before users existed');
     localStorage.removeItem('actionplan.v1.syncConnected');
     eq(readUsers().list[0].account, null, 'never linked');
-    if (saved === null) localStorage.removeItem(USERS_KEY); else localStorage.setItem(USERS_KEY, saved);
+    if (saved === null) localStorage.removeItem(USERS_KEY);
+    else localStorage.setItem(USERS_KEY, saved);
   });
 
-  await step('users: the first Google login takes this device\'s data to that account', async () => {
+  await step("users: the first Google login takes this device's data to that account", async () => {
     fakeGoogle();
-    clearTimeout(syncState.timer); Object.assign(syncState, { busy: false, again: false, timer: null });
+    clearTimeout(syncState.timer);
+    Object.assign(syncState, { busy: false, again: false, timer: null });
     fresh('Ana plan');
     addSecret(SECRET.A);
-    theme = 'dark'; prefs.set('theme', 'dark'); applyTheme();
+    theme = 'dark';
+    prefs.set('theme', 'dark');
+    applyTheme();
     prefs.set('view', 'goals');
-    G.pick = 'A'; prompts = []; nameAnswer = 'Ana';
+    G.pick = 'A';
+    prompts = [];
+    nameAnswer = 'Ana';
     await logIn();
     await settle();
     const me = currentUser();
     assert(users.list.length === 1 && me.id === 'local', 'still the one user');
     eq(me.account, { id: 'perm-A', email: 'ana@example.com' }, 'linked to the account');
-    eq(prompts.map(p => p[1]), ['Ana Novak'], 'asked for a name once, suggesting the Google name');
+    eq(
+      prompts.map(p => p[1]),
+      ['Ana Novak'],
+      'asked for a name once, suggesting the Google name',
+    );
     assert(me.name === 'Ana' && JSON.parse(localStorage.getItem(USERS_KEY)).list[0].name === 'Ana', 'name kept');
     eq(G.requests.at(-1), { hint: '', prompt: 'select_account' }, 'Google lets the user pick the account');
-    assert(fileText('perm-A').includes(SECRET.A) && fileText('perm-A').includes('Ana plan'), 'everything synced to that account');
+    assert(
+      fileText('perm-A').includes(SECRET.A) && fileText('perm-A').includes('Ana plan'),
+      'everything synced to that account',
+    );
     assert(syncState.status === 'synced' && !$('#syncBtn').hidden, 'synced, cloud shown');
-    assert(G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A', 'token kept for this user');
+    assert(
+      G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A',
+      'token kept for this user',
+    );
     assert(!offers, 'no first-visit tour: the data is the same');
   });
 
-  await step('users: another account on a device already logged in gets an empty user, as on a first visit', async () => {
-    const aFile = fileText('perm-A');
-    G.pick = 'B'; prompts = []; nameAnswer = null;
-    await logIn();
-    await settle();
-    const bor = currentUser();
-    assert(users.list.length === 2 && bor.id !== 'local' && bor.ns === `u.${bor.id}.`, 'a second user on their own prefix');
-    eq(bor.account, { id: 'perm-B', email: 'bor@example.com' }, 'linked to the new account');
-    eq(bor.name, 'Bor', 'name prompted (Google name taken as given)');
-    assert(plans.list.length === 1 && plans.list[0].name === t('plan.defaultName') && itemCount() === 0 && !visions.list.length, 'one empty starter plan, no visions');
-    assert(ui.view === 'dashboard' && theme === 'system' && !document.documentElement.dataset.theme, 'default view and theme, not Ana\'s');
-    eq(offers, 1, 'the first-visit language picker and tour are offered');
-    noLeak(memText(), ['A'], 'Bor\'s screen and memory');
-    noLeak(fileText('perm-B'), ['A'], 'Bor\'s Drive');
-    noLeak(keysText(bor), ['A'], 'Bor\'s stored keys');
-    assert(fileText('perm-A') === aFile, 'Ana\'s Drive untouched');
-    assert(G.tokens[JSON.parse(sessionStorage.getItem(`actionplan.u.${bor.id}.syncToken`)).value] === 'perm-B', 'Bor\'s own token, under his prefix');
-    assert(G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A', 'Ana\'s token stays hers');
-    // The real offer: a new user has not seen the tour, so the language picker opens.
-    realOffer(); await tick(); await tick();
-    assert($('.lang-pick'), 'language picker shown');
-    $('.lang-pick [data-lang-done]').click();
-    assert(tour.step >= 0, 'then the tour');
-    endTour(false);
-    assert(prefs.get('tourSeen') === true && plans.list.length === 1, 'tour seen, its plan gone');
-    addSecret(SECRET.B);
-    await syncNow(true); await settle();
-    assert(fileText('perm-B').includes(SECRET.B), 'Bor\'s edits sync to Bor\'s Drive');
-    assert(fileText('perm-A') === aFile, 'and not to Ana\'s');
-  });
+  await step(
+    'users: another account on a device already logged in gets an empty user, as on a first visit',
+    async () => {
+      const aFile = fileText('perm-A');
+      G.pick = 'B';
+      prompts = [];
+      nameAnswer = null;
+      await logIn();
+      await settle();
+      const bor = currentUser();
+      assert(
+        users.list.length === 2 && bor.id !== 'local' && bor.ns === `u.${bor.id}.`,
+        'a second user on their own prefix',
+      );
+      eq(bor.account, { id: 'perm-B', email: 'bor@example.com' }, 'linked to the new account');
+      eq(bor.name, 'Bor', 'name prompted (Google name taken as given)');
+      assert(
+        plans.list.length === 1 &&
+          plans.list[0].name === t('plan.defaultName') &&
+          itemCount() === 0 &&
+          !visions.list.length,
+        'one empty starter plan, no visions',
+      );
+      assert(
+        ui.view === 'dashboard' && theme === 'system' && !document.documentElement.dataset.theme,
+        "default view and theme, not Ana's",
+      );
+      eq(offers, 1, 'the first-visit language picker and tour are offered');
+      noLeak(memText(), ['A'], "Bor's screen and memory");
+      noLeak(fileText('perm-B'), ['A'], "Bor's Drive");
+      noLeak(keysText(bor), ['A'], "Bor's stored keys");
+      assert(fileText('perm-A') === aFile, "Ana's Drive untouched");
+      assert(
+        G.tokens[JSON.parse(sessionStorage.getItem(`actionplan.u.${bor.id}.syncToken`)).value] === 'perm-B',
+        "Bor's own token, under his prefix",
+      );
+      assert(
+        G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A',
+        "Ana's token stays hers",
+      );
+      // The real offer: a new user has not seen the tour, so the language picker opens.
+      realOffer();
+      await tick();
+      await tick();
+      assert($('.lang-pick'), 'language picker shown');
+      $('.lang-pick [data-lang-done]').click();
+      assert(tour.step >= 0, 'then the tour');
+      endTour(false);
+      assert(prefs.get('tourSeen') === true && plans.list.length === 1, 'tour seen, its plan gone');
+      addSecret(SECRET.B);
+      await syncNow(true);
+      await settle();
+      assert(fileText('perm-B').includes(SECRET.B), "Bor's edits sync to Bor's Drive");
+      assert(fileText('perm-A') === aFile, "and not to Ana's");
+    },
+  );
 
-  await step('users: switching back opens that user\'s own data, as they left it', async () => {
+  await step("users: switching back opens that user's own data, as they left it", async () => {
     renderSync();
     const ana = byAcct('A');
     const row = [...$('#syncSection .user-list').children].find(li => li.textContent.includes('Ana'));
     assert(row && row.textContent.includes('ana@example.com'), 'Ana listed under others, with her email');
-    G.pick = 'A'; prompts = [];
+    G.pick = 'A';
+    prompts = [];
     row.querySelector('[data-sync="switch"]').click();
-    await settle(); await settle();
+    await settle();
+    await settle();
     assert(currentUser() === ana && !prompts.length, 'Ana again, no name asked');
     eq(G.requests.at(-1), { hint: 'ana@example.com', prompt: 'select_account' }, 'Google is told which account');
     assert(theme === 'dark' && ui.view === 'goals', 'her theme and view');
-    assert(db.goals.some(g => g.title === SECRET.A) || allPlansData().some(p => p.data.goals.some(g => g.title === SECRET.A)), 'her goal');
-    noLeak(memText(), ['B'], 'Ana\'s screen and memory');
-    noLeak(keysText(ana), ['B'], 'Ana\'s stored keys');
-    noLeak(keysText(byAcct('B')), ['A'], 'Bor\'s stored keys');
-    noLeak(fileText('perm-A'), ['B'], 'Ana\'s Drive');
+    assert(
+      db.goals.some(g => g.title === SECRET.A) ||
+        allPlansData().some(p => p.data.goals.some(g => g.title === SECRET.A)),
+      'her goal',
+    );
+    noLeak(memText(), ['B'], "Ana's screen and memory");
+    noLeak(keysText(ana), ['B'], "Ana's stored keys");
+    noLeak(keysText(byAcct('B')), ['A'], "Bor's stored keys");
+    noLeak(fileText('perm-A'), ['B'], "Ana's Drive");
     assert($('#toast').textContent === t('user.switched', { name: 'Ana' }), 'toast says who');
   });
 
-  await step('users: a renewed token for someone else\'s account is refused', async () => {
-    const aFile = fileText('perm-A'), bFile = fileText('perm-B');
+  await step("users: a renewed token for someone else's account is refused", async () => {
+    const aFile = fileText('perm-A'),
+      bFile = fileText('perm-B');
     drive.forget();
     G.pick = 'B'; // the popup picked Bor's account while Ana renews
-    await syncNow(true); await settle();
+    await syncNow(true);
+    await settle();
     eq(syncState.status, 'account', 'status says it was another account');
     assert($('#syncBtn').title === t('sync.status.account', { email: 'ana@example.com' }), 'and which to choose');
     assert(!sessionStorage.getItem('actionplan.syncToken') && !drive.token, 'the wrong token is not kept');
     assert(fileText('perm-A') === aFile && fileText('perm-B') === bFile, 'neither Drive touched');
     G.pick = 'A';
-    await syncNow(true); await settle();
+    await syncNow(true);
+    await settle();
     eq(syncState.status, 'synced', 'the right account syncs again');
-    eq(G.requests.at(-1), { hint: 'ana@example.com', prompt: '' }, 'renewal hints Ana\'s account');
+    eq(G.requests.at(-1), { hint: 'ana@example.com', prompt: '' }, "renewal hints Ana's account");
   });
 
   await step('users: a sync on its way when another user takes over stops, both ways', async () => {
-    const ana = currentUser(), bFile = fileText('perm-B');
-    let release; const slow = drive.read;
-    drive.read = value => new Promise(r => { release = () => r(slow(value)); });
-    addSecret(SECRET.A + '-2'); clearTimeout(syncState.timer);
+    const ana = currentUser(),
+      bFile = fileText('perm-B');
+    let release;
+    const slow = drive.read;
+    drive.read = value =>
+      new Promise(r => {
+        release = () => r(slow(value));
+      });
+    addSecret(SECRET.A + '-2');
+    clearTimeout(syncState.timer);
     const running = syncNow(false);
     await tick();
     G.pick = 'B';
@@ -7725,66 +13283,99 @@ window.moreTests = async ({ step, assert }) => {
     assert(currentUser() === byAcct('B'), 'Bor took over');
     const reads = G.reads;
     drive.read = slow;
-    release(); await running; await switching; await settle();
-    noLeak(memText(), ['A'], 'Bor\'s screen after Ana\'s late answer');
-    noLeak(keysText(currentUser()), ['A'], 'Bor\'s keys after Ana\'s late answer');
-    assert(!fileText('perm-A').includes(SECRET.A + '-2'), 'Ana\'s stopped sync wrote nothing');
-    assert(fileText('perm-B') === bFile, 'nor into Bor\'s Drive');
+    release();
+    await running;
+    await switching;
+    await settle();
+    noLeak(memText(), ['A'], "Bor's screen after Ana's late answer");
+    noLeak(keysText(currentUser()), ['A'], "Bor's keys after Ana's late answer");
+    assert(!fileText('perm-A').includes(SECRET.A + '-2'), "Ana's stopped sync wrote nothing");
+    assert(fileText('perm-B') === bFile, "nor into Bor's Drive");
     assert(!syncState.busy, 'not stuck');
-    await syncNow(true); await settle();
-    noLeak(fileText('perm-B'), ['A'], 'Bor\'s next sync');
+    await syncNow(true);
+    await settle();
+    noLeak(fileText('perm-B'), ['A'], "Bor's next sync");
     assert(G.reads > reads, 'Bor syncs normally');
     // Back to Ana: her unsynced edit is still hers and goes up now.
     G.pick = 'A';
-    await logIn('ana@example.com', ana); await settle();
-    assert(fileText('perm-A').includes(SECRET.A + '-2'), 'Ana\'s edit synced once she is back');
-    noLeak(fileText('perm-A'), ['B'], 'Ana\'s Drive');
+    await logIn('ana@example.com', ana);
+    await settle();
+    assert(fileText('perm-A').includes(SECRET.A + '-2'), "Ana's edit synced once she is back");
+    noLeak(fileText('perm-A'), ['B'], "Ana's Drive");
   });
 
-  await step('users: log out leaves an empty guest; a guest\'s login keeps the guest\'s data', async () => {
-    const before = users.list.length, ana = currentUser();
+  await step("users: log out leaves an empty guest; a guest's login keeps the guest's data", async () => {
+    const before = users.list.length,
+      ana = currentUser();
     $('#settingsBtn').click();
     $('#syncSection [data-sync="logout"]').click();
     const guest = currentUser();
-    assert(users.list.length === before + 1 && !guest.account && guest.ns === `u.${guest.id}.`, 'a new guest on their own prefix');
-    assert($('#syncBtn').hidden && !drive.token && !sessionStorage.getItem('actionplan.syncToken'), 'signed out, Ana\'s token gone');
+    assert(
+      users.list.length === before + 1 && !guest.account && guest.ns === `u.${guest.id}.`,
+      'a new guest on their own prefix',
+    );
+    assert(
+      $('#syncBtn').hidden && !drive.token && !sessionStorage.getItem('actionplan.syncToken'),
+      "signed out, Ana's token gone",
+    );
     assert(plans.list.length === 1 && itemCount() === 0 && !visions.list.length, 'an empty start');
-    noLeak(memText(), ['A', 'B'], 'the guest\'s screen and memory');
+    noLeak(memText(), ['A', 'B'], "the guest's screen and memory");
     assert($('#toast').textContent === t('user.loggedOut', { name: 'Ana' }), 'toast');
     const names = [...$('#syncSection .user-list').querySelectorAll('b')].map(b => b.textContent);
     eq(names, ['Ana', 'Bor'], 'everyone signed in here is listed');
-    assert([...document.querySelectorAll('#syncSection .user-list [data-sync="switch"]')].every(b => b.textContent === t('user.logIn')), 'each with Log in');
-    assert(keysText(ana).includes(SECRET.A), 'Ana\'s data stays on the device');
+    assert(
+      [...document.querySelectorAll('#syncSection .user-list [data-sync="switch"]')].every(
+        b => b.textContent === t('user.logIn'),
+      ),
+      'each with Log in',
+    );
+    assert(keysText(ana).includes(SECRET.A), "Ana's data stays on the device");
     settings.close();
     addSecret(SECRET.G);
-    G.pick = 'C'; prompts = [];
-    await logIn(); await settle();
-    assert(currentUser() === guest && users.list.length === before + 1, 'the guest becomes the new account\'s user');
-    eq(guest.name, 'cene', 'no Google name: the email\'s name is suggested');
-    assert(fileText('perm-C').includes(SECRET.G), 'the guest\'s data synced to it');
-    noLeak(fileText('perm-C'), ['A', 'B'], 'Cene\'s Drive');
+    G.pick = 'C';
+    prompts = [];
+    await logIn();
+    await settle();
+    assert(currentUser() === guest && users.list.length === before + 1, "the guest becomes the new account's user");
+    eq(guest.name, 'cene', "no Google name: the email's name is suggested");
+    assert(fileText('perm-C').includes(SECRET.G), "the guest's data synced to it");
+    noLeak(fileText('perm-C'), ['A', 'B'], "Cene's Drive");
     // Logging out again makes a new guest; a known account from there opens its user and leaves the guest be.
     logOut();
     const guest2 = currentUser();
     assert(guest2 !== guest && !guest2.account && users.list.length === before + 2, 'a new guest');
     addSecret('guest-two-goal');
     G.pick = 'B';
-    await logIn(); await settle();
-    assert(currentUser() === byAcct('B') && users.list.includes(guest2) && !guest2.account, 'Bor opened, guest kept as it was');
-    noLeak(memText(), ['A', 'C', 'G'], 'Bor\'s screen');
-    assert(!memText().includes('guest-two-goal') && keysText(guest2).includes('guest-two-goal'), 'the guest\'s goal stays the guest\'s');
+    await logIn();
+    await settle();
+    assert(
+      currentUser() === byAcct('B') && users.list.includes(guest2) && !guest2.account,
+      'Bor opened, guest kept as it was',
+    );
+    noLeak(memText(), ['A', 'C', 'G'], "Bor's screen");
+    assert(
+      !memText().includes('guest-two-goal') && keysText(guest2).includes('guest-two-goal'),
+      "the guest's goal stays the guest's",
+    );
     logOut();
-    assert(currentUser() === guest2 && db.goals.some(g => g.title === 'guest-two-goal'), 'logging out returns to that one guest');
+    assert(
+      currentUser() === guest2 && db.goals.some(g => g.title === 'guest-two-goal'),
+      'logging out returns to that one guest',
+    );
   });
 
   await step('users: no item of one user is stored under another, in storage or session', () => {
     const owner = { A: byAcct('A'), B: byAcct('B'), G: byAcct('C') }; // the first guest's data became Cene's
     Object.entries(owner).forEach(([k, u]) => {
       assert(keysText(u).includes(SECRET[k]), `${k} still has their own`);
-      users.list.filter(o => o !== u).forEach(o => assert(!keysText(o).includes(SECRET[k]), `${SECRET[k]} found under ${o.name || o.id}`));
+      users.list
+        .filter(o => o !== u)
+        .forEach(o => assert(!keysText(o).includes(SECRET[k]), `${SECRET[k]} found under ${o.name || o.id}`));
     });
     users.list.forEach(u => {
-      const tok = userKeys(u, sessionStorage).map(k => JSON.parse(sessionStorage.getItem(k))?.value).filter(Boolean);
+      const tok = userKeys(u, sessionStorage)
+        .map(k => JSON.parse(sessionStorage.getItem(k))?.value)
+        .filter(Boolean);
       tok.forEach(v => assert(G.tokens[v] === u.account?.id, `${u.name}: a token of ${G.tokens[v]}`));
     });
     // Every stored key belongs to exactly one user (or the device: the user list and the language).
@@ -7793,35 +13384,59 @@ window.moreTests = async ({ step, assert }) => {
     users.list.forEach(u => userKeys(u).forEach(k => owners[k]++));
     const odd = Object.entries(owners).filter(([k, n]) => n !== 1 && k !== USERS_KEY && k !== LANG_KEY);
     assert(!odd.length, 'keys with no single owner: ' + odd.map(o => o.join(':')));
-    eq(Object.values(G.files).map(f => f.format), ['actionplan-sync', 'actionplan-sync', 'actionplan-sync'], 'one file per account');
+    eq(
+      Object.values(G.files).map(f => f.format),
+      ['actionplan-sync', 'actionplan-sync', 'actionplan-sync'],
+      'one file per account',
+    );
     return `${users.list.length} users`;
   });
 
   await step('users: name on the first login, changed in Settings, escaped', async () => {
     G.pick = 'A';
-    await logIn('ana@example.com', byAcct('A')); await settle();
+    await logIn('ana@example.com', byAcct('A'));
+    await settle();
     $('#settingsBtn').click();
     const input = $('#syncSection [data-user-name]');
-    assert(input.value === 'Ana' && $('#syncSection').textContent.includes(t('user.signedInAs', { email: 'ana@example.com' })), 'name and account shown');
+    assert(
+      input.value === 'Ana' &&
+        $('#syncSection').textContent.includes(t('user.signedInAs', { email: 'ana@example.com' })),
+      'name and account shown',
+    );
     input.focus();
     setSyncStatus('syncing');
-    assert(document.activeElement === input && $('#syncSection .sync-status').dataset.status === 'syncing', 'a status change keeps the field in focus');
+    assert(
+      document.activeElement === input && $('#syncSection .sync-status').dataset.status === 'syncing',
+      'a status change keeps the field in focus',
+    );
     input.value = '  <img src=x onerror=alert(1)> Ana  ';
     input.dispatchEvent(new Event('change', { bubbles: true }));
-    input.blur(); renderSync();
+    input.blur();
+    renderSync();
     eq(currentUser().name, '<img src=x onerror=alert(1)> Ana', 'renamed, trimmed');
-    eq(JSON.parse(localStorage.getItem(USERS_KEY)).list.find(u => u.id === currentUser().id).name, currentUser().name, 'stored');
+    eq(
+      JSON.parse(localStorage.getItem(USERS_KEY)).list.find(u => u.id === currentUser().id).name,
+      currentUser().name,
+      'stored',
+    );
     eq(byAcct('B').name, 'Bor', 'others keep their names');
-    G.pick = 'B'; await logIn('bor@example.com', byAcct('B')); await settle();
+    G.pick = 'B';
+    await logIn('bor@example.com', byAcct('B'));
+    await settle();
     renderSync();
     assert(!$('#syncSection img') && $('#syncSection .user-list').textContent.includes('<img src=x'), 'shown as text');
     $('#syncSection [data-user-name]').value = '';
     $('#syncSection [data-user-name]').dispatchEvent(new Event('change', { bubbles: true }));
     renderSync();
     assert($('#syncSection [data-user-name]').placeholder === 'bor@example.com', 'an empty name shows the email');
-    byAcct('B').name = 'Bor'; saveUsers();
+    byAcct('B').name = 'Bor';
+    saveUsers();
     changeLanguage('sl');
-    assert($('#syncSection').textContent.includes(I18N.sl.strings['user.logOut']) && $('#syncSection h3').textContent === I18N.sl.strings['sync.title'], 'Slovenian');
+    assert(
+      $('#syncSection').textContent.includes(I18N.sl.strings['user.logOut']) &&
+        $('#syncSection h3').textContent === I18N.sl.strings['sync.title'],
+      'Slovenian',
+    );
     changeLanguage('en');
     settings.close();
   });
@@ -7831,121 +13446,222 @@ window.moreTests = async ({ step, assert }) => {
     bor.account = { id: '', email: '' };
     drive.forget();
     G.pick = 'B';
-    await syncNow(true); await settle();
+    await syncNow(true);
+    await settle();
     eq(bor.account, { id: 'perm-B', email: 'bor@example.com' }, 'account learnt');
     eq(syncState.status, 'synced', 'and synced');
     // Picked from the list while its account is not known yet: that user, not a new one.
-    bor.account = { id: '', email: '' }; saveUsers();
+    bor.account = { id: '', email: '' };
+    saveUsers();
     const count = users.list.length;
     logOut();
-    await logIn('', bor); await settle();
+    await logIn('', bor);
+    await settle();
     assert(currentUser() === bor && users.list.length === count && bor.account.id === 'perm-B', 'the picked user');
   });
 
   await step('users: failed or cancelled Google sign-in changes nothing', async () => {
-    const me = currentUser(), count = users.list.length, file = fileText('perm-B');
-    drive.request = async () => { throw new SyncError('auth'); };
+    const me = currentUser(),
+      count = users.list.length,
+      file = fileText('perm-B');
+    drive.request = async () => {
+      throw new SyncError('auth');
+    };
     await logIn();
-    assert(currentUser() === me && users.list.length === count && $('#toast').textContent === t('sync.connectFailed'), 'same user, toast');
+    assert(
+      currentUser() === me && users.list.length === count && $('#toast').textContent === t('sync.connectFailed'),
+      'same user, toast',
+    );
     fakeGoogle();
-    drive.whoami = async () => { throw new SyncError('offline'); };
+    drive.whoami = async () => {
+      throw new SyncError('offline');
+    };
     await logIn();
-    assert(currentUser() === me && users.list.length === count && fileText('perm-B') === file, 'identity unknown: nothing changes');
+    assert(
+      currentUser() === me && users.list.length === count && fileText('perm-B') === file,
+      'identity unknown: nothing changes',
+    );
     fakeGoogle();
   });
 
   await step('users: phone width – the account section fits 390 px', async () => {
     $('#settingsBtn').click();
     const frame = document.createElement('iframe');
-    Object.assign(frame.style, { width: '390px', height: '900px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    Object.assign(frame.style, {
+      width: '390px',
+      height: '900px',
+      position: 'fixed',
+      left: '-9999px',
+      top: '0',
+      border: '0',
+    });
     frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0"><div class="modal-body" style="padding:0 16px">${$('#syncSection').outerHTML}</div></body>`;
-    await new Promise(res => { frame.onload = res; document.body.append(frame); });
+    await new Promise(res => {
+      frame.onload = res;
+      document.body.append(frame);
+    });
     const doc = frame.contentDocument;
-    const wide = [...doc.querySelectorAll('#syncSection *')].filter(el => el.getBoundingClientRect().right > 390 - 16 + 0.5).map(el => `${el.tagName}.${el.className}:${Math.round(el.getBoundingClientRect().right)}`);
-    assert(doc.documentElement.scrollWidth <= 390, `no sideways scroll: ${doc.documentElement.scrollWidth} ${wide.join(' ')}`);
-    [...doc.querySelectorAll('.user-list li, .user-name')].forEach(el => assert(el.getBoundingClientRect().right <= 390 - 16 + 0.5, 'row inside the screen'));
+    const wide = [...doc.querySelectorAll('#syncSection *')]
+      .filter(el => el.getBoundingClientRect().right > 390 - 16 + 0.5)
+      .map(el => `${el.tagName}.${el.className}:${Math.round(el.getBoundingClientRect().right)}`);
+    assert(
+      doc.documentElement.scrollWidth <= 390,
+      `no sideways scroll: ${doc.documentElement.scrollWidth} ${wide.join(' ')}`,
+    );
+    [...doc.querySelectorAll('.user-list li, .user-name')].forEach(el =>
+      assert(el.getBoundingClientRect().right <= 390 - 16 + 0.5, 'row inside the screen'),
+    );
     frame.remove();
     settings.close();
   });
 
-  await step('users: removing a user deletes only their data here; logging in again brings back what synced', async () => {
-    const ana = byAcct('A'), bor = currentUser(), cene = byAcct('C');
-    const allKeys = area => Object.keys(area);
-    const nsKeys = (u, area = localStorage) => allKeys(area).filter(k => k.startsWith(KEY_ROOT + u.ns));
-    const anaKeys = keysText(ana), borKeys = keysText(bor), lang = localStorage.getItem(LANG_KEY);
-    assert(bor === byAcct('B'), 'Bor is on');
-    renderSync();
-    const removeBtn = u => $(`#syncSection [data-sync="remove"][data-user="${u.id}"]`);
-    // Cancelled: nothing changes.
-    window.confirm = () => false;
-    removeBtn(cene).click();
-    assert(users.list.includes(cene) && keysText(cene).includes(SECRET.G), 'cancel keeps everything');
-    window.confirm = () => true;
-    removeBtn(cene).click();
-    assert(!users.list.includes(cene) && !JSON.parse(localStorage.getItem(USERS_KEY)).list.some(u => u.id === cene.id), 'gone from the list, stored too');
-    assert(!nsKeys(cene).length && !nsKeys(cene, sessionStorage).length, 'every key of theirs deleted');
-    assert(keysText(ana) === anaKeys && keysText(bor) === borKeys && localStorage.getItem(LANG_KEY) === lang && currentUser() === bor, 'the others and the device untouched, still Bor');
-    eq($('#toast').textContent, t('user.removed', { name: 'cene' }), 'toast');
-    assert(!removeBtn(cene), 'no longer listed');
-    // Logging in again makes a new user with what had synced to their Drive.
-    G.pick = 'C';
-    await logIn(); await settle();
-    const back = currentUser();
-    assert(back !== cene && back.account.id === 'perm-C' && JSON.stringify(allPlansData().map(p => p.data)).includes(SECRET.G), 'their synced data is back');
-    // Removing the user you are: the guest opens, nobody else is touched.
-    const guest = users.list.find(u => !u.account);
-    renderSync();
-    removeBtn(back).click();
-    assert(currentUser() === guest && !users.list.includes(back) && !nsKeys(back).length && !nsKeys(back, sessionStorage).length, 'the guest opens, their keys are gone');
-    assert(!drive.token && $('#syncBtn').hidden, 'signed out');
-    noLeak(memText(), ['A', 'B', 'G'], 'the guest\'s screen');
-    // The first user, on the plain keys: only theirs go (the device's language and the user list stay).
-    const borKeys2 = keysText(bor);
-    removeUser(ana.id);
-    const plain = allKeys(localStorage).filter(k => !users.list.some(u => u.ns && k.startsWith(KEY_ROOT + u.ns)) && k !== USERS_KEY && k !== LANG_KEY);
-    assert(!users.list.includes(ana) && !plain.length, 'no plain keys left: ' + plain);
-    assert(!sessionStorage.getItem('actionplan.syncToken'), 'nor her token');
-    assert(keysText(bor) === borKeys2 && localStorage.getItem(LANG_KEY) === lang, 'Bor and the language untouched');
-    eq(readUsers().list.map(u => u.id), users.list.map(u => u.id), 'stored list matches');
-    // A guest is never offered for removal.
-    assert(!removeBtn(guest), 'no remove for the guest');
-  });
+  await step(
+    'users: removing a user deletes only their data here; logging in again brings back what synced',
+    async () => {
+      const ana = byAcct('A'),
+        bor = currentUser(),
+        cene = byAcct('C');
+      const allKeys = area => Object.keys(area);
+      const nsKeys = (u, area = localStorage) => allKeys(area).filter(k => k.startsWith(KEY_ROOT + u.ns));
+      const anaKeys = keysText(ana),
+        borKeys = keysText(bor),
+        lang = localStorage.getItem(LANG_KEY);
+      assert(bor === byAcct('B'), 'Bor is on');
+      renderSync();
+      const removeBtn = u => $(`#syncSection [data-sync="remove"][data-user="${u.id}"]`);
+      // Cancelled: nothing changes.
+      window.confirm = () => false;
+      removeBtn(cene).click();
+      assert(users.list.includes(cene) && keysText(cene).includes(SECRET.G), 'cancel keeps everything');
+      window.confirm = () => true;
+      removeBtn(cene).click();
+      assert(
+        !users.list.includes(cene) && !JSON.parse(localStorage.getItem(USERS_KEY)).list.some(u => u.id === cene.id),
+        'gone from the list, stored too',
+      );
+      assert(!nsKeys(cene).length && !nsKeys(cene, sessionStorage).length, 'every key of theirs deleted');
+      assert(
+        keysText(ana) === anaKeys &&
+          keysText(bor) === borKeys &&
+          localStorage.getItem(LANG_KEY) === lang &&
+          currentUser() === bor,
+        'the others and the device untouched, still Bor',
+      );
+      eq($('#toast').textContent, t('user.removed', { name: 'cene' }), 'toast');
+      assert(!removeBtn(cene), 'no longer listed');
+      // Logging in again makes a new user with what had synced to their Drive.
+      G.pick = 'C';
+      await logIn();
+      await settle();
+      const back = currentUser();
+      assert(
+        back !== cene &&
+          back.account.id === 'perm-C' &&
+          JSON.stringify(allPlansData().map(p => p.data)).includes(SECRET.G),
+        'their synced data is back',
+      );
+      // Removing the user you are: the guest opens, nobody else is touched.
+      const guest = users.list.find(u => !u.account);
+      renderSync();
+      removeBtn(back).click();
+      assert(
+        currentUser() === guest &&
+          !users.list.includes(back) &&
+          !nsKeys(back).length &&
+          !nsKeys(back, sessionStorage).length,
+        'the guest opens, their keys are gone',
+      );
+      assert(!drive.token && $('#syncBtn').hidden, 'signed out');
+      noLeak(memText(), ['A', 'B', 'G'], "the guest's screen");
+      // The first user, on the plain keys: only theirs go (the device's language and the user list stay).
+      const borKeys2 = keysText(bor);
+      removeUser(ana.id);
+      const plain = allKeys(localStorage).filter(
+        k => !users.list.some(u => u.ns && k.startsWith(KEY_ROOT + u.ns)) && k !== USERS_KEY && k !== LANG_KEY,
+      );
+      assert(!users.list.includes(ana) && !plain.length, 'no plain keys left: ' + plain);
+      assert(!sessionStorage.getItem('actionplan.syncToken'), 'nor her token');
+      assert(keysText(bor) === borKeys2 && localStorage.getItem(LANG_KEY) === lang, 'Bor and the language untouched');
+      eq(
+        readUsers().list.map(u => u.id),
+        users.list.map(u => u.id),
+        'stored list matches',
+      );
+      // A guest is never offered for removal.
+      assert(!removeBtn(guest), 'no remove for the guest');
+    },
+  );
 
-  await step('users: linked before users existed – learnt from a token still valid, never another user\'s account', async () => {
-    fakeGoogle();
-    const legacy = addUser(); legacy.account = { id: '', email: '' }; saveUsers();
-    enterUser(legacy.id);
-    G.pick = 'C'; drive.keep(await drive.request('', '')); // a token from before the update
-    const reqs = G.requests.length;
-    await syncNow(false); await settle();
-    eq(legacy.account, { id: 'perm-C', email: 'cene@example.com' }, 'learnt from the token, without a popup');
-    assert(G.requests.length === reqs && syncState.status === 'synced', 'no popup, synced');
-    // Another such user whose token is for Bor, who has a user here: refused, the token dropped, Bor's Drive untouched.
-    const twin = addUser(); twin.account = { id: '', email: '' }; saveUsers();
-    enterUser(twin.id);
-    G.pick = 'B'; drive.keep(await drive.request('', ''));
-    const bFile = fileText('perm-B');
-    await syncNow(false); await settle();
-    eq(syncState.status, 'account', 'refused');
-    eq($('#syncBtn').title, t('sync.status.accountTaken'), 'says the account is someone else\'s here');
-    assert(!twin.account.id && !drive.token && !sessionStorage.getItem(userKey('actionplan.syncToken')) && fileText('perm-B') === bFile, 'not taken, token dropped, nothing synced');
-    await syncNow(true); await settle();
-    eq(G.requests.at(-1), { hint: '', prompt: 'select_account' }, 'renewing lets them choose the account');
-    eq(syncState.status, 'account', 'Bor again: still refused');
-    eq(users.list.filter(u => u.account?.id === 'perm-B').length, 1, 'one user per account');
-    removeUser(twin.id); removeUser(legacy.id);
-    assert(!users.list.includes(twin) && !users.list.includes(legacy), 'cleaned up');
-  });
+  await step(
+    "users: linked before users existed – learnt from a token still valid, never another user's account",
+    async () => {
+      fakeGoogle();
+      const legacy = addUser();
+      legacy.account = { id: '', email: '' };
+      saveUsers();
+      enterUser(legacy.id);
+      G.pick = 'C';
+      drive.keep(await drive.request('', '')); // a token from before the update
+      const reqs = G.requests.length;
+      await syncNow(false);
+      await settle();
+      eq(legacy.account, { id: 'perm-C', email: 'cene@example.com' }, 'learnt from the token, without a popup');
+      assert(G.requests.length === reqs && syncState.status === 'synced', 'no popup, synced');
+      // Another such user whose token is for Bor, who has a user here: refused, the token dropped, Bor's Drive untouched.
+      const twin = addUser();
+      twin.account = { id: '', email: '' };
+      saveUsers();
+      enterUser(twin.id);
+      G.pick = 'B';
+      drive.keep(await drive.request('', ''));
+      const bFile = fileText('perm-B');
+      await syncNow(false);
+      await settle();
+      eq(syncState.status, 'account', 'refused');
+      eq($('#syncBtn').title, t('sync.status.accountTaken'), "says the account is someone else's here");
+      assert(
+        !twin.account.id &&
+          !drive.token &&
+          !sessionStorage.getItem(userKey('actionplan.syncToken')) &&
+          fileText('perm-B') === bFile,
+        'not taken, token dropped, nothing synced',
+      );
+      await syncNow(true);
+      await settle();
+      eq(G.requests.at(-1), { hint: '', prompt: 'select_account' }, 'renewing lets them choose the account');
+      eq(syncState.status, 'account', 'Bor again: still refused');
+      eq(users.list.filter(u => u.account?.id === 'perm-B').length, 1, 'one user per account');
+      removeUser(twin.id);
+      removeUser(legacy.id);
+      assert(!users.list.includes(twin) && !users.list.includes(legacy), 'cleaned up');
+    },
+  );
 
   await step('users: a login whose user list cannot be stored changes nothing', async () => {
-    const me = currentUser(), count = users.list.length, stored = localStorage.getItem(USERS_KEY);
+    const me = currentUser(),
+      count = users.list.length,
+      stored = localStorage.getItem(USERS_KEY);
     assert(!me.account, 'from the guest');
     const set = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (k, v) { if (k === USERS_KEY) throw new DOMException('full', 'QuotaExceededError'); return set.call(this, k, v); };
+    Storage.prototype.setItem = function (k, v) {
+      if (k === USERS_KEY) throw new DOMException('full', 'QuotaExceededError');
+      return set.call(this, k, v);
+    };
     G.pick = 'C';
-    try { await logIn(); await settle(); } finally { Storage.prototype.setItem = set; }
-    assert(currentUser().id === me.id && !currentUser().account && users.list.length === count, 'the guest stays a guest, no user added');
-    assert(!users.list.some(u => u.account?.id === 'perm-C') && localStorage.getItem(USERS_KEY) === stored, 'the account is nobody\'s here');
+    try {
+      await logIn();
+      await settle();
+    } finally {
+      Storage.prototype.setItem = set;
+    }
+    assert(
+      currentUser().id === me.id && !currentUser().account && users.list.length === count,
+      'the guest stays a guest, no user added',
+    );
+    assert(
+      !users.list.some(u => u.account?.id === 'perm-C') && localStorage.getItem(USERS_KEY) === stored,
+      "the account is nobody's here",
+    );
     assert(!drive.token && $('#syncBtn').hidden, 'its token not kept, not signed in');
     eq($('#toast').textContent, t('err.storage'), 'says storage is full');
   });
@@ -7954,48 +13670,79 @@ window.moreTests = async ({ step, assert }) => {
     const me = currentUser();
     const other = JSON.parse(localStorage.getItem(USERS_KEY));
     other.list.find(u => u.account?.id === 'perm-B').name = 'Bor from tab 2';
-    other.list.push({ id: 'tab2user', ns: 'u.tab2user.', name: 'Dana', account: { id: 'perm-D', email: 'dana@example.com' } });
+    other.list.push({
+      id: 'tab2user',
+      ns: 'u.tab2user.',
+      name: 'Dana',
+      account: { id: 'perm-D', email: 'dana@example.com' },
+    });
     other.current = 'tab2user';
     localStorage.setItem(USERS_KEY, JSON.stringify(other));
     dispatchEvent(new StorageEvent('storage', { key: USERS_KEY }));
     assert(currentUser().id === me.id, 'this tab stays with its user');
-    assert(users.list.some(u => u.id === 'tab2user') && byAcct('B').name === 'Bor from tab 2', 'the new list is taken over');
+    assert(
+      users.list.some(u => u.id === 'tab2user') && byAcct('B').name === 'Bor from tab 2',
+      'the new list is taken over',
+    );
     saveUsers();
-    assert(JSON.parse(localStorage.getItem(USERS_KEY)).list.some(u => u.id === 'tab2user'), 'saving here keeps what the other tab added');
+    assert(
+      JSON.parse(localStorage.getItem(USERS_KEY)).list.some(u => u.id === 'tab2user'),
+      'saving here keeps what the other tab added',
+    );
     // The other tab removes the user open here: this tab drops their token and opens the guest.
     G.pick = 'B';
-    await logIn('bor@example.com', byAcct('B')); await settle();
-    const bor = currentUser(), tokenKey = `actionplan.${bor.ns}syncToken`;
+    await logIn('bor@example.com', byAcct('B'));
+    await settle();
+    const bor = currentUser(),
+      tokenKey = `actionplan.${bor.ns}syncToken`;
     assert(sessionStorage.getItem(tokenKey), 'Bor signed in here');
     const after = JSON.parse(localStorage.getItem(USERS_KEY));
     after.list = after.list.filter(u => u.id !== bor.id);
     localStorage.setItem(USERS_KEY, JSON.stringify(after));
     dispatchEvent(new StorageEvent('storage', { key: USERS_KEY }));
     assert(!currentUser().account && !users.list.some(u => u.id === bor.id), 'the guest opens');
-    assert(!sessionStorage.getItem(tokenKey) && !drive.token, 'Bor\'s token gone from this tab');
-    noLeak(memText(), ['B'], 'the guest\'s screen');
+    assert(!sessionStorage.getItem(tokenKey) && !drive.token, "Bor's token gone from this tab");
+    noLeak(memText(), ['B'], "the guest's screen");
     // Put Bor back (his data is still stored) for what follows.
-    users.list.push(bor); users.list = users.list.filter(u => u.id !== 'tab2user'); saveUsers();
+    users.list.push(bor);
+    users.list = users.list.filter(u => u.id !== 'tab2user');
+    saveUsers();
   });
 
   await step('users: a new user whose account already has plans in Drive gets no first-visit tour', async () => {
     G.accounts.D = { id: 'perm-D', email: 'dana@example.com', name: 'Dana' };
     G.files['perm-D'] = JSON.parse(fileText('perm-B'));
-    G.pick = 'B'; await logIn('bor@example.com', byAcct('B')); await settle();
+    G.pick = 'B';
+    await logIn('bor@example.com', byAcct('B'));
+    await settle();
     const before = offers;
-    G.pick = 'D'; await logIn(); await settle();
+    G.pick = 'D';
+    await logIn();
+    await settle();
     const dana = currentUser();
     assert(dana.account.id === 'perm-D' && dana !== byAcct('B'), 'a new user for Dana');
-    assert(SYNC_COLLS.some(c => allPlansData().some(p => p.data[c].length)), 'her plans came down');
+    assert(
+      SYNC_COLLS.some(c => allPlansData().some(p => p.data[c].length)),
+      'her plans came down',
+    );
     eq(offers, before, 'no tour offered');
     removeUser(dana.id);
   });
 
   // Back to a device nobody has signed in on, for anything after this.
-  users.list.filter(u => u.ns).forEach(u => { userKeys(u).forEach(k => localStorage.removeItem(k)); userKeys(u, sessionStorage).forEach(k => sessionStorage.removeItem(k)); });
+  users.list
+    .filter(u => u.ns)
+    .forEach(u => {
+      userKeys(u).forEach(k => localStorage.removeItem(k));
+      userKeys(u, sessionStorage).forEach(k => sessionStorage.removeItem(k));
+    });
   users.list = [{ id: 'local', ns: '', name: '', account: null }];
   enterUser('local');
   drive.forget();
-  theme = 'system'; prefs.set('theme', 'system'); applyTheme(); renderSync();
-  window.prompt = realPrompt; offerTour = realOffer;
+  theme = 'system';
+  prefs.set('theme', 'system');
+  applyTheme();
+  renderSync();
+  window.prompt = realPrompt;
+  offerTour = realOffer;
 };

@@ -9,7 +9,7 @@ import { initTutorial, isTourRunning, offerTour } from './tutorial/tour';
 import { decorateHelp } from './tutorial/help';
 import './store/users';
 import './store/visions';
-import { bootUser, enterUser } from './legacy/app.js';
+import { bootUser, enterUser } from './boot';
 import { onRendered, render } from './views/index';
 // Listen-only, like ui/forms/events (whose click listener must come first).
 import './views/events';

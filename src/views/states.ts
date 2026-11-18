@@ -1,17 +1,13 @@
-/** The current states view: state cards, and asking for a new value or amount from one. */
+/** The current states view: the state cards (ui/state-value.ts asks for a new value or amount). */
 import { db } from '../core/state';
-import { $, emptyState, esc, linkTag, matchesSearch } from '../ui/dom';
+import { emptyState, esc, linkTag, matchesSearch } from '../ui/dom';
 import { t, tp } from '../i18n/index';
-import { addEntry, entriesOf, isCumulative, recordMeasurement, stateDate, stateScale } from '../core/cumulative';
+import { entriesOf, isCumulative, stateDate, stateScale } from '../core/cumulative';
 import { searchBox } from './filters';
 import { relsFrom, relsTo } from '../core/relations';
-import { scaleText, totalText, withUnit } from '../ui/text';
+import { scaleText, totalText } from '../ui/text';
 import { fmtNum, isNum } from '../core/util';
 import { fmtRel } from '../core/dates';
-import { openAmountPop } from '../ui/amount-popover';
-import { save } from '../store/plans';
-import { toast } from '../ui/toast';
-import { render } from './index';
 
 export function renderStates() {
   if (!db.states.length) return emptyState(t('states.emptyTitle'), t('states.emptyText'), 'state');
@@ -50,54 +46,4 @@ export function renderStates() {
       </article>`;
       })
       .join('')}</div>`;
-}
-
-export function openStateAmount(id: string, anchor: HTMLElement) {
-  const s = db.states.find(x => x.id === id);
-  if (!s) return;
-  openAmountPop(
-    anchor,
-    {
-      title: t('cu.addTo', { name: s.title }),
-      fields: [{ label: t('cu.amount'), unit: s.unit }],
-      withDate: true,
-      okLabel: t('cu.add'),
-    },
-    ([n], date) => {
-      if (n === null) return anchor.focus();
-      addEntry(s, date, n);
-      save();
-      render();
-      toast(t('cu.added', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));
-      $(`[data-add-amount="${id}"]`)?.focus();
-    },
-  );
-}
-
-// A click on a state's card asks for a new measured value, dated today unless changed (one that adds
-// up asks for an amount instead); editing the state is in the card's menu.
-export function openStateValue(id: string, anchor: HTMLElement) {
-  const s = db.states.find(x => x.id === id);
-  if (!s) return;
-  if (isCumulative(s)) return openStateAmount(id, anchor);
-  const hint = isNum(s.value)
-    ? t('sv.latest', { value: withUnit(fmtNum(s.value), s.unit || ''), date: fmtRel(s.date) || '—' })
-    : '';
-  openAmountPop(
-    anchor,
-    {
-      title: t('sv.title', { name: s.title }),
-      hint,
-      fields: [{ label: t('f.value'), unit: s.unit }],
-      withDate: true,
-      okLabel: t('btn.save'),
-    },
-    ([n], date) => {
-      if (n === null) return;
-      recordMeasurement(s, date, String(n));
-      save();
-      render();
-      toast(t('sv.saved', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));
-    },
-  );
 }
