@@ -7,7 +7,15 @@ import './store/users';
 import './legacy/visions.js';
 import { initSync, renderSync, scheduleSync, setSyncPaused } from './legacy/drive.js';
 import './legacy/backup.js';
-import { bootUser, offerReached, render, renderInstall, renderLangSwitch, renderPlanSwitch, toast } from './legacy/app.js';
+import {
+  bootUser,
+  offerReached,
+  render,
+  renderInstall,
+  renderLangSwitch,
+  renderPlanSwitch,
+  toast,
+} from './legacy/app.js';
 import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { on } from './store/events';
