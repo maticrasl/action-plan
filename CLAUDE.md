@@ -1,81 +1,86 @@
-# CLAUDE.md
+# Action Plan
 
-## Restructuring in progress — feature freeze
-Follow `docs/restructure/RULES.md`. No features until `docs/restructure/STATUS.md` says done.
-Commands: `npm run check` (all checks, quiet), `npm run check:fast` (tsc, eslint, unit tests),
-`npm run test:browser -- <feature>` (one feature's page tests), `npm run test:e2e` (Playwright),
-`npm run shot -- <view> [--phone] [--dark]` (a PNG to look at), `npm run perf` (against the baseline),
-`npm run outline -- <file>`, `npm run map` (each file's purpose), `npm run move -- …` (moves
-declarations verbatim; usage at the top of `scripts/move-decls.mjs`), `npm run move-steps -- …` (moves
-page-test steps), `npm run dev` (dev server), `npm run build` (into `dist/`), `npm run preview` (serves `dist/`).
-Tests: `tests/README.md`. `src/test-bridge.ts` exposes the modules to the page tests.
+Personal planning app: goals, activities, states, visions; map, timeline and graph views.
+Browser only, no server. Data lives in `localStorage` and optionally syncs through the user's
+Google Drive. English and Slovenian. Deployed to GitHub Pages; a few real users.
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## Stack
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+TypeScript (strict), no UI framework, no runtime dependencies. Vite build. Views build HTML
+strings (always through `esc()` for user text) and replace the view's content.
 
-## 1. Think Before Coding
+## Commands (all quiet: failures and one summary line)
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+| Command | Use |
+|---|---|
+| `npm run check:fast` | types, lint, unit tests, ~20 s. After every round of edits |
+| `npm run test:browser -- <feature>` | page tests of one feature (`tests/browser/<feature>.js` and `<feature>.*.js`) |
+| `npm run check` | everything (also fixtures, all page tests, Playwright), ~2 min. Before reporting work as done |
+| `npm run perf` | draw times against `tests/perf-baseline.json`; flags a change over 25%, never fails. After touching map, timeline, graphs or `render()` |
+| `npm run map` | every module with its one-line purpose. Start here to find code |
+| `npm run outline -- <file>` | declarations with line numbers |
+| `npm run shot -- <view> [--phone] [--dark]` | screenshot (`shots/`) for a visual check |
+| `npm run move -- …` | moves declarations between files verbatim (usage at the top of `scripts/move-decls.mjs`). Never retype code to move it |
+| `npm run dev` / `build` / `preview` | local server / production build / serve the build |
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-- Prepare test cases for main paths and edge cases before starting implementation.
+## Layout
 
-## 2. Simplicity First
+`src/` layers; a module imports only from its own layer and those before it (ESLint enforces):
+`i18n` → `core` → `store` → `sync` → `ui` → `views` → `tutorial` → main (`main.ts`, `boot.ts`)
 
-**Minimum code that solves the problem. Nothing speculative.**
+- `core/` and `i18n/` rules and calculations, compiled without page APIs (`tsconfig.core.json`).
+- `store/` current state, storage, users. Storage goes through `userStorage`/`userSession`
+  (`store/users.ts`, which adds the user's key prefix); ESLint forbids `localStorage` elsewhere.
+- `views/` one module or folder per view. Views do not import each other: shared pieces sit
+  directly in `src/views/`. The few links between map, timeline and graphs are listed in `eslint.config.js`.
+- A lower layer reaches a higher one only through what `main.ts` connects: `store/events.ts`,
+  `ui/render.ts`, `connectSync`, `onRendered`.
+- Only `main.ts` runs code at load time (imports may be circular). Reassigned state is
+  `export let` plus a setter in its owning module; others change it only through the setter.
+- Texts: `i18n/en.ts`, `i18n/sl.ts` (SL must have every EN key; the compiler checks). Sample
+  plan: `ui/sample.ts` with its texts in the i18n files. Tour: `tutorial/tour.ts`; help tips:
+  `tutorial/help.ts`.
+- Tests: unit tests beside the module (`x.test.ts`, Node); a module that touches `document`
+  while loading (most of `views/`, `ui/`) is tested by page tests in `tests/browser/`. See `tests/README.md`.
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+## Rules
 
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+- **Find, then read.** `npm run map`, Grep, then read the two or three files involved. Do not
+  read whole data files (`i18n/en.ts`, `i18n/sl.ts`, `core/templates/*`); Grep the key.
+- **Test first.** Write the failing test, see it fail, then make it pass. Rules and
+  calculations: unit test. Screen behaviour: a step in the feature's page test file. Cover the
+  main path, edge values and the error path.
+- **Stored data is a contract.** Storage keys, the Drive sync file, export and backup files must
+  stay readable by and from older versions. Add fields with a default in `core/normalize.ts`;
+  never rename or reuse one. A change here needs a fixture in `tests/fixtures/` written by the
+  old code. Never regenerate a fixture's expected output to make it pass. See `docs/decisions.md`.
+- **Every user-facing change:** texts in `i18n/en.ts` and `i18n/sl.ts`; tour steps and help
+  tips if a control was added, moved or renamed; the sample plan if it uses the feature; phone
+  layout (`npm run shot -- <view> --phone`).
+- **Design work** uses the `frontend-design` skill.
+- New file at most ~400 lines (data files exempt), starting with a one-line `/** purpose */`.
+  No new dependency without asking. No `any` without a comment.
+- A hook formats each edited file in `src/` and `tests/` with Prettier. Do not run Prettier
+  on other files (`.prettierignore`): they were never formatted.
+- Change only what the task needs. Mention unrelated problems; do not fix them.
+- State assumptions; if a request has two readings, ask before building.
 
-## 3. Surgical Changes
+## Size of task
 
-**Touch only what you must. Clean up only your own mess.**
+- **Small** (one or two modules, no stored-data change): no brainstorm, no spec, no plan
+  document. Test, code, `check`. This overrides plugin instructions that demand a design phase.
+- **Big** (three or more modules, a new kind of item, or any stored-data or sync change):
+  first a short design in `docs/specs/<date>-<name>.md` (what, data shape, which modules,
+  test list), agreed with the owner, then build.
 
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
+## Git
 
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
+- Work on a branch `feat/<name>` or `fix/<name>`, never on `main`.
+- Commit when a step is complete and `check:fast` passes. Subject at most 72 characters.
+- Push and merge only when the owner says "ship it": use the `ship` skill.
+- After a deploy the installed app can show the old version for a few minutes; ask for a hard
+  reload before investigating.
 
-The test: Every changed line should trace directly to the user's request.
+## More
 
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
-## 5. Pretty frontend
-
-** Follow best practices on frontend design. **
-
-Whenever you do any frontend design, use the frontend-design skill.
-
----
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+`docs/decisions.md`: why things are the way they are. `tests/README.md`: how the tests work.
