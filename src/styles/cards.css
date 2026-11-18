@@ -1,0 +1,85 @@
+/* ---------- Cards ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.card {
+  border-radius: var(--r-md);
+  padding: 18px 18px 16px; cursor: pointer; display: flex; flex-direction: column; gap: 10px;
+}
+/* Every item, as on the map: milk glass washed in its status colour (or its kind's), no edge, glowing from within –
+   brighter at the top, a soft band of its colour low inside – its side cut along the bottom and right; goals are
+   cut thicker. Hovered, it takes a little more of its colour. Cards and rows (every view but the timeline and the
+   map) keep only a hint of it: --mute scales every wash of colour. */
+.glass {
+  --side: color-mix(in srgb, color-mix(in srgb, var(--tint) calc(var(--glass-side-tint) * var(--mute, 1)), var(--glass-base)) calc(100% - var(--glass-dim)), #000);
+  --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side);
+  --depth: 3px;
+  --glow: 0 0 14px 3px color-mix(in srgb, var(--tint) 60%, transparent);
+  border: 0;
+  box-shadow: inset 0 1px 0 var(--glass-rim), inset 0 -14px 22px -14px color-mix(in srgb, var(--tint) calc(40% * var(--mute, 1)), transparent), var(--slab), var(--vg, 0 0 #0000);
+  background: linear-gradient(to bottom, var(--glass-spec), transparent 65%),
+    color-mix(in srgb, color-mix(in srgb, var(--tint) calc((var(--glass-tint) + var(--wash, 0%)) * var(--mute, 1)), var(--glass-base)) calc(var(--glass-alpha) * 100%), transparent);
+}
+:is(.card, .row).glass { --mute: .25; }
+.glass.goal { --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side), 4px 4px 0 var(--side), 5px 5px 0 var(--side); --depth: 5px; }
+:is(.glass, .node).state { --glass-tint: var(--glass-tint-state); }
+:is(.glass, .node).st-todo:not(.goal, .state), :is(.glass, .node).st-blocked { --glass-tint: var(--glass-tint-quiet); --glass-side-tint: var(--glass-side-quiet); }
+.glass:hover { --wash: 6%; }
+.card h3 { font-size: 18px; }
+.card .desc { color: var(--ink-2); font-size: 14.5px; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13.5px; color: var(--ink-2); align-items: center; }
+.meta strong { color: var(--ink); }
+
+/* Activity: a plain tile; status is shown by the check */
+.card.activity { padding: 14px 14px 12px; gap: 8px; }
+.card.activity h3 { font-size: 16px; font-weight: 500; letter-spacing: 0; }
+/* A long-press opens the card's menu, not a text selection or the browser's own menu. */
+@media (pointer: coarse) { [data-ctx-item] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } }
+/* "Show in …" from another view: the card glows briefly. */
+.card.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { from { box-shadow: inset 0 1px 0 var(--glass-rim), var(--slab), var(--glow); } }
+
+.tag {
+  display: inline-block; vertical-align: middle; padding: 2px 9px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 400; background: var(--surface-2); color: var(--ink-2);
+  white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+.tag[data-open] { cursor: pointer; }
+.tag[data-open]:hover { text-decoration: underline; }
+.tag.goal { background: var(--goal-soft); color: var(--goal); }
+.tag.state { background: var(--state-soft); color: var(--state); }
+.tag.activity { background: var(--surface-2); color: var(--ink); }
+.tag.ok { background: var(--fill-done); color: var(--ink); }
+.tag.warn { background: var(--fill-doing); color: var(--ink); }
+.tag.bad { background: var(--fill-late); color: var(--ink); }
+/* On cards, which keep only a hint of their colour, a status tag is the grey chip with a faint wash of its status. */
+.glass .tag.ok { background: color-mix(in srgb, var(--ok) 14%, var(--surface-2)); }
+.glass .tag.warn { background: color-mix(in srgb, var(--warn) 18%, var(--surface-2)); }
+.glass .tag.bad { background: color-mix(in srgb, var(--bad) 12%, var(--surface-2)); }
+
+.progress { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.progress > i { display: block; height: 100%; background: var(--ok); border-radius: 99px; }
+.progress-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.progress-row .progress { flex: 1; }
+
+/* Goal progress, as on the map's boxes: a fine rounded track in a see-through ink, the part walked in green,
+   a small light knob where you are now. */
+.trail { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
+.trail-line { position: relative; height: 4px; margin: 0 6px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.trail-line > i { position: absolute; inset: 0 auto 0 0; background: var(--ok); border-radius: 4px; }
+.trail-line .blaze {
+  position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%;
+  background: var(--glass-base); border: 3px solid var(--ok); box-sizing: border-box;
+}
+.trail-ends { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--ink-3); }
+.trail-ends strong { color: var(--ink); font-size: 13px; }
+
+/* SMART badge */
+.smart { display: inline-flex; gap: 2px; flex: none; }
+.smart b {
+  width: 20px; height: 22px; display: grid; place-items: center; border-radius: 4px;
+  font-size: 12px; font-weight: 600; color: var(--ink-3); background: var(--surface-2);
+}
+.smart b.on { background: var(--goal-soft); color: var(--goal); }
+
+.links { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+

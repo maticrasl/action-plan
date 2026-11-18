@@ -50,9 +50,15 @@ const TEST_FILES: Record<string, string> = {
   'tests/perf.js': 'tests/perf.js',
   'tests/fixture-pre.js': 'tests/fixtures/fixture-pre.js',
   'tests/fixture-page.js': 'tests/fixtures/fixture-page.js',
-  // Tests render parts of the app in an iframe that links this path.
-  'css/styles.css': 'src/styles/styles.css',
 };
+
+// Tests render parts of the app in an iframe that links css/styles.css: the files src/styles/index.css
+// imports, joined in its order.
+function stylesheet(): string {
+  const dir = join(root, 'src', 'styles');
+  const files = [...readFileSync(join(dir, 'index.css'), 'utf8').matchAll(/^@import '\.\/(.+)';/gm)].map(m => m[1]);
+  return files.map(f => readFileSync(join(dir, f), 'utf8')).join('');
+}
 
 function testPages(): Plugin {
   return {
@@ -76,6 +82,7 @@ function testPages(): Plugin {
       for (const [fileName, from] of Object.entries(TEST_FILES)) {
         this.emitFile({ type: 'asset', fileName, source: readFileSync(join(root, from)) });
       }
+      this.emitFile({ type: 'asset', fileName: 'css/styles.css', source: stylesheet() });
     },
   };
 }

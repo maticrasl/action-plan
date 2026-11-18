@@ -1,0 +1,69 @@
+/* ---------- Shell ---------- */
+.app { display: grid; grid-template-columns: 216px 1fr; min-height: 100vh; }
+.nav {
+  background: var(--nav-bg); color: var(--nav-ink);
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 22px 12px 18px; position: sticky; top: 0; height: 100vh;
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 10px 26px; font-weight: 600; font-size: 18px; letter-spacing: -.01em; }
+.blaze-mark { width: 26px; height: 26px; }
+.blaze-mark circle:first-child { fill: var(--blaze); }
+.blaze-mark circle:last-child { fill: #fff; }
+
+/* Plan switcher */
+.plan-switch { display: flex; align-items: flex-end; gap: 4px; }
+.plan-label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 400; color: var(--ink-2); }
+.plan-actions { display: flex; }
+.plan-actions .icon-btn { width: 32px; height: 32px; }
+.plan-actions svg { fill: none !important; stroke-width: 2 !important; stroke-linecap: round; stroke-linejoin: round; width: 18px; height: 18px; }
+.nav .plan-switch { padding: 0 6px 18px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.1); flex-wrap: wrap; }
+.nav .plan-label { color: inherit; opacity: .9; flex-basis: 100%; }
+.nav .plan-actions { margin-left: auto; }
+.nav .plan-label select { background: rgba(255,255,255,.08); color: var(--nav-ink); border-color: rgba(255,255,255,.18); font-weight: 500; }
+.nav .plan-label select option { color: var(--ink); background: var(--surface); }
+.nav .plan-actions .icon-btn { color: var(--nav-ink); opacity: .7; }
+.nav .plan-actions .icon-btn:hover { opacity: 1; background: rgba(255,255,255,.08); }
+.title-block { min-width: 0; }
+.plan-name { display: none; position: relative; max-width: 100%; margin: 0 0 0 -6px; }
+.plan-name select {
+  appearance: none; -webkit-appearance: none; width: auto; max-width: 100%; min-height: 32px; padding: 4px 26px 4px 6px;
+  border: 0; border-radius: var(--r-md); background: none; color: var(--ink-2); box-shadow: none;
+  font: inherit; font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+}
+.plan-name select:hover, .plan-name select:focus-visible { background: var(--surface-2); color: var(--ink); }
+.plan-name svg {
+  position: absolute; right: 6px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); pointer-events: none;
+  fill: none; stroke: var(--ink-2); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 9px 12px;
+  border: 0; background: none; border-radius: var(--r-md); cursor: pointer; text-align: left;
+  color: inherit; opacity: .72; font-weight: 400;
+}
+.nav-item svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-item:hover { opacity: 1; background: rgba(255,255,255,.06); }
+.nav-item.active { opacity: 1; background: rgba(255,255,255,.1); box-shadow: inset 3px 0 0 var(--blaze); }
+.nav-more, .nav-sheet { display: none; }
+.nav-footer { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.1); }
+
+.main { min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 22px 36px 14px; position: sticky; top: 0; z-index: 5;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+.topbar h1 { font-size: 32px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
+.view { padding: 6px 36px 56px; max-width: 1240px; width: 100%; overflow-x: clip; }
+/* The map and the timeline use the whole width of the screen. */
+.view[data-view="map"], .view[data-view="timeline"] { max-width: none; }
+
+.lang-switch { display: flex; padding: 3px; border-radius: calc(var(--r-sm) + 3px); background: var(--surface-2); }
+.lang-switch button {
+  border: 0; background: none; padding: 4px 10px; border-radius: var(--r-sm);
+  font-size: 12.5px; font-weight: 500; letter-spacing: .03em; cursor: pointer; color: var(--ink-2);
+}
+.lang-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+

@@ -1,0 +1,62 @@
+/* ---------- Visions ---------- */
+:root { --vglow: var(--vglow-silver); }
+:root.purpose { --vglow: var(--vglow-gold); }
+/* With a Purpose the blaze at the top left turns gold (the app's icon stays as it is). */
+:root.purpose .brand .blaze-mark circle:first-child, .blaze-mark.gold circle:first-child { fill: var(--purpose); }
+:root.purpose .brand .blaze-mark circle:last-child, .blaze-mark.gold circle:last-child { fill: #FFF4D2; }
+/* Items working toward a vision: a faint, wide glow (wider and fainter than a selected box's). */
+/* Only round the item itself: what is nested in a glowing card (or row) does not glow again. */
+.glass { --vg: 0 0 #0000; }
+/* Cards and rows: the glow is a layer behind every item in the view, so it never lies over one, its own or a neighbour's. */
+.glass.vglow:not(.tl-bar, .tl-milestone) { position: relative; }
+.glass.vglow:not(.tl-bar, .tl-milestone)::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; box-shadow: 0 0 26px 6px var(--vglow); pointer-events: none; }
+#view, .col { isolation: isolate; }
+/* On the timeline the row is marked; its bar glows, kept within the row, and labels stay on top of every bar's glow. */
+.tl-row.vglow :is(.tl-bar, .tl-milestone).glass { --vg: 0 0 12px 2px var(--vglow); }
+.tl-bar-label { z-index: 2; }
+.vglow-halos { filter: url(#vision-glow); pointer-events: none; }
+.node-vglow { fill: var(--vglow); }
+/* Many lines overlap, so their layer is a little lighter than the boxes' glow. */
+.vglow-lines { filter: url(#vision-line-glow); opacity: .75; pointer-events: none; }
+.edge-vglow { fill: none; stroke: var(--vglow); stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; }
+.vis-note { margin: 0 0 12px; }
+.vis-status { background: color-mix(in srgb, var(--vision) 22%, var(--surface)); border-radius: var(--r-md); padding: 12px 16px; margin: 0 0 18px; color: var(--ink-2); display: flex; flex-direction: column; gap: 4px; }
+.vis-status p { margin: 0; }
+.vis-status.found { background: color-mix(in srgb, var(--purpose) 24%, var(--surface)); color: var(--ink); font-weight: 500; box-shadow: 0 0 26px 4px var(--vglow); }
+.vision-tree { display: flex; flex-direction: column; gap: 16px; max-width: 820px; }
+/* A vision card is a cloud: its silver ground is blurred at the edge, the text over it stays sharp. */
+.card.vision { --vc: var(--vision); position: relative; isolation: isolate; background: none; border: 0; box-shadow: none; margin-left: min(calc(var(--level, 0) * 32px), 30%); }
+.card.vision::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: var(--r-md); filter: blur(7px);
+  background: radial-gradient(120% 150% at 25% 0, color-mix(in srgb, #fff var(--vision-sheen), var(--vc)), var(--vc) 75%); }
+.card.vision::after { content: ''; position: absolute; inset: -10px; z-index: -2; border-radius: 26px; background: var(--vc); opacity: .32; filter: blur(16px); }
+.card.vision.reached { --vc: var(--vision-lit); }
+.card.vision.reached::after { opacity: .5; }
+.card.vision.purpose { --vc: var(--purpose); color: var(--on-purpose); }
+.card.vision.purpose :is(.desc, .meta) { color: color-mix(in srgb, var(--on-purpose) 75%, transparent); }
+.card.vision:hover::before { filter: blur(7px) brightness(1.04); }
+.card.vision .desc { color: color-mix(in srgb, var(--ink-2) 60%, var(--ink)); -webkit-line-clamp: 3; }
+.card.vision .meta { color: color-mix(in srgb, var(--ink-2) 60%, var(--ink)); }
+.tag.vision { background: color-mix(in srgb, var(--vision) 55%, var(--surface)); color: var(--ink); }
+.tag.purpose { background: var(--purpose); color: #2B1F00; font-weight: 500; }
+.tag.other-plan { opacity: .8; }
+/* On the map: no glass slab, a cloud in the box's shape. */
+.band.vision { fill: color-mix(in srgb, var(--vision) 7%, var(--bg)); }
+.col-label.vision { fill: color-mix(in srgb, var(--vision-ink) 60%, var(--ink)); stroke: color-mix(in srgb, var(--vision) 7%, var(--bg)); }
+.node.vision { --vc: var(--vision); --tint: var(--vision-ink); }
+.node.vision.reached { --vc: var(--vision-lit); }
+.node.vision.purpose { --vc: var(--purpose); --tint: var(--purpose); }
+.node.vision rect.cloud { fill: var(--vc); fill-opacity: 1; }
+.node.vision rect.cloud-haze { fill: var(--vc); fill-opacity: .45; }
+.node.vision rect.cloud-sheen { fill: url(#vision-sheen); }
+.vision-sheen-top { stop-color: #fff; stop-opacity: var(--vision-sheen); }
+.node.vision.purpose text { fill: var(--on-purpose); }
+.node.vision.reached rect.cloud-haze { fill-opacity: .7; }
+.node.vision:hover rect.cloud { fill: color-mix(in srgb, #fff 12%, var(--vc)); }
+.node.vision text:not(.sub) { font-weight: 500; }
+/* The Purpose popup. */
+.purpose-dlg { width: min(440px, calc(100vw - 32px)); }
+.purpose-body { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 30px 26px 24px; }
+.purpose-body .blaze-mark { width: 64px; height: 64px; filter: drop-shadow(0 0 18px var(--vglow-gold)); }
+.purpose-body h2 { font-size: 22px; }
+.purpose-body p { margin: 0 0 6px; color: var(--ink-2); }
+

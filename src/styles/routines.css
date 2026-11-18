@@ -1,0 +1,71 @@
+/* ---------- Routines ---------- */
+.routines { margin-bottom: 18px; }
+.routines-title { font-size: 15px; padding: 0 6px 10px; display: flex; align-items: center; gap: 8px; }
+.routines-title::before { content: "⟳"; color: var(--goal); font-size: 16px; }
+.routines-title span { color: var(--ink-3); font-weight: 400; }
+.routine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 12px; }
+/* The title keeps the width it needs, up to 65%; the schedule tag gets the rest and ends in an
+   ellipsis when it is still too long (the full text is its tooltip). */
+.rt-sched { flex: 0 1 auto; min-width: 0; }
+.routine > .card-head h3 { flex: none; max-width: 65%; }
+.rt-nav { display: flex; align-items: center; gap: 2px; }
+.rt-nav .rt-week { flex: 1; min-width: 0; }
+.rt-arrow { width: 28px; height: 34px; flex: none; border-radius: var(--r-sm); }
+.rt-arrow svg { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; width: 18px; height: 18px; }
+.rt-arrow:disabled { opacity: .3; cursor: default; background: transparent; }
+.rt-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.rt-day {
+  height: 34px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--surface);
+  color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; display: grid; place-items: center;
+}
+/* Done: filled green. Due: outlined blue (filled pale blue while it is today's to do). Missed: hatched,
+   in quiet greys – a miss is shown, not alarmed. Not due: a faint dotted outline. Today: ringed. */
+.rt-day.due { border: 2px solid var(--goal); color: var(--ink); }
+.rt-day.rest { border: 1px dotted var(--line-strong); background: transparent; color: var(--ink-3); font-weight: 400; }
+.rt-day.missed { border: 2px dashed var(--ink-3); color: var(--ink-3); text-decoration: line-through; background: repeating-linear-gradient(135deg, var(--sunken) 0 3px, transparent 3px 7px); }
+.rt-day.on { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+/* Made up: a missed day that a tick on another day stood in for – outlined in green, not filled. */
+.rt-day.made { border: 2px solid var(--ok); color: var(--ok); background: var(--fill-done); }
+.rt-day.due.today:not(.on) { background: var(--goal-soft); color: var(--goal); }
+.rt-day.today { outline: 2px solid var(--ink); outline-offset: 2px; }
+.rt-day:hover:not([aria-disabled="true"]) { border-color: var(--ink-2); }
+.rt-day.on:hover:not([aria-disabled="true"]) { filter: brightness(1.08); border-color: var(--ok); }
+.rt-day[aria-disabled="true"] { opacity: .35; cursor: default; }
+/* Days still to come stay readable when they are due, so the week ahead shows. */
+.rt-day.due[aria-disabled="true"] { opacity: .75; }
+.rt-week { padding: 3px 0; }
+/* On glass, light grey edges and faded days vanish into the tint: edges take the card's colour, deepened toward ink,
+   the days still to come fade less, and the days off are a pale pane rather than nothing. */
+.glass { --on-glass-edge: color-mix(in srgb, var(--tint) 50%, var(--ink-2)); }
+.glass .rt-day:not(.due, .on, .made) { border-color: var(--on-glass-edge); }
+.glass .rt-day.rest { border-color: color-mix(in srgb, var(--on-glass-edge) 70%, transparent); background: color-mix(in srgb, var(--surface) 40%, transparent); color: var(--ink-2); }
+.glass .rt-day.missed { border-color: var(--on-glass-edge); color: var(--ink-2); }
+.glass .rt-day[aria-disabled="true"] { opacity: .6; }
+.glass .rt-day.due[aria-disabled="true"] { opacity: .85; }
+.glass .progress { background: color-mix(in srgb, var(--ink) 13%, transparent); }
+.rt-legend { margin: -2px 0 12px; font-size: 13px; gap: 6px 14px; }
+.rt-swatch { display: inline-block; width: 18px; height: 14px; box-sizing: border-box; border-radius: 4px; cursor: default; }
+.rt-swatch.today { outline-offset: 1px; border-color: var(--line-strong); background: var(--surface); }
+.rt-today.warn { font-weight: 500; }
+.routine-row .meta { font-size: 12.5px; margin-left: 6px; }
+.rep-nth { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
+.repeat-box { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; border: 1px dashed var(--line-strong); border-radius: var(--r-md); }
+.day-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.day-toggle { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 50%; }
+.rep-custom { display: flex; flex-direction: column; gap: 12px; }
+.rep-every { display: flex; gap: 8px; }
+.rep-every input { width: 72px; flex: none; }
+.rep-every select { width: auto; flex: none; }
+.rep-ends { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rep-ends legend { padding: 0; margin-bottom: 6px; font-size: 13.5px; font-weight: 500; }
+.rep-radio { display: inline-flex; align-items: center; gap: 8px; min-width: 76px; font-size: 14px; cursor: pointer; }
+.field > .rep-radio { font-weight: 400; font-size: 14px; }
+.field.rep-end { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rep-end .date-field { width: 170px; }
+.rep-end input[name="count"] { width: 72px; }
+.rep-end .err { flex-basis: 100%; }
+.day-toggle[aria-pressed="true"] { background: var(--goal); border-color: var(--goal); color: var(--surface); }
+.rt-stats { margin: 0; }
+.rep-check { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
+.rep-check input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--goal); }
+

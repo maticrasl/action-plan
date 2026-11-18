@@ -1,0 +1,20 @@
+/* The app's styles, in this order: later rules win, so the order is part of the design. */
+@import './base.css';
+@import './shell.css';
+@import './controls.css';
+@import './cards.css';
+@import './overview.css';
+@import './board.css';
+@import './routines.css';
+@import './map.css';
+@import './visions.css';
+@import './timeline.css';
+@import './dialogs.css';
+@import './responsive.css';
+@import './tour.css';
+@import './help.css';
+@import './timeline-lines.css';
+@import './graphs.css';
+@import './sidebar.css';
+@import './settings.css';
+@import './sync.css';
