@@ -9,7 +9,7 @@
 | 04 store and sync | merged (PR #10) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-04` |
 | 05 shared UI | merged (PR #12) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-05` |
 | 06 views and tutorial | merged (PR #14) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-06` |
-| 07 map, timeline, graphs | done on `restructure/phase-07` (both sessions), not pushed; waits for the owner check and "ship it" |
+| 07 map, timeline, graphs | merged (PR #16) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-07` |
 | 08 close-out | not started |
 | 09 tests | not started |
 | 10 workflow | not started |
