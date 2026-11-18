@@ -9,7 +9,10 @@ import { initTutorial, isTourRunning, offerTour } from './tutorial/tour';
 import { decorateHelp } from './tutorial/help';
 import './store/users';
 import './store/visions';
-import { bootUser, enterUser, onRendered, render } from './legacy/app.js';
+import { bootUser, enterUser } from './legacy/app.js';
+import { onRendered, render } from './views/index';
+// Listen-only, like ui/forms/events (whose click listener must come first).
+import './views/events';
 import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { on } from './store/events';
