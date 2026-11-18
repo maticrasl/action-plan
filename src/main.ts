@@ -1,7 +1,7 @@
 /** Boots the app: loads the modules in the old script order, then starts it. */
 import { setLang, t } from './i18n/index';
 import { applyStaticI18n, detectLang } from './ui/i18n-dom';
-import './legacy/config.js';
+import './sync/config';
 import { initTutorial, offerTour, tour } from './legacy/tutorial.js';
 import './store/users';
 import './store/visions';

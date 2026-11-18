@@ -1,5 +1,4 @@
 /** Google Drive sync: sign-in, the sync file, merging and status. */
-import { GOOGLE_CLIENT_ID } from './config.js';
 import { offerTour } from './tutorial.js';
 import { $, enterUser, esc, toast } from './app.js';
 import { I18N, locale, t } from '../i18n/index';
@@ -15,6 +14,7 @@ import { prefs } from '../store/prefs';
 import { plans, plansVersion, setPlans, setPlansVersion } from '../store/state';
 import { PLANS_KEY, planKey, readPlan } from '../store/plans';
 import { applyVisions } from '../store/visions';
+import { GOOGLE_CLIENT_ID } from '../sync/config';
 
 /* =========================================================
    Google Drive sync
