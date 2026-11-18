@@ -1,4 +1,4 @@
-/** The app: data model, storage, views, forms and event wiring. */
+/** The map, timeline and graphs views, their gestures and menus, and boot (phase 7 moves the views). */
 import { locale, t, tp } from '../i18n/index';
 import { clamp, fmtNum, isNum } from '../core/util';
 import { fmtDate, fmtDay, fmtRel, fmtSpan, today } from '../core/dates';
@@ -36,14 +36,6 @@ import { GOAL_FILTERS, categoryChips, goalSelect, inCategory, scopeFor, searchBo
 import { fmtRange, toggleCheckin } from '../views/routines';
 import { openStateValue } from '../views/states';
 import { VIEWS, render } from '../views/index';
-
-/* ---------- Relations ---------- */
-
-/* =========================================================
-   Views
-   ========================================================= */
-
-/* ---------- Goal categories & shared filters ---------- */
 
 /* ---------- Relationship map ---------- */
 
