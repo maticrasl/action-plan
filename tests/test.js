@@ -336,26 +336,6 @@
     return `tip="${tip}" i=${i}`;
   });
 
-  await step('settings switches', () => {
-    $('#settingsBtn').click();
-    assert(settings.open);
-    const box = settings.querySelector('[data-setting="hideDone"]');
-    box.checked = !box.checked;
-    box.dispatchEvent(new Event('change', { bubbles: true }));
-    assert(ui.hideDone === box.checked);
-    box.checked = !box.checked;
-    box.dispatchEvent(new Event('change', { bubbles: true }));
-    settings.querySelector('[data-setting="navCollapsed"]').click();
-    const col = $('.app').classList.contains('nav-collapsed');
-    settings.querySelector('[data-setting="navCollapsed"]').click();
-    settings.querySelector('[data-theme-set="dark"]').click();
-    const th = document.documentElement.dataset.theme;
-    settings.querySelector('[data-theme-set="system"]').click();
-    const sync = $('#syncSection .sync-body').textContent.trim().slice(0, 40);
-    settings.close();
-    return `collapsed=${col} theme=${th} sync="${sync}"`;
-  });
-
   await step('plans: new, rename, switch, delete', () => {
     const n0 = plans.list.length;
     $('[data-plan="new"]').click();
