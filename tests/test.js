@@ -19,18 +19,6 @@
       .join(' '),
   );
 
-  await step('i18n en/sl key parity', () => {
-    const en = Object.keys(I18N.en.strings).sort(),
-      sl = Object.keys(I18N.sl.strings).sort();
-    const miss = en.filter(k => !sl.includes(k)).concat(sl.filter(k => !en.includes(k)).map(k => 'sl-only:' + k));
-    assert(!miss.length, miss.join(','));
-    assert(
-      I18N.en.sample.goals.length === I18N.sl.sample.goals.length &&
-        I18N.en.sample.activities.length === I18N.sl.sample.activities.length,
-    );
-    return `${en.length} keys each`;
-  });
-
   await step('load sample plan', () => {
     loadSample();
     assert(db.goals.length === 12 && db.activities.length === 25 && db.states.length === 7);
@@ -241,21 +229,6 @@
     return err;
   });
 
-  await step('canRelate rules', () => {
-    const [g1, g2] = db.goals,
-      [a1] = db.activities,
-      [s1] = db.states;
-    return [
-      canRelate(g1.id, g1.id, 'subgoal'),
-      canRelate(s1.id, g1.id, 'contributes'),
-      canRelate(a1.id, s1.id, 'depends'),
-      canRelate(a1.id, g1.id, 'nope'),
-      canRelate(g2.id, g1.id, 'depends'),
-    ]
-      .map(x => x || 'ok')
-      .join(' | ');
-  });
-
   await step('cycle status + drag-free status changes', () => {
     setView('activities');
     const a = db.activities.find(x => x.title === 'Child act');
@@ -447,45 +420,6 @@
     importJson(new File(['not json'], 'bad.json'));
     await new Promise(r => setTimeout(r, 50));
     return `${currentPlan().name} toast="${$('#toast').textContent}"`;
-  });
-
-  await step('change tracking + merge', () => {
-    const base = normalize(sampleData());
-    const a = JSON.parse(JSON.stringify(base)),
-      b = JSON.parse(JSON.stringify(base));
-    a.goals[0].title = 'Edited on A';
-    a.goals[0].updatedAt = '2099-01-01T00:00:00.000Z';
-    b.deleted[b.goals[1].id] = '2099-01-01T00:00:00.000Z';
-    b.goals.splice(1, 1);
-    b.states[0].history.push({ date: '2099-05-05', value: '99' });
-    b.states[0].updatedAt = '2098-01-01T00:00:00.000Z';
-    a.relations.push({
-      id: 'dup',
-      from: a.relations[0].from,
-      to: a.relations[0].to,
-      type: a.relations[0].type,
-      updatedAt: '2099-01-01T00:00:00.000Z',
-    });
-    const m = mergePlans(a, b);
-    assert(m.goals[0].title === 'Edited on A');
-    assert(m.goals.length === a.goals.length - 1);
-    assert(m.states[0].value === '99');
-    const sA = {
-      plans: { list: [{ id: 'p1', name: 'One', updatedAt: '2099-01-01' }], deleted: { p2: '2099-01-01' } },
-      data: { p1: a },
-    };
-    const sB = {
-      plans: {
-        list: [
-          { id: 'p1', name: 'Uno' },
-          { id: 'p2', name: 'Two' },
-        ],
-        deleted: {},
-      },
-      data: { p1: b, p2: emptyDb() },
-    };
-    const ms = mergeStores(sA, sB);
-    return `goals=${m.goals.length} rels=${m.relations.length} deleted=${Object.keys(m.deleted).length} plans=${ms.plans.list.map(p => p.name)} plansDeleted=${Object.keys(ms.plans.deleted)}`;
   });
 
   await step('sync with a fake Drive', async () => {

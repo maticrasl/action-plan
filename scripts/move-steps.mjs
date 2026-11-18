@@ -1,5 +1,6 @@
 /** Moves page-test steps between suite files byte for byte, and lists what each statement of a suite uses. */
 // usage: npm run move-steps -- <from> <to> <what> [<what> …]
+//        npm run move-steps -- --drop <from> <what> [<what> …]   (a step replaced by unit tests)
 //        npm run move-steps -- --list <file>
 //   <what>     a step, by the start of its name; or line:<n>, the suite statement whose code starts on line n;
 //              or <a>..<b>, every statement from the one <a> names to the one <b> names
@@ -98,7 +99,9 @@ function move(from, to, whats, top) {
   const src = suiteOf(from);
   const picked = [...new Set(whats.flatMap(w => pick(src.chunks, w)))].sort((a, b) => a - b);
   const moved = picked.map(i => src.chunks[i]);
-  if (top) {
+  if (to === null) {
+    // --drop: nowhere to write
+  } else if (top) {
     const indent = /^[ \t]*/.exec(src.chunks[0].text)[0];
     const dedent = t => t.replace(new RegExp(`^${indent}`, 'gm'), '');
     const { text } = readText(to);
@@ -122,12 +125,13 @@ function move(from, to, whats, top) {
     text = text.slice(0, c.start) + text.slice(end);
   }
   writeText(from, text);
-  for (const c of moved) console.log(`moved ${from}:${c.from}-${c.to} ${c.step !== null ? `step ${c.step}` : declNames(c.stmt).join(', ') || 'code'}`);
+  for (const c of moved) console.log(`${to === null ? 'dropped' : 'moved'} ${from}:${c.from}-${c.to} ${c.step !== null ? `step ${c.step}` : declNames(c.stmt).join(', ') || 'code'}`);
 }
 
 const top = args.includes('--top');
 if (top) args.splice(args.indexOf('--top'), 1);
 if (args[0] === '--list') list(args[1]);
+else if (args[0] === '--drop' && args.length >= 3) move(args[1], null, args.slice(2), false);
 else if (args.length >= 3) move(args[0], args[1], args.slice(2), top);
 else {
   console.error('usage: npm run move-steps -- <from> <to> <what> [<what> …] | --list <file>');

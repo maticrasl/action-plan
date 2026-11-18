@@ -1,20 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { UserList } from '../core/model';
 import { LANG_KEY, USERS_KEY, readUsers, setUsers, userKey, userKeys, userStorage } from './users';
-
-// localStorage in memory, as much of it as users.ts uses.
-function memoryStorage() {
-  const map = new Map<string, string>();
-  return {
-    getItem: (k: string) => map.get(k) ?? null,
-    setItem: (k: string, v: string) => void map.set(k, String(v)),
-    removeItem: (k: string) => void map.delete(k),
-    key: (i: number) => [...map.keys()][i] ?? null,
-    get length() {
-      return map.size;
-    },
-  };
-}
+import { memoryStorage } from './memory-storage';
 
 const twoUsers = (current: string): UserList => ({
   current,
