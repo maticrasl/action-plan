@@ -80,7 +80,10 @@ export interface Goal extends Item {
   baseline?: string;
   current?: string;
   target?: string;
+  // The old answer to "Why is this realistic?"; new goals ask for the obstacle and the plan for it.
   achievable?: string;
+  obstacle?: string;
+  ifThen?: string;
   relevant?: string;
   startDate?: ISODate;
   deadline?: ISODate;

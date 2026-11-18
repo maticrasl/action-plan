@@ -209,8 +209,8 @@ suite(async () => {
     fresh('Glow');
     setAside();
     const A = mkV('Purposeful life');
-    const g = mk('goal', { title: 'Lead', visions: [A.id], deadline: d(20), startDate: d(-5) });
-    const u = mk('goal', { title: 'Loose', deadline: d(25), startDate: d(-5) });
+    const g = mk('goal', { ...SMART, title: 'Lead', visions: [A.id], deadline: d(20), startDate: d(-5) });
+    const u = mk('goal', { ...SMART, title: 'Loose', deadline: d(25), startDate: d(-5) });
     const a = mk('activity', { title: 'Practise', status: 'doing', dueDate: d(0), startDate: d(-2) });
     const r = mk('activity', {
       title: 'Daily habit',
@@ -347,6 +347,74 @@ suite(async () => {
       !document.querySelector('#view .vglow') && !document.documentElement.classList.contains('purpose'),
       'no visions: no glow',
     );
+    putBack();
+    deletePlan(plans.current);
+  });
+  await step('golden glow: only while every active goal is SMART; the Purpose card stays gold', () => {
+    clearVisions();
+    fresh('Golden');
+    setAside();
+    const here = plans.current;
+    const A = mkV('Golden life');
+    const g = mk('goal', { ...SMART, title: 'Finished goal', visions: [A.id], startDate: d(-5), deadline: d(30) });
+    visions.purposeFound = today(); // found before: no popup
+    save();
+    saveVisions();
+    setView('goals');
+    const root = document.documentElement;
+    const glow = () => getComputedStyle(root).getPropertyValue('--vglow').trim();
+    const halo = () => getComputedStyle($(`#view .card[data-ctx-item="${g.id}"]`), '::before').boxShadow;
+    const logo = () => getComputedStyle($('.brand .blaze-mark circle')).fill;
+    assert(root.classList.contains('purpose') && root.classList.contains('golden'), 'all SMART: golden');
+    const gold = { glow: glow(), halo: halo(), logo: logo() };
+    // An unfinished goal serving the Purpose.
+    const v = mk('goal', { title: 'Learn to cook', visions: [A.id], startDate: d(-1) });
+    save();
+    render();
+    assert(root.classList.contains('purpose') && !root.classList.contains('golden'), 'Purpose, but not golden');
+    assert(glow() !== gold.glow && halo() !== gold.halo, `the glow is silver: ${halo()}`);
+    assert(logo() !== gold.logo, `the blaze is not gold: ${logo()}`);
+    setView('visions');
+    assert(
+      $('#view .card.vision.purpose .tag.purpose') && $('#view .vis-status.found').textContent.includes(A.title),
+      'the Purpose card, its tag and the found line stay',
+    );
+    const line = $('#view .vis-vague');
+    assert(
+      line && line.textContent.includes('“Learn to cook”'),
+      'the Visions view names the goal: ' + line?.textContent,
+    );
+    line.querySelector(`[data-open="${v.id}"]`).click();
+    assert(modal.open && $('#f-title').value === 'Learn to cook', 'its name opens its form');
+    Object.entries({ ...SMART, deadline: d(40) }).forEach(([k, val]) => ($('#f-' + k).value = val));
+    submitForm();
+    assert(!modal.open && root.classList.contains('golden') && glow() === gold.glow, 'finished: gold again');
+    assert(!$('#view .vis-vague') && logo() === gold.logo, 'no line; the blaze is gold');
+    // Pausing an unfinished goal brings the gold back too.
+    const w = mk('goal', { title: 'Sleep better', visions: [A.id] });
+    save();
+    render();
+    assert(!root.classList.contains('golden'), 'another unfinished goal');
+    w.status = 'paused';
+    save();
+    render();
+    assert(root.classList.contains('golden'), 'paused: gold');
+    // An unfinished goal in a plan that is not open.
+    fresh('Golden other');
+    mk('goal', { title: 'Far vague', visions: [A.id] });
+    save();
+    openPlan(here);
+    setView('visions');
+    const far = $('#view .vis-vague');
+    assert(
+      !root.classList.contains('golden') &&
+        far?.textContent.includes(t('vis.goalInPlan', { goal: 'Far vague', plan: 'Golden other' })) &&
+        !far.querySelector('[data-open]'),
+      "another plan's goal takes the gold and is named with its plan: " + far?.textContent,
+    );
+    deletePlan(plans.list.find(p => p.name === 'Golden other').id);
+    openPlan(here);
+    clearVisions();
     putBack();
     deletePlan(plans.current);
   });

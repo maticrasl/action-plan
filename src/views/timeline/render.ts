@@ -42,6 +42,14 @@ export const TL = { ROW: 40, ZOOM: { week: 30, month: 8, quarter: 2.6 }, MIN: 1.
 export const endOf = (kind: string, item: Dated) => (kind === 'goal' ? item.deadline : item.dueDate);
 // A routine that runs a set number of times ends where its start puts it: only the whole bar moves.
 export const fixedEnd = (item: Entity['item']) => isRoutine(item) && !!item.repeat.count;
+// What dragging the selected bar does: move both dates, or only the start (a routine's end follows
+// its count; a goal without a deadline has no end).
+const dragHint = ({ kind, item }: Entity): TextKey =>
+  fixedEnd(item)
+    ? 'tl.dragHintMove'
+    : kind === 'goal' && !endOf(kind, item as Goal)
+      ? 'tl.dragHintOpen'
+      : 'tl.dragHint';
 // The grips at the ends of the selected bar reach a little past it, so even a thin bar has room to grab.
 export const tlGrip = (edge: string | undefined, left: number, width: number) => {
   const inner = Math.min(6, width / 4);
@@ -145,9 +153,11 @@ export function renderTimeline() {
         e = endOf(kind, item);
       const dateText = fmtSpan(s, e, true) || t('tl.noDates');
       let bar = `<span class="tl-nodates">${t('tl.noDates')}</span>`;
+      // A goal with a start and no deadline yet runs to today and fades out there; it has no end to drag.
+      const open = kind === 'goal' && !!s && !e;
       if (s || e) {
         const a = dayNum((s || e)!),
-          b = dayNum((e || s)!);
+          b = open ? Math.max(a, todayN) : dayNum((e || s)!);
         const left = x(a),
           width = (b - a + 1) * px;
         const overdue = st === 'late' && e && dayNum(e) < todayN;
@@ -158,16 +168,17 @@ export function renderTimeline() {
         // The selected item's bar can be dragged to new dates (see "Moving dates in the timeline").
         const drag = item.id === ui.tlDates ? ` tl-drag" data-tl-drag="${item.id}` : '';
         // Every row of an item, so an activity listed under several goals gets its arrows on each copy.
-        const spot = s && e ? { start: left, end: left + width } : { start: left + px / 2 - 7, end: left + px / 2 + 7 };
+        const spot =
+          (s && e) || open ? { start: left, end: left + width } : { start: left + px / 2 - 7, end: left + px / 2 + 7 };
         (geo[item.id] ||= []).push({ ...spot, y: i * ROW + ROW / 2, goal: r.goal });
-        if (!s || !e) {
+        if ((!s || !e) && !open) {
           const cx = left + px / 2;
           bar = `${lateHtml}<i class="tl-milestone glass ${kind} st-${st}${drag}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
         } else {
           const inside = width > item.title.length * 7.2 + 26;
           const pct = kind === 'goal' ? goalProgress(item as Goal) : null;
           const grips =
-            drag && !fixedEnd(item)
+            drag && !fixedEnd(item) && !open
               ? ['start', 'end']
                   .map(
                     edge =>
@@ -175,7 +186,7 @@ export function renderTimeline() {
                   )
                   .join('')
               : '';
-          bar = `${lateHtml}${grips}<div class="tl-bar glass ${kind} st-${st}${drag}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
+          bar = `${lateHtml}${grips}<div class="tl-bar glass ${kind} st-${st}${open ? ' tl-open' : ''}${drag}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
         }
       }
       if (s || e) bar += tlRoutineDays(item, from, to, x, px);
@@ -274,5 +285,5 @@ export function renderTimeline() {
     </div>`
         : `<div class="empty">${t('tl.noneShown')}</div>`
     }
-    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) + (geo[sel] ? `<p class="meta" style="margin-top:8px">${t(sel !== ui.tlDates ? 'tl.datesHint' : fixedEnd(findEntity(sel)!.item) ? 'tl.dragHintMove' : 'tl.dragHint')}</p>` : '') : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
+    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) + (geo[sel] ? `<p class="meta" style="margin-top:8px">${t(sel !== ui.tlDates ? 'tl.datesHint' : dragHint(findEntity(sel)!))}</p>` : '') : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
 }

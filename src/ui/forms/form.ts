@@ -14,7 +14,7 @@ import { stateForm, updateStateFields } from './state';
 import { fillRelTypes, relationForm } from './relation';
 import { visionForm } from './vision';
 import { saveVisions } from '../../store/visions';
-import { ownMetric, smartCheck } from '../../core/progress';
+import { goalErrors, ownMetric, smartCheck } from '../../core/progress';
 import { addEntry, convertState, deleteEntry, entriesOf, isCumulative, recordMeasurement } from '../../core/cumulative';
 import { checkedOn, dayItemsDone, followList, setCheckin, tickable } from '../../core/routines/checkins';
 import { dropRoutineDeps } from '../../core/normalize';
@@ -209,8 +209,9 @@ export function submitForm() {
   }
 
   if (kind === 'goal') {
-    const c = smartCheck(v as unknown as Goal);
-    if (Object.keys(c.errs).length) return showErrors(c.errs);
+    // Only answers that contradict each other stop a save; unfinished SMART parts do not.
+    const errs = goalErrors(v as unknown as Goal);
+    if (Object.keys(errs).length) return showErrors(errs);
     const g = Object.assign((existing as Goal) || { id: uid(), createdAt: today() }, {
       title: v.title.trim(),
       specific: v.specific.trim(),
@@ -219,7 +220,8 @@ export function submitForm() {
       baseline: v.baseline,
       current: v.current,
       target: v.target,
-      achievable: v.achievable.trim(),
+      // The old answer shows only while it has text; a goal without one keeps what it had.
+      achievable: (v.achievable ?? (existing as Goal | null)?.achievable ?? '').trim(),
       relevant: v.relevant.trim(),
       startDate: v.startDate,
       deadline: v.deadline,
@@ -231,11 +233,20 @@ export function submitForm() {
     else g.progress = v.progress as Goal['progress'];
     // How a state that adds up counts; kept when the field is not shown.
     if (v.period) g.period = v.period as Scale;
+    // The obstacle and the plan for it: no field at all when empty.
+    for (const k of ['obstacle', 'ifThen'] as const) {
+      const s = (v[k] || '').trim().slice(0, 500);
+      if (s) g[k] = s;
+      else delete g[k];
+    }
     if (!existing) db.goals.push(g);
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
     setIncoming(g.id, 'contributes', arr('activities'));
     setGoalVisions(g, arr('visions'));
+    const c = smartCheck(g),
+      lit = 'SMART'.split('').filter(l => c[l as 'S']).length;
+    if (lit < 5) return finish(t(existing ? 'toast.goalUpdatedPartial' : 'toast.goalAddedPartial', { n: lit }));
     return finish(t(existing ? 'toast.goalUpdated' : 'toast.goalCreated'));
   }
 
