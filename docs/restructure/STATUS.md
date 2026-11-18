@@ -10,7 +10,7 @@
 | 05 shared UI | merged (PR #12) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-05` |
 | 06 views and tutorial | merged (PR #14) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-06` |
 | 07 map, timeline, graphs | merged (PR #16) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-07` |
-| 08 close-out | not started |
+| 08 close-out | done on `restructure/phase-08` (not pushed); waits for the owner check |
 | 09 tests | not started |
 | 10 workflow | not started |
 
@@ -20,6 +20,7 @@ Compare against these after phases 7 and 8. Average ms per draw (budget in brack
 the baseline; the largest, 300 items + 20 visions map, 229 ms (was 198). After phase 3: the same (223 ms; state form 117).
 Phase 7 map session: 300 items map 149 ms, + 20 visions 218, all else at or under the baseline; state form 121 (over, as before).
 Phase 7 end: 300 items map 151, + 20 visions 222 (+12%), timeline 16, graphs 17, the rest at or under; state form 129 (over, as before).
+Phase 8 end: all in budget but the state form, 117 (over, as before); 300 items map 150, + 20 visions 232 (budget 300), the rest at or under.
 
 | Check | ms | | Check | ms |
 |---|---|---|---|---|
@@ -60,14 +61,18 @@ Phase 9 (tests) can make the first step restore English in `finally` and take th
 
 ## Notes for the next phase
 
-- `app.js` now holds only Boot (`bootUser`, `enterUser`). Timeline: `timeline/rows.ts` (rows, folds), `render.ts`, `drag.ts`.
-  Graphs: `graphs/states.ts` (line graphs, axes, `grCharts`), `plot.ts` (shared plot), `sums.ts` (bar/step/routine cards),
-  `points.ts` (crosshair, tooltip, resize). `openAddMenu` is in `map/menu.ts`. `layout.ts` 441 lines (note 1); all else ≤ 400.
-- `main.ts` calls `listenGraphs()`, `listenMap()`, `listenTlDrag()`; no view listens while it loads now. Recorder of
-  `addEventListener` calls (per target, event and phase): 84 groups, 130 listeners, the same as before phase 7 (script not kept).
-- `move-decls --check` now accepts a leading `export` added or dropped; its import rewriting drops `type` modifiers and may merge
-  a type into a value import (fix those lines by hand after a move between typed files).
-- Moving as before: `line:<n>` numbers shift after each run; banners without code go in a commit of their own; `--check` per file.
-- Layers and hooks unchanged (`ui/` ← `views/` ← `tutorial/`); `markVisions` asks the tour through `setTourRunning` (`main.ts`).
-- Unchanged: fixtures never regenerated; tests assign only through `setX`; a name exported twice throws in the bridge. Legacy files
-  are CRLF. PowerShell mangles UTF-8 and strips quotes passed to `node -e` (write a script file). Unit tests 122.
+- `src/legacy` is gone. Boot is `src/boot.ts`, not `main.ts`: the suite calls `enterUser` through the bridge, which skips main.ts.
+- `noUncheckedIndexedAccess`: 397 errors, left as a later option. `no-explicit-any` is an error; there is no `any` in src.
+- Layers: ESLint rule `layers/order` (`scripts/lib/eslint-layers.mjs`; its 17 cases run in `npm run lint`). Inside views/,
+  `index.ts` and `events.ts` sit above the views; other files directly in views/ are shared and import no view. Views call
+  `render` through `ui/render.ts`. Kept exceptions: 10 file pairs among map, timeline and graphs (item menu, gestures, line
+  drawing, timeline drag state), listed in `eslint.config.js`.
+- Cycles: `npm run cycles -- --values`, 42 → 24. Left: core (cumulative → relations → visions → merge/normalize, progress ↔
+  keeping), store plans ↔ visions, ui/forms/form.ts ↔ each form (its field builders want a file of their own), plan-io ↔
+  plan-switcher (↔ plan-dialogs), reached ↔ toast, graphs plot ↔ states ↔ sums, map keys/menu/link/zoom ↔ timeline/drag.
+- Dead code: none found. `stateChange`'s unused `s` stays (the suite passes three arguments; phase 9). 183 exports are used
+  only in their own file. Over 400 lines: `views/map/layout.ts` 441, `styles/timeline.css` 685, `styles/settings.css` 652.
+- Styles: `src/styles/index.css` imports 19 files; the test build joins them into `css/styles.css` for the suite's iframes.
+- Prettier ran as `prettier --write src "tests/**/*.js"` (fixture JSON left as written); its commit is in `.git-blame-ignore-revs`.
+- `move-decls`: drops `type` modifiers and appends imports at the end (order in main.ts matters); fix those lines by hand.
+- Unchanged: fixtures never regenerated; tests assign only through `setX`. Unit tests 122, suite 221 steps.
