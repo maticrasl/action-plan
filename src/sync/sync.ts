@@ -5,9 +5,9 @@ import { plans, plansVersion, setPlans, setPlansVersion } from '../store/state';
 import { db, setDb, visions } from '../core/state';
 import { PLANS_KEY, planKey, readPlan } from '../store/plans';
 import { I18N, t } from '../i18n/index';
-import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from '../core/merge';
+import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot, type Store } from '../core/merge';
 import { uid } from '../core/util';
-import { emptyDb } from '../core/model';
+import { emptyDb, type Plan } from '../core/model';
 import { emit } from '../store/events';
 import { applyVisions } from '../store/visions';
 import { SyncError, drive, toFile } from './drive';
@@ -22,50 +22,68 @@ import { prefs } from '../store/prefs';
    locally and writes it back.
    There is no server, so Google's access token lasts about an hour and can only be renewed
    from a click; after that, sync pauses until the user clicks the sync button.
-   Loaded before app.js; initSync() is called from its boot section.
+   main.ts starts it with initSync() (legacy/sync-ui.js, the screen part).
    ========================================================= */
 
-export const SYNC_DELAY = 3000;       // after a change
-export const SYNC_EVERY = 5 * 60000;  // while the app is open
+export const SYNC_DELAY = 3000; // after a change
+export const SYNC_EVERY = 5 * 60000; // while the app is open
 
-export const syncConfigured = () => typeof GOOGLE_CLIENT_ID === 'string' && GOOGLE_CLIENT_ID.endsWith('.apps.googleusercontent.com');
+export const syncConfigured = () =>
+  typeof GOOGLE_CLIENT_ID === 'string' && GOOGLE_CLIENT_ID.endsWith('.apps.googleusercontent.com');
 // Signed in = the current user has a Google account (users.js); the sync file is in that account's Drive.
 export const syncConnected = () => syncConfigured() && !!currentUser().account;
 
 // status: idle | syncing | synced | paused (needs a click) | offline | error | account (signed in to someone else's account)
-export const syncState = { status: 'idle', busy: false, again: false, timer: null };
+export const syncState = { status: 'idle' as string, busy: false, again: false, timer: null as number | null };
 
 /* ---------- Stores: this device ↔ the sync file ---------- */
 
 // Everything on this device, as a detached copy.
-export function localStore() {
+export function localStore(): Required<Store> {
   const data = Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? db : readPlan(p.id)]));
   return JSON.parse(JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data, visions }));
 }
 
 // The empty starter plan a new device makes on its first visit would otherwise sync as an extra
 // "My plan"; on the first sync it is dropped when the Drive file already has plans.
-export function dropStarterPlans(store) {
+export function dropStarterPlans(store: Required<Store>): Required<Store> {
   const starterNames = new Set(Object.values(I18N).map(l => l.strings['plan.defaultName']));
-  const isStarter = p => {
+  const isStarter = (p: Plan) => {
     const d = store.data[p.id];
     return starterNames.has(p.name) && SYNC_COLLS.every(c => !d[c].length) && !Object.keys(d.deleted || {}).length;
   };
   const list = store.plans.list.filter(p => !isStarter(p));
-  return { plans: { ...store.plans, list }, data: Object.fromEntries(list.map(p => [p.id, store.data[p.id]])), visions: store.visions };
+  return {
+    plans: { ...store.plans, list },
+    data: Object.fromEntries(list.map(p => [p.id, store.data[p.id]])),
+    visions: store.visions,
+  };
 }
 
 // Make the merged store this device's data; the open plan is reloaded only if it changed.
-export function applyStore(store) {
-  const before = JSON.stringify(db) + JSON.stringify(visions), current = plans.current;
+export function applyStore(store: Store) {
+  const before = JSON.stringify(db) + JSON.stringify(visions),
+    current = plans.current;
   if (!store.plans.list.length) {
     const id = uid();
     store.plans.list.push({ id, name: t('plan.defaultName') });
     store.data[id] = emptyDb();
   }
   const keep = new Set(store.plans.list.map(p => p.id));
-  plans.list.filter(p => !keep.has(p.id)).forEach(p => { try { userStorage.removeItem(planKey(p.id)); } catch (e) { /* ignore */ } });
-  setPlans({ current: keep.has(current) ? current : store.plans.list[0].id, list: store.plans.list, deleted: store.plans.deleted });
+  plans.list
+    .filter(p => !keep.has(p.id))
+    .forEach(p => {
+      try {
+        userStorage.removeItem(planKey(p.id));
+      } catch (e) {
+        /* ignore */
+      }
+    });
+  setPlans({
+    current: keep.has(current as string) ? current : store.plans.list[0].id,
+    list: store.plans.list,
+    deleted: store.plans.deleted,
+  });
   try {
     store.plans.list.forEach(p => userStorage.setItem(planKey(p.id), JSON.stringify(store.data[p.id])));
     userStorage.setItem(PLANS_KEY, JSON.stringify(plans));
@@ -75,7 +93,7 @@ export function applyStore(store) {
   takePlanSnapshot(plans);
   if (store.visions) applyVisions(store.visions);
   setPlansVersion(plansVersion + 1);
-  setDb(readPlan(plans.current));
+  setDb(readPlan(plans.current as string));
   takeSnapshot(db);
   emit('storeReplaced', plans.current !== current || JSON.stringify(db) + JSON.stringify(visions) !== before);
 }
@@ -84,23 +102,29 @@ export function applyStore(store) {
 
 // True while sync must wait: during the tour the open plan is a temporary one (main.ts sets it).
 export let syncPaused = () => false;
-export function setSyncPaused(v) { syncPaused = v; }
+export function setSyncPaused(v: () => boolean) {
+  syncPaused = v;
+}
 
 export function scheduleSync(delay = SYNC_DELAY) {
   if (!syncConnected()) return;
-  clearTimeout(syncState.timer);
+  clearTimeout(syncState.timer as number);
   syncState.timer = setTimeout(() => syncNow(false), delay);
 }
 
 // `interactive` is true when a click started the sync, so Google may show its sign-in popup.
-export async function syncNow(interactive = false) {
+export async function syncNow(interactive = false): Promise<void> {
   // During the tour the open plan is a temporary one; endTour syncs once it is over.
   if (!syncConnected() || syncPaused()) return;
-  if (syncState.busy) { syncState.again = true; return; }
-  clearTimeout(syncState.timer);
+  if (syncState.busy) {
+    syncState.again = true;
+    return;
+  }
+  clearTimeout(syncState.timer as number);
   if (!navigator.onLine) return setSyncStatus('offline');
   // Another user taking over while this sync waits stops it: nothing of theirs is read or written.
-  const user = currentUser(), mine = () => currentUser() === user;
+  const user = currentUser(),
+    mine = () => currentUser() === user;
   syncState.busy = true;
   setSyncStatus('syncing');
   try {
@@ -126,14 +150,20 @@ export async function syncNow(interactive = false) {
   } catch (e) {
     if (!mine()) return;
     if (e instanceof SyncError) setSyncStatus(e.code === 'auth' ? 'paused' : e.code);
-    else { console.error(e); setSyncStatus('error'); }
+    else {
+      console.error(e);
+      setSyncStatus('error');
+    }
   } finally {
     syncState.busy = false;
-    if (syncState.again) { syncState.again = false; scheduleSync(); }
+    if (syncState.again) {
+      syncState.again = false;
+      scheduleSync();
+    }
   }
 }
 
-export function setSyncStatus(status) {
+export function setSyncStatus(status: string) {
   syncState.status = status;
   emit('syncChanged');
 }
