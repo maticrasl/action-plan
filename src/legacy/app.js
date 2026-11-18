@@ -1,8 +1,5 @@
 /** The app: data model, storage, views, forms and event wiring. */
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
-import { saveUsers, userStorage, users } from './users.js';
-import { deleteVision, goalsReaching, loadVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion } from './visions.js';
-import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
 import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
@@ -17,161 +14,24 @@ import { DAY_MS, dayNum, dayStr, isoOf } from '../core/days';
 import { PERIODS, SCALES, addEntry, calPeriod, convertState, deleteEntry, dropRoutineEntries, entriesOf, followLatest, goalPeriod, graphEntries, graphScale, improvedStates, isCumulative, lastPeriodTotal, periodTotals, refreshTotal, stateDate, stateScale, stateTotal, sumOf } from '../core/cumulative';
 import { consistency, keptDay, makesUp, periodProgress, routineState, routineStreak, routineToday } from '../core/routines/keeping';
 import { activityState, blockers, byActivities, byRoutines, countedActivities, goalActivities, goalCurrent, goalProgress, goalReached, goalRoutines, goalScope, goalState, isComplete, measuringState, ownMetric, smartCheck, startDueActivities } from '../core/progress';
-import { PLAN_FORMAT, PLAN_VERSION, dropRoutineDeps, hasProgress, normalize, parsePlanFile, progressCounts, resetProgress } from '../core/normalize';
-import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
+import { PLAN_FORMAT, PLAN_VERSION, dropRoutineDeps, hasProgress, parsePlanFile, progressCounts, resetProgress } from '../core/normalize';
 import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/index';
-
-export const STORAGE_KEY = 'actionplan.v1';
+import { saveUsers, userStorage, users } from '../store/users';
+import { STORAGE_KEY, prefs } from '../store/prefs';
+import { currentPlan, freshUi, plans, setPlans, ui } from '../store/state';
+import { PLANS_KEY, createPlan, deletePlan, load, mergePlanInto, nameTaken, openPlan, planKey, readPlan, save, uniqueName } from '../store/plans';
+import { deleteVision, goalsReaching, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache } from '../store/visions';
+import { drive } from '../sync/drive';
+import { syncConnected, syncState } from '../sync/sync';
+import { renderSync } from './sync-ui.js';
 
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
-
-// What the views show; each user starts from these (enterUser), then their remembered preferences.
-export const freshUi = () => ({
-  view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
-  mapHidden: new Set(), hideDone: false, hideVisions: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
-  tlDates: null, // the selected timeline item whose dates can be dragged: its bar was clicked, not just its row
-  rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
-  grZoom: {}, // how far each graph is zoomed: 1 fits the card
-});
-export const ui = freshUi();
-
-// Small per-device preferences (view, hidden relation types, hide-done, theme).
-export const prefs = {
-  get(key, fallback) {
-    try { const v = userStorage.getItem(`${STORAGE_KEY}.${key}`); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
-  },
-  set(key, value) {
-    try { userStorage.setItem(`${STORAGE_KEY}.${key}`, JSON.stringify(value)); } catch (e) { /* ignore */ }
-  },
-};
-
-/* ---------- Plans ----------
-   Each action plan is stored under its own key; an index keeps names and the current plan.
-   Data from the single-plan version (STORAGE_KEY) is migrated into the first plan. */
-export const PLANS_KEY = 'actionplan.plans';
-export const planKey = id => `actionplan.plan.${id}`;
-export let plans = { current: null, list: [] };
-export function setPlans(v) { plans = v; }
-export const currentPlan = () => plans.list.find(p => p.id === plans.current);
-
-export function readPlan(id) {
-  try {
-    const raw = userStorage.getItem(planKey(id));
-    return raw ? normalize(JSON.parse(raw)) : emptyDb();
-  } catch (e) {
-    return emptyDb();
-  }
-}
-
-export function load() {
-  loadVisions();
-  try {
-    const saved = JSON.parse(userStorage.getItem(PLANS_KEY));
-    if (Array.isArray(saved?.list) && saved.list.length) plans = saved;
-  } catch (e) { /* start fresh */ }
-  if (plans.list.length) {
-    if (!currentPlan()) plans.current = plans.list[0].id;
-    takePlanSnapshot(plans);
-    setDb(readPlan(plans.current));
-    takeSnapshot(db);
-    return;
-  }
-  let legacy = emptyDb();
-  try {
-    const raw = userStorage.getItem(STORAGE_KEY);
-    if (raw) legacy = normalize(JSON.parse(raw));
-  } catch (e) { /* ignore */ }
-  const id = uid();
-  plans = { current: id, list: [{ id, name: t('plan.defaultName') }] };
-  takePlanSnapshot({ list: [] }); // a brand-new plan list: nothing in it was deleted
-  setDb(legacy);
-  takeSnapshot(db);
-  save();
-}
-
-export function save() {
-  offerReached();
-  stampChanges(db);
-  stampPlanChanges(plans);
-  setPlansVersion(plansVersion + 1);
-  try {
-    userStorage.setItem(planKey(plans.current), JSON.stringify(db));
-    userStorage.setItem(PLANS_KEY, JSON.stringify(plans));
-  } catch (e) {
-    toast(t('err.storage'));
-  }
-  scheduleSync();
-}
-
-export function openPlan(id) {
-  plans.current = id;
-  setDb(readPlan(id));
-  takeSnapshot(db);
-  Object.assign(ui, { category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', mapSelected: null, mapRel: null, search: '', mapRefocus: true, rtWeek: {} });
-  save();
-  renderPlanSwitch();
-  render();
-}
-
-// Plan names are unique, ignoring case and spaces around them.
-export const nameTaken = (name, exceptId) => plans.list.some(p => p.id !== exceptId && p.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
-// The name itself if it is free, else with the first free number added: "Sample plan 2".
-export function uniqueName(name) {
-  let candidate = name, n = 1;
-  while (nameTaken(candidate)) candidate = `${name} ${++n}`;
-  return candidate;
-}
 
 // Asks for a plan name until it is free (or the user cancels); `exceptId` is the plan being renamed.
 export function askPlanName(question, suggestion, exceptId) {
   let name = prompt(question, suggestion)?.trim();
   while (name && nameTaken(name, exceptId)) name = prompt(`${t('plan.nameTaken', { name })}\n${question}`, name)?.trim();
   return name;
-}
-
-export function createPlan(name, data = emptyDb()) {
-  const id = uid();
-  plans.list.push({ id, name });
-  plans.current = id;
-  setDb(data);
-  takeSnapshot(db); // what a new plan starts with is not an edit
-  save();
-  openPlan(id);
-}
-
-export function deletePlan(id) {
-  try { userStorage.removeItem(planKey(id)); } catch (e) { /* ignore */ }
-  plans.list = plans.list.filter(p => p.id !== id);
-  if (!plans.list.length) return createPlan(t('plan.defaultName'));
-  openPlan(plans.list[0].id);
-}
-
-// Moves everything in one plan into another and opens that one. Items keep their ids unless the
-// target already has (or once deleted) that id; then they get new ones and their relations follow.
-// The moved items are saved as changes, so sync carries them; `remove` deletes the source afterwards.
-export function mergePlanInto(fromId, toId, remove = false) {
-  if (fromId === toId) return;
-  const source = fromId === plans.current ? JSON.parse(JSON.stringify(db)) : readPlan(fromId);
-  if (plans.current !== toId) openPlan(toId);
-  const taken = new Set([...SYNC_COLLS.flatMap(c => db[c].map(x => x.id)), ...Object.keys(db.deleted || {})]);
-  const ids = new Map();
-  const place = x => {
-    const id = taken.has(x.id) ? uid() : x.id;
-    taken.add(id);
-    ids.set(x.id, id);
-    delete x.updatedAt;
-    return Object.assign(x, { id });
-  };
-  SYNC_COLLS.filter(c => c !== 'relations').forEach(c => db[c].push(...source[c].map(place)));
-  db.relations.push(...source.relations.filter(r => ids.has(r.from) && ids.has(r.to))
-    .map(r => place({ ...r, from: ids.get(r.from), to: ids.get(r.to) })));
-  if (remove) {
-    try { userStorage.removeItem(planKey(fromId)); } catch (e) { /* ignore */ }
-    plans.list = plans.list.filter(p => p.id !== fromId);
-  }
-  save();
-  renderPlanSwitch();
-  render();
 }
 
 /* ---------- Utilities ---------- */
@@ -5198,7 +5058,7 @@ export function enterUser(id) {
   Object.assign(ui, freshUi());
   storedHealth.clear();
   setOtherPlansCache({ key: '', list: [] });
-  plans = { current: null, list: [] };
+  setPlans({ current: null, list: [] });
   setDb(emptyDb());
   const firstVisit = bootUser();
   renderSettings();

@@ -8,8 +8,7 @@ export default tseslint.config(
   {
     files: ['src/**/*.js'],
     extends: [js.configs.recommended],
-    // google: Google's sign-in script, loaded at run time (drive.js).
-    languageOptions: { globals: { ...globals.browser, google: 'readonly' } },
+    languageOptions: { globals: globals.browser },
     rules: {
       // The legacy code names caught errors it ignores and drops fields by destructuring.
       'no-unused-vars': ['error', { caughtErrors: 'none', ignoreRestSiblings: true }],
@@ -29,6 +28,19 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none', ignoreRestSiblings: true }],
       '@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true, allowTernary: true }],
       'no-irregular-whitespace': ['error', { skipRegExps: true }],
+    },
+  },
+  {
+    // Stored data goes through store/users.ts, which puts the current user's prefix on each key.
+    // The language key is the device's (ui/i18n-dom.ts); index.html's theme script is not linted.
+    files: ['src/**/*.{js,ts}'],
+    ignores: ['src/store/users.ts', 'src/ui/i18n-dom.ts', 'src/**/*.test.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'localStorage', message: 'Use userStorage from store/users.ts.' },
+        { name: 'sessionStorage', message: 'Use userSession from store/users.ts.' },
+      ],
     },
   },
 );

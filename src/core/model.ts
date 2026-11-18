@@ -61,7 +61,7 @@ export type ISOTime = string; // a moment, from Date.toISOString()
 export type IdSet<V = 1> = Record<string, V>;
 
 // Every item carries an id; sync stamps `updatedAt` on what changed.
-interface Item {
+export interface Item {
   id: string;
   updatedAt?: ISOTime;
 }
@@ -201,6 +201,19 @@ export interface VisionList {
   list: Vision[];
   deleted: IdSet<ISOTime>;
   purposeFound?: ISODate; // the day a Purpose was first found (it is celebrated once)
+}
+
+// The people on one device (actionplan.users). `ns` is the key prefix after 'actionplan.': '' for
+// the first user, `u.<id>.` for later ones. A user without an account is a guest.
+export interface User {
+  id: string;
+  ns: string;
+  name: string;
+  account: { id: string; email: string } | null;
+}
+export interface UserList {
+  current: string;
+  list: User[];
 }
 
 export function emptyDb(): Db {

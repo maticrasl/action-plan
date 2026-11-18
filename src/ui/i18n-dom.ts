@@ -1,7 +1,6 @@
 /** The language on the page: detected from storage and the browser, saved, and applied to static markup. */
 import { I18N, lang, setLang, t, type Lang, type TextKey } from '../i18n/index';
-
-export const LANG_KEY = 'actionplan.lang';
+import { LANG_KEY } from '../store/users';
 
 export function detectLang(): Lang {
   try {
