@@ -11,7 +11,7 @@
 | 06 views and tutorial | merged (PR #14) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-06` |
 | 07 map, timeline, graphs | merged (PR #16) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-07` |
 | 08 close-out | merged (PR #18) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-08` |
-| 09 tests | done on branch `restructure/phase-09` (not pushed); awaits "ship it" |
+| 09 tests | merged (PR #20) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-09` |
 | 10 workflow | not started |
 
 ## Perf baseline
@@ -50,7 +50,7 @@ Fixtures pass on Linux.
 - `item menu: show in another view, selected there`: a map box side 6 px off (658 → 664)
 
 Phase 9: `routines.monthly.js` switches back to English after the first, so the two monthly steps after it
-are off the list. Not yet confirmed on GitHub (the branch is not pushed).
+are off the list; confirmed on GitHub (PR #20 and its deploy passed).
 
 ## `NO RESULT` flake in `test:browser`: cause found, fix in `tests/pre.js` (2026-11-17)
 
@@ -76,5 +76,5 @@ are off the list. Not yet confirmed on GitHub (the branch is not pushed).
   tests ported in phases 3–7; the other ~67 became 85 new expects. Nothing was dropped without a replacement.
 - `users.js` is 632 lines: one chain of logins on a fake Google; splitting it means replaying the logins.
 - `npm audit`: 11 high in the vite/vitest/typescript-eslint chain (picomatch), there before this phase.
-- CI (`check.yml`) installs Playwright's Chromium shell and fetches the `pre-restructure` tag; not yet run on GitHub.
+- CI (`check.yml`) installs Playwright's Chromium shell and fetches the `pre-restructure` tag; green on GitHub (~2.5–3 min).
 - Unchanged: no app code changed; fixtures never regenerated; `stateChange`'s unused `s` stays.
