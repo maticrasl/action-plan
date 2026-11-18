@@ -4,7 +4,7 @@ import { I18N, lang, t, type Lang, type TextKey } from '../i18n/index';
 import type { Db } from '../core/model';
 import { clamp } from '../core/util';
 import { prefs } from '../store/prefs';
-import { plans, ui } from '../store/state';
+import { plans, ui, type ViewName } from '../store/state';
 import { createPlan, deletePlan, openPlan, save, uniqueName } from '../store/plans';
 import { scheduleSync } from '../sync/sync';
 import { $, esc, itemCount } from '../ui/dom';
@@ -34,7 +34,7 @@ import { EDGE, closeHelpTip } from './help';
 // A view to switch to, and selectors of what to spotlight: the first one visible.
 export interface TourStep {
   key: string;
-  view?: string;
+  view?: ViewName;
   target?: string[];
   optional?: boolean;
 }
@@ -65,7 +65,7 @@ export const tour: {
   steps: TourStep[];
   planId: string | null;
   prevPlan: string | null;
-  prevView: string | null;
+  prevView: ViewName | null;
 } = { step: -1, steps: TOUR_STEPS, planId: null, prevPlan: null, prevView: null };
 export const isTourRunning = () => tour.step >= 0;
 export const SPOT_PAD = 6;

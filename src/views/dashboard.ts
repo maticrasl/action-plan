@@ -3,7 +3,7 @@ import { byDeadline, byDueDate, deadlineTag, emptyState, esc, itemCount, linkTag
 import { t, tp } from '../i18n/index';
 import { db } from '../core/state';
 import { activityState, blockers, goalProgress } from '../core/progress';
-import { isRoutine } from '../core/routines/schedule';
+import { isRoutine, type Routine } from '../core/routines/schedule';
 import { daysUntil, today } from '../core/dates';
 import { routineToday } from '../core/routines/keeping';
 import { ui } from '../store/state';
@@ -11,6 +11,7 @@ import { routineRow } from './routines';
 import { goalCard } from '../ui/goal-card';
 import { relsFrom } from '../core/relations';
 import { isList, listDone } from '../core/routines/checkins';
+import type { Activity } from '../core/model';
 
 export function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
@@ -22,17 +23,23 @@ export function renderDashboard() {
   // Only the routines today still asks for: a set day (or a missed one to make up), or a flexible
   // routine whose week or month is not met yet; not those ticked today, resting or not running.
   const now = today();
-  const routines = db.activities.filter(a => isRoutine(a) && ['due', 'makeUp', 'any'].includes(routineToday(a)));
+  const routines = db.activities.filter(
+    (a): a is Routine => isRoutine(a) && ['due', 'makeUp', 'any'].includes(routineToday(a) as string),
+  );
   const doneActs = oneOff.filter(a => a.status === 'done').length;
   const todo = oneOff.filter(a => a.status !== 'done').sort(byDueDate);
-  const overdue = todo.filter(a => a.dueDate && daysUntil(a.dueDate) < 0).length;
+  const overdue = todo.filter(a => a.dueDate && daysUntil(a.dueDate)! < 0).length;
   // Only active activities: collapsed, those due by today (overdue included); expanded, also the
   // others in progress.
   const due = todo.filter(a => a.dueDate && a.dueDate <= now);
   const going = todo.filter(a => due.includes(a) || a.status === 'doing');
   const next = ui.nextAll ? going : due;
-  const more = going.length > due.length ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
-    ui.nextAll ? t('dash.showFewer') : t('dash.showAll', { n: going.length })}</button>` : '';
+  const more =
+    going.length > due.length
+      ? `<button type="button" class="list-more" data-next-more aria-expanded="${ui.nextAll}">${
+          ui.nextAll ? t('dash.showFewer') : t('dash.showAll', { n: going.length })
+        }</button>`
+      : '';
 
   const waiting = todo.filter(a => blockers(a).length).length;
   return `
@@ -46,20 +53,30 @@ export function renderDashboard() {
     </section>
 
     <h2 class="section-title">${t('dash.next')} <small>${next.length ? t('dash.sorted') : ''}</small></h2>
-    ${next.length ? `<div class="list">${next.map(activityRow).join('')}${more}</div>`
-    : more ? `<div class="list"><div class="empty">${t('dash.noneDue')}</div>${more}</div>`
-    : `<div class="empty">${t(todo.length ? 'dash.noneActive' : 'dash.allDone')}</div>`}
+    ${
+      next.length
+        ? `<div class="list">${next.map(activityRow).join('')}${more}</div>`
+        : more
+          ? `<div class="list"><div class="empty">${t('dash.noneDue')}</div>${more}</div>`
+          : `<div class="empty">${t(todo.length ? 'dash.noneActive' : 'dash.allDone')}</div>`
+    }
 
-    ${routines.length ? `<h2 class="section-title">${t('rt.title')} <small>${t('rt.dashHint')}</small></h2>
-    <div class="list routine-list">${routines.map(routineRow).join('')}</div>` : ''}
+    ${
+      routines.length
+        ? `<h2 class="section-title">${t('rt.title')} <small>${t('rt.dashHint')}</small></h2>
+    <div class="list routine-list">${routines.map(routineRow).join('')}</div>`
+        : ''
+    }
 
     <h2 class="section-title">${t('dash.goalsInProgress')} <small>${active.length ? t('dash.clickToEdit') : ''}</small></h2>
     ${active.length ? `<div class="grid">${active.map(goalCard).join('')}</div>` : `<div class="empty">${t('dash.noActive')}</div>`}
   `;
 }
 
-export function activityRow(a) {
-  const goals = relsFrom(a.id, 'contributes').map(r => linkTag(r.to)).join('');
+export function activityRow(a: Activity) {
+  const goals = relsFrom(a.id, 'contributes')
+    .map(r => linkTag(r.to))
+    .join('');
   const blocked = blockers(a).length;
   return `<div class="row glass st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
     ${statusCheck(a)}

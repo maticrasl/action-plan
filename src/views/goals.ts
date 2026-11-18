@@ -19,7 +19,12 @@ export function renderGoals() {
   return `
     ${categoryChips()}
     <div class="toolbar">
-      <div class="chips">${Object.entries(filters).map(([k, v]) => `<button class="chip ${ui.goalFilter === k ? 'active' : ''}" data-goal-filter="${k}">${v} <span class="count">${k === 'all' ? inCat.length : inCat.filter(g => g.status === k).length}</span></button>`).join('')}</div>
+      <div class="chips">${Object.entries(filters)
+        .map(
+          ([k, v]) =>
+            `<button class="chip ${ui.goalFilter === k ? 'active' : ''}" data-goal-filter="${k}">${v} <span class="count">${k === 'all' ? inCat.length : inCat.filter(g => g.status === k).length}</span></button>`,
+        )
+        .join('')}</div>
       ${searchBox()}
     </div>
     ${list.length ? `<div class="grid">${list.map(goalCard).join('')}</div>` : `<div class="empty">${t('goals.noMatch')}</div>`}`;

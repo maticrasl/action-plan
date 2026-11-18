@@ -1,20 +1,24 @@
 /** What is open now: the plan list, the version counter and what the views show. */
-import type { ISODate, PlanList } from '../core/model';
+import type { GoalStatus, ISODate, PlanList, RelType, VisionRel } from '../core/model';
 
-// Ids are of items, relations or visions; the last three fields are set later, not by freshUi.
+// The views, by the names in the navigation, views/index.ts's VIEWS and the stored `view` preference.
+export type ViewName = 'dashboard' | 'goals' | 'activities' | 'states' | 'visions' | 'map' | 'timeline' | 'graphs';
+
+// Ids are of items, relations or visions; a goal filter of '' means all goals. The last three
+// fields are set later, not by freshUi.
 export interface Ui {
-  view: string;
-  goalFilter: string;
-  category: string;
-  activityGoal: string;
+  view: ViewName;
+  goalFilter: 'all' | GoalStatus; // the goals view's status chips
+  category: string; // the goal category chosen in the chips ('' for all)
+  activityGoal: string; // these four: each view's goal picker, a goal id or '' (GOAL_FILTERS)
   mapGoal: string;
   timelineGoal: string;
   graphGoal: string;
-  mapHidden: Set<string>;
+  mapHidden: Set<RelType | VisionRel>; // kinds of lines the map does not draw
   hideDone: boolean;
   hideVisions: boolean;
-  nextAll: boolean;
-  tlPx: number;
+  nextAll: boolean; // the overview's "Show all": also the activities in progress that are not due
+  tlPx: number; // the timeline's pixels per day
   mapScale: number;
   tlDeps: boolean;
   planBadges: boolean;
@@ -25,8 +29,8 @@ export interface Ui {
   tlDates: string | null;
   rtWeek: Record<string, ISODate>;
   grZoom: Record<string, number>;
-  mapRefocus?: boolean;
-  mapLinkFrom?: string | null;
+  mapRefocus?: boolean; // the next render centres the map or timeline instead of keeping its scroll
+  mapLinkFrom?: string | null; // the map box a link is being drawn from, by tapping
   navCollapsed?: boolean;
 }
 
