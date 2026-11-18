@@ -1,31 +1,6 @@
 // Runs after app.js: exercises the main flows and writes results into <pre id="OK">.
 (async () => {
-  const out = [];
-  const log = s => out.push(s);
-  const hash = str => {
-    let h = 5381;
-    for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
-    return h.toString(16);
-  };
-  const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
-  const fp = () => {
-    const html = $('#view').innerHTML.replace(UUID, 'ID');
-    return `${hash(html)}/${html.length}`;
-  };
-  const step = async (name, fn) => {
-    try {
-      const r = await fn();
-      log(`PASS ${name}${r === undefined ? '' : ': ' + r}`);
-    } catch (e) {
-      log(`FAIL ${name}: ${(e && e.stack) || e}`);
-    }
-  };
-  const assert = (c, m) => {
-    if (!c) throw new Error(m || 'assertion failed');
-  };
   const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs'];
-  const tick = () => new Promise(r => setTimeout(r, 0));
-
   await step('boot: one empty starter plan', () => {
     assert(plans.list.length === 1);
     assert(itemCountSafe() === 0);

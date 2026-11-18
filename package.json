@@ -17,7 +17,8 @@
     "outline": "node scripts/outline.mjs",
     "map": "node scripts/map.mjs",
     "cycles": "node scripts/cycles.mjs",
-    "move": "node scripts/move-decls.mjs"
+    "move": "node scripts/move-decls.mjs",
+    "move-steps": "node scripts/move-steps.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

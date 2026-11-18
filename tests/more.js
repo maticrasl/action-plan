@@ -3,35 +3,7 @@
 // The real Drive methods, before any test swaps them for fakes.
 const REAL_DRIVE = { ...drive };
 window.moreTests = async ({ step, assert }) => {
-  const tick = () => new Promise(r => setTimeout(r, 0));
-  const d = n => {
-    const x = new Date();
-    x.setDate(x.getDate() + n);
-    return isoDate(x);
-  };
-  const eq = (a, b, m) =>
-    assert(
-      JSON.stringify(a) === JSON.stringify(b),
-      `${m || 'expected'} ${JSON.stringify(b)}, got ${JSON.stringify(a)}`,
-    );
-  const fresh = name => {
-    createPlan(name);
-    assert(itemCount() === 0);
-  };
-  const mk = (kind, p = {}) => {
-    const base = { goal: { status: 'active' }, activity: { status: 'todo' }, state: { history: [] } }[kind];
-    const x = { id: uid(), title: `${kind} ${Math.random().toString(36).slice(2, 6)}`, ...base, ...p };
-    collection(kind).push(x);
-    return x;
-  };
-  const rel = (a, b, type) => {
-    const e = addRelation(a.id, b.id, type);
-    assert(!e, `${type}: ${e}`);
-  };
   const plansBefore = plans.list.map(p => p.id);
-  // By Sunday every sample routine has met its week: unticking "cook at home" keeps one on the overview any day.
-  const untickCook = () => (db.activities.find(a => a.repeat?.times === 5).checkins = {});
-
   await step('sample plan: every relation follows the rules; house renovation category', () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
