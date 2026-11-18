@@ -3,14 +3,13 @@ import { I18N, lang, t } from '../i18n/index';
 import { $, esc } from './dom';
 import { applyStaticI18n, setLanguage } from './i18n-dom';
 import { applyNavCollapsed, setNavCollapsed } from './nav';
-import { renderSync } from '../legacy/sync-ui.js';
+import { renderSync } from './sync-ui';
 import { renderInstall } from './install';
 import { modal } from './forms/form';
 import { requestRender } from './render';
 import { ui } from '../store/state';
 import { prefs } from '../store/prefs';
 import { renderPlanSwitch } from './plan-switcher';
-import { setHelp } from '../legacy/tutorial.js';
 import { closeCtxMenu } from './menu';
 import { openTemplates } from './templates-dialog';
 import { importJson, loadSample, openExport } from './plan-io';
@@ -121,3 +120,9 @@ $('#importInput').addEventListener('change', e => {
 $('#sampleBtn').addEventListener('click', () => { settings.close(); loadSample(); });
 $('#templatesBtn').addEventListener('click', openTemplates);
 
+export function setHelp(on) {
+  ui.help = on;
+  prefs.set('help', on);
+  $('#helpBtn').setAttribute('aria-pressed', on);
+  requestRender();
+}

@@ -7,8 +7,8 @@ import { SYNC_EVERY, setSyncStatus, syncConfigured, syncConnected, syncNow, sync
 import { plans } from '../store/state';
 import { SYNC_COLLS } from '../core/merge';
 import { db } from '../core/state';
-import { $, esc } from '../ui/dom';
-import { toast } from '../ui/toast';
+import { $, esc } from './dom';
+import { toast } from './toast';
 
 // Switching users and offering the tour belong to the app above the screen parts; main.ts connects them.
 let enterUser = () => false;

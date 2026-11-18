@@ -20,7 +20,7 @@ import { PLANS_KEY, load, removeEntity, save } from '../store/plans';
 import { goalsReaching, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache } from '../store/visions';
 import { drive } from '../sync/drive';
 import { syncState } from '../sync/sync';
-import { renderSync } from './sync-ui.js';
+import { renderSync } from '../ui/sync-ui';
 import { $, byDeadline, byDueDate, deadlineTag, emptyState, esc, hideDoneToggle, itemCount, linkTag, matchesSearch, neighbourhood, progressBar, smartBadge, statusCheck, statusLegend, trail, viewEl, waitsForTag } from '../ui/dom';
 import { categories } from '../core/categories';
 import { periodText, scaleText, scheduleText, shortSchedule, statusLabels, streakText, totalText, weekdayName, withUnit } from '../ui/text';

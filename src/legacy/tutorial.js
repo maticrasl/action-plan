@@ -10,10 +10,9 @@ import { closeCtxMenu } from '../ui/menu';
 import { setView } from '../ui/nav';
 import { toast } from '../ui/toast';
 import { modal } from '../ui/forms/form';
-import { changeLanguage, settings } from '../ui/settings';
+import { changeLanguage, setHelp, settings } from '../ui/settings';
 import { renderPlanSwitch } from '../ui/plan-switcher';
 import { sampleData } from '../ui/plan-io';
-import { requestRender } from '../ui/render';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode
@@ -237,13 +236,6 @@ export function decorateHelp() {
     view.querySelector(sel)?.insertAdjacentHTML(where,
       `<button type="button" class="help-dot" data-help-tip="${key}" aria-expanded="false" aria-label="${esc(t('help.tipLabel'))}" title="${esc(t('help.tipLabel'))}">i</button>`);
   });
-}
-
-export function setHelp(on) {
-  ui.help = on;
-  prefs.set('help', on);
-  $('#helpBtn').setAttribute('aria-pressed', on);
-  requestRender();
 }
 
 export function openHelpTip(dot) {
