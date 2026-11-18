@@ -20,7 +20,10 @@ import { setDb } from './core/state';
 import { on } from './store/events';
 import { scheduleSync, setSyncPaused } from './sync/sync';
 import { initSync, renderSync } from './legacy/sync-ui.js';
+import { setRenderer } from './ui/render';
 
+// Screen parts below the views redraw through this.
+setRenderer(render);
 // Storage and sync reach the screen only through these.
 on('saving', () => offerReached());
 on('saved', () => scheduleSync());

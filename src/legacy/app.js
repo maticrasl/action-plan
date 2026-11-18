@@ -27,6 +27,7 @@ import { renderSync } from './sync-ui.js';
 import { $, byDeadline, byDueDate, deadlineTag, emptyState, esc, hideDoneToggle, itemCount, linkTag, matchesSearch, neighbourhood, progressBar, smartBadge, statusCheck, statusLegend, trail, viewEl, waitsForTag } from '../ui/dom';
 import { categories, categorySuggestions } from '../core/categories';
 import { nthWord, periodText, scaleText, scheduleText, shortSchedule, statusLabels, streakText, totalText, weekdayName, withUnit } from '../ui/text';
+import { requestRender } from '../ui/render';
 
 // Asks for a plan name until it is free (or the user cancels); `exceptId` is the plan being renamed.
 export function askPlanName(question, suggestion, exceptId) {
@@ -2712,7 +2713,7 @@ export function submitForm() {
 export function finish(msg) {
   save();
   modal.close();
-  render();
+  requestRender();
   toast(msg);
 }
 
@@ -2784,7 +2785,7 @@ export function showReached() {
   toast(t('reached.text', { name: g.title }), { label: t('reached.mark'), run: () => {
     g.status = 'achieved';
     save();
-    render();
+    requestRender();
     toast(t('ctx.statusSet', { s: t('goal.achieved') }));
   } });
 }
@@ -2925,7 +2926,7 @@ export function setView(view) {
   ui.search = '';
   ui.mapRefocus = true;
   prefs.set('view', view);
-  render();
+  requestRender();
   window.scrollTo(0, 0);
 }
 
@@ -3685,7 +3686,7 @@ export const SETTINGS = {
 export function setToggle(key, on) {
   ui[key] = on;
   prefs.set(key, on);
-  render();
+  requestRender();
 }
 
 export function renderSettings() {
@@ -3719,7 +3720,7 @@ export function setNavCollapsed(on) {
   ui.navCollapsed = on;
   prefs.set('navCollapsed', on);
   applyNavCollapsed();
-  render(); // graphs are drawn at the view's width
+  requestRender(); // graphs are drawn at the view's width
 }
 
 export function applyNavCollapsed() {
@@ -4733,7 +4734,7 @@ export function changeLanguage(code) {
   renderPlanSwitch();
   renderInstall();
   if (modal.open) modal.close();
-  render();
+  requestRender();
 }
 
 document.addEventListener('click', e => {
@@ -4759,7 +4760,7 @@ export function applyTheme() {
 export const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 // The map writes its glass in the colours of the theme it was drawn in, so a change of theme redraws it;
 // other views follow the CSS, and keep an open popup.
-export const redrawForTheme = () => { if (ui.view === 'map') render(); };
+export const redrawForTheme = () => { if (ui.view === 'map') requestRender(); };
 darkScheme.addEventListener('change', () => { if (theme === 'system') redrawForTheme(); });
 export function renderThemeSetting() {
   $('#themeSeg').innerHTML = THEMES.map(k =>
