@@ -9,12 +9,13 @@ import { deletePlan, mergePlanInto, readPlan } from '../store/plans';
 import { toast } from './toast';
 import { planContents } from './plan-switcher';
 import { exportJson } from './plan-io';
+import type { Plan } from '../core/model';
 
 /* ---------- Deleting a plan: spells out what is lost and asks for the plan's name ---------- */
 
-export const planDel = $('#planDelete');
+export const planDel = $<HTMLDialogElement>('#planDelete');
 
-export function openPlanDelete(plan) {
+export function openPlanDelete(plan: Plan) {
   closeCtxMenu();
   planDel.dataset.id = plan.id;
   const contents = planContents(db);
@@ -38,34 +39,35 @@ export function openPlanDelete(plan) {
       <input type="text" id="planDeleteName" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="planDeleteHint">
       <div class="hint" id="planDeleteHint">${t('planDel.typeHint')}</div>
     </div>`;
-  $('#planDeleteBtn').disabled = true;
+  $<HTMLButtonElement>('#planDeleteBtn').disabled = true;
   planDel.showModal();
   $('#planDeleteName').focus();
 }
 
-export const planDelNameOk = () => $('#planDeleteName').value.trim() === plans.list.find(p => p.id === planDel.dataset.id)?.name;
-planDel.addEventListener('input', () => ($('#planDeleteBtn').disabled = !planDelNameOk()));
+export const planDelNameOk = () =>
+  $<HTMLInputElement>('#planDeleteName').value.trim() === plans.list.find(p => p.id === planDel.dataset.id)?.name;
+planDel.addEventListener('input', () => ($<HTMLButtonElement>('#planDeleteBtn').disabled = !planDelNameOk()));
 planDel.addEventListener('click', e => {
-  if (e.target === planDel || e.target.closest('[data-plan-delete-close]')) planDel.close();
-  if (e.target.closest('[data-plan-backup]')) exportJson();
-  if (e.target.closest('[data-plan-merge-instead]')) {
+  if (e.target === planDel || (e.target as HTMLElement).closest('[data-plan-delete-close]')) planDel.close();
+  if ((e.target as HTMLElement).closest('[data-plan-backup]')) exportJson();
+  if ((e.target as HTMLElement).closest('[data-plan-merge-instead]')) {
     planDel.close();
-    openMerge(currentPlan(), true);
+    openMerge(currentPlan()!, true);
   }
 });
 $('#planDeleteForm').addEventListener('submit', e => {
   e.preventDefault();
   if (!planDelNameOk()) return;
   planDel.close();
-  deletePlan(planDel.dataset.id);
+  deletePlan(planDel.dataset.id!);
   toast(t('toast.planDeleted'));
 });
 
 /* ---------- Merging a plan into another (also offered instead of deleting it) ---------- */
 
-export const planMerge = $('#planMerge');
+export const planMerge = $<HTMLDialogElement>('#planMerge');
 
-export function openMerge(plan, remove = false) {
+export function openMerge(plan: Plan, remove = false) {
   closeCtxMenu();
   const others = plans.list.filter(p => p.id !== plan.id);
   if (!others.length) return;
@@ -84,13 +86,13 @@ export function openMerge(plan, remove = false) {
   $('#mergeTarget').focus();
 }
 planMerge.addEventListener('click', e => {
-  if (e.target === planMerge || e.target.closest('[data-plan-merge-close]')) return planMerge.close();
-  if (!e.target.closest('#mergeBtn') || !planMerge.open) return;
-  const from = plans.list.find(p => p.id === planMerge.dataset.id), to = plans.list.find(p => p.id === $('#mergeTarget').value);
-  const remove = $('#mergeRemove').checked;
+  if (e.target === planMerge || (e.target as HTMLElement).closest('[data-plan-merge-close]')) return planMerge.close();
+  if (!(e.target as HTMLElement).closest('#mergeBtn') || !planMerge.open) return;
+  const from = plans.list.find(p => p.id === planMerge.dataset.id),
+    to = plans.list.find(p => p.id === $<HTMLSelectElement>('#mergeTarget').value);
+  const remove = $<HTMLInputElement>('#mergeRemove').checked;
   planMerge.close();
   if (!from || !to) return;
   mergePlanInto(from.id, to.id, remove);
   toast(t(remove ? 'toast.mergedDeleted' : 'toast.merged', { from: from.name, to: to.name }));
 });
-
