@@ -5,7 +5,6 @@ import './sync/config';
 import { initTutorial, offerTour, tour } from './legacy/tutorial.js';
 import './store/users';
 import './store/visions';
-import { initSync, renderSync, scheduleSync, setSyncPaused } from './legacy/drive.js';
 import './legacy/backup.js';
 import {
   bootUser,
@@ -19,6 +18,8 @@ import {
 import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { on } from './store/events';
+import { scheduleSync, setSyncPaused } from './sync/sync';
+import { initSync, renderSync } from './legacy/sync-ui.js';
 
 // Storage and sync reach the screen only through these.
 on('saving', () => offerReached());

@@ -1,6 +1,5 @@
 /** The app: data model, storage, views, forms and event wiring. */
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
-import { drive, renderSync, syncConnected, syncState } from './drive.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
 import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
@@ -22,6 +21,9 @@ import { STORAGE_KEY, prefs } from '../store/prefs';
 import { currentPlan, freshUi, plans, setPlans, ui } from '../store/state';
 import { PLANS_KEY, createPlan, deletePlan, load, mergePlanInto, nameTaken, openPlan, planKey, readPlan, save, uniqueName } from '../store/plans';
 import { deleteVision, goalsReaching, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache } from '../store/visions';
+import { drive } from '../sync/drive';
+import { syncConnected, syncState } from '../sync/sync';
+import { renderSync } from './sync-ui.js';
 
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
