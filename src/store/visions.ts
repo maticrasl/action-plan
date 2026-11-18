@@ -1,7 +1,8 @@
 /** Visions: the global list above goals, stored apart from plans, and the goals serving them. */
 import { db, setVisions, visions } from '../core/state';
 import { TOMBSTONE_DAYS, itemContent } from '../core/merge';
-import { normalizeVisions, ownVisions, purposeOf, visionAncestors } from '../core/visions';
+import { normalizeVisions, ownVisions, purposeOf, visionAncestors, type PlanData } from '../core/visions';
+import type { VisionList } from '../core/model';
 import { userStorage } from './users';
 import { emit } from './events';
 import { currentPlan, plans, plansVersion } from './state';
@@ -21,80 +22,118 @@ import { readPlan } from './plans';
 
 export const VISIONS_KEY = 'actionplan.visions';
 export let visionsVersion = 0; // bumped on every change to the list, so cached answers know to start over
-export let visionSnapshot = new Map();
+export let visionSnapshot = new Map<string, string>();
 
-export const takeVisionSnapshot = () => { visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)])); };
+export const takeVisionSnapshot = () => {
+  visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)]));
+};
 
 export function loadVisions() {
-  try { setVisions(normalizeVisions(JSON.parse(userStorage.getItem(VISIONS_KEY)))); } catch (e) { setVisions(normalizeVisions(null)); }
+  try {
+    setVisions(normalizeVisions(JSON.parse(userStorage.getItem(VISIONS_KEY) as string)));
+  } catch (e) {
+    setVisions(normalizeVisions(null));
+  }
   takeVisionSnapshot();
   visionsVersion++;
 }
 
 // Stamps what changed since the last save, remembers deleted ids (as plans do), stores the list and syncs.
 export function saveVisions() {
-  const now = new Date().toISOString(), present = new Set();
+  const now = new Date().toISOString(),
+    present = new Set<string>();
   visions.list.forEach(v => {
     present.add(v.id);
     if (visionSnapshot.get(v.id) !== itemContent(v)) v.updatedAt = now;
     delete visions.deleted[v.id];
   });
-  visionSnapshot.forEach((_, id) => { if (!present.has(id)) visions.deleted[id] = now; });
+  visionSnapshot.forEach((_, id) => {
+    if (!present.has(id)) visions.deleted[id] = now;
+  });
   const cutoff = new Date(Date.now() - TOMBSTONE_DAYS * 86400000).toISOString();
-  Object.keys(visions.deleted).forEach(id => { if (visions.deleted[id] < cutoff) delete visions.deleted[id]; });
+  Object.keys(visions.deleted).forEach(id => {
+    if (visions.deleted[id] < cutoff) delete visions.deleted[id];
+  });
   takeVisionSnapshot();
   visionsVersion++;
-  try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { emit('storageError'); }
+  try {
+    userStorage.setItem(VISIONS_KEY, JSON.stringify(visions));
+  } catch (e) {
+    emit('storageError');
+  }
   emit('saved');
 }
 
 /* ---------- The vision tree ---------- */
 
-export function deleteVision(id) {
+export function deleteVision(id: string) {
   visions.list = visions.list.filter(v => v.id !== id);
-  visions.list.forEach(v => { if (v.parents.includes(id)) v.parents = v.parents.filter(p => p !== id); });
+  visions.list.forEach(v => {
+    if (v.parents.includes(id)) v.parents = v.parents.filter(p => p !== id);
+  });
   saveVisions();
 }
 
 /* ---------- Goals serving visions ---------- */
 
 // Every plan's data: the open one as it is now, the others as stored (read once per change).
-export let otherPlansCache = { key: '', list: [] };
-export function setOtherPlansCache(v) { otherPlansCache = v; }
-export function allPlansData() {
+export let otherPlansCache: { key: string; list: PlanData[] } = { key: '', list: [] };
+export function setOtherPlansCache(v: typeof otherPlansCache) {
+  otherPlansCache = v;
+}
+export function allPlansData(): PlanData[] {
   const key = `${plansVersion}|${plans.current}|${plans.list.map(p => p.id).join(',')}`;
-  if (otherPlansCache.key !== key) otherPlansCache = { key, list: plans.list.filter(p => p.id !== plans.current).map(p => ({ plan: p, data: readPlan(p.id) })) };
-  return [{ plan: currentPlan() || { id: plans.current, name: '' }, data: db }, ...otherPlansCache.list];
+  if (otherPlansCache.key !== key)
+    otherPlansCache = {
+      key,
+      list: plans.list.filter(p => p.id !== plans.current).map(p => ({ plan: p, data: readPlan(p.id) })),
+    };
+  return [{ plan: currentPlan() || { id: plans.current as string, name: '' }, data: db }, ...otherPlansCache.list];
 }
 
 // Visions some goal (in any plan) serves, and every vision above them.
 export function reachedVisions() {
-  const out = new Set();
-  allPlansData().forEach(({ data }) => data.goals.forEach(g => ownVisions(g).forEach(id => {
-    out.add(id);
-    visionAncestors(id).forEach(a => out.add(a));
-  })));
+  const out = new Set<string>();
+  allPlansData().forEach(({ data }) =>
+    data.goals.forEach(g =>
+      ownVisions(g).forEach(id => {
+        out.add(id);
+        visionAncestors(id).forEach(a => out.add(a));
+      }),
+    ),
+  );
   return out;
 }
 
 // How many goals (in every plan) serve a vision, directly or through a narrower one.
-export function goalsReaching(id) {
+export function goalsReaching(id: string) {
   let n = 0;
-  allPlansData().forEach(({ data }) => data.goals.forEach(g => { if (ownVisions(g).some(x => x === id || visionAncestors(x).has(id))) n++; }));
+  allPlansData().forEach(({ data }) =>
+    data.goals.forEach(g => {
+      if (ownVisions(g).some(x => x === id || visionAncestors(x).has(id))) n++;
+    }),
+  );
   return n;
 }
 
 // The goals (from every plan) that serve a vision directly, as { plan, goal }.
-export const servingGoals = id => allPlansData().flatMap(({ plan, data }) => data.goals.filter(g => ownVisions(g).includes(id)).map(goal => ({ plan, goal })));
+export const servingGoals = (id: string) =>
+  allPlansData().flatMap(({ plan, data }) =>
+    data.goals.filter(g => ownVisions(g).includes(id)).map(goal => ({ plan, goal })),
+  );
 
 export const purposeState = () => purposeOf(allPlansData());
 
 /* ---------- Sync ---------- */
 
 // Makes a merged list this device's.
-export function applyVisions(merged) {
+export function applyVisions(merged: VisionList) {
   setVisions(normalizeVisions(merged));
-  try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { /* the plans' write reports it */ }
+  try {
+    userStorage.setItem(VISIONS_KEY, JSON.stringify(visions));
+  } catch (e) {
+    /* the plans' write reports it */
+  }
   takeVisionSnapshot();
   visionsVersion++;
 }
