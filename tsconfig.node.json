@@ -1,9 +1,10 @@
 {
   // Code that runs in Node: the Vite and Vitest configs, and the unit tests (Vitest brings Node's types,
-  // which the app's own files must not see).
+  // which the app's own files must not see). DOM: the store and sync modules the tests load name page
+  // types such as Response.
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
@@ -11,5 +12,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "src/**/*.test.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "playwright.config.ts", "src/**/*.test.ts", "tests/e2e"]
 }

@@ -4,3 +4,6 @@ dist-test/
 .claude/worktrees/
 .claude/settings.local.json
 tests/fixtures/private/
+shots/
+test-results/
+playwright-report/

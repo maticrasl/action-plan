@@ -17,7 +17,7 @@ export function chromePath() {
   return 'google-chrome';
 }
 
-// Builds the app at `src` in test mode (vite.config.ts: test.html, perf.html, fx.html) and serves
+// Builds the app at `src` in test mode (vite.config.ts: browser.html, perf.html, fx.html) and serves
 // the result on a free local port. Returns { dir, profiles, url, close }: the built folder, a temp
 // folder for Chrome profiles, the server's address with a trailing slash, and a function that stops
 // the server and removes the profiles.

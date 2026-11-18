@@ -11,10 +11,15 @@
 | 06 views and tutorial | merged (PR #14) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-06` |
 | 07 map, timeline, graphs | merged (PR #16) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-07` |
 | 08 close-out | merged (PR #18) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-08` |
-| 09 tests | not started |
+| 09 tests | done on branch `restructure/phase-09` (not pushed); awaits "ship it" |
 | 10 workflow | not started |
 
-## Perf baseline (`npm run perf`, 2026-11-16, owner's Windows PC, Chrome headless, real time)
+## Perf baseline
+
+Since phase 9, `npm run perf` compares with `tests/perf-baseline.json` (2026-11-18, this PC) and flags a change
+over 25%; `npm run perf -- --save` stores a new one. The history below is from before.
+
+### `npm run perf`, 2026-11-16, owner's Windows PC, Chrome headless, real time
 
 Compare against these after phases 7 and 8. Average ms per draw (budget in brackets). After phase 1: within
 the baseline; the largest, 300 items + 20 visions map, 229 ms (was 198). After phase 3: the same (223 ms; state form 117).
@@ -41,13 +46,11 @@ it was 100 and measured 117–129 since 2026-11-08); all checks pass.
 These steps fail on GitHub's Linux Chrome (the same 4 in all 3 runs of PR #1) and still gate locally.
 Fixtures pass on Linux.
 
-- `routine cards: a short schedule tag that fits, the full one as its tooltip`: text width. It fails while
-  set to Slovenian and never switches back, so the next two fail as a result:
-- `monthly routines: the form shows the right fields and saves each option`
-- `monthly routines: check-ins, streaks and the week strip`
+- `routine cards: a short schedule tag that fits, the full one as its tooltip`: text width (Slovenian)
 - `item menu: show in another view, selected there`: a map box side 6 px off (658 → 664)
 
-Phase 9 (tests) can make the first step restore English in `finally` and take the two monthly steps off.
+Phase 9: `routines.monthly.js` switches back to English after the first, so the two monthly steps after it
+are off the list. Not yet confirmed on GitHub (the branch is not pushed).
 
 ## `NO RESULT` flake in `test:browser`: cause found, fix in `tests/pre.js` (2026-11-17)
 
@@ -62,18 +65,16 @@ Phase 9 (tests) can make the first step restore English in `finally` and take th
 
 ## Notes for the next phase
 
-- `src/legacy` is gone. Boot is `src/boot.ts`, not `main.ts`: the suite calls `enterUser` through the bridge, which skips main.ts.
-- `noUncheckedIndexedAccess`: 397 errors, left as a later option. `no-explicit-any` is an error; there is no `any` in src.
-- Layers: ESLint rule `layers/order` (`scripts/lib/eslint-layers.mjs`; its 17 cases run in `npm run lint`). Inside views/,
-  `index.ts` and `events.ts` sit above the views; other files directly in views/ are shared and import no view. Views call
-  `render` through `ui/render.ts`. Kept exceptions: 10 file pairs among map, timeline and graphs (item menu, gestures, line
-  drawing, timeline drag state), listed in `eslint.config.js`.
-- Cycles: `npm run cycles -- --values`, 42 → 24. Left: core (cumulative → relations → visions → merge/normalize, progress ↔
-  keeping), store plans ↔ visions, ui/forms/form.ts ↔ each form (its field builders want a file of their own), plan-io ↔
-  plan-switcher (↔ plan-dialogs), reached ↔ toast, graphs plot ↔ states ↔ sums, map keys/menu/link/zoom ↔ timeline/drag.
-- Dead code: none found. `stateChange`'s unused `s` stays (the suite passes three arguments; phase 9). 183 exports are used
-  only in their own file. Over 400 lines: `views/map/layout.ts` 441, `styles/timeline.css` 685, `styles/settings.css` 652.
-- Styles: `src/styles/index.css` imports 19 files; the test build joins them into `css/styles.css` for the suite's iframes.
-- Prettier ran as `prettier --write src "tests/**/*.js"` (fixture JSON left as written); its commit is in `.git-blame-ignore-revs`.
-- `move-decls`: drops `type` modifiers and appends imports at the end (order in main.ts matters); fix those lines by hand.
-- Unchanged: fixtures never regenerated; tests assign only through `setX`. Unit tests 122, suite 221 steps.
+- Tests: `tests/README.md`. Page tests are 34 files in `tests/browser` (187 steps, each file alone in a fresh page, 4 at
+  a time, ~45 s); unit tests 143 in 19 files; Playwright 3 (`tests/e2e`, on `dist/`). more.js and test.js are gone.
+- The suite's day is pinned (pre.js shifts Date to Wed 2026-11-18 noon). Run on Sunday 2026-06-14, two steps failed:
+  see `found-bugs.md`.
+- Unit tests load only modules that do not touch `document` while loading: views/* and most of ui/* stay page tests
+  (no jsdom: not an allowed dependency). sync.ts types clash with Node's setTimeout, so applyStore stays a page test.
+- `tsconfig.node.json` has the DOM lib (store and sync modules name Response); it also checks tests/e2e.
+- Assertions (assert/eq/expect): 2714 before, 2545 after. ~212 of the 279 page assertions removed duplicated unit
+  tests ported in phases 3–7; the other ~67 became 85 new expects. Nothing was dropped without a replacement.
+- `users.js` is 632 lines: one chain of logins on a fake Google; splitting it means replaying the logins.
+- `npm audit`: 11 high in the vite/vitest/typescript-eslint chain (picomatch), there before this phase.
+- CI (`check.yml`) installs Playwright's Chromium shell and fetches the `pre-restructure` tag; not yet run on GitHub.
+- Unchanged: no app code changed; fixtures never regenerated; `stateChange`'s unused `s` stays.

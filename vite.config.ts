@@ -36,20 +36,20 @@ function serviceWorker(): Plugin {
 }
 
 // The test pages: copies of the built index.html with classic scripts in <head> that run before the
-// app, and a list of classic scripts the test bridge appends once the app has booted.
+// app, and a list of classic scripts the test bridge appends once the app has booted. browser.html
+// runs the tests/browser files named in its query (tests/browser/harness.js).
 const TEST_PAGES: Record<string, { before: string[]; after: string[] }> = {
-  'test.html': { before: ['tests/pre.js'], after: ['tests/more.js', 'tests/test.js'] },
+  'browser.html': { before: ['tests/pre.js'], after: ['tests/browser/harness.js'] },
   'perf.html': { before: ['tests/pre.js'], after: ['tests/perf.js'] },
   // fixture-config.js is written by scripts/fixtures.mjs before each page load.
   'fx.html': { before: ['fixture-config.js', 'tests/fixture-pre.js'], after: ['tests/fixture-page.js'] },
 };
 const TEST_FILES: Record<string, string> = {
   'tests/pre.js': 'tests/pre.js',
-  'tests/more.js': 'tests/more.js',
-  'tests/test.js': 'tests/test.js',
   'tests/perf.js': 'tests/perf.js',
   'tests/fixture-pre.js': 'tests/fixtures/fixture-pre.js',
   'tests/fixture-page.js': 'tests/fixtures/fixture-page.js',
+  ...Object.fromEntries(filesIn(join(root, 'tests', 'browser')).map(f => [`tests/browser/${f}`, `tests/browser/${f}`])),
 };
 
 // Tests render parts of the app in an iframe that links css/styles.css: the files src/styles/index.css

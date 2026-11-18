@@ -16,7 +16,7 @@ import {
 
 // Ported from tests/more.js: "visions: loops refused, several parents allowed…", "visions: Purpose needs one
 // top vision…" (through purposeOf, with every plan's data given) and "visions: sync merges them like plans…".
-// reachedVisions and the other readers of every stored plan stay in legacy/visions.js and are tested there.
+// reachedVisions and the other readers of every stored plan are tested in store/visions.test.ts.
 
 let n = 0;
 const mkV = (title: string, parents: Vision[] = []): Vision => {

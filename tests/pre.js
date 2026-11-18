@@ -1,4 +1,19 @@
-// Runs before the app: clean storage, deterministic stubs, error capture.
+// Runs before the app: a fixed calendar day, clean storage, deterministic stubs, error capture.
+// The suite always starts on Wednesday 18 November 2026 at noon, mid-month and weeks from a clock
+// change. The clock is shifted, not frozen: code that measures elapsed time still sees it advance.
+{
+  const RealDate = Date,
+    shift = new RealDate(2026, 10, 18, 12).getTime() - RealDate.now();
+  window.Date = class extends RealDate {
+    constructor(...a) {
+      if (a.length) super(...a);
+      else super(RealDate.now() + shift);
+    }
+    static now() {
+      return RealDate.now() + shift;
+    }
+  };
+}
 window.__errors = [];
 window.onerror = (msg, src, line, col) => {
   __errors.push(`${msg} @${(src || '').split('/').pop()}:${line}:${col}`);

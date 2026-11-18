@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "npm run -s check:fast && npm run -s test:fixtures && npm run -s test:browser",
+    "check": "npm run -s check:fast && npm run -s test:fixtures && npm run -s test:browser && npm run -s test:e2e",
     "check:fast": "npm run -s typecheck && npm run -s lint && npm run -s test:unit",
     "dev": "vite",
     "build": "vite build",
@@ -13,14 +13,18 @@
     "test:unit": "vitest run --reporter=./scripts/vitest-quiet.mjs --passWithNoTests",
     "test:fixtures": "node scripts/fixtures.mjs",
     "test:browser": "node scripts/run-suite.mjs",
+    "test:e2e": "vite build --logLevel error && playwright test",
+    "shot": "node scripts/shot.mjs",
     "perf": "node scripts/run-suite.mjs --perf",
     "outline": "node scripts/outline.mjs",
     "map": "node scripts/map.mjs",
     "cycles": "node scripts/cycles.mjs",
-    "move": "node scripts/move-decls.mjs"
+    "move": "node scripts/move-decls.mjs",
+    "move-steps": "node scripts/move-steps.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
     "eslint": "^10.15.0",
     "globals": "^17.14.0",

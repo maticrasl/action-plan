@@ -18,4 +18,8 @@ jobs:
           node-version-file: .nvmrc
           package-manager-cache: false
       - run: npm ci
+      # Playwright (npm run test:e2e): Chromium's headless shell only, with its system libraries.
+      - run: npx playwright install --with-deps --only-shell chromium
+      # The upgrade test serves the app as it was before the restructure.
+      - run: git fetch --no-tags --depth=1 origin +refs/tags/pre-restructure:refs/tags/pre-restructure
       - run: npm run check
