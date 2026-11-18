@@ -1,10 +1,10 @@
 /** Visions: the global list above goals, stored apart from plans. */
-import { userStorage } from './users.js';
 import { currentPlan, plans, readPlan } from './app.js';
 import { db, setVisions, visions } from '../core/state';
 import { normalizeVisions, ownVisions, purposeOf, visionAncestors } from '../core/visions';
 import { TOMBSTONE_DAYS, itemContent } from '../core/merge';
 import { emit } from '../store/events';
+import { userStorage } from '../store/users';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")

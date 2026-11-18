@@ -1,6 +1,5 @@
 /** The app: data model, storage, views, forms and event wiring. */
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
-import { saveUsers, userStorage, users } from './users.js';
 import { deleteVision, goalsReaching, loadVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion } from './visions.js';
 import { drive, renderSync, syncConnected, syncState } from './drive.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
@@ -21,6 +20,7 @@ import { PLAN_FORMAT, PLAN_VERSION, dropRoutineDeps, hasProgress, normalize, par
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
 import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/index';
 import { emit } from '../store/events';
+import { saveUsers, userStorage, users } from '../store/users';
 
 export const STORAGE_KEY = 'actionplan.v1';
 
