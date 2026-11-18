@@ -1,0 +1,26 @@
+{
+  "machine": "DESKTOP-3I632O1",
+  "date": "2026-11-18",
+  "ms": {
+    "sample plan: dashboard view": 5,
+    "sample plan: goals view": 3,
+    "sample plan: activities view": 7,
+    "sample plan: states view": 3,
+    "sample plan: visions view": 2,
+    "sample plan: map view": 29,
+    "sample plan: timeline view": 22,
+    "sample plan: graphs view": 19,
+    "sample plan: map layout": 3,
+    "300 items: map view": 146,
+    "1,100 amounts: graph by day": 59,
+    "1,100 amounts: graph by week": 25,
+    "1,100 amounts: graph by month": 24,
+    "1,100 amounts: graph by year": 21,
+    "1,100 amounts: graph by total": 33,
+    "1,100 amounts: states view": 1,
+    "1,100 amounts: state form": 143,
+    "300 items + 20 visions: map view": 205,
+    "20 visions: visions view": 4,
+    "300 items + 20 visions: goals view with glow": 9
+  }
+}

@@ -5,11 +5,12 @@
 //   default    prints each failing file's FAIL lines, its errors and a summary line, then one total line;
 //              exit 0 if all passed
 //   --verbose  every PASS and FAIL line, with stacks
-//   --perf     the draw-time budgets (tests/perf.js) on real time instead; prints their lines, never fails
+//   --perf     the draw times (tests/perf.js) on real time instead, against tests/perf-baseline.json;
+//              flags a change over 25%, never fails. --perf --save stores this run as the baseline
 //   --app      test the app in another folder (a `git archive` of an older commit) with its own tests
 // On CI (CI=true), steps listed in tests/ci-skip.txt still run but their failure does not count.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { hostname, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
 
@@ -49,10 +50,43 @@ function selectPages(wanted) {
 
 }
 
+// Draw times against tests/perf-baseline.json: a change over 25% (and over 5 ms, below which the
+// numbers are noise) is flagged. --save writes this run as the new baseline, with the machine's name.
 async function runPerf() {
   // Real time: no virtual-time budget, so the clock runs while perf.js measures.
   const out = readPre(await dumpDom(url + 'perf.html', profiles, { virtualTime: 0, profile: 'profile-perf' }), 'PERF');
-  console.log(out ?? 'FAIL draw times: NO RESULT');
+  if (out === null) {
+    console.log('FAIL draw times: NO RESULT');
+    return 1;
+  }
+  const ms = {};
+  for (const l of out.split('\n').map(s => s.trim())) {
+    const m = /^(?:PASS|FAIL) (.+): (\d+) ms \(budget \d+ ms\)$/.exec(l);
+    if (m) ms[m[1]] = Number(m[2]);
+    else console.log(l); // a check that could not run
+  }
+  const file = join(tests, 'perf-baseline.json');
+  if (args.includes('--save')) {
+    writeFileSync(file, JSON.stringify({ machine: hostname(), date: new Date().toISOString().slice(0, 10), ms }, null, 2) + '\n');
+    console.log(`perf: baseline saved for ${hostname()}, ${Object.keys(ms).length} checks`);
+    return 0;
+  }
+  const base = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { ms: {} };
+  if (base.machine && base.machine !== hostname())
+    console.log(`note: the baseline is from ${base.machine} (${base.date}), this is ${hostname()}`);
+  let flagged = 0;
+  for (const [name, now] of Object.entries(ms)) {
+    const was = base.ms[name];
+    if (was === undefined) {
+      console.log(`NEW     ${name}: ${now} ms`);
+      continue;
+    }
+    const change = was ? (now - was) / was : 0;
+    const flag = Math.abs(now - was) > 5 && Math.abs(change) > 0.25 ? (change > 0 ? 'SLOWER' : 'FASTER') : 'ok';
+    if (flag !== 'ok') flagged++;
+    console.log(`${flag.padEnd(7)} ${name}: ${now} ms (baseline ${was}, ${change >= 0 ? '+' : ''}${Math.round(change * 100)}%)`);
+  }
+  console.log(`perf: ${Object.keys(ms).length} checks, ${flagged} changed over 25%`);
   return 0;
 }
 
