@@ -219,3 +219,8 @@ export interface UserList {
 export function emptyDb(): Db {
   return { goals: [], states: [], activities: [], relations: [], deleted: {} };
 }
+
+// The collections of a plan that sync item by item, and what is in them.
+export type Coll = 'goals' | 'states' | 'activities' | 'relations';
+
+export const SYNC_COLLS: Coll[] = ['goals', 'states', 'activities', 'relations'];

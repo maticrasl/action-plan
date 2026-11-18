@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
-  SYNC_COLLS,
   mergeActivity,
   mergePlans,
   mergeState,
@@ -12,6 +11,7 @@ import {
   takeSnapshot,
   type Store,
 } from './merge';
+import { SYNC_COLLS } from './model';
 import { normalize } from './normalize';
 import { addDays } from './routines/schedule';
 import { today } from './dates';
