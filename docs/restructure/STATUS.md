@@ -12,7 +12,8 @@
 | 07 map, timeline, graphs | merged (PR #16) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-07` |
 | 08 close-out | merged (PR #18) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-08` |
 | 09 tests | merged (PR #20) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-09` |
-| 10 workflow | done 2026-11-18 on `restructure/phase-10`; ships on the owner's "ship it". **Restructure done: features allowed** |
+| 10 workflow | merged (PR #22) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-10`. **Restructure done: features allowed** |
+| after | plan docs merged (PR #23) and deployed 2026-11-18; fonts and date-proof tests on `fix/fonts-and-sunday-tests`, ships on the owner's "ship it" |
 
 ## Perf baseline
 
@@ -43,14 +44,18 @@ it was 100 and measured 117–129 since 2026-11-08); all checks pass.
 
 ## CI skip list (`tests/ci-skip.txt`)
 
-These steps fail on GitHub's Linux Chrome (the same 4 in all 3 runs of PR #1) and still gate locally.
-Fixtures pass on Linux.
+Empty since 2026-11-18 (`fix/fonts-and-sunday-tests`). It held two steps that failed on GitHub's Linux
+Chrome only, both measuring text:
 
 - `routine cards: a short schedule tag that fits, the full one as its tooltip`: text width (Slovenian)
 - `item menu: show in another view, selected there`: a map box side 6 px off (658 → 664)
 
-Phase 9: `routines.monthly.js` switches back to English after the first, so the two monthly steps after it
-are off the list; confirmed on GitHub (PR #20 and its deploy passed).
+Cause: the text was measured in whatever font the machine had: in the test frames always the
+fallback (Segoe UI on Windows, Liberation or DejaVu on Linux; `css/styles.css` had no Overpass), on the
+page Overpass from Google Fonts only once it had arrived. Now Overpass ships with the app
+(`src/styles/fonts/`, also in the test frames' `css/fonts/`) and the harness loads it before any
+step (`fontsLoaded`). Both pass locally; **the first CI run of that branch confirms them on Linux**. If one
+still fails there, put it back on the list with its message.
 
 ## `NO RESULT` flake in `test:browser`: cause found, fix in `tests/pre.js` (2026-11-17)
 
@@ -78,3 +83,11 @@ are off the list; confirmed on GitHub (PR #20 and its deploy passed).
 - Memory (step 5) applied with the owner's yes, 2026-11-18: 14 entries; old folder kept as `memory-backup-2026-11-18`
   beside it. Delete `docs/restructure/` after 2026-12-18; `docs/decisions.md` carries what matters.
 - Node is at `C:\Program Files\nodejs`; a Claude process started before the install has no `node` on PATH.
+  `gh` is at `C:\Program Files\GitHub CLI\gh.exe`, likewise not always on PATH.
+
+## Notes (after phase 10, 2026-11-18)
+
+- The suite passes on any day, not only the pinned Wednesday: checked by pinning `tests/pre.js` to 15
+  Sundays of 2026 and to 1 Mar, 31 Mar, 1 Jan, 29 Feb (map, menu, routines, visions; the whole suite on
+  22 Nov and 14 Jun). One step still depends on the day: see `found-bugs.md` (a fifth weekday).
+- The font files add ~124 KB to the first load and the offline cache; the Google request is gone.

@@ -59,6 +59,7 @@ suite(async () => {
         frame.onload = res;
         document.body.append(frame);
       });
+      await fontsLoaded(frame.contentDocument);
       const doc = frame.contentDocument,
         card = doc.querySelector('.gr-card').getBoundingClientRect();
       const btns = [...doc.querySelectorAll('.gr-scale button')].map(b => b.getBoundingClientRect());
@@ -109,6 +110,7 @@ suite(async () => {
           frame.onload = res;
           document.body.append(frame);
         });
+        await fontsLoaded(frame.contentDocument);
         const doc = frame.contentDocument,
           card = doc.querySelector('.card').getBoundingClientRect();
         const title = doc.querySelector('.card-head h3'),

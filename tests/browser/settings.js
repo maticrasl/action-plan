@@ -141,6 +141,7 @@ suite(async () => {
           frame.onload = res;
           document.body.append(frame);
         });
+        await fontsLoaded(frame.contentDocument);
         const doc = frame.contentDocument,
           css = sel => frame.contentWindow.getComputedStyle(doc.querySelector(sel));
         const nav = doc.querySelector('.nav').getBoundingClientRect(),
@@ -313,6 +314,7 @@ suite(async () => {
       frame.onload = res;
       document.body.append(frame);
     });
+    await fontsLoaded(frame.contentDocument);
     const doc = frame.contentDocument;
     const wide = [...doc.querySelectorAll('#syncSection *')]
       .filter(el => el.getBoundingClientRect().right > 390 - 16 + 0.5)

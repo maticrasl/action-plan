@@ -1,8 +1,6 @@
 # Suite steps whose failure does not count on CI (GitHub's Linux Chrome), one step name per line.
 # They still gate locally. Add a step only for a rendering difference (fonts, sizes), and list it
 # in docs/restructure/STATUS.md.
-
-# Text width: the Slovenian tag does not fit on Linux fonts.
-routine cards: a short schedule tag that fits, the full one as its tooltip
-# Box position: one side of a map box 6 px off (658 → 664).
-item menu: show in another view, selected there
+#
+# Empty since the typeface ships with the app (src/styles/fonts.css) and the harness waits for it
+# (fontsLoaded in tests/browser/harness.js): the two steps that differed on Linux fonts are back.

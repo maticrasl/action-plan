@@ -316,6 +316,7 @@ suite(async () => {
         frame.onload = res;
         document.body.append(frame);
       });
+      await fontsLoaded(frame.contentDocument);
       const doc = frame.contentDocument,
         c = doc.querySelector('.card').getBoundingClientRect();
       const ds = [...doc.querySelectorAll('.rt-day')].map(b => b.getBoundingClientRect());

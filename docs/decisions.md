@@ -85,8 +85,14 @@ runs; a failing budget blocked the suite on unchanged code. It compares against
 `tests/perf-baseline.json` and flags a change over 25%; look into a flag, but it never fails the
 checks. `npm run perf -- --save` stores a new baseline after an accepted change.
 
-**CI skip list.** A few steps fail on GitHub's Linux fonts only (`tests/ci-skip.txt`). They run
-there without counting and still gate locally.
+**The typeface ships with the app.** Overpass is in `src/styles/fonts/` (SIL Open Font License),
+not loaded from Google Fonts: nothing is fetched from another site until the user logs in, the
+installed app has it offline, and the page tests measure text in the same font on every machine
+(the harness waits for it, `fontsLoaded`).
+
+**CI skip list.** A step that fails on GitHub's Linux Chrome only, for a rendering reason, can be
+listed in `tests/ci-skip.txt`: it runs there without counting and still gates locally. Empty
+since the typeface ships with the app (2026-11-18).
 
 ## Releases
 

@@ -90,6 +90,7 @@ suite(async () => {
       frame.onload = res;
       document.body.append(frame);
     });
+    await fontsLoaded(frame.contentDocument);
     [...frame.contentDocument.querySelectorAll('.card')].forEach(c => {
       const card = c.getBoundingClientRect(),
         h = c.querySelector('h3').getBoundingClientRect(),
@@ -110,7 +111,7 @@ suite(async () => {
     changeLanguage('en');
     deletePlan(plans.current);
   });
-  changeLanguage('en'); // also when the step above failed in Slovenian (it does on CI's Linux fonts)
+  changeLanguage('en'); // also when the step above failed in Slovenian
   await step('monthly routines: the form shows the right fields and saves each option', () => {
     fresh('Monthly');
     const shown = sel => !$(sel).closest('[hidden]');

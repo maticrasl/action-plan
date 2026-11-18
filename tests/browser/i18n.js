@@ -87,4 +87,24 @@ suite(async () => {
     deletePlan(plans.current);
     return fmtSpan(now, addDays(now, 1), true);
   });
+  await step('typeface: Overpass from the app itself, with Slovenian letters, bold and italic', async () => {
+    await fontsLoaded();
+    const faces = [...document.fonts].filter(f => f.family.replace(/["']/g, '') === 'Overpass');
+    eq(faces.map(f => f.status), ['loaded', 'loaded', 'loaded', 'loaded'], 'four faces, all loaded');
+    assert(
+      document.fonts.check('400 16px Overpass', 'čšž ČŠŽ') &&
+        document.fonts.check('800 16px Overpass', 'čšž') &&
+        document.fonts.check('italic 16px Overpass', 'čšž'),
+      'regular, bold and italic, with č, š and ž',
+    );
+    eq(getComputedStyle(document.body).fontFamily.split(',')[0].replace(/["']/g, ''), 'Overpass', 'the app uses it');
+    const urls = performance.getEntriesByType('resource').map(e => e.name),
+      fonts = urls.filter(u => new URL(u).pathname.endsWith('.woff2'));
+    assert(fonts.length && fonts.every(u => new URL(u).origin === location.origin), `from the app's own site: ${fonts}`);
+    assert(
+      !urls.some(u => /fonts\.(googleapis|gstatic)\.com/.test(u)) && !$('link[href*="fonts.googleapis"]'),
+      'nothing from Google Fonts',
+    );
+    return `${fonts.length} files`;
+  });
 });

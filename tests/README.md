@@ -33,7 +33,9 @@ needs a `setX` export in its module.
 A file is `suite(async () => { await step('name', () => { … }); … })`. A step passes unless it throws; what
 it returns is shown with `--verbose`. Helpers (global): `assert(cond, msg)`, `eq(got, want, msg)`,
 `fresh(name)` (a new empty plan), `mk(kind, fields)` (a new item), `rel(a, b, type)`, `d(n)` (a date n
-days from today), `tick()`, `fp()`, and shared fixtures (`progressPlan`, `addPlan`, `capture`, `mkV`, …).
+days from today), `tick()`, `fp()`, `fontsLoaded(doc)`, and shared fixtures (`progressPlan`, `addPlan`,
+`capture`, `mkV`, …). The runner loads the app's typeface before the first step; a step that measures text
+in an iframe (`css/styles.css`) awaits `fontsLoaded(frame.contentDocument)` after its `load`.
 
 To add a step: put it in its feature's file; build what it needs (`fresh`, `mk`, `loadSample()`) instead
 of relying on an earlier step, and leave no dialog open. To prove it catches the bug, break the code, see

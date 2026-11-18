@@ -260,6 +260,7 @@ suite(async () => {
       frame.onload = res;
       document.body.append(frame);
     });
+    await fontsLoaded(frame.contentDocument);
     const doc = frame.contentDocument,
       cards = [...doc.querySelectorAll('.card.vision')];
     eq(cards.length, 4, 'all four drawn');

@@ -631,10 +631,9 @@ folder. See `p-google`.
 
 ⚠ The app does not use advertising or tracking, and it does not count what you do in it.
 
-⚠ Two things do come from outside when the app loads: the app's own files, from the site that
-hosts it, and its typeface, from Google Fonts. The companies running those services see that
-your device asked for a file, as with any web page. They do not receive anything from your
-plans.
+⚠ When the app loads, its own files (the typeface among them) come from the site that hosts it.
+The company running that site sees that your device asked for a file, as with any web page. It
+does not receive anything from your plans.
 
 Related: `p-google`, `p-backup`, `p-device`
 

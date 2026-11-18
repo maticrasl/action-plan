@@ -49,7 +49,7 @@ export async function serveTestBuild(src = ROOT) {
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.map': 'application/json', '.webmanifest': 'application/manifest+json',
-  '.png': 'image/png', '.svg': 'image/svg+xml',
+  '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2',
 };
 
 // Runs headless Chrome on `url` and resolves to the dumped DOM. `virtualTime` in ms, or 0 for real

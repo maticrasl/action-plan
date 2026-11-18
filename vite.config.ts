@@ -53,7 +53,7 @@ const TEST_FILES: Record<string, string> = {
 };
 
 // Tests render parts of the app in an iframe that links css/styles.css: the files src/styles/index.css
-// imports, joined in its order.
+// imports, joined in its order. Its font URLs (./fonts/…) find the files in css/fonts/.
 function stylesheet(): string {
   const dir = join(root, 'src', 'styles');
   const files = [...readFileSync(join(dir, 'index.css'), 'utf8').matchAll(/^@import '\.\/(.+)';/gm)].map(m => m[1]);
@@ -83,6 +83,9 @@ function testPages(): Plugin {
         this.emitFile({ type: 'asset', fileName, source: readFileSync(join(root, from)) });
       }
       this.emitFile({ type: 'asset', fileName: 'css/styles.css', source: stylesheet() });
+      const fonts = join(root, 'src', 'styles', 'fonts');
+      for (const f of filesIn(fonts).filter(f => f.endsWith('.woff2')))
+        this.emitFile({ type: 'asset', fileName: `css/fonts/${f}`, source: readFileSync(join(fonts, f)) });
     },
   };
 }
