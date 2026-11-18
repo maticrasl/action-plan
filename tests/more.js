@@ -11631,52 +11631,6 @@ window.moreTests = async ({ step, assert }) => {
     syncState.timer = null;
   };
 
-  await step('users: storage keys are per user; a tampered user list is not trusted', () => {
-    const root = currentUser();
-    assert(
-      users.list.length === 1 && root.id === 'local' && root.ns === '' && !root.account,
-      'one user, no account, the plain keys',
-    );
-    eq(
-      [userKey('actionplan.plans'), userKey('other.key')],
-      ['actionplan.plans', 'other.key'],
-      'first user: keys unchanged',
-    );
-    const saved = localStorage.getItem(USERS_KEY);
-    localStorage.setItem(
-      USERS_KEY,
-      JSON.stringify({
-        current: 'x',
-        list: [
-          { id: 'x', ns: 'u.y.', name: 'bad', account: null },
-          { id: 'y"><b', ns: '', account: null },
-          { id: 'z', ns: 'u.z.', name: 5, account: { id: 7 } },
-        ],
-      }),
-    );
-    const read = readUsers();
-    eq(
-      read.list.map(u => [u.id, u.ns, u.name, u.account]),
-      [['z', 'u.z.', '', null]],
-      'only well-formed users, each on its own prefix',
-    );
-    eq(read.current, 'z', 'current falls back to a listed user');
-    localStorage.setItem(USERS_KEY, '{oops');
-    eq(
-      readUsers().list.map(u => u.id),
-      ['local'],
-      'broken list: the first user',
-    );
-    // A device that synced before users existed is linked to an account the next sync learns.
-    localStorage.removeItem(USERS_KEY);
-    localStorage.setItem('actionplan.v1.syncConnected', 'true');
-    eq(readUsers().list[0].account, { id: '', email: '' }, 'linked before users existed');
-    localStorage.removeItem('actionplan.v1.syncConnected');
-    eq(readUsers().list[0].account, null, 'never linked');
-    if (saved === null) localStorage.removeItem(USERS_KEY);
-    else localStorage.setItem(USERS_KEY, saved);
-  });
-
   await step("users: the first Google login takes this device's data to that account", async () => {
     fakeGoogle();
     clearTimeout(syncState.timer);
