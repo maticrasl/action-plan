@@ -75,3 +75,8 @@ export function userKeys(user, area = localStorage) {
   }
   return keys;
 }
+
+// Deletes a user's keys on this device: the session ones, and with `all` the stored ones first.
+export function removeUserKeys(user, all) {
+  (all ? [localStorage, sessionStorage] : [sessionStorage]).forEach(area => userKeys(user, area).forEach(k => area.removeItem(k)));
+}

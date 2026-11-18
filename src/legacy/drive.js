@@ -1,9 +1,9 @@
 /** Google Drive sync: sign-in, the sync file, merging and status. */
 import { GOOGLE_CLIENT_ID } from './config.js';
-import { offerTour, tour } from './tutorial.js';
-import { USERS_KEY, addUser, currentUser, readUsers, saveUsers, setUsers, userKeys, userSession, userStorage, users } from './users.js';
+import { offerTour } from './tutorial.js';
+import { USERS_KEY, addUser, currentUser, readUsers, removeUserKeys, saveUsers, setUsers, userSession, userStorage, users } from './users.js';
 import { applyVisions, plansVersion, setPlansVersion } from './visions.js';
-import { $, PLANS_KEY, enterUser, esc, planKey, plans, prefs, readPlan, render, renderPlanSwitch, setPlans, toast } from './app.js';
+import { $, PLANS_KEY, enterUser, esc, planKey, plans, prefs, readPlan, setPlans, toast } from './app.js';
 import { I18N, locale, t } from '../i18n/index';
 import { uid } from '../core/util';
 import { emptyDb } from '../core/model';
@@ -11,6 +11,7 @@ import { db, setDb, visions } from '../core/state';
 import { normalize, safeId } from '../core/normalize';
 import { normalizeVisions } from '../core/visions';
 import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from '../core/merge';
+import { emit } from '../store/events';
 
 /* =========================================================
    Google Drive sync
@@ -222,18 +223,21 @@ export function applyStore(store) {
     store.plans.list.forEach(p => userStorage.setItem(planKey(p.id), JSON.stringify(store.data[p.id])));
     userStorage.setItem(PLANS_KEY, JSON.stringify(plans));
   } catch (e) {
-    toast(t('err.storage'));
+    emit('storageError');
   }
   takePlanSnapshot(plans);
   if (store.visions) applyVisions(store.visions);
   setPlansVersion(plansVersion + 1);
   setDb(readPlan(plans.current));
   takeSnapshot(db);
-  renderPlanSwitch();
-  if (plans.current !== current || JSON.stringify(db) + JSON.stringify(visions) !== before) render();
+  emit('storeReplaced', plans.current !== current || JSON.stringify(db) + JSON.stringify(visions) !== before);
 }
 
 /* ---------- Sync ---------- */
+
+// True while sync must wait: during the tour the open plan is a temporary one (main.ts sets it).
+export let syncPaused = () => false;
+export function setSyncPaused(v) { syncPaused = v; }
 
 export function scheduleSync(delay = SYNC_DELAY) {
   if (!syncConnected()) return;
@@ -244,7 +248,7 @@ export function scheduleSync(delay = SYNC_DELAY) {
 // `interactive` is true when a click started the sync, so Google may show its sign-in popup.
 export async function syncNow(interactive = false) {
   // During the tour the open plan is a temporary one; endTour syncs once it is over.
-  if (!syncConnected() || (typeof tour !== 'undefined' && tour.step >= 0)) return;
+  if (!syncConnected() || syncPaused()) return;
   if (syncState.busy) { syncState.again = true; return; }
   clearTimeout(syncState.timer);
   if (!navigator.onLine) return setSyncStatus('offline');
@@ -257,7 +261,7 @@ export async function syncNow(interactive = false) {
     const remote = await drive.read(token);
     if (!mine()) return;
     // A tour that started while this sync waited: endTour syncs once it is over.
-    if (typeof tour !== 'undefined' && tour.step >= 0) return setSyncStatus('idle');
+    if (syncPaused()) return setSyncStatus('idle');
     // From here until applyStore nothing waits, so no local edit can slip in between.
     let local = localStore();
     if (!prefs.get('syncedOnce', false) && remote.content?.plans.list.length) local = dropStarterPlans(local);
@@ -344,7 +348,7 @@ export function removeUser(id) {
   const name = userName(user);
   if (!confirm(t('user.removeConfirm', { name }))) return;
   if (user === currentUser()) openGuest();
-  [localStorage, sessionStorage].forEach(area => userKeys(user, area).forEach(k => area.removeItem(k)));
+  removeUserKeys(user, true);
   users.list = users.list.filter(u => u !== user);
   saveUsers();
   renderSync();
@@ -361,7 +365,7 @@ export function renameUser(name) {
 
 export function setSyncStatus(status) {
   syncState.status = status;
-  renderSync();
+  emit('syncChanged');
 }
 
 export function syncTime(iso) {
@@ -439,7 +443,7 @@ export function initSync() {
     const was = currentUser();
     setUsers(readUsers());
     if (users.list.some(u => u.id === was.id)) { users.current = was.id; return renderSync(); }
-    userKeys(was, sessionStorage).forEach(k => sessionStorage.removeItem(k));
+    removeUserKeys(was, false);
     enterUser((users.list.find(u => !u.account) || addUser()).id);
   });
   // Load Google's script ahead of a click, so its popup opens straight from that click.

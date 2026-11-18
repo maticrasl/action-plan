@@ -1,11 +1,10 @@
 /** Visions: the global list above goals, stored apart from plans. */
 import { userStorage } from './users.js';
-import { scheduleSync } from './drive.js';
-import { currentPlan, plans, readPlan, toast } from './app.js';
-import { t } from '../i18n/index';
+import { currentPlan, plans, readPlan } from './app.js';
 import { db, setVisions, visions } from '../core/state';
 import { normalizeVisions, ownVisions, purposeOf, visionAncestors } from '../core/visions';
 import { TOMBSTONE_DAYS, itemContent } from '../core/merge';
+import { emit } from '../store/events';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")
@@ -46,8 +45,8 @@ export function saveVisions() {
   Object.keys(visions.deleted).forEach(id => { if (visions.deleted[id] < cutoff) delete visions.deleted[id]; });
   takeVisionSnapshot();
   visionsVersion++;
-  try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { toast(t('err.storage')); }
-  if (typeof scheduleSync === 'function') scheduleSync();
+  try { userStorage.setItem(VISIONS_KEY, JSON.stringify(visions)); } catch (e) { emit('storageError'); }
+  emit('saved');
 }
 
 /* ---------- The vision tree ---------- */

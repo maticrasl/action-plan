@@ -2,7 +2,7 @@
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
 import { saveUsers, userStorage, users } from './users.js';
 import { deleteVision, goalsReaching, loadVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion } from './visions.js';
-import { drive, renderSync, scheduleSync, syncConnected, syncState } from './drive.js';
+import { drive, renderSync, syncConnected, syncState } from './drive.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
 import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
@@ -20,6 +20,7 @@ import { activityState, blockers, byActivities, byRoutines, countedActivities, g
 import { PLAN_FORMAT, PLAN_VERSION, dropRoutineDeps, hasProgress, normalize, parsePlanFile, progressCounts, resetProgress } from '../core/normalize';
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
 import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/index';
+import { emit } from '../store/events';
 
 export const STORAGE_KEY = 'actionplan.v1';
 
@@ -90,7 +91,7 @@ export function load() {
 }
 
 export function save() {
-  offerReached();
+  emit('saving');
   stampChanges(db);
   stampPlanChanges(plans);
   setPlansVersion(plansVersion + 1);
@@ -98,9 +99,9 @@ export function save() {
     userStorage.setItem(planKey(plans.current), JSON.stringify(db));
     userStorage.setItem(PLANS_KEY, JSON.stringify(plans));
   } catch (e) {
-    toast(t('err.storage'));
+    emit('storageError');
   }
-  scheduleSync();
+  emit('saved');
 }
 
 export function openPlan(id) {
@@ -109,8 +110,7 @@ export function openPlan(id) {
   takeSnapshot(db);
   Object.assign(ui, { category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '', mapSelected: null, mapRel: null, search: '', mapRefocus: true, rtWeek: {} });
   save();
-  renderPlanSwitch();
-  render();
+  emit('plansChanged');
 }
 
 // Plan names are unique, ignoring case and spaces around them.
@@ -170,8 +170,7 @@ export function mergePlanInto(fromId, toId, remove = false) {
     plans.list = plans.list.filter(p => p.id !== fromId);
   }
   save();
-  renderPlanSwitch();
-  render();
+  emit('plansChanged');
 }
 
 /* ---------- Utilities ---------- */
