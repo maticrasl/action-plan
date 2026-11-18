@@ -154,7 +154,7 @@ export function listenTlDrag() {
     const { kind, item } = ent,
       edge = el.dataset.tlEdge || '';
     const s0 = (item as Goal | Activity).startDate || '',
-      e0 = endOf(kind, item) || '';
+      e0 = endOf(kind, item as Goal | Activity) || '';
     // How far the drag may go: to the ends of the timeline as drawn.
     const scroll = $('.tl-scroll'),
       from = Number(scroll.dataset.from),

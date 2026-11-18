@@ -101,7 +101,7 @@ export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption
   }
   // "Show in…" opens in place onto the other views, each with its name and icon from the navigation
   // (the full name is the accessible name and tooltip); with only one, it is offered directly.
-  const views = SHOW_IN[kind].filter(v => v !== ui.view && (v !== 'graphs' || hasGraph(item)));
+  const views = SHOW_IN[kind].filter(v => v !== ui.view && (v !== 'graphs' || hasGraph(item as State | Activity)));
   const showOpt = (v: ViewName) =>
     opt('show:' + v, t(('nav.' + v) as TextKey), {
       icon: v,
@@ -198,8 +198,7 @@ export function revealIn(view: ViewName, kind: ItemKind, item: PlanItem | Vision
   // Unfold only what hides it: every fold is kept that still leaves it shown.
   const scope = scopeFor(ui.timelineGoal),
     folded = tlCollapsed();
-  const shown = (set: Set<string>) =>
-    (timelineRows(scope, set) as { item?: { id: string } }[]).some(r => r.item?.id === item.id);
+  const shown = (set: Set<string>) => timelineRows(scope, set).some(r => r.item?.id === item.id);
   if (!shown(folded) && shown(new Set()))
     setTlCollapsed(
       [...folded].reduce((keep, k) => (shown(new Set([...keep, k])) ? keep.add(k) : keep), new Set<string>()),

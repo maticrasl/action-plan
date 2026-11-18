@@ -11,6 +11,8 @@ import { MAP } from './layout';
 import { endTlDrag, tlDrag } from '../timeline/drag';
 import { TL } from '../timeline/render';
 import { GR, grCharts, grDrawW, graphFor } from '../graphs/states';
+import type { State } from '../../core/model';
+import type { Routine } from '../../core/routines/schedule';
 
 // Safari's gesture events (not in TypeScript's DOM types).
 interface GestureEvent extends UIEvent {
@@ -62,7 +64,7 @@ export function zoomTimeline(factor: number, cx: number) {
 // Only that graph is redrawn, into the same element, so a pinch that started on it keeps going.
 export function zoomGraph(plot: HTMLElement, factor: number, cx: number) {
   const id = plot.closest<HTMLElement>('[data-gr]')?.dataset.gr,
-    c = (grCharts as Record<string, { zoom: [number, number] }>)[id!],
+    c = grCharts[id!],
     item = id && findEntity(id)?.item;
   if (!c || !item) return;
   const z0 = clamp(ui.grZoom[id!] || 1, ...c.zoom),
@@ -73,7 +75,7 @@ export function zoomGraph(plot: HTMLElement, factor: number, cx: number) {
   const u = (cx - svg.getBoundingClientRect().left - GR.L) / (w0 - GR.L - GR.R);
   ui.grZoom[id!] = z;
   const fresh = document.createElement('div');
-  fresh.innerHTML = graphFor(item, grDrawW);
+  fresh.innerHTML = graphFor(item as State | Routine, grDrawW);
   const next = fresh.querySelector('.gr-plot')!;
   plot.className = next.className;
   plot.replaceChildren(...next.childNodes);

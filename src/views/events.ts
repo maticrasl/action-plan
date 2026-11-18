@@ -93,9 +93,9 @@ viewEl.addEventListener('click', e => {
   if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date!, el);
   if (el.dataset.liTick) return tickListItem(el.dataset.liTick, el.dataset.li!, el.dataset.date);
   if (el.dataset.addAmount) return openStateAmount(el.dataset.addAmount, el);
-  if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
-  if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry);
-  if (el.dataset.grScale) return setGraphScale(el.dataset.state, el.dataset.grScale);
+  if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date!);
+  if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry!);
+  if (el.dataset.grScale) return setGraphScale(el.dataset.state!, el.dataset.grScale);
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
   if (el.dataset.open) {
     const ent = findEntity(el.dataset.open);
