@@ -1,5 +1,5 @@
 /** The guided tour and help mode. */
-import { changeLanguage, closeCtxMenu, modal, render, renderPlanSwitch, sampleData, setView, settings, toast } from './app.js';
+import { changeLanguage, modal, render, renderPlanSwitch, sampleData, settings } from './app.js';
 import { I18N, lang, t } from '../i18n/index';
 import { clamp } from '../core/util';
 import { prefs } from '../store/prefs';
@@ -7,6 +7,9 @@ import { plans, ui } from '../store/state';
 import { createPlan, deletePlan, openPlan, save, uniqueName } from '../store/plans';
 import { scheduleSync } from '../sync/sync';
 import { $, esc, itemCount } from '../ui/dom';
+import { closeCtxMenu } from '../ui/menu';
+import { setView } from '../ui/nav';
+import { toast } from '../ui/toast';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode

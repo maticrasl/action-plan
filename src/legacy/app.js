@@ -13,7 +13,7 @@ import { checkedOn, dayItemsDone, followList, isList, isListRoutine, itemOn, lis
 import { DAY_MS, dayNum, dayStr, isoOf } from '../core/days';
 import { PERIODS, SCALES, addEntry, calPeriod, convertState, deleteEntry, deleteMeasurement, dropRoutineEntries, entriesOf, goalPeriod, graphEntries, graphScale, improvedStates, isCumulative, lastPeriodTotal, periodTotals, recordMeasurement, refreshTotal, stateDate, stateScale, stateTotal, sumOf } from '../core/cumulative';
 import { consistency, keptDay, makesUp, periodProgress, routineState, routineStreak, routineToday } from '../core/routines/keeping';
-import { activityState, blockers, byActivities, byRoutines, countedActivities, goalActivities, goalCurrent, goalProgress, goalReached, goalRoutines, goalScope, goalState, isComplete, measuringState, ownMetric, smartCheck, startDueActivities } from '../core/progress';
+import { activityState, blockers, byActivities, byRoutines, countedActivities, goalActivities, goalCurrent, goalProgress, goalRoutines, goalScope, goalState, isComplete, measuringState, ownMetric, smartCheck, startDueActivities } from '../core/progress';
 import { PLAN_FORMAT, PLAN_VERSION, dropRoutineDeps, hasProgress, parsePlanFile, progressCounts, resetProgress } from '../core/normalize';
 import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/index';
 import { saveUsers, userStorage, users } from '../store/users';
@@ -28,6 +28,11 @@ import { $, byDeadline, byDueDate, deadlineTag, emptyState, esc, hideDoneToggle,
 import { categories, categorySuggestions } from '../core/categories';
 import { nthWord, periodText, scaleText, scheduleText, shortSchedule, statusLabels, streakText, totalText, weekdayName, withUnit } from '../ui/text';
 import { requestRender } from '../ui/render';
+import { closeCtxMenu, ctxMenu, showCtxMenu, toggleCtxSub } from '../ui/menu';
+import { applyNavCollapsed, setNavCollapsed, setView } from '../ui/nav';
+import { closeAmountPop, openAmountPop } from '../ui/amount-popover';
+import { offerReached, reachedQueue } from '../ui/reached';
+import { hideToast, toast } from '../ui/toast';
 
 // Asks for a plan name until it is free (or the user cancels); `exceptId` is the plan being renamed.
 export function askPlanName(question, suggestion, exceptId) {
@@ -2724,72 +2729,6 @@ export function setLastNodeClick(v) { lastNodeClick = v; }
    Events
    ========================================================= */
 
-// `action` ({ label, run }) adds a button, and the toast stays longer so there is time to use it.
-export function toast(msg, action = null) {
-  const box = $('#toast');
-  box.textContent = msg;
-  box.classList.toggle('has-action', !!action);
-  if (action) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'toast-action';
-    btn.textContent = action.label;
-    btn.addEventListener('click', () => { hideToast(); action.run(); });
-    box.append(' ', btn);
-  }
-  box.classList.add('show');
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(hideToast, action ? 8000 : 2200);
-}
-export function hideToast() {
-  clearTimeout(toast.timer);
-  $('#toast').classList.remove('show', 'has-action');
-  $('#toast').replaceChildren();
-  // Goals waiting to be offered come next.
-  if (reachedQueue.length) setTimeout(showReached, 250);
-}
-
-/* ---------- "Target reached": offer to mark a goal achieved ----------
-   After a change, each active goal that has reached its target since it was last offered gets a
-   toast with a button to mark it achieved, one goal at a time; `offeredAt` remembers the offer
-   until the goal drops below its target again. The first check of a plan on a device only notes
-   which goals are there already, so an existing plan does not greet you with a row of toasts. */
-
-export const reachedQueue = [];
-
-export function offerReached() {
-  const key = 'reachedChecked.' + plans.current, quiet = !prefs.get(key, false);
-  let changed = false;
-  db.goals.forEach(g => {
-    const reached = goalReached(g);
-    if (reached && !g.offeredAt) {
-      g.offeredAt = today();
-      changed = true;
-      if (!quiet && !reachedQueue.includes(g.id)) reachedQueue.push(g.id);
-    } else if (!reached && g.offeredAt) {
-      delete g.offeredAt;
-      changed = true;
-    }
-  });
-  if (quiet) prefs.set(key, true);
-  if (reachedQueue.length && !$('#toast').classList.contains('has-action')) setTimeout(showReached, 0);
-  return changed;
-}
-
-export function showReached() {
-  if ($('#toast').classList.contains('has-action')) return;
-  let g;
-  while (reachedQueue.length && !(g = db.goals.find(x => x.id === reachedQueue[0] && goalReached(x)))) reachedQueue.shift();
-  if (!g) return;
-  reachedQueue.shift();
-  toast(t('reached.text', { name: g.title }), { label: t('reached.mark'), run: () => {
-    g.status = 'achieved';
-    save();
-    requestRender();
-    toast(t('ctx.statusSet', { s: t('goal.achieved') }));
-  } });
-}
-
 export function cycleStatus(id) {
   const a = db.activities.find(x => x.id === id);
   if (!a) return;
@@ -2800,65 +2739,6 @@ export function cycleStatus(id) {
   save();
   render();
 }
-
-/* ---------- Amount popover: a quick amount for states that add up ----------
-   A state card's + asks for an amount and its date; ticking a routine that improves such states
-   asks for an amount for each (empty adds nothing). Enter adds. Escape or "Tick only" still ticks
-   the day; a click elsewhere leaves everything as it was. */
-
-export let amountPop = null; // { el, anchor, skip }
-
-export function openAmountPop(anchor, { title, hint, fields, withDate, okLabel, skipLabel }, submit, skip = null) {
-  closeAmountPop();
-  const el = document.createElement('form');
-  el.className = 'amount-pop';
-  el.noValidate = true;
-  el.setAttribute('role', 'dialog');
-  el.setAttribute('aria-label', title);
-  el.innerHTML = `<strong class="amount-title">${esc(title)}</strong>${hint ? `<p class="amount-hint">${esc(hint)}</p>` : ''}
-    ${fields.map((f, i) => `<label class="amount-field"><span>${esc(f.label)}</span><span class="amount-input">
-      <input type="text" data-amount="${i}" inputmode="decimal" autocomplete="off" placeholder="0">${f.unit ? `<span class="amount-unit">${esc(f.unit)}</span>` : ''}</span></label>`).join('')}
-    ${withDate ? `<label class="amount-field"><span>${t('f.asOf')}</span><input type="text" data-amount-date value="${esc(dateInput(today()))}" placeholder="${esc(t('f.datePh'))}" inputmode="numeric" autocomplete="off" maxlength="10"></label>` : ''}
-    <div class="amount-err" role="alert"></div>
-    <div class="amount-actions">${skipLabel ? `<button type="button" class="btn small ghost" data-amount-skip>${esc(skipLabel)}</button>` : ''}<button type="submit" class="btn small primary">${esc(okLabel)}</button></div>`;
-  document.body.append(el);
-  amountPop = { el, anchor, skip };
-  const r = anchor.getBoundingClientRect(), vw = document.documentElement.clientWidth;
-  const below = r.bottom + 8 + el.offsetHeight <= innerHeight - 8;
-  el.style.left = `${clamp(r.left + r.width / 2 - el.offsetWidth / 2, 8, vw - el.offsetWidth - 8)}px`;
-  el.style.top = `${Math.max(8, below ? r.bottom + 8 : r.top - 8 - el.offsetHeight)}px`;
-  el.querySelector('input').focus();
-  el.addEventListener('submit', e => {
-    e.preventDefault();
-    const amounts = [...el.querySelectorAll('[data-amount]')].map(i => (i.value.trim() ? parseNum(i.value) : null));
-    const dateBox = el.querySelector('[data-amount-date]');
-    const date = dateBox ? parseDateInput(dateBox.value) : today();
-    const err = amounts.some(n => Number.isNaN(n)) ? t('err.number') : !date ? t('err.date') : '';
-    if (err) { el.querySelector('.amount-err').textContent = err; return; }
-    closeAmountPop();
-    submit(amounts, date);
-  });
-  el.addEventListener('click', e => { if (e.target.closest('[data-amount-skip]')) skipAmount(); });
-  el.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
-    e.preventDefault();
-    e.stopPropagation();
-    skipAmount();
-  });
-}
-
-export function skipAmount() {
-  const { skip, anchor } = amountPop;
-  closeAmountPop();
-  if (skip) skip();
-  else anchor.focus();
-}
-
-export function closeAmountPop() {
-  amountPop?.el.remove();
-  amountPop = null;
-}
-document.addEventListener('pointerdown', e => { if (amountPop && !amountPop.el.contains(e.target) && e.target !== amountPop.anchor) closeAmountPop(); });
 
 export function openStateAmount(id, anchor) {
   const s = db.states.find(x => x.id === id);
@@ -2919,60 +2799,6 @@ export function removeEntry(id, entryId) {
   const card = $(`[data-gr="${id}"]`);
   if (card) { card.querySelector('.gr-table').open = true; card.querySelector('.gr-table summary').focus(); }
 }
-
-export function setView(view) {
-  ui.view = view;
-  ui.mapLinkFrom = null;
-  ui.search = '';
-  ui.mapRefocus = true;
-  prefs.set('view', view);
-  requestRender();
-  window.scrollTo(0, 0);
-}
-
-document.querySelectorAll('.nav-item[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-
-/* ---------- "More" menu of the phone tab bar ---------- */
-
-export function openNavSheet() {
-  const sheet = $('#navSheet');
-  sheet.innerHTML = [...document.querySelectorAll('.nav-extra')].map(b =>
-    `<button type="button" role="menuitem" class="${b.dataset.view === ui.view ? 'active' : ''}" data-sheet-view="${b.dataset.view}">${b.innerHTML}</button>`).join('');
-  sheet.hidden = false;
-  $('#navMore').setAttribute('aria-expanded', 'true');
-  (sheet.querySelector('.active') || sheet.querySelector('button')).focus();
-}
-
-export function closeNavSheet(refocus = false) {
-  const sheet = $('#navSheet');
-  if (sheet.hidden) return;
-  sheet.hidden = true;
-  $('#navMore').setAttribute('aria-expanded', 'false');
-  if (refocus) $('#navMore').focus();
-}
-
-$('#navMore').addEventListener('click', () => ($('#navSheet').hidden ? openNavSheet() : closeNavSheet()));
-$('#navSheet').addEventListener('click', e => {
-  const b = e.target.closest('[data-sheet-view]');
-  if (!b) return;
-  closeNavSheet();
-  setView(b.dataset.sheetView);
-});
-$('#navSheet').addEventListener('keydown', e => {
-  const items = [...$('#navSheet').querySelectorAll('button')];
-  const i = items.indexOf(document.activeElement);
-  const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: items.length - 1 }[e.key];
-  if (e.key === 'Escape' || e.key === 'Tab') {
-    if (e.key === 'Escape') e.preventDefault();
-    closeNavSheet(e.key === 'Escape');
-  } else if (to !== undefined) {
-    e.preventDefault();
-    items[(to + items.length) % items.length].focus();
-  }
-});
-document.addEventListener('pointerdown', e => { if (!e.target.closest('#navSheet, #navMore')) closeNavSheet(); });
-// The menu only exists on phones; close it when the window grows past that.
-matchMedia('(max-width: 720px)').addEventListener('change', e => { if (!e.matches) closeNavSheet(); });
 
 // On the map and the timeline (where links are drawn between kinds), what to add: under the Add button, or at x, y
 // for a right-click on the map's empty space.
@@ -3360,13 +3186,6 @@ modal.addEventListener('cancel', e => {
   closeCalendar(true);
 });
 document.addEventListener('pointerdown', e => { if (cal && !cal.field.contains(e.target)) closeCalendar(); });
-// A press that starts inside a dialog (selecting text) and ends on its backdrop
-// fires a click on the dialog itself; swallow it so the dialog stays open.
-export let pressTarget = null;
-document.addEventListener('pointerdown', e => { pressTarget = e.target; }, true);
-document.addEventListener('click', e => {
-  if (e.target instanceof HTMLDialogElement && pressTarget && pressTarget !== e.target) e.stopImmediatePropagation();
-}, true);
 modal.addEventListener('click', e => {
   if (e.target === modal || e.target.closest('[data-close]')) modal.close();
 });
@@ -3714,29 +3533,8 @@ $('#importInput').addEventListener('change', e => {
 $('#sampleBtn').addEventListener('click', () => { settings.close(); loadSample(); });
 $('#templatesBtn').addEventListener('click', openTemplates);
 
-/* ---------- Collapsible sidebar (desktop): only the icons stay visible ---------- */
-
-export function setNavCollapsed(on) {
-  ui.navCollapsed = on;
-  prefs.set('navCollapsed', on);
-  applyNavCollapsed();
-  requestRender(); // graphs are drawn at the view's width
-}
-
-export function applyNavCollapsed() {
-  const on = ui.navCollapsed;
-  $('.app').classList.toggle('nav-collapsed', on);
-  const b = $('#navToggle');
-  b.setAttribute('aria-expanded', !on);
-  b.querySelector('span').textContent = t(on ? 'nav.expand' : 'nav.collapse');
-  b.title = t(on ? 'nav.expand' : 'nav.collapse');
-}
-
-$('#navToggle').addEventListener('click', () => setNavCollapsed(!ui.navCollapsed));
-
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 
-export const ctxMenu = $('#ctxMenu');
 // Map boxes and timeline rows both act as item "nodes".
 export const NODE_SEL = '[data-map-node],[data-tl-node]';
 // The menu also opens on the cards and rows of the other views (on a chart, only on its heading).
@@ -3846,49 +3644,6 @@ export function openCtxMenu(id, x, y, byKey = false) {
   Object.assign(ctxMenu.dataset, { id, rel: '', add: '' });
   ctxMenu.setAttribute('aria-label', t('ctx.label', { name: ent.item.title }));
   showCtxMenu(ent.kind, t('kind.' + ent.kind), ent.item.title, ctxOptions(ent.kind, ent.item), x, y, byKey);
-}
-
-export let ctxOpenedAt = 0;
-
-// Fills the menu – a heading with a tag and a name (none without a title), then its options – and shows it at x, y, kept on screen.
-// An option with a sub list is a parent that opens its items in place, below it (see toggleCtxSub).
-// Opened from the keyboard, its first item takes focus; opened by a finger or the mouse, the menu itself
-// does, so no item is marked under the finger (the arrow keys still reach them).
-export function showCtxMenu(tagClass, tag, title, options, x, y, byKey = false) {
-  ctxOpenedAt = performance.now();
-  ctxMenu.innerHTML = (title ? `<div class="ctx-head"><span class="tag ${tagClass}">${tag}</span><strong title="${esc(title)}">${esc(title)}</strong></div>` : '') +
-    options.map(o => o === '-' ? '<hr>' : o.sub ?
-      `<button type="button" tabindex="-1" data-ctx-sub role="menuitem" aria-haspopup="true" aria-expanded="false" aria-controls="ctxSub">${esc(o.label)}<svg class="ctx-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>` +
-      `<div class="ctx-sub" id="ctxSub" role="group" aria-label="${esc(o.label)}" hidden>${o.sub.map(ctxButton).join('')}</div>` : ctxButton(o)).join('');
-  ctxMenu.hidden = false;
-  const { width, height } = ctxMenu.getBoundingClientRect();
-  ctxMenu.style.left = `${Math.max(8, Math.min(x, innerWidth - width - 8))}px`;
-  ctxMenu.style.top = `${Math.max(8, Math.min(y, innerHeight - height - 8))}px`;
-  (byKey ? ctxMenu.querySelector('button') : ctxMenu).focus();
-}
-
-// One item; a view's icon goes before its name in the "Show in…" list, after the words otherwise.
-export const ctxButton = o => {
-  const icon = o.icon ? $(`.nav-item[data-view="${o.icon}"] svg`).outerHTML : '';
-  return `<button type="button" tabindex="-1" data-ctx="${o.act}" class="${o.danger ? 'danger' : ''}" role="${o.checked === undefined ? 'menuitem' : 'menuitemradio'}"${o.checked === undefined ? '' : ` aria-checked="${o.checked}"`}${o.name ? ` aria-label="${esc(o.name)}" title="${esc(o.name)}"` : ''}>${o.name ? icon : ''}${esc(o.label)}${o.name ? '' : icon}</button>`;
-};
-
-// Opens (or closes) the parent's items in place; the menu then moves up as far as it needs to stay
-// on screen, and scrolls to the opened items when it is taller than the screen.
-export function toggleCtxSub(open) {
-  const parent = ctxMenu.querySelector('[data-ctx-sub]'), sub = $('#ctxSub');
-  sub.hidden = !open;
-  parent.setAttribute('aria-expanded', open);
-  const r = ctxMenu.getBoundingClientRect();
-  ctxMenu.style.top = `${Math.max(8, Math.min(r.top, innerHeight - r.height - 8))}px`;
-  const below = sub.getBoundingClientRect().bottom - ctxMenu.getBoundingClientRect().bottom + 6;
-  if (open && below > 0) ctxMenu.scrollTop += below;
-}
-
-export function closeCtxMenu(refocus = false) {
-  if (ctxMenu.hidden) return;
-  ctxMenu.hidden = true;
-  if (refocus) $(ctxMenu.dataset.add ? '#addBtn' : ctxMenu.dataset.rel ? `[data-rel-edit="${ctxMenu.dataset.rel}"]` : `[data-map-node="${ctxMenu.dataset.id}"], [data-tl-node="${ctxMenu.dataset.id}"]`)?.focus();
 }
 
 // A relationship line's menu (long-press, right-click or the menu key): it selects the line and
@@ -4494,39 +4249,6 @@ ctxMenu.addEventListener('click', e => {
   else if (b && ctxMenu.dataset.rel) runRelAction(b.dataset.ctx, ctxMenu.dataset.rel);
   else if (b) runCtxAction(b.dataset.ctx, ctxMenu.dataset.id);
 });
-ctxMenu.addEventListener('keydown', e => {
-  const items = [...ctxMenu.querySelectorAll('button')].filter(b => !b.closest('[hidden]'));
-  const i = items.indexOf(document.activeElement);
-  // The "Show in…" parent: Right opens it onto its first item; Left (or Escape) on one of its items
-  // closes it back onto the parent, as does Left on the open parent.
-  const parent = ctxMenu.querySelector('[data-ctx-sub]'), inSub = !!document.activeElement.closest('.ctx-sub');
-  if (parent && e.key === 'ArrowRight' && document.activeElement === parent) {
-    e.preventDefault();
-    toggleCtxSub(true);
-    return $('#ctxSub button').focus();
-  }
-  if (parent && (e.key === 'ArrowLeft' && (inSub || document.activeElement === parent) || e.key === 'Escape' && inSub)) {
-    e.preventDefault();
-    toggleCtxSub(false);
-    return parent.focus();
-  }
-  // With the menu itself focused (i = -1), Down goes to the first item and Up to the last.
-  const moves = { ArrowDown: i + 1, ArrowUp: (i < 0 ? items.length : i) - 1, Home: 0, End: items.length - 1 };
-  if (e.key in moves) {
-    e.preventDefault();
-    items[(moves[e.key] + items.length) % items.length].focus();
-  } else if (e.key === 'Escape' || e.key === 'Tab') {
-    e.preventDefault();
-    closeCtxMenu(true);
-  }
-});
-document.addEventListener('pointerdown', e => { if (!ctxMenu.contains(e.target)) closeCtxMenu(); });
-addEventListener('resize', () => closeCtxMenu());
-// Scrolling closes the menu, but not a scroll that arrives right after it opened: browsers deliver
-// scroll events on the next frame, so one from just before (a redraw putting the map's scroll back,
-// as a line's menu does when it selects the line, or the end of a swipe) can land after it.
-// Scrolling the menu itself (taller than a phone held sideways) keeps it open.
-document.addEventListener('scroll', e => { if (e.target !== ctxMenu && performance.now() - ctxOpenedAt > 400) closeCtxMenu(); }, true);
 
 /* ---------- Plan switcher (sidebar on desktop, menu on mobile) ---------- */
 

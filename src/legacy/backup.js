@@ -1,5 +1,5 @@
 /** Full backup and restore of every plan and the visions. */
-import { download, render, renderPlanSwitch, settings, toast } from './app.js';
+import { download, render, renderPlanSwitch, settings } from './app.js';
 import { t, tp } from '../i18n/index';
 import { uid } from '../core/util';
 import { fmtDate, isoDate, today } from '../core/dates';
@@ -12,6 +12,7 @@ import { planKey, save, uniqueName } from '../store/plans';
 import { saveVisions } from '../store/visions';
 import { SYNC_FORMAT, parseStore, toFile } from '../sync/drive';
 import { localStore } from '../sync/sync';
+import { toast } from '../ui/toast';
 
 /* =========================================================
    Full backup: every plan and the visions in one file

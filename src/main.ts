@@ -2,25 +2,21 @@
 import { setLang, t } from './i18n/index';
 import { applyStaticI18n, detectLang } from './ui/i18n-dom';
 import './sync/config';
+// Only listens on the page, so nothing else imports it; before the views, whose click listeners it must precede.
+import './ui/dialog';
 import { initTutorial, offerTour, tour } from './legacy/tutorial.js';
 import './store/users';
 import './store/visions';
 import './legacy/backup.js';
-import {
-  bootUser,
-  offerReached,
-  render,
-  renderInstall,
-  renderLangSwitch,
-  renderPlanSwitch,
-  toast,
-} from './legacy/app.js';
+import { bootUser, render, renderInstall, renderLangSwitch, renderPlanSwitch } from './legacy/app.js';
 import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { on } from './store/events';
 import { scheduleSync, setSyncPaused } from './sync/sync';
 import { initSync, renderSync } from './legacy/sync-ui.js';
 import { setRenderer } from './ui/render';
+import { offerReached } from './ui/reached';
+import { toast } from './ui/toast';
 
 // Screen parts below the views redraw through this.
 setRenderer(render);
