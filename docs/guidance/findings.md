@@ -93,7 +93,7 @@ noted.
     who linked things to tidy the map. Softer: "Your goals now point one way".
 12. **Self-host the typeface.** The font is loaded from Google Fonts, so "nothing leaves your
     device unless you log in" is not quite true. Shipping the font with the app makes the
-    privacy text simple and true.
+    privacy text simple and true. *Done 2026-11-18: the font ships with the app.*
 13. **A warning beside sensitive measures** is not needed, but the Guide now says when to stop
     tracking. For weight and food, tracking can do harm to some people.
 

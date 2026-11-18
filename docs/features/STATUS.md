@@ -24,7 +24,7 @@ first.
 
 ## Before these features
 
-- [ ] Restructure finished (phase 10 done; see `docs/restructure/STATUS.md`)
+- [x] Restructure finished (phase 10 done; see `docs/restructure/STATUS.md`) 2026-11-18
 - [ ] Guidance 1: Guide page (`docs/guidance/01-guide-page.md`)
 - [ ] Guidance 2: Walkthrough (`docs/guidance/02-walkthrough.md`)
 - [ ] Guidance 3: Tips (`docs/guidance/03-tips.md`)
@@ -88,4 +88,9 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
-Nothing built yet. Plans written 2026-11-15 against commit `5b71e59`.
+- No feature built yet. Plans written 2026-11-15 against commit `5b71e59`; the restructure (phases
+  1–10) has moved the code since: find files with `npm run map`, not by the paths in the plans.
+- Next open line: Guidance 1, the Guide page. `feedback-link` may come first (see above).
+- Done 2026-11-18 outside the list: the typeface ships with the app (findings 12; the Guide's privacy
+  article in `docs/guidance/guide-content.en.md` already says so), the page tests pass on any
+  day, and two small bugs found on the way are fixed (`docs/restructure/found-bugs.md`).

@@ -49,7 +49,7 @@ export async function serveTestBuild(src = ROOT) {
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.map': 'application/json', '.webmanifest': 'application/manifest+json',
-  '.png': 'image/png', '.svg': 'image/svg+xml',
+  '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2',
 };
 
 // Runs headless Chrome on `url` and resolves to the dumped DOM. `virtualTime` in ms, or 0 for real
@@ -58,6 +58,8 @@ export function dumpDom(url, profiles, { virtualTime = 60000, profile = 'profile
   const args = [
     '--headless=new', '--disable-gpu', '--no-first-run',
     `--user-data-dir=${join(profiles, profile)}`, '--window-size=1280,900',
+    // The light colour scheme whatever the system's, so every machine runs the same suite (as for the day, tests/pre.js).
+    '--blink-settings=preferredColorScheme=1',
   ];
   if (process.platform === 'linux') args.push('--no-sandbox'); // GitHub's runners refuse Chrome's sandbox
   if (offline) args.push('--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1'); // nothing but the test server is reachable

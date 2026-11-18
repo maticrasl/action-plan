@@ -79,6 +79,10 @@
 .vis-status p {
   margin: 0;
 }
+/* It names goals and visions: a long word breaks rather than widening a phone screen. */
+.vis-status {
+  overflow-wrap: anywhere;
+}
 .vis-status.found {
   background: color-mix(in srgb, var(--purpose) 24%, var(--surface));
   color: var(--ink);

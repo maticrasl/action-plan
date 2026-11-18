@@ -1,4 +1,5 @@
 /* The app's styles, in this order: later rules win, so the order is part of the design. */
+@import './fonts.css';
 @import './base.css';
 @import './shell.css';
 @import './controls.css';
