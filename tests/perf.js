@@ -73,7 +73,7 @@
         setView('graphs');
       });
     check('1,100 amounts: states view', 100, () => setView('states'));
-    check('1,100 amounts: state form', 100, () => {
+    check('1,100 amounts: state form', 150, () => {
       openForm('state', 'k');
       modal.close();
     });

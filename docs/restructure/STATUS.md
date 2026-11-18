@@ -20,7 +20,8 @@ Compare against these after phases 7 and 8. Average ms per draw (budget in brack
 the baseline; the largest, 300 items + 20 visions map, 229 ms (was 198). After phase 3: the same (223 ms; state form 117).
 Phase 7 map session: 300 items map 149 ms, + 20 visions 218, all else at or under the baseline; state form 121 (over, as before).
 Phase 7 end: 300 items map 151, + 20 visions 222 (+12%), timeline 16, graphs 17, the rest at or under; state form 129 (over, as before).
-Phase 8 end: all in budget but the state form, 117 (over, as before); 300 items map 150, + 20 visions 232 (budget 300), the rest at or under.
+Phase 8 end: 300 items map 150, + 20 visions 232 (budget 300), the rest at or under. The state form's budget is 150 (owner, 2026-11-18;
+it was 100 and measured 117–129 since 2026-11-08); all checks pass.
 
 | Check | ms | | Check | ms |
 |---|---|---|---|---|
@@ -30,7 +31,7 @@ Phase 8 end: all in budget but the state form, 117 (over, as before); 300 items 
 | sample: states (150) | 1 | | 1,100 amounts: graph by year (100) | 22 |
 | sample: visions (150) | 1 | | 1,100 amounts: graph by total (100) | 30 |
 | sample: map (150) | 28 | | 1,100 amounts: states view (100) | 0 |
-| sample: timeline (150) | 20 | | 1,100 amounts: state form (100) | **126 (over, as since 2026-11-08)** |
+| sample: timeline (150) | 20 | | 1,100 amounts: state form (100, now 150) | 126 (was over since 2026-11-08) |
 | sample: graphs (150) | 18 | | 300 items + 20 visions: map (300) | 198 |
 | sample: map layout (150) | 2 | | 20 visions: visions view (100) | 3 |
 | 300 items: map (250) | 156 | | 300 items + 20 visions: goals with glow (150) | 7 |
