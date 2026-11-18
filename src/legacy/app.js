@@ -1,5 +1,5 @@
 /** The app: data model, storage, views, forms and event wiring. */
-import { decorateHelp, endTour, tour } from './tutorial.js';
+import { endTour, isTourRunning } from './tutorial.js';
 import { locale, t, tp } from '../i18n/index';
 import { clamp, doneLast, fmtNum, formatter, isNum } from '../core/util';
 import { daysUntil, fmtDate, fmtDay, fmtRel, fmtSpan, today } from '../core/dates';
@@ -267,9 +267,12 @@ export function render() {
     if (prevScroll) wrap.scrollTop = prevScroll.top;
   }
   markVisions();
-  decorateHelp();
+  rendered.forEach(fn => fn());
   updatePlanBadges();
 }
+// What runs after each draw, set from above the views (main.ts: help mode's tips).
+export const rendered = [];
+export const onRendered = fn => { rendered.push(fn); };
 // Coming back to the app on a later day starts the activities due by then, and may find goals
 // that a period's end has brought to their target.
 document.addEventListener('visibilitychange', () => {
@@ -1047,7 +1050,7 @@ export function markVisions() {
   const ps = purposeState(), contrib = contributingIds();
   document.documentElement.classList.toggle('purpose', ps.on);
   viewEl.querySelectorAll('.glass[data-ctx-item], .tl-row[data-tl-node]').forEach(el => el.classList.toggle('vglow', contrib.has(el.dataset.ctxItem || el.dataset.tlNode)));
-  if (!ps.on || visions.purposeFound || (typeof tour !== 'undefined' && tour.step >= 0)) return;
+  if (!ps.on || visions.purposeFound || isTourRunning()) return;
   visions.purposeFound = today();
   saveVisions();
   $('#purposeText').textContent = t('purpose.text', { name: ps.root.title });
@@ -2992,7 +2995,7 @@ export function bootUser() {
 // Another user takes over this device: nothing of the one before stays in memory, on screen or
 // in a sync on its way (syncNow stops itself). Returns true on that user's first visit.
 export function enterUser(id) {
-  if (typeof tour !== 'undefined' && tour.step >= 0) endTour(false);
+  if (isTourRunning()) endTour(false);
   closeCtxMenu();
   closeAmountPop();
   reachedQueue.length = 0; // "goal reached" popups still waiting were the other user's

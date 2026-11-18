@@ -50,6 +50,7 @@ export const TOUR_STEPS = [
 ];
 
 export const tour = { step: -1, steps: TOUR_STEPS, planId: null, prevPlan: null, prevView: null };
+export const isTourRunning = () => tour.step >= 0;
 export const SPOT_PAD = 6;
 export const EDGE = 16;
 

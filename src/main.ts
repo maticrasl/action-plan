@@ -5,10 +5,10 @@ import './sync/config';
 // Only listen on the page, so nothing else imports them; before the views, whose click listeners the first must precede.
 import './ui/dialog';
 import './ui/forms/events';
-import { initTutorial, offerTour, tour } from './legacy/tutorial.js';
+import { decorateHelp, initTutorial, isTourRunning, offerTour } from './legacy/tutorial.js';
 import './store/users';
 import './store/visions';
-import { bootUser, enterUser, render } from './legacy/app.js';
+import { bootUser, enterUser, onRendered, render } from './legacy/app.js';
 import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { on } from './store/events';
@@ -23,6 +23,8 @@ import { renderPlanSwitch } from './ui/plan-switcher';
 
 // Screen parts below the views redraw, switch users and offer the tour through these.
 setRenderer(render);
+// The tutorial sits above the views: help mode's tips go on after every draw.
+onRendered(decorateHelp);
 // Through the live bindings: offerTour can be replaced (setOfferTour), as the suite does.
 connectSync({ enterUser: (id: string) => enterUser(id), offerTour: () => offerTour() });
 // Storage and sync reach the screen only through these.
@@ -38,7 +40,7 @@ on('storeReplaced', changed => {
 });
 on('storageError', () => toast(t('err.storage')));
 on('syncChanged', () => renderSync());
-setSyncPaused(() => tour.step >= 0);
+setSyncPaused(isTourRunning);
 
 setLang(detectLang());
 setDb(emptyDb());
