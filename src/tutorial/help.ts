@@ -11,7 +11,10 @@ export const EDGE = 16;
    While on, each view opens with a banner explaining what it is for, and the
    first instance of each key control gets an ⓘ button with a one-line tip. */
 
-export const HELP_TIPS: { sel: string; key: string; where?: InsertPosition }[] = [
+// A tip's key names its text, help.tip.<key>: a key without a text does not compile.
+type TipKey = { [K in TextKey]: K extends `help.tip.${infer T}` ? T : never }[TextKey];
+
+export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] = [
   { sel: '.summary-line', key: 'summary', where: 'beforeend' },
   { sel: '.cat-chips', key: 'categories', where: 'beforeend' },
   { sel: '.card.goal .smart', key: 'smart' },
