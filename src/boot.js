@@ -1,27 +1,27 @@
 /** Boot: loading a user's plans, visions and preferences and showing them, and switching users. */
-import { clamp } from '../core/util';
-import { REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
-import { setDb } from '../core/state';
-import { saveUsers, userStorage, users } from '../store/users';
-import { STORAGE_KEY, prefs } from '../store/prefs';
-import { freshUi, setPlans, ui } from '../store/state';
-import { PLANS_KEY, load } from '../store/plans';
-import { setOtherPlansCache } from '../store/visions';
-import { drive } from '../sync/drive';
-import { syncState } from '../sync/sync';
-import { renderSync } from '../ui/sync-ui';
-import { $ } from '../ui/dom';
-import { closeCtxMenu } from '../ui/menu';
-import { applyNavCollapsed } from '../ui/nav';
-import { closeAmountPop } from '../ui/amount-popover';
-import { reachedQueue } from '../ui/reached';
-import { hideToast } from '../ui/toast';
-import { THEMES, applyTheme, renderSettings, setTheme, settings } from '../ui/settings';
-import { renderPlanSwitch, storedHealth } from '../ui/plan-switcher';
-import { endTour, isTourRunning } from '../tutorial/tour';
-import { VIEWS, render } from '../views/index';
-import { MAP } from '../views/map/layout';
-import { TL } from '../views/timeline/render';
+import { clamp } from './core/util';
+import { REL_TYPES, VISION_RELS, emptyDb } from './core/model';
+import { setDb } from './core/state';
+import { saveUsers, userStorage, users } from './store/users';
+import { STORAGE_KEY, prefs } from './store/prefs';
+import { freshUi, setPlans, ui } from './store/state';
+import { PLANS_KEY, load } from './store/plans';
+import { setOtherPlansCache } from './store/visions';
+import { drive } from './sync/drive';
+import { syncState } from './sync/sync';
+import { renderSync } from './ui/sync-ui';
+import { $ } from './ui/dom';
+import { closeCtxMenu } from './ui/menu';
+import { applyNavCollapsed } from './ui/nav';
+import { closeAmountPop } from './ui/amount-popover';
+import { reachedQueue } from './ui/reached';
+import { hideToast } from './ui/toast';
+import { THEMES, applyTheme, renderSettings, setTheme, settings } from './ui/settings';
+import { renderPlanSwitch, storedHealth } from './ui/plan-switcher';
+import { endTour, isTourRunning } from './tutorial/tour';
+import { VIEWS, render } from './views/index';
+import { MAP } from './views/map/layout';
+import { TL } from './views/timeline/render';
 
 /* ---------- Boot ---------- */
 
