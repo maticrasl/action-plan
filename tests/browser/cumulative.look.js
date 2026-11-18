@@ -1,4 +1,4 @@
-/** Page tests: cumulative.look. */
+/** Page tests: states that add up: the scale switch, phone rows, card layout, long histories, wording. */
 suite(async () => {
   await step('cumulative: the scale switch and Counts in Slovenian', () => {
     fresh('Slovenian scales');

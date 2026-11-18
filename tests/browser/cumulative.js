@@ -1,4 +1,4 @@
-/** Page tests: cumulative. */
+/** Page tests: states that add up: goals per period, ticks with amounts, + on the card, totals, the form. */
 suite(async () => {
   await step('cumulative: goals use the higher of this and the last period; reached only by a complete one', () => {
     fresh('Cumulative goals');

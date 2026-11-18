@@ -1,4 +1,4 @@
-/** Page tests: merge. */
+/** Page tests: the merge dialog, merging from the delete dialog, and both in Slovenian. */
 suite(async () => {
   const mrg = $('#planMerge');
   const titles = data =>

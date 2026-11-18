@@ -1,4 +1,4 @@
-/** Page tests: timeline. */
+/** Page tests: timeline rows, selecting, editing and deleting bars and arrows, routine days, line drawing. */
 suite(async () => {
   await step('timeline rows: tree order, hidden done, unlinked group', () => {
     fresh('Rows');

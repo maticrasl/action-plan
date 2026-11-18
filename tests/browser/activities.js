@@ -1,4 +1,4 @@
-/** Page tests: activities. */
+/** Page tests: the one-time-or-routine choice, the board, start dates, card menus, the overview's next actions. */
 suite(async () => {
   await step('a new activity first asks: one-time or routine', async () => {
     fresh('Kind first');

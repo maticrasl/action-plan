@@ -1,4 +1,4 @@
-/** Page tests: map. */
+/** Page tests: map keys and menus, short hints, + to add, light and dark glass, text inside the boxes. */
 suite(async () => {
   await step('keyboard: map nodes, context menu, tour', async () => {
     fresh('Keys');

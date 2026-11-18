@@ -1,4 +1,4 @@
-/** Page tests: routines.rules. */
+/** Page tests: make-up days and their form option, nothing depending on a routine, the sample and tour. */
 suite(async () => {
   await step('routines: set days can be made up on another day', () => {
     fresh('Make up');

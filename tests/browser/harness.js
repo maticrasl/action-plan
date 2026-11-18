@@ -21,9 +21,9 @@ const writeResult = text => {
   document.body.append(pre);
 };
 
-// The helpers. From tests/test.js: step, assert and fp (a fingerprint of the view).
-// From tests/more.js: d (a date n days from today), eq, fresh (a new empty plan), mk (a new item),
-// rel (a relationship that must be allowed) and untickCook.
+// The helpers: step, assert, eq, fp (a fingerprint of the view), tick (a turn of the event loop),
+// d (a date n days from today), fresh (a new empty plan), mk (a new item), rel (a relationship that
+// must be allowed) and untickCook.
 const out = [];
 const log = s => out.push(s);
 const hash = str => {
@@ -55,10 +55,7 @@ const d = n => {
   return isoDate(x);
 };
 const eq = (a, b, m) =>
-  assert(
-    JSON.stringify(a) === JSON.stringify(b),
-    `${m || 'expected'} ${JSON.stringify(b)}, got ${JSON.stringify(a)}`,
-  );
+  assert(JSON.stringify(a) === JSON.stringify(b), `${m || 'expected'} ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
 const fresh = name => {
   createPlan(name);
   assert(itemCount() === 0);
@@ -76,18 +73,8 @@ const rel = (a, b, type) => {
 // By Sunday every sample routine has met its week: unticking "cook at home" keeps one on the overview any day.
 const untickCook = () => (db.activities.find(a => a.repeat?.times === 5).checkins = {});
 
-if (location.pathname.endsWith('/browser.html')) {
-  (async () => {
-    const files = new URLSearchParams(location.search).get('f').split(',');
-    for (const f of files) await loadScript(`tests/browser/${f}.js`);
-    if (!suites.length) throw new Error(`no suite in ${files}`);
-    for (const fn of suites) await fn();
-    await tick();
-    log('errors: ' + (__errors.length ? __errors.join(' || ') : 'none'));
-    writeResult(out.join('\n'));
-  })().catch(e => writeResult('HARNESS CRASH ' + e.stack));
-}
-
+// Helpers that steps of several files share: the views, copies, amounts, plan files and dialogs,
+// weeks, form fields, visions, clicks and keys, the real Drive.
 const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs'];
 
 const clone = x => JSON.parse(JSON.stringify(x));
@@ -237,3 +224,16 @@ const $$ = sel => [...document.querySelectorAll(sel)];
 
 // The real Drive methods, before any test swaps them for fakes.
 const REAL_DRIVE = { ...drive };
+
+// The runner: everything above is defined by the time the first suite runs.
+if (location.pathname.endsWith('/browser.html')) {
+  (async () => {
+    const files = new URLSearchParams(location.search).get('f').split(',');
+    for (const f of files) await loadScript(`tests/browser/${f}.js`);
+    if (!suites.length) throw new Error(`no suite in ${files}`);
+    for (const fn of suites) await fn();
+    await tick();
+    log('errors: ' + (__errors.length ? __errors.join(' || ') : 'none'));
+    writeResult(out.join('\n'));
+  })().catch(e => writeResult('HARNESS CRASH ' + e.stack));
+}

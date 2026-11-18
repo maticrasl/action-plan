@@ -1,4 +1,4 @@
-/** Page tests: visions.map. */
+/** Page tests: visions on the map, and the glow of what serves one in every view. */
 suite(async () => {
   await step('visions: the map – a band above goals, clouds, lines, hiding unrelated visions, linking', () => {
     clearVisions();

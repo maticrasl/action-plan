@@ -1,4 +1,4 @@
-/** Page tests: visions. */
+/** Page tests: visions through sync, the visions view, the forms, and phones. */
 suite(async () => {
   await step('visions: sync merges them like plans, repairs loops, keeps the Purpose found first', () => {
     // The merging itself is tested in src/core/visions.test.ts.

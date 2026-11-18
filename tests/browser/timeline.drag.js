@@ -1,4 +1,4 @@
-/** Page tests: timeline.drag. */
+/** Page tests: dragging the selected timeline bar to move its dates, and a grip to move one end. */
 suite(async () => {
   await step('timeline: dragging the selected bar moves its dates; a grip moves one end', async () => {
     fresh('Drag dates');

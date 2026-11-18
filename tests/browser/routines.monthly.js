@@ -1,4 +1,4 @@
-/** Page tests: routines.monthly. */
+/** Page tests: routine schedule tags, the monthly options in the form, monthly check-ins and streaks. */
 suite(async () => {
   const lastOfMonth = iso => isoOf(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 0);
   await step('routine cards: a short schedule tag that fits, the full one as its tooltip', async () => {

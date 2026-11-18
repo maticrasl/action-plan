@@ -1,4 +1,4 @@
-/** Page tests: states. */
+/** Page tests: state descriptions in both languages, the sample's, and a click on a card for a new value. */
 suite(async () => {
   await step('states: the description is what is measured, in both languages', () => {
     const labels = {

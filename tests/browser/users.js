@@ -1,4 +1,4 @@
-/** Page tests: users. */
+/** Page tests: one user per Google account: logins, switching, logging out, removing, tokens, other tabs. */
 suite(async () => {
   // A fake Google: each token belongs to the account picked in the "popup", and each account has its
   // own Drive file. A write with one account's token can only land in that account's file.

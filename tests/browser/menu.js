@@ -1,4 +1,4 @@
-/** Page tests: menu. */
+/** Page tests: the item menu's Show in: another view with the item selected, and in place. */
 suite(async () => {
   await step('item menu: show in another view, selected there', () => {
     fresh('Show in');

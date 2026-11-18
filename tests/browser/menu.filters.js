@@ -1,4 +1,4 @@
-/** Page tests: menu.filters. */
+/** Page tests: the item menu's Show in clears the filters that would hide the item there. */
 suite(async () => {
   await step('item menu: show in sets the filters that would hide the item there', () => {
     fresh('Show in filters');

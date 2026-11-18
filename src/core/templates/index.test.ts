@@ -35,7 +35,8 @@ test('every template is complete in both languages and every link names an item 
         kinds[x.k] = kind;
         expect(x.title, `${tpl.id}.${x.k}: title`).toBeTruthy();
         for (const f of TEXT)
-          if (x[f] !== undefined) expect(textOk(x[f]), `text ${tpl.id}.${x.k}.${f}: ${JSON.stringify(x[f])}`).toBe(true);
+          if (x[f] !== undefined)
+            expect(textOk(x[f]), `text ${tpl.id}.${x.k}.${f}: ${JSON.stringify(x[f])}`).toBe(true);
         if (x.list !== undefined) {
           expect(kind === 'activity' && Array.isArray(x.list) && x.list.length, `${tpl.id}.${x.k}: list`).toBeTruthy();
           (x.list as unknown[]).forEach((v, i) => expect(textOk(v), `text ${tpl.id}.${x.k}.list.${i}`).toBe(true));

@@ -1,4 +1,4 @@
-/** Page tests: routines.strip. */
+/** Page tests: the routine week strip: late days, due and missed days, dates, arrows, earlier weeks. */
 suite(async () => {
   const longDate = iso => fmtDay(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const rcard = r => $(`.card.routine[data-open="${r.id}"]`);

@@ -1,4 +1,4 @@
-/** Page tests: map.select. */
+/** Page tests: map lines around rows; selecting, opening and deleting lines and items; right-click to add. */
 suite(async () => {
   const mapFixture = () => {
     fresh('Map keys');

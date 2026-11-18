@@ -1,4 +1,4 @@
-/** Page tests: map-gestures. */
+/** Page tests: dragging to link, zoom limits, long-press taps, two-finger pinches, no tap highlight. */
 suite(async () => {
   await step('map: drag from one box to another to link them; touch picks by tapping', async () => {
     fresh('Linking');

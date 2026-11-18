@@ -12,7 +12,7 @@
 //   --list     every statement in the suite body: its lines, the step name or the names it declares, and
 //              the names it uses that other statements of the body declare
 // The suite body is the function passed to suite() in a browser file; elsewhere the function whose body
-// holds the `await step(…)` calls (more.js: moreTests; test.js: the async IIFE).
+// holds the `await step(…)` calls (as in the old tests/more.js and tests/test.js).
 import { existsSync } from 'node:fs';
 import ts from 'typescript';
 import { chunkOf, declNames, line, parse, readText, writeText } from './lib/ast.mjs';

@@ -1,4 +1,4 @@
-/** Page tests: map-gestures.touch. */
+/** Page tests: line menus by long-press, right-click or menu key, and one-finger tap-tap-drag zoom. */
 suite(async () => {
   await step('lines: a long-press, right-click or menu key opens Edit, Remove and Deselect', async () => {
     fresh('Line menu');

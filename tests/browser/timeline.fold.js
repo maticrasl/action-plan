@@ -1,4 +1,4 @@
-/** Page tests: timeline.fold. */
+/** Page tests: the timeline tree: prerequisites, an activity under each goal, hiding done, folding. */
 suite(async () => {
   const foldFixture = () => {
     fresh('Fold');

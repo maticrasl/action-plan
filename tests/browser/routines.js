@@ -1,4 +1,4 @@
-/** Page tests: routines. */
+/** Page tests: the routine form, board, overview and goal progress; due date to end date; start dates. */
 suite(async () => {
   await step('routines: form, board, overview, goal progress, menu, map and sync', async () => {
     fresh('Routines UI');

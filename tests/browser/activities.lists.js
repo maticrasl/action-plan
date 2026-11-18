@@ -1,4 +1,4 @@
-/** Page tests: activities.lists. */
+/** Page tests: activities with a list of items: ticking, stamps, order, around the app, two devices, phones. */
 suite(async () => {
   await step('lists: items to tick off; all ticked means done', async () => {
     fresh('Lists');

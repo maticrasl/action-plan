@@ -1,4 +1,4 @@
-/** Page tests: routines.lists. */
+/** Page tests: routines with a list: ticking items each day, a week met, editing, escaping, Slovenian. */
 suite(async () => {
   await step('routine lists: made from the choice, items ticked each day, the day follows them', async () => {
     fresh('Routine lists');

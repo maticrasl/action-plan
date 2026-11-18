@@ -73,8 +73,14 @@ describe('tp: plural forms', () => {
 test('English and Slovenian have the same keys, and samples of the same size', () => {
   const en = Object.keys(I18N.en.strings).sort(),
     sl = Object.keys(I18N.sl.strings).sort();
-  expect(en.filter(k => !sl.includes(k)), 'only in English').toEqual([]);
-  expect(sl.filter(k => !en.includes(k)), 'only in Slovenian').toEqual([]);
+  expect(
+    en.filter(k => !sl.includes(k)),
+    'only in English',
+  ).toEqual([]);
+  expect(
+    sl.filter(k => !en.includes(k)),
+    'only in Slovenian',
+  ).toEqual([]);
   expect(I18N.sl.sample.goals.length).toBe(I18N.en.sample.goals.length);
   expect(I18N.sl.sample.activities.length).toBe(I18N.en.sample.activities.length);
 });
