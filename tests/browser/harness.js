@@ -197,3 +197,9 @@ const fileOf = (obj, name = 'plan.json') =>
   new File([typeof obj === 'string' ? obj : JSON.stringify(obj)], name, { type: 'application/json' });
 const imp = $('#planImport'),
   exp = $('#planExport');
+
+const mondayAt = iso => addDays(iso, -weekday(iso));
+const change = (id, value) => {
+  $(id).value = value;
+  $(id).dispatchEvent(new Event('change', { bubbles: true }));
+};
