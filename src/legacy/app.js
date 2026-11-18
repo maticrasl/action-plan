@@ -1,5 +1,4 @@
 /** The app: data model, storage, views, forms and event wiring. */
-import { endTour, isTourRunning } from './tutorial.js';
 import { locale, t, tp } from '../i18n/index';
 import { clamp, doneLast, fmtNum, formatter, isNum } from '../core/util';
 import { daysUntil, fmtDate, fmtDay, fmtRel, fmtSpan, today } from '../core/dates';
@@ -34,6 +33,7 @@ import { THEMES, applyTheme, renderSettings, setTheme, setToggle, settings } fro
 import { renderPlanSwitch, storedHealth, updatePlanBadges } from '../ui/plan-switcher';
 import { openTemplates } from '../ui/templates-dialog';
 import { loadSample } from '../ui/sample';
+import { endTour, isTourRunning } from '../tutorial/tour';
 
 /* ---------- Relations ---------- */
 

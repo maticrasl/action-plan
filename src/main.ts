@@ -5,7 +5,8 @@ import './sync/config';
 // Only listen on the page, so nothing else imports them; before the views, whose click listeners the first must precede.
 import './ui/dialog';
 import './ui/forms/events';
-import { decorateHelp, initTutorial, isTourRunning, offerTour } from './legacy/tutorial.js';
+import { initTutorial, isTourRunning, offerTour } from './tutorial/tour';
+import { decorateHelp } from './tutorial/help';
 import './store/users';
 import './store/visions';
 import { bootUser, enterUser, onRendered, render } from './legacy/app.js';
