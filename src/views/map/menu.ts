@@ -33,9 +33,9 @@ import type { MenuOption } from '../../ui/menu';
 import type { FormKind } from '../../ui/forms/form';
 import type { GoalFilterTarget } from '../filters';
 import { selectsInView } from './keys';
-import { hasGraph } from '../graphs/states';
 import { setTlCollapsed, timelineRows, tlCollapsed } from '../timeline/rows';
 import { openStateValue } from '../../ui/state-value';
+import { hasGraph } from '../../core/series';
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 

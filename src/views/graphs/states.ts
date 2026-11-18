@@ -5,7 +5,7 @@ import { db } from '../../core/state';
 import { t } from '../../i18n/index';
 import { withUnit } from '../../ui/text';
 import { fmtDate, fmtDay, fmtRel, today } from '../../core/dates';
-import { deleteMeasurement, entriesOf, graphScale, isCumulative } from '../../core/cumulative';
+import { deleteMeasurement, graphScale, isCumulative } from '../../core/cumulative';
 import { save } from '../../store/plans';
 import { requestRender as render } from '../../ui/render';
 import { toast } from '../../ui/toast';
@@ -17,9 +17,10 @@ import { TL } from '../timeline/render';
 import { ui } from '../../store/state';
 import { categoryChips, goalSelect, scopeFor, searchBox } from '../filters';
 import { periodGraphCard, routineGraphCard, totalGraphCard } from './sums';
-import type { Activity, Goal, ISODate, State } from '../../core/model';
+import type { Goal, ISODate, State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
 import { areaFill } from './plot';
+import { hasGraph, stateSeries } from '../../core/series';
 
 /* ---------- Graphs (measurement history of each current state) ----------
    One line chart per current state: its measurements over time, a target line for every goal it
@@ -73,13 +74,6 @@ export function niceTicks(lo: number, hi: number, count = 4, whole = false) {
     if (v >= hi - step * 1e-9) break;
   }
   return ticks;
-}
-
-export function stateSeries(s: State) {
-  return (s.history || [])
-    .filter(h => h.date && isNum(h.value))
-    .map(h => ({ day: dayNum(h.date), date: h.date, value: Number(h.value) }))
-    .sort((a, b) => a.day - b.day);
 }
 
 export function removeMeasurement(id: string, iso: ISODate) {
@@ -348,14 +342,6 @@ export function dateAxis(px: Axis, x0: number, x1: number, wide: boolean, withTo
     )
     .join('');
 }
-
-// States with measurements or amounts, and routines with check-ins, have a graph.
-export const hasGraph = (item: State | Activity) =>
-  isRoutine(item)
-    ? Object.values(item.checkins || {}).includes(1)
-    : isCumulative(item as State)
-      ? entriesOf(item as State).length > 0
-      : stateSeries(item as State).length > 0;
 
 export function renderGraphs() {
   const routines = db.activities.filter(hasGraph) as Routine[];
