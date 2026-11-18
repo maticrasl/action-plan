@@ -6,7 +6,7 @@
 | 01 modules and build | merged (PR #3) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-01` |
 | 02 core leaves | merged (PR #6) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-02` |
 | 03 core domain | merged (PR #8) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-03` |
-| 04 store and sync | not started |
+| 04 store and sync | done on branch `restructure/phase-04` (2026-11-18), not pushed; waits for the owner check |
 | 05 shared UI | not started |
 | 06 views and tutorial | not started |
 | 07 map, timeline, graphs | not started |
@@ -60,16 +60,16 @@ Phase 9 (tests) can make the first step restore English in `finally` and take th
 
 - Moving: `npm run move -- <from> <to> <names|Obj.prop|Arr[Title]:NAME|comment:<line>> [--section …] --fix-imports`, the
   `/** … */` line, `--check <from> <to>` (or `--commit <rev>`), `check`, commit; then `git mv` to .ts, types, Prettier, commit.
-  Untyped code cannot go into a .ts file in a move commit. `--section` runs to the next header still in the file.
-- `src/core` never imports `src/legacy`: tsc follows the import into app.js, which reaches DOM code in `src/ui`. Deviation from
-  phase 3's file: `db` and `visions` (with setters) moved to `src/core/state.ts`; `plans`, the version counters,
-  `otherPlansCache` and `allPlansData` stay in legacy (phase 4). Rows went in dependency order (progress with keeping).
-- Split: `purposeState()` (legacy) = `purposeOf(allPlansData())` (core). Left in legacy on purpose: routine tick handlers, the
-  week strip and cards, schedule and period texts, `totalText`/`scaleText`, `planFile`, and visions' storage and readers.
-- Template area files call `core/templates/schedules.ts` while loading (it imports only types). `model.ts`: `State.unit` and
-  `Activity.description` are optional (templates leave them out). ESLint lets TS files use ternary/`&&` statements.
-- Core unit tests (108) pin the clock and call `setDb(emptyDb())` where rules read the open plan.
-- Unchanged: `main.ts` sets `lang` and `db` first; tsc projects (app, core without DOM, node); fixtures from `pre-restructure`,
-  never regenerated; tests assign `x` only through `setX`; PowerShell mangles UTF-8 (use Edit or Node); Node/`gh` PATH.
-- A name exported twice throws in the test bridge; a new stored field goes into `model.ts` (`model.test.ts` checks fixtures).
-  Approved extra dev deps: `@types/node`, `@eslint/js`, `globals`. Pages deploys from Actions (`deploy.yml` calls `check.yml`).
+  Moved code is appended: move a header with `comment:<n>` first to keep it on top (a header does not travel with the name below).
+- Layers: `core` ← `store` ← `sync`; neither imports `legacy`/`ui`. `db`, `visions` stay in `core/state.ts` (core cannot import
+  store); `store/state.ts` has `plans`, `ui`, `freshUi`, `plansVersion`. `LANG_KEY` is in `store/users.ts`.
+- Upward calls are `emit`s from `store/events.ts` (saving, saved, plansChanged, storeReplaced(changed), storageError,
+  syncChanged), wired in `main.ts` before boot; listeners run synchronously where the call was. `syncNow` asks `syncPaused()`
+  (`main.ts`: `tour.step >= 0`). Phase 5: `legacy/sync-ui.js` (sign-in, `renderSync`, `initSync`) and `askPlanName` (prompt).
+- `enterUser`/`bootUser` untouched in app.js (step 2). Storage areas: ESLint `no-restricted-globals` outside `store/users.ts`,
+  `ui/i18n-dom.ts`, `*.test.ts`; `removeUserKeys` covers what sign-out code did directly.
+- Drive fakes checked: calling a `drive.read` bound at load made 22 suite steps fail. Keep calls as `drive.x(...)`.
+- Unit tests 118; store tests stub `localStorage` (`vi.stubGlobal`); Vitest runs `--no-experimental-webstorage` (Node 26 warns).
+- Unchanged: fixtures from `pre-restructure`, never regenerated; tests assign `x` only through `setX`; a name exported twice
+  throws in the test bridge; new stored fields go into `model.ts`. PowerShell: mangles UTF-8 (use Edit or Node), `mv` is
+  Move-Item (never name a helper `mv`), Node at `C:\Program Files\nodejs` may be off PATH. Pages deploys from Actions.
