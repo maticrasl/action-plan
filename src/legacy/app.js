@@ -1,6 +1,6 @@
 /** The app: data model, storage, views, forms and event wiring. */
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
-import { deleteVision, goalsReaching, loadVisions, plansVersion, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache, setPlansVersion } from './visions.js';
+import { deleteVision, goalsReaching, loadVisions, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache } from './visions.js';
 import { drive, renderSync, syncConnected, syncState } from './drive.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
@@ -22,27 +22,15 @@ import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/i
 import { emit } from '../store/events';
 import { saveUsers, userStorage, users } from '../store/users';
 import { STORAGE_KEY, prefs } from '../store/prefs';
+import { currentPlan, freshUi, plans, plansVersion, setPlans, setPlansVersion, ui } from '../store/state';
 
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
-
-// What the views show; each user starts from these (enterUser), then their remembered preferences.
-export const freshUi = () => ({
-  view: 'dashboard', goalFilter: 'active', category: '', activityGoal: '', mapGoal: '', timelineGoal: '', graphGoal: '',
-  mapHidden: new Set(), hideDone: false, hideVisions: false, nextAll: false, tlPx: 8, mapScale: 1, tlDeps: true, planBadges: true, search: '', mapSelected: null, mapRel: null, help: false,
-  tlDates: null, // the selected timeline item whose dates can be dragged: its bar was clicked, not just its row
-  rtWeek: {}, // the Monday each routine card's week strip shows, when not this week
-  grZoom: {}, // how far each graph is zoomed: 1 fits the card
-});
-export const ui = freshUi();
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.
    Data from the single-plan version (STORAGE_KEY) is migrated into the first plan. */
 export const PLANS_KEY = 'actionplan.plans';
 export const planKey = id => `actionplan.plan.${id}`;
-export let plans = { current: null, list: [] };
-export function setPlans(v) { plans = v; }
-export const currentPlan = () => plans.list.find(p => p.id === plans.current);
 
 export function readPlan(id) {
   try {
@@ -57,7 +45,7 @@ export function load() {
   loadVisions();
   try {
     const saved = JSON.parse(userStorage.getItem(PLANS_KEY));
-    if (Array.isArray(saved?.list) && saved.list.length) plans = saved;
+    if (Array.isArray(saved?.list) && saved.list.length) setPlans(saved);
   } catch (e) { /* start fresh */ }
   if (plans.list.length) {
     if (!currentPlan()) plans.current = plans.list[0].id;
@@ -72,7 +60,7 @@ export function load() {
     if (raw) legacy = normalize(JSON.parse(raw));
   } catch (e) { /* ignore */ }
   const id = uid();
-  plans = { current: id, list: [{ id, name: t('plan.defaultName') }] };
+  setPlans({ current: id, list: [{ id, name: t('plan.defaultName') }] });
   takePlanSnapshot({ list: [] }); // a brand-new plan list: nothing in it was deleted
   setDb(legacy);
   takeSnapshot(db);
@@ -5186,7 +5174,7 @@ export function enterUser(id) {
   Object.assign(ui, freshUi());
   storedHealth.clear();
   setOtherPlansCache({ key: '', list: [] });
-  plans = { current: null, list: [] };
+  setPlans({ current: null, list: [] });
   setDb(emptyDb());
   const firstVisit = bootUser();
   renderSettings();

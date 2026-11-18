@@ -1,10 +1,11 @@
 /** Visions: the global list above goals, stored apart from plans. */
-import { currentPlan, plans, readPlan } from './app.js';
+import { readPlan } from './app.js';
 import { db, setVisions, visions } from '../core/state';
 import { normalizeVisions, ownVisions, purposeOf, visionAncestors } from '../core/visions';
 import { TOMBSTONE_DAYS, itemContent } from '../core/merge';
 import { emit } from '../store/events';
 import { userStorage } from '../store/users';
+import { currentPlan, plans, plansVersion } from '../store/state';
 
 /* =========================================================
    Visions: desired states above goals ("to be fit and live healthily")
@@ -20,8 +21,6 @@ import { userStorage } from '../store/users';
 
 export const VISIONS_KEY = 'actionplan.visions';
 export let visionsVersion = 0; // bumped on every change to the list, so cached answers know to start over
-export let plansVersion = 0;   // bumped whenever plans are saved or synced (other plans' goals are cached)
-export function setPlansVersion(v) { plansVersion = v; }
 export let visionSnapshot = new Map();
 
 export const takeVisionSnapshot = () => { visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)])); };

@@ -1,8 +1,8 @@
 /** Google Drive sync: sign-in, the sync file, merging and status. */
 import { GOOGLE_CLIENT_ID } from './config.js';
 import { offerTour } from './tutorial.js';
-import { applyVisions, plansVersion, setPlansVersion } from './visions.js';
-import { $, PLANS_KEY, enterUser, esc, planKey, plans, readPlan, setPlans, toast } from './app.js';
+import { applyVisions } from './visions.js';
+import { $, PLANS_KEY, enterUser, esc, planKey, readPlan, toast } from './app.js';
 import { I18N, locale, t } from '../i18n/index';
 import { uid } from '../core/util';
 import { emptyDb } from '../core/model';
@@ -13,6 +13,7 @@ import { SYNC_COLLS, mergeStores, takePlanSnapshot, takeSnapshot } from '../core
 import { emit } from '../store/events';
 import { USERS_KEY, addUser, currentUser, readUsers, removeUserKeys, saveUsers, setUsers, userSession, userStorage, users } from '../store/users';
 import { prefs } from '../store/prefs';
+import { plans, plansVersion, setPlans, setPlansVersion } from '../store/state';
 
 /* =========================================================
    Google Drive sync
