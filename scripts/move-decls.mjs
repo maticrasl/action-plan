@@ -8,6 +8,7 @@
 //                 top-level array literal Arr: become `export const NAME = [ … ];` in <to>, the header
 //                 above it, and Arr holds `...NAME,` in their place
 //   comment:<n>   the comment that starts on line n and stands alone between statements (a banner)
+//   line:<n>      the top-level statement whose code starts on line n, with its comments (a listener)
 //   --section     everything under one /* ---------- header ---------- */ up to the next header, header included
 //   --fix-imports rewrite the import lines of <from>, <to> and every file that imports a moved name;
 //                 without it the tool only prints what has to change
@@ -66,6 +67,7 @@ function move() {
     const [obj, prop] = n.split('.');
     const arr = n.match(/^([\w$]+)\[(.+)\]:([\w$]+)$/);
     if (n.startsWith('comment:')) chunks.push(looseComment(sf, Number(n.slice(8))));
+    else if (n.startsWith('line:')) chunks.push(statementAt(sf, Number(n.slice(5))));
     else if (arr) arrs.push({ name: arr[3], ...arrayChunk(sf, arr[1], arr[2]) });
     else if (prop) props.push({ name: prop, ...propertyChunk(sf, obj, prop) });
     else if (!byName.has(n)) throw new Error(`${rel(FROM)} has no top-level ${n}`);
@@ -229,6 +231,14 @@ function looseComment(sf, n) {
       return { stmts: [], start, end, text: sf.text.slice(start, end) };
     }
   throw new Error(`no comment between top-level statements starts on line ${n}`);
+}
+
+// The top-level statement whose code starts on line `n` (1-based), with its comments: for statements
+// without a name, such as a listener registration.
+function statementAt(sf, n) {
+  const stmt = sf.statements.find(s => !ts.isImportDeclaration(s) && line(sf, s) === n);
+  if (!stmt) throw new Error(`no top-level statement starts on line ${n}`);
+  return chunkOf(sf, stmt);
 }
 
 // A Map of file -> Set of import names.
