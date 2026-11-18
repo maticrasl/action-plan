@@ -1,5 +1,5 @@
 /** The guided tour and help mode. */
-import { changeLanguage, modal, render, renderPlanSwitch, sampleData, settings } from './app.js';
+import { changeLanguage, render, renderPlanSwitch, sampleData, settings } from './app.js';
 import { I18N, lang, t } from '../i18n/index';
 import { clamp } from '../core/util';
 import { prefs } from '../store/prefs';
@@ -10,6 +10,7 @@ import { $, esc, itemCount } from '../ui/dom';
 import { closeCtxMenu } from '../ui/menu';
 import { setView } from '../ui/nav';
 import { toast } from '../ui/toast';
+import { modal } from '../ui/forms/form';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode

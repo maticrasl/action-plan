@@ -2,8 +2,9 @@
 import { setLang, t } from './i18n/index';
 import { applyStaticI18n, detectLang } from './ui/i18n-dom';
 import './sync/config';
-// Only listens on the page, so nothing else imports it; before the views, whose click listeners it must precede.
+// Only listen on the page, so nothing else imports them; before the views, whose click listeners the first must precede.
 import './ui/dialog';
+import './ui/forms/events';
 import { initTutorial, offerTour, tour } from './legacy/tutorial.js';
 import './store/users';
 import './store/visions';
