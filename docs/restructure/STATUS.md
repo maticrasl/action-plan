@@ -9,7 +9,7 @@
 | 04 store and sync | merged (PR #10) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-04` |
 | 05 shared UI | merged (PR #12) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-05` |
 | 06 views and tutorial | merged (PR #14) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-06` |
-| 07 map, timeline, graphs | session 1 (map) done on `restructure/phase-07`, not pushed; session 2 (timeline, graphs) next |
+| 07 map, timeline, graphs | done on `restructure/phase-07` (both sessions), not pushed; waits for the owner check and "ship it" |
 | 08 close-out | not started |
 | 09 tests | not started |
 | 10 workflow | not started |
@@ -19,6 +19,7 @@
 Compare against these after phases 7 and 8. Average ms per draw (budget in brackets). After phase 1: within
 the baseline; the largest, 300 items + 20 visions map, 229 ms (was 198). After phase 3: the same (223 ms; state form 117).
 Phase 7 map session: 300 items map 149 ms, + 20 visions 218, all else at or under the baseline; state form 121 (over, as before).
+Phase 7 end: 300 items map 151, + 20 visions 222 (+12%), timeline 16, graphs 17, the rest at or under; state form 129 (over, as before).
 
 | Check | ms | | Check | ms |
 |---|---|---|---|---|
@@ -59,17 +60,13 @@ Phase 9 (tests) can make the first step restore English in `finally` and take th
 
 ## Notes for the next phase
 
-- Phase 7 session 2 moves what is left in `app.js` above Boot: timeline (`TL`, folds, `timelineRows`, `renderTimeline`) and graphs
-  (both "Graphs" sections, `openAddMenu`). Then remove the casts on `grCharts` (`map/zoom.ts`) and `timelineRows` (`map/menu.ts`).
-- Session 1 also moved `timeline/drag.ts` (its listeners had to register after the map's) and, by meaning, Safari's gesture
-  zoom to `map/zoom.ts`, item keys, double-click and menu clicks to `map/keys.ts`; `map/glass.ts` split from `render.ts` (585 lines).
-  `layout.ts` is 441 lines because of `layoutMap` alone (accepted by note 1); it imports only types.
-- Listeners: `npm run move -- … line:<n> --wrap <fn>` puts them verbatim into one exported function. `main.ts` calls `listenMap()`
-  (`map/index.ts`: fonts, menu, zoom, link, keys), then `listenTlDrag()`. The graphs' listeners still register as `app.js` loads,
-  so before those: keep them first (top-level in their module, or a `listenGraphs()` called before `listenMap()`).
-- Check the order with a recorder of `addEventListener` calls on a build before and after (per target, event and phase): 84 groups,
-  130 listeners, all the same after session 1. The script is not in the repo; rebuild it if needed (vite build, unminified).
-- Gesture state stays with its listeners; read elsewhere through the import (`press` has `setPress`, as `zoom.ts` clears it).
+- `app.js` now holds only Boot (`bootUser`, `enterUser`). Timeline: `timeline/rows.ts` (rows, folds), `render.ts`, `drag.ts`.
+  Graphs: `graphs/states.ts` (line graphs, axes, `grCharts`), `plot.ts` (shared plot), `sums.ts` (bar/step/routine cards),
+  `points.ts` (crosshair, tooltip, resize). `openAddMenu` is in `map/menu.ts`. `layout.ts` 441 lines (note 1); all else ≤ 400.
+- `main.ts` calls `listenGraphs()`, `listenMap()`, `listenTlDrag()`; no view listens while it loads now. Recorder of
+  `addEventListener` calls (per target, event and phase): 84 groups, 130 listeners, the same as before phase 7 (script not kept).
+- `move-decls --check` now accepts a leading `export` added or dropped; its import rewriting drops `type` modifiers and may merge
+  a type into a value import (fix those lines by hand after a move between typed files).
 - Moving as before: `line:<n>` numbers shift after each run; banners without code go in a commit of their own; `--check` per file.
 - Layers and hooks unchanged (`ui/` ← `views/` ← `tutorial/`); `markVisions` asks the tour through `setTourRunning` (`main.ts`).
 - Unchanged: fixtures never regenerated; tests assign only through `setX`; a name exported twice throws in the bridge. Legacy files
