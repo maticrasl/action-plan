@@ -1,21 +1,28 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { today } from './dates';
-import type { Entry, State } from './model';
+import { emptyDb, type Entry, type Goal, type State } from './model';
 import {
   calPeriod,
+  convertState,
   goalPeriod,
   lastPeriodTotal,
   periodTotals,
+  recordMeasurement,
   refreshTotal,
   stateDate,
   stateScale,
   stateTotal,
   stateValue,
 } from './cumulative';
+import { mergePlans, mergeState } from './merge';
+import { parsePlanFile } from './normalize';
+import { goalCurrent, goalReached } from './progress';
+import { setDb } from './state';
 import { addDays } from './routines/schedule';
 
 // Ported from tests/more.js: "cumulative: calendar periods, totals at their edges…", "the value is the running
-// total…" and the defaults in "old states migrate…" (recording plain measurements is the app's).
+// total…", the defaults in "old states migrate…", "an old export imports in the new form…", "the graph
+// scale and a goal's period sync…" and "switching to plain and back…".
 
 let n = 0;
 const entry = (date: string, amount: number | string): Entry => ({ id: `e${++n}`, date, amount: String(amount) });
@@ -88,4 +95,70 @@ test('defaults: an unknown scale and a goal without a period count in total', ()
     goalPeriod({ id: 'g', title: 'g', status: 'active', period: 'total' }),
     goalPeriod({ id: 'g', title: 'g', status: 'active' }),
   ]).toEqual(['total', 'total', 'total']);
+});
+
+test('plain states keep one value a date: a new one that day replaces it', () => {
+  const p: State = { id: 'p', title: 'p', description: '', value: '', history: [] };
+  recordMeasurement(p, today(), '5');
+  recordMeasurement(p, today(), '7');
+  expect([p.history.length, stateValue(p)]).toEqual([1, '7']);
+});
+
+test('an old export imports in the new form, and its goal counts the last full week', () => {
+  const lastWeek = addDays(calPeriod('week', today()).from, -1);
+  const raw = {
+    name: 'Old export',
+    goals: [{ id: 'g', title: 'Run 30 a week', status: 'active', baseline: '0', target: '30', metric: 'Km' }],
+    states: [
+      {
+        id: 's',
+        title: 'Km',
+        unit: 'km',
+        cumulative: 'week',
+        entries: [{ id: 'e', date: lastWeek, amount: '30' }],
+        value: '0',
+        date: lastWeek,
+      },
+    ],
+    relations: [{ id: 'r', from: 's', to: 'g', type: 'measures' }],
+  };
+  const { data } = parsePlanFile(JSON.stringify(raw), 'old.json');
+  expect([data.states[0].cumulative, data.states[0].scale, data.states[0].value, data.goals[0].period]).toEqual([
+    true,
+    'week',
+    '30',
+    'week',
+  ]);
+  setDb(data);
+  expect([goalCurrent(data.goals[0]), goalReached(data.goals[0])]).toEqual([30, true]);
+  setDb(emptyDb());
+});
+
+test("the graph scale and a goal's period sync like any other change", () => {
+  const e = (id: string, amount: number): Entry => ({ id, date: today(), amount: String(amount) });
+  // Device A switched the graph to months later; device B added an amount earlier.
+  const a = adds([e('x', 1)], { scale: 'month', updatedAt: '2099-02-01', value: '1', date: today() });
+  const b = adds([e('x', 1), e('y', 2)], { scale: 'week', updatedAt: '2099-01-01', value: '3', date: today() });
+  const m = mergeState(a, b);
+  expect([m.scale, m.entries!.map(x => x.id), m.value]).toEqual(['month', ['x', 'y'], '3']);
+  const goal = (period: Goal['period'], updatedAt: string): Goal => ({
+    id: 'g',
+    title: 'G',
+    status: 'active',
+    period,
+    updatedAt,
+  });
+  const merged = mergePlans(
+    { ...emptyDb(), goals: [goal('month', '2099-01-01')], states: [b] },
+    { ...emptyDb(), goals: [goal('week', '2099-03-01')], states: [a] },
+  );
+  expect([merged.goals[0].period, merged.states[0].scale]).toEqual(['week', 'month']);
+});
+
+test("switching to plain and back keeps the graph's scale", () => {
+  const s = adds([{ id: 'a', date: today(), amount: '4' }], { scale: 'month' });
+  convertState(s, false);
+  expect([!s.cumulative, s.scale, s.history.length]).toEqual([true, 'month', 1]);
+  convertState(s, true);
+  expect([s.cumulative, stateScale(s), stateValue(s)]).toEqual([true, 'month', 4]);
 });
