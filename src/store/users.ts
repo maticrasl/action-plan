@@ -1,6 +1,5 @@
 /** Users on one device and the storage under each one's key prefix. */
 import { uid } from '../core/util';
-import { LANG_KEY } from '../ui/i18n-dom';
 import type { User, UserList } from '../core/model';
 
 /* =========================================================
@@ -115,3 +114,5 @@ export function removeUserKeys(user: User, all: boolean) {
     userKeys(user, area).forEach(k => area.removeItem(k)),
   );
 }
+
+export const LANG_KEY = 'actionplan.lang';
