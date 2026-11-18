@@ -2,5 +2,6 @@
 # They still gate locally. Add a step only for a rendering difference (fonts, sizes), and list it
 # in docs/restructure/STATUS.md.
 #
-# Empty since the typeface ships with the app (src/styles/fonts.css) and the harness waits for it
-# (fontsLoaded in tests/browser/harness.js): the two steps that differed on Linux fonts are back.
+# Empty since 2026-11-18: the typeface ships with the app and the harness waits for it
+# (fontsLoaded in tests/browser/harness.js), and the test Chrome always runs in the light colour
+# scheme (scripts/lib/chrome.mjs). See docs/restructure/STATUS.md.

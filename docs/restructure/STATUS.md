@@ -44,18 +44,22 @@ it was 100 and measured 117–129 since 2026-11-08); all checks pass.
 
 ## CI skip list (`tests/ci-skip.txt`)
 
-Empty since 2026-11-18 (`fix/fonts-and-sunday-tests`). It held two steps that failed on GitHub's Linux
-Chrome only, both measuring text:
+Empty since 2026-11-18 (`fix/fonts-and-sunday-tests`). It held two steps that failed on GitHub only,
+for two different reasons:
 
-- `routine cards: a short schedule tag that fits, the full one as its tooltip`: text width (Slovenian)
-- `item menu: show in another view, selected there`: a map box side 6 px off (658 → 664)
-
-Cause: the text was measured in whatever font the machine had: in the test frames always the
-fallback (Segoe UI on Windows, Liberation or DejaVu on Linux; `css/styles.css` had no Overpass), on the
-page Overpass from Google Fonts only once it had arrived. Now Overpass ships with the app
-(`src/styles/fonts/`, also in the test frames' `css/fonts/`) and the harness loads it before any
-step (`fontsLoaded`). Both pass locally; **the first CI run of that branch confirms them on Linux**. If one
-still fails there, put it back on the list with its message.
+- `routine cards: a short schedule tag that fits, the full one as its tooltip`: text width (Slovenian).
+  The text was measured in whatever font the machine had: in the test frames always a fallback (Segoe
+  UI on Windows, Liberation or DejaVu on Linux; `css/styles.css` had no Overpass). Now Overpass ships with
+  the app (`src/styles/fonts/`, also in the frames' `css/fonts/`) and the harness loads it before any step
+  (`fontsLoaded`). Confirmed on GitHub.
+- `item menu: show in another view, selected there`: "side shaded by the light: bottom 658 → 664, right
+  684". Not a size and not Linux: these are colour sums of a goal slab's shading. The suite ran in the
+  system's colour scheme: the owner's PC is dark (night glass, where the step held), GitHub's runner
+  light. By day the white glass reflects more sky on the right side (it faces sideways) than on the
+  bottom, so the right is lighter in colour though it gets less light. Found by printing the scheme and
+  the stops: forced into the light scheme, the owner's PC gives CI's exact numbers. Now the test Chrome always runs in the
+  light scheme (`scripts/lib/chrome.mjs`, like the pinned day), and the step checks the light itself
+  (`glassLighting`) plus the colours of each theme apart; the glass look is unchanged.
 
 ## `NO RESULT` flake in `test:browser`: cause found, fix in `tests/pre.js` (2026-11-17)
 

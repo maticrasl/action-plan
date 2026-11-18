@@ -26,7 +26,8 @@ in `shots/`), `npm run perf -- --save` (a new baseline for this machine), `npm r
 
 `browser.html?f=<file>` is the built app with `tests/pre.js` before it and `tests/browser/harness.js` after
 it. `pre.js` clears storage, sets English and no tour, stubs `requestAnimationFrame`, `confirm` and
-`prompt`, and pins the calendar: the clock is shifted to start at Wednesday 18 November 2026, noon. The
+`prompt`, and pins the calendar: the clock is shifted to start at Wednesday 18 November 2026, noon. Chrome
+runs in the light colour scheme whatever the system's (`scripts/lib/chrome.mjs`). The
 test bridge (`src/test-bridge.ts`, test build only) puts every module export on `window`; assigning one
 needs a `setX` export in its module.
 

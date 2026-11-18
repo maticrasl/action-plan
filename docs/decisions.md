@@ -78,7 +78,9 @@ How to change them safely:
 **Page tests stay in-page.** The old suite was fast and thorough; it was split by feature
 (`tests/browser/`), not rewritten. Playwright covers only what a page cannot test about itself:
 phone viewport and touch, offline start, upgrading from the old app. The suite's day is pinned
-(Wednesday 2026-11-18) so date-dependent steps do not change from day to day.
+(Wednesday 2026-11-18) so date-dependent steps do not change from day to day, and so is the
+colour scheme (light, `scripts/lib/chrome.mjs`), so a dark system does not run another suite
+than GitHub's runner. A step about the night look sets `data-theme="dark"` itself.
 
 **Speed budgets do not gate.** `npm run perf` runs on real time and varies between machines and
 runs; a failing budget blocked the suite on unchanged code. It compares against
