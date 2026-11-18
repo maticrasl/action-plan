@@ -1,4 +1,4 @@
-/** The item menu on the map and timeline (right-click, long-press, keys), and their keys and double-click. */
+/** The item menu on the map and timeline: what it offers, opening it (right-click, long-press) and what it does. */
 import { t } from '../../i18n/index';
 import { ui } from '../../store/state';
 import { isRoutine, runsOn } from '../../core/routines/schedule';

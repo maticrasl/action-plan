@@ -1,4 +1,4 @@
-/** The map view: glass boxes, lines and their selection, text fitted to the boxes. */
+/** The map view: boxes, lines and their selection, text fitted to the boxes. */
 import { GLASS, MAP, glassThickness, layoutMap } from './layout';
 import { ui } from '../../store/state';
 import { ctxMenu } from '../../ui/menu';
