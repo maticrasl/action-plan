@@ -2,16 +2,16 @@
 import { decorateHelp, endTour, setHelp, tour } from './tutorial.js';
 import { I18N, lang, locale, t, tp } from '../i18n/index';
 import { applyStaticI18n, setLanguage } from '../ui/i18n-dom';
-import { clamp, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
+import { clamp, doneLast, fmtNum, formatter, isNum, numInput, parseNum, uid } from '../core/util';
 import { dateInput, daysUntil, fmtDate, fmtDay, fmtRel, fmtSpan, isoDate, parseDateInput, today } from '../core/dates';
 import { ACTIVITY_STATUS, GOAL_STATUS, KINDS, REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
 import { db, setDb, visions } from '../core/state';
-import { canParent, contributingIds, findVision, ownVisions, visionAncestors, visionParents, visionRoots } from '../core/visions';
+import { canParent, contributingIds, findVision, ownVisions, setGoalVisions, visionAncestors, visionParents, visionRel, visionRelId, visionRoots } from '../core/visions';
 import { addRelation, ancestors, canRelate, collection, descendants, findEntity, kindList, possibleTypes, reaches, relLabel, relSignature, relsFrom, relsTo } from '../core/relations';
 import { addDays, daysBetween, isDueDay, isFlexible, isRoutine, lastOccurrence, monthDay, monthRule, nextDueDay, nthInMonth, periodOf, periodUnit, routineStart, runsOn, sched, weekday } from '../core/routines/schedule';
 import { checkedOn, dayItemsDone, followList, isList, isListRoutine, itemOn, listDone, setCheckin, setDayItems, tickable } from '../core/routines/checkins';
 import { DAY_MS, dayNum, dayStr, isoOf } from '../core/days';
-import { PERIODS, SCALES, addEntry, calPeriod, convertState, deleteEntry, dropRoutineEntries, entriesOf, followLatest, goalPeriod, graphEntries, graphScale, improvedStates, isCumulative, lastPeriodTotal, periodTotals, refreshTotal, stateDate, stateScale, stateTotal, sumOf } from '../core/cumulative';
+import { PERIODS, SCALES, addEntry, calPeriod, convertState, deleteEntry, deleteMeasurement, dropRoutineEntries, entriesOf, goalPeriod, graphEntries, graphScale, improvedStates, isCumulative, lastPeriodTotal, periodTotals, recordMeasurement, refreshTotal, stateDate, stateScale, stateTotal, sumOf } from '../core/cumulative';
 import { consistency, keptDay, makesUp, periodProgress, routineState, routineStreak, routineToday } from '../core/routines/keeping';
 import { activityState, blockers, byActivities, byRoutines, countedActivities, goalActivities, goalCurrent, goalProgress, goalReached, goalRoutines, goalScope, goalState, isComplete, measuringState, ownMetric, smartCheck, startDueActivities } from '../core/progress';
 import { PLAN_FORMAT, PLAN_VERSION, dropRoutineDeps, hasProgress, parsePlanFile, progressCounts, resetProgress } from '../core/normalize';
@@ -19,8 +19,8 @@ import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/i
 import { saveUsers, userStorage, users } from '../store/users';
 import { STORAGE_KEY, prefs } from '../store/prefs';
 import { currentPlan, freshUi, plans, setPlans, ui } from '../store/state';
-import { PLANS_KEY, createPlan, deletePlan, load, mergePlanInto, nameTaken, openPlan, planKey, readPlan, save, uniqueName } from '../store/plans';
-import { deleteVision, goalsReaching, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache } from '../store/visions';
+import { PLANS_KEY, createPlan, deletePlan, load, mergePlanInto, nameTaken, openPlan, planKey, readPlan, removeEntity, save, uniqueName } from '../store/plans';
+import { goalsReaching, purposeState, reachedVisions, saveVisions, servingGoals, setOtherPlansCache } from '../store/visions';
 import { drive } from '../sync/drive';
 import { syncConnected, syncState } from '../sync/sync';
 import { renderSync } from './sync-ui.js';
@@ -49,17 +49,6 @@ export function setIncoming(toId, type, fromIds) {
   db.relations = db.relations.filter(r => !(r.to === toId && r.type === type));
   const errors = fromIds.map(from => addRelation(from, toId, type)).filter(Boolean);
   if (errors.length) toast(errors[0]);
-}
-
-export function removeEntity(kind, id) {
-  if (kind === 'vision') {
-    if (ui.mapSelected === id) ui.mapSelected = null;
-    return deleteVision(id);
-  }
-  const list = collection(kind);
-  list.splice(list.findIndex(x => x.id === id), 1);
-  db.relations = db.relations.filter(r => r.from !== id && r.to !== id);
-  if (ui.mapSelected === id) ui.mapSelected = null;
 }
 
 export function tickListItem(id, itemId, iso = today()) {
@@ -509,10 +498,6 @@ export function goalSelect(target, value) {
   </select>`;
 }
 
-// A list's items on its card, each ticked off with a tap, under how many are done.
-// Ticked items go below the ones still to do, each group in the list's own order.
-export const doneLast = (list, done = i => i.done) => [...list.filter(i => !done(i)), ...list.filter(done)];
-
 export function listTicks(a) {
   const n = listDone(a);
   return `${a.list.length ? progressBar(n / a.list.length * 100, t('list.done', { done: n, total: a.list.length })) : ''}
@@ -597,13 +582,6 @@ export function visionForm(v) {
     ${field('description', t('f.visionDesc'), area('description', v.description, t('f.visionDescPh')))}
     ${checklist('parents', t('f.visionParents'), 'vision', options, parents, t('f.visionParentsHint'))}
     ${checklist('goals', t('f.visionGoals'), 'goal', db.goals, goals)}`;
-}
-
-// A goal's own links to visions, without those that are gone; none is no field at all.
-export function setGoalVisions(g, ids) {
-  const keep = ids.filter(findVision);
-  if (keep.length) g.visions = [...new Set(keep)];
-  else delete g.visions;
 }
 
 /* ---------- Relationship map ---------- */
@@ -1023,15 +1001,6 @@ export const roundedRect = (x0, y0, x1, y1, r) =>
 /* ---------- Visions on the map ----------
    Links to visions are not stored relationships: a goal keeps the visions it serves, a vision its
    parents. On the map they are drawn as lines with ids of their own, vl~<from>~<to>. */
-export const visionRelId = (from, to) => `vl~${from}~${to}`;
-export function visionRel(id) {
-  const [pre, from, to] = String(id || '').split('~');
-  if (pre !== 'vl') return null;
-  const child = findVision(from);
-  if (child) return visionParents(child).includes(to) ? { id, from, to, type: 'subvision' } : null;
-  const goal = db.goals.find(g => g.id === from);
-  return goal && ownVisions(goal).includes(to) ? { id, from, to, type: 'serves' } : null;
-}
 
 // Why two boxes can't be linked through a vision (an i18n key), or null. Two visions: the first serves the second.
 export function visionLinkError(a, b) {
@@ -1574,20 +1543,6 @@ export function stateSeries(s) {
   return (s.history || []).filter(h => h.date && isNum(h.value))
     .map(h => ({ day: dayNum(h.date), date: h.date, value: Number(h.value) }))
     .sort((a, b) => a.day - b.day);
-}
-
-// One measurement per date: a new value for a date replaces the old one. The state's value is its latest measurement.
-export function recordMeasurement(s, date, value) {
-  s.history = (s.history || []).filter(h => h.date !== date).concat({ date, value }).sort((a, b) => a.date.localeCompare(b.date));
-  if (s.dropped) { delete s.dropped[date]; if (!Object.keys(s.dropped).length) delete s.dropped; }
-  followLatest(s);
-}
-
-// A deleted date is remembered, so syncing with an older copy does not bring the measurement back.
-export function deleteMeasurement(s, date) {
-  s.history = (s.history || []).filter(h => h.date !== date);
-  s.dropped = { ...s.dropped, [date]: 1 };
-  followLatest(s);
 }
 
 export function removeMeasurement(id, iso) {

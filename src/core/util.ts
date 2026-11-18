@@ -43,3 +43,10 @@ export function parseNum(s: unknown): number {
 // A stored number ("78.5") as typed in the current language ("78,5" in Slovenian).
 export const numInput = (v: string | number | null | undefined): string | number =>
   isNum(v) ? String(v).replace('.', (1.5).toLocaleString(locale()).charAt(1)) : (v ?? '');
+
+// A list's items on its card, each ticked off with a tap, under how many are done.
+// Ticked items go below the ones still to do, each group in the list's own order.
+export const doneLast = <T extends { done?: boolean }>(list: T[], done: (i: T) => unknown = i => i.done) => [
+  ...list.filter(i => !done(i)),
+  ...list.filter(done),
+];

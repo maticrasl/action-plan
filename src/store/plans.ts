@@ -1,7 +1,7 @@
 /** The plans: loading, saving, opening, creating, deleting and merging them, and their names. */
 import { userStorage } from './users';
 import { normalize } from '../core/normalize';
-import { emptyDb, type Db, type Item, type PlanList } from '../core/model';
+import { emptyDb, type Db, type Item, type ItemKind, type PlanList } from '../core/model';
 import { currentPlan, plans, plansVersion, setPlans, setPlansVersion, ui } from './state';
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
 import { db, setDb } from '../core/state';
@@ -9,7 +9,8 @@ import { STORAGE_KEY } from './prefs';
 import { uid } from '../core/util';
 import { t } from '../i18n/index';
 import { emit } from './events';
-import { loadVisions } from './visions';
+import { deleteVision, loadVisions } from './visions';
+import { collection } from '../core/relations';
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.
@@ -155,4 +156,18 @@ export function mergePlanInto(fromId: string, toId: string, remove = false) {
   }
   save();
   emit('plansChanged');
+}
+
+export function removeEntity(kind: ItemKind, id: string) {
+  if (kind === 'vision') {
+    if (ui.mapSelected === id) ui.mapSelected = null;
+    return deleteVision(id);
+  }
+  const list = collection(kind);
+  list.splice(
+    list.findIndex(x => x.id === id),
+    1,
+  );
+  db.relations = db.relations.filter(r => r.from !== id && r.to !== id);
+  if (ui.mapSelected === id) ui.mapSelected = null;
 }

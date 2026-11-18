@@ -2,7 +2,7 @@
 import { db, visions } from './state';
 import { safeId } from './normalize';
 import { mergeDeleted, newerOf, newestFirst, stamp } from './merge';
-import type { Db, Goal, IdSet, ISOTime, Plan, Vision, VisionList } from './model';
+import type { Db, Goal, IdSet, ISOTime, Plan, Vision, VisionList, VisionRel } from './model';
 import type { TextKey } from '../i18n/index';
 
 // One plan's data, with its entry in the plan list.
@@ -173,4 +173,24 @@ export function mergeVisions(rawA: RawVisions, rawB: RawVisions): VisionList {
   const found = [a.purposeFound, b.purposeFound].filter(Boolean).sort()[0];
   if (found) out.purposeFound = found;
   return out;
+}
+
+// A goal's own links to visions, without those that are gone; none is no field at all.
+export function setGoalVisions(g: Goal, ids: string[]) {
+  const keep = ids.filter(findVision);
+  if (keep.length) g.visions = [...new Set(keep)];
+  else delete g.visions;
+}
+
+// A link to a vision is no stored relation; its line on the map has an id of its own, vl~<from>~<to>.
+export const visionRelId = (from: string, to: string) => `vl~${from}~${to}`;
+export function visionRel(
+  id: string | null | undefined,
+): { id: string; from: string; to: string; type: VisionRel } | null {
+  const [pre, from, to] = String(id || '').split('~');
+  if (pre !== 'vl') return null;
+  const child = findVision(from);
+  if (child) return visionParents(child).includes(to) ? { id: id!, from, to, type: 'subvision' } : null;
+  const goal = db.goals.find(g => g.id === from);
+  return goal && ownVisions(goal).includes(to) ? { id: id!, from, to, type: 'serves' } : null;
 }
