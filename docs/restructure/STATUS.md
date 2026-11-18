@@ -8,7 +8,7 @@
 | 03 core domain | merged (PR #8) and deployed by `deploy.yml` 2026-11-17; tag `before-phase-03` |
 | 04 store and sync | merged (PR #10) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-04` |
 | 05 shared UI | merged (PR #12) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-05` |
-| 06 views and tutorial | not started |
+| 06 views and tutorial | done on branch `restructure/phase-06` (not pushed); waiting for the owner check |
 | 07 map, timeline, graphs | not started |
 | 08 close-out | not started |
 | 09 tests | not started |
@@ -60,16 +60,16 @@ Phase 9 (tests) can make the first step restore English in `finally` and take th
 
 - Moving: `npm run move -- <from> <to> <names|Obj.prop|Arr[Title]:NAME|comment:<n>|line:<n>> [--section …] --fix-imports`, the
   `/** … */` line, `--check`, `check`, commit; then `git mv` to .ts, types, Prettier, commit. `line:<n>` takes a listener; look lines
-  up again before each run. `--section` runs past `/* === */` banners. Into a .ts file: `--check`, then type, one commit.
-- Layers: `core` ← `store` ← `sync` ← `ui`; ESLint forbids `ui/` to import `legacy/` or `views/`. Upward calls from `ui/`:
-  `requestRender()` (`ui/render.ts`; `main.ts` sets `render`), `connectSync({ enterUser, offerTour })` (through wrappers: the suite
-  swaps `offerTour` by `setOfferTour`), and the `store/events.ts` emits. A prep commit rewires calls before the verbatim move.
-- Listeners: the form dialog's stay in today's order in `ui/forms/events.ts` (Ctrl+Enter stops the rest); the others moved with
-  their feature. `main.ts` imports the listen-only `ui/dialog.ts` and `ui/forms/events.ts` before the legacy code. The test build
-  loads every module by glob and hides a missing import: after `npm run build`, look for a moved listener's code in `dist/`.
-- Left in `app.js` (3,016 lines, not the ~2,500 hoped): views, their gestures, the `#view` click/input/change dispatchers (only
-  view branches: for phase 6), the map context menu's options and actions (`ui/menu.ts` has the menu itself), boot.
-- Typed `$<E>(sel)` returns E (non-null). `(e.target as HTMLElement)` in listeners. Form data: `Links`, `New<T>`, `FormVals` in
-  `ui/forms/form.ts`. Shared texts in `ui/text.ts`, categories in `core/categories.ts`, `removeEntity` in `store/plans.ts`.
+  up again before each run (import edits shift them). Banners left without code are dropped in a commit of their own.
+- Layers: `core` ← `store` ← `sync` ← `ui` ← `views` ← `tutorial`; ESLint forbids `ui/` to import `legacy/`, `views/`, `tutorial/`,
+  and `views/` to import `tutorial/`. Upward: `requestRender()`, `connectSync`, `store/events.ts`, and `onRendered(fn)` in
+  `views/index.ts` (`main.ts` registers `decorateHelp`). Views do not import each other; shared parts: `views/filters.ts`,
+  `views/routines.ts`, `ui/goal-card.ts`.
+- Phase 7 re-points: `views/index.ts` takes `renderMap`/`renderTimeline`/`renderGraphs`/`markVisions` from `app.js`; the `#view`
+  click dispatcher in `views/events.ts` takes the map, timeline and graph actions (`TL`, `nodeId`, `zoomMap`, …) from it.
+  `markVisions` asks `isTourRunning()` (tutorial): moved into `views/`, it needs a hook set from `main.ts` (prep commit).
+- Boot (`bootUser`, `enterUser`) is still in `app.js` (phase 6's note 2 said `main.ts`; left for phase 8). `Ui` is typed: `ViewName`.
+- Listener order: `main.ts` imports `tutorial/tour` (tutorial.js's import order, `help` last) where tutorial.js was, and
+  `views/events` after `legacy/app.js`. The test build hides a missing import: after `npm run build`, look in `dist/`.
 - Unchanged: fixtures never regenerated; tests assign `x` only through `setX`; a name exported twice throws in the bridge. Legacy
-  files are CRLF: scripted edits keep line ends. PowerShell mangles UTF-8 (Edit or Node); Node may be off PATH. Unit tests 118.
+  files are CRLF. PowerShell mangles UTF-8 (Edit or Node); Node is off PATH (`C:\Program Files\nodejs`). Unit tests 118.

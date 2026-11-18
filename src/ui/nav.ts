@@ -1,11 +1,11 @@
 /** Moving between views: the sidebar and tab bar, the phone's More menu, the collapsible sidebar. */
-import { ui } from '../store/state';
+import { ui, type ViewName } from '../store/state';
 import { prefs } from '../store/prefs';
 import { requestRender } from './render';
 import { $ } from './dom';
 import { t } from '../i18n/index';
 
-export function setView(view: string) {
+export function setView(view: ViewName) {
   ui.view = view;
   ui.mapLinkFrom = null;
   ui.search = '';
@@ -17,7 +17,7 @@ export function setView(view: string) {
 
 document
   .querySelectorAll<HTMLElement>('.nav-item[data-view]')
-  .forEach(b => b.addEventListener('click', () => setView(b.dataset.view!)));
+  .forEach(b => b.addEventListener('click', () => setView(b.dataset.view as ViewName)));
 
 /* ---------- "More" menu of the phone tab bar ---------- */
 
@@ -47,7 +47,7 @@ $('#navSheet').addEventListener('click', e => {
   const b = (e.target as Element).closest<HTMLElement>('[data-sheet-view]');
   if (!b) return;
   closeNavSheet();
-  setView(b.dataset.sheetView!);
+  setView(b.dataset.sheetView as ViewName);
 });
 $('#navSheet').addEventListener('keydown', e => {
   const items = [...$('#navSheet').querySelectorAll('button')];
