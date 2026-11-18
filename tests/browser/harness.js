@@ -89,3 +89,111 @@ if (location.pathname.endsWith('/browser.html')) {
 }
 
 const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs'];
+
+const clone = x => JSON.parse(JSON.stringify(x));
+
+const entry = (date, amount, routine) => ({ id: uid(), date, amount: String(amount), ...(routine && { routine }) });
+
+// A plan with progress of every kind: achieved and measured goals, measurements, done and started
+// activities, routine check-ins (ticked and unticked), sync bookkeeping and a relation.
+const progressPlan = () => {
+  const g1 = {
+    id: uid(),
+    title: 'Run 10 km',
+    unit: 'km',
+    baseline: '5',
+    current: '7',
+    target: '10',
+    startDate: d(-30),
+    deadline: d(40),
+    status: 'active',
+    category: 'Health',
+    createdAt: d(-31),
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+  const g2 = {
+    id: uid(),
+    title: 'Read a book',
+    baseline: '0',
+    current: '1',
+    target: '1',
+    startDate: d(-20),
+    deadline: d(-2),
+    status: 'achieved',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+  const g3 = { id: uid(), title: 'On hold', progress: 'activities', startDate: d(-10), status: 'paused' };
+  const s1 = {
+    id: uid(),
+    title: 'Longest run',
+    unit: 'km',
+    value: '7',
+    date: d(-1),
+    history: [
+      { date: d(-30), value: '5' },
+      { date: d(-1), value: '7' },
+    ],
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+  const s2 = { id: uid(), title: 'Weight', unit: 'kg', history: [] };
+  const a1 = { id: uid(), title: 'Buy shoes', status: 'done', startDate: d(-28), dueDate: d(-25) };
+  const a2 = {
+    id: uid(),
+    title: 'Training plan',
+    status: 'doing',
+    startDate: d(-21),
+    dueDate: d(50),
+    notes: 'Three runs a week',
+  };
+  const a3 = { id: uid(), title: 'Someday', status: 'todo' };
+  const r1 = {
+    id: uid(),
+    title: 'Run',
+    status: 'todo',
+    startDate: d(-14),
+    repeat: { every: 1, unit: 'week', days: [0, 3] },
+    checkins: { [d(-7)]: 1, [d(-4)]: 1, [d(-3)]: 0 },
+  };
+  const rel1 = { id: uid(), from: a2.id, to: g1.id, type: 'contributes' };
+  return {
+    name: 'Running',
+    data: {
+      goals: [g1, g2, g3],
+      states: [s1, s2],
+      activities: [a1, a2, a3, r1],
+      relations: [rel1],
+      deleted: { gone: '2026-01-01T00:00:00.000Z' },
+    },
+  };
+};
+const datesOf = data =>
+  [...data.goals, ...data.activities].flatMap(x => [x.startDate, x.deadline, x.dueDate]).filter(Boolean);
+const addPlan = ({ name, data }) => {
+  createPlan(uniqueName(name), normalize(clone(data)));
+  return currentPlan();
+};
+// Captures what a download or share would hand over instead of saving it.
+const capture = async run => {
+  const got = [];
+  const orig = URL.createObjectURL,
+    click = HTMLAnchorElement.prototype.click;
+  URL.createObjectURL = b => {
+    got.push({ blob: b });
+    return 'blob:x' + got.length;
+  };
+  HTMLAnchorElement.prototype.click = function () {
+    got[got.length - 1].name = this.download;
+  };
+  try {
+    await run();
+  } finally {
+    URL.createObjectURL = orig;
+    HTMLAnchorElement.prototype.click = click;
+  }
+  for (const g of got) g.json = JSON.parse(await g.blob.text());
+  return got;
+};
+const fileOf = (obj, name = 'plan.json') =>
+  new File([typeof obj === 'string' ? obj : JSON.stringify(obj)], name, { type: 'application/json' });
+const imp = $('#planImport'),
+  exp = $('#planExport');

@@ -1,5 +1,64 @@
-/** Page tests: help mode's tips in every view, and the tour's steps. */
+/** Page tests: the language picker on a first visit, help mode's tips in every view, the tour's steps. */
 suite(async () => {
+  await step('first visit: language picker before the tour', () => {
+    changeLanguage('en');
+    let done = 0;
+    chooseLanguage(() => done++);
+    const card = $('.lang-pick');
+    assert(
+      card && $('.lang-pick-block') && document.activeElement === $('[data-lang-done]'),
+      'picker open, Continue focused',
+    );
+    const options = [...card.querySelectorAll('[data-lang-pick]')]
+      .map(b => `${b.dataset.langPick}=${b.textContent}`)
+      .join(' ');
+    assert(
+      card.querySelector('[data-lang-pick="en"]').getAttribute('aria-pressed') === 'true',
+      'current language marked',
+    );
+    card.querySelector('[data-lang-pick="sl"]').click();
+    assert(lang === 'sl' && localStorage.getItem(LANG_KEY) === 'sl', 'language switched and saved');
+    assert(
+      $('#langPickTitle').textContent === 'Izberite jezik' &&
+        card.querySelector('[data-lang-pick="sl"]').getAttribute('aria-pressed') === 'true',
+      'card redrawn in Slovenian',
+    );
+    assert(currentPlan().name === I18N.sl.strings['plan.defaultName'], 'empty starter plan renamed');
+    const tabs = [];
+    for (let i = 0; i < card.querySelectorAll('button').length + 1; i++) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+      tabs.push(document.activeElement.closest('.lang-pick') ? 'in' : 'out');
+    }
+    assert(!tabs.includes('out'), 'Tab stays in the card');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    assert(!$('.lang-pick') && !$('.lang-pick-block') && done === 1, 'Escape closes and continues');
+
+    // A plan with content keeps its name; Continue starts the tour in the chosen language.
+    mk('goal', { title: 'Keep my name' });
+    save();
+    chooseLanguage(startTour);
+    $('[data-lang-pick="en"]').click();
+    assert(currentPlan().name === I18N.sl.strings['plan.defaultName'], 'plan with items not renamed');
+    $('[data-lang-done]').click();
+    assert(
+      !$('.lang-pick') && tour.step === 0 && $('#tourTitle').textContent === t('tour.about.title'),
+      'tour starts in English',
+    );
+    assert(
+      $('[data-tour="next"]').textContent === t('tour.next') && !$('[data-tour="back"]'),
+      'about slide first, Next',
+    );
+    assert(t('tour.about.text').includes('SMART'), 'describes the app');
+    $('[data-tour="next"]').click();
+    assert(
+      $('#tourTitle').textContent === t('tour.welcome.title') &&
+        $('[data-tour="next"]').textContent === t('tour.start'),
+      'then the tour intro with Start',
+    );
+    endTour(false);
+    return options;
+  });
+
   loadSample(); // help tips decorate the sample plan's items
   await step('help mode decorates views', () => {
     setHelp(true);
