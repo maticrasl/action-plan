@@ -12,7 +12,7 @@
 | 07 map, timeline, graphs | merged (PR #16) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-07` |
 | 08 close-out | merged (PR #18) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-08` |
 | 09 tests | merged (PR #20) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-09` |
-| 10 workflow | built on `restructure/phase-10`; waiting for the owner: memory changes (step 5), then "ship it" |
+| 10 workflow | done 2026-11-18 on `restructure/phase-10`; ships on the owner's "ship it". **Restructure done: features allowed** |
 
 ## Perf baseline
 
@@ -75,6 +75,6 @@ are off the list; confirmed on GitHub (PR #20 and its deploy passed).
 - Measure (step 7), 2026-11-18, Opus 5.5, fresh session: "right-click empty timeline space opens the Add menu"
   (like `f47d3bf`): 32 turns, 45k context written, 1.05M cache reads, 10.4k output, $0.78; 7 reads, all ranged;
   test first. Old cost unknown (owner); the README estimated severalfold. Throwaway branch deleted, never pushed.
-- Open: memory changes (step 5) with the owner; then set this file to done and ship. Delete `docs/restructure/`
-  after 2026-12-18.
+- Memory (step 5) applied with the owner's yes, 2026-11-18: 14 entries; old folder kept as `memory-backup-2026-11-18`
+  beside it. Delete `docs/restructure/` after 2026-12-18; `docs/decisions.md` carries what matters.
 - Node is at `C:\Program Files\nodejs`; a Claude process started before the install has no `node` on PATH.
