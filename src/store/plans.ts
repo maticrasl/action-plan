@@ -2,7 +2,6 @@
 import { userStorage } from './users';
 import { normalize } from '../core/normalize';
 import { emptyDb, type Db, type Item, type PlanList } from '../core/model';
-import { loadVisions } from '../legacy/visions.js';
 import { currentPlan, plans, plansVersion, setPlans, setPlansVersion, ui } from './state';
 import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
 import { db, setDb } from '../core/state';
@@ -10,6 +9,7 @@ import { STORAGE_KEY } from './prefs';
 import { uid } from '../core/util';
 import { t } from '../i18n/index';
 import { emit } from './events';
+import { loadVisions } from './visions';
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.
