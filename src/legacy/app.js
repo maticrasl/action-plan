@@ -21,8 +21,7 @@ import { SYNC_COLLS, stampChanges, stampPlanChanges, takePlanSnapshot, takeSnaps
 import { TEMPLATES, TPL_AREAS, templateData, tplText } from '../core/templates/index';
 import { emit } from '../store/events';
 import { saveUsers, userStorage, users } from '../store/users';
-
-export const STORAGE_KEY = 'actionplan.v1';
+import { STORAGE_KEY, prefs } from '../store/prefs';
 
 export const statusLabels = (list, prefix) => Object.fromEntries(list.map(k => [k, t(prefix + k)]));
 
@@ -35,16 +34,6 @@ export const freshUi = () => ({
   grZoom: {}, // how far each graph is zoomed: 1 fits the card
 });
 export const ui = freshUi();
-
-// Small per-device preferences (view, hidden relation types, hide-done, theme).
-export const prefs = {
-  get(key, fallback) {
-    try { const v = userStorage.getItem(`${STORAGE_KEY}.${key}`); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
-  },
-  set(key, value) {
-    try { userStorage.setItem(`${STORAGE_KEY}.${key}`, JSON.stringify(value)); } catch (e) { /* ignore */ }
-  },
-};
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.

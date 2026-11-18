@@ -1,8 +1,9 @@
 /** The guided tour and help mode. */
 import { scheduleSync } from './drive.js';
-import { $, changeLanguage, closeCtxMenu, createPlan, deletePlan, esc, itemCount, modal, openPlan, plans, prefs, render, renderPlanSwitch, sampleData, save, setView, settings, toast, ui, uniqueName } from './app.js';
+import { $, changeLanguage, closeCtxMenu, createPlan, deletePlan, esc, itemCount, modal, openPlan, plans, render, renderPlanSwitch, sampleData, save, setView, settings, toast, ui, uniqueName } from './app.js';
 import { I18N, lang, t } from '../i18n/index';
 import { clamp } from '../core/util';
+import { prefs } from '../store/prefs';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode
