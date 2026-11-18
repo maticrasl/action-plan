@@ -2,6 +2,7 @@
 import { plans } from '../store/state';
 import { prefs } from '../store/prefs';
 import { db } from '../core/state';
+import type { Goal } from '../core/model';
 import { goalReached } from '../core/progress';
 import { today } from '../core/dates';
 import { $ } from './dom';
@@ -16,10 +17,11 @@ import { toast } from './toast';
    until the goal drops below its target again. The first check of a plan on a device only notes
    which goals are there already, so an existing plan does not greet you with a row of toasts. */
 
-export const reachedQueue = [];
+export const reachedQueue: string[] = [];
 
 export function offerReached() {
-  const key = 'reachedChecked.' + plans.current, quiet = !prefs.get(key, false);
+  const key = 'reachedChecked.' + plans.current,
+    quiet = !prefs.get(key, false);
   let changed = false;
   db.goals.forEach(g => {
     const reached = goalReached(g);
@@ -39,14 +41,18 @@ export function offerReached() {
 
 export function showReached() {
   if ($('#toast').classList.contains('has-action')) return;
-  let g;
-  while (reachedQueue.length && !(g = db.goals.find(x => x.id === reachedQueue[0] && goalReached(x)))) reachedQueue.shift();
+  let g: Goal | undefined;
+  while (reachedQueue.length && !(g = db.goals.find(x => x.id === reachedQueue[0] && goalReached(x))))
+    reachedQueue.shift();
   if (!g) return;
   reachedQueue.shift();
-  toast(t('reached.text', { name: g.title }), { label: t('reached.mark'), run: () => {
-    g.status = 'achieved';
-    save();
-    requestRender();
-    toast(t('ctx.statusSet', { s: t('goal.achieved') }));
-  } });
+  toast(t('reached.text', { name: g.title }), {
+    label: t('reached.mark'),
+    run: () => {
+      g!.status = 'achieved';
+      save();
+      requestRender();
+      toast(t('ctx.statusSet', { s: t('goal.achieved') }));
+    },
+  });
 }

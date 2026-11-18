@@ -3,7 +3,7 @@ import { $ } from './dom';
 import { reachedQueue, showReached } from './reached';
 
 // `action` ({ label, run }) adds a button, and the toast stays longer so there is time to use it.
-export function toast(msg, action = null) {
+export function toast(msg: string, action: { label: string; run: () => void } | null = null) {
   const box = $('#toast');
   box.textContent = msg;
   box.classList.toggle('has-action', !!action);
@@ -12,13 +12,18 @@ export function toast(msg, action = null) {
     btn.type = 'button';
     btn.className = 'toast-action';
     btn.textContent = action.label;
-    btn.addEventListener('click', () => { hideToast(); action.run(); });
+    btn.addEventListener('click', () => {
+      hideToast();
+      action.run();
+    });
     box.append(' ', btn);
   }
   box.classList.add('show');
   clearTimeout(toast.timer);
   toast.timer = setTimeout(hideToast, action ? 8000 : 2200);
 }
+// The timer that hides the toast, kept on the function.
+toast.timer = undefined as ReturnType<typeof setTimeout> | undefined;
 export function hideToast() {
   clearTimeout(toast.timer);
   $('#toast').classList.remove('show', 'has-action');
