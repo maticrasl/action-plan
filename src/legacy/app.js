@@ -1,4 +1,4 @@
-/** The timeline and graphs views, and boot (phase 7 moves the two views; the map is in views/map). */
+/** Boot: loading a user's plans, visions and preferences and showing them, and switching users. */
 import { clamp } from '../core/util';
 import { REL_TYPES, VISION_RELS, emptyDb } from '../core/model';
 import { setDb } from '../core/state';

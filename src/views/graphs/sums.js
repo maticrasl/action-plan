@@ -218,10 +218,6 @@ export function routineGraphCard(a, width) {
   return grCardHtml(a, stats, legend, plot, table, scaleSwitch(a));
 }
 
-/* =========================================================
-   Events
-   ========================================================= */
-
 // The graph of a state that adds up, or of a routine, shows another scale; it is kept on the item.
 export function setGraphScale(id, scale) {
   const s = db.states.find(x => x.id === id) || db.activities.find(x => x.id === id && isRoutine(x));
