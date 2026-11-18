@@ -61,7 +61,7 @@ export type ISOTime = string; // a moment, from Date.toISOString()
 export type IdSet<V = 1> = Record<string, V>;
 
 // Every item carries an id; sync stamps `updatedAt` on what changed.
-interface Item {
+export interface Item {
   id: string;
   updatedAt?: ISOTime;
 }
