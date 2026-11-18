@@ -16,9 +16,10 @@ import { isRoutine, periodUnit } from '../../core/routines/schedule';
 import { TL } from '../timeline/render';
 import { ui } from '../../store/state';
 import { categoryChips, goalSelect, scopeFor, searchBox } from '../filters';
-import { areaFill, periodGraphCard, routineGraphCard, totalGraphCard } from './sums';
+import { periodGraphCard, routineGraphCard, totalGraphCard } from './sums';
 import type { Activity, Goal, ISODate, State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
+import { areaFill } from './plot';
 
 /* ---------- Graphs (measurement history of each current state) ----------
    One line chart per current state: its measurements over time, a target line for every goal it

@@ -20,12 +20,12 @@ import { GOAL_FILTERS, type GoalFilterTarget } from './filters';
 import { VIEWS, render } from './index';
 import { linkItems } from './map/link';
 import { zoomMap } from './map/zoom';
-import { nodeId } from './map/menu';
+import { nodeId, openAddMenu } from './map/menu';
 import { removeRelation } from './map/render';
-import { TL, foldAllTl, toggleTlFold } from './timeline/render';
+import { TL } from './timeline/render';
 import { removeMeasurement } from './graphs/states';
 import { removeEntry, setGraphScale } from './graphs/sums';
-import { openAddMenu } from './map/add-menu';
+import { foldAllTl, toggleTlFold } from './timeline/rows';
 
 export let lastNodeClick: { id: string | null; t: number } = { id: null, t: 0 };
 export function setLastNodeClick(v: typeof lastNodeClick) {

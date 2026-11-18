@@ -34,9 +34,8 @@ import type { MenuOption } from '../../ui/menu';
 import type { FormKind } from '../../ui/forms/form';
 import type { GoalFilterTarget } from '../filters';
 import { selectsInView } from './keys';
-import { setTlCollapsed, timelineRows, tlCollapsed } from '../timeline/render';
 import { hasGraph } from '../graphs/states';
-import { openAddMenu } from './add-menu';
+import { setTlCollapsed, timelineRows, tlCollapsed } from '../timeline/rows';
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 
@@ -377,5 +376,24 @@ export function listenMenu() {
       if (press?.fired) press = null;
     },
     true,
+  );
+}
+
+// On the map and the timeline (where links are drawn between kinds), what to add: under the Add button, or at x, y
+// for a right-click on the map's empty space.
+export function openAddMenu(x: number, y: number, byKey: boolean) {
+  Object.assign(ctxMenu.dataset, { id: '', rel: '', add: '1' });
+  ctxMenu.setAttribute('aria-label', t('add.item'));
+  showCtxMenu(
+    '',
+    '',
+    '',
+    ['goal', 'activity', 'state', ...(ui.view === 'map' ? ['vision'] : [])].map(k => ({
+      act: 'new:' + k,
+      label: t(('add.' + k) as TextKey),
+    })),
+    x,
+    y,
+    byKey,
   );
 }
