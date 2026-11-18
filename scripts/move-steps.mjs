@@ -3,7 +3,8 @@
 //        npm run move-steps -- --drop <from> <what> [<what> …]   (a step replaced by unit tests)
 //        npm run move-steps -- --list <file>
 //   <what>     a step, by the start of its name; or line:<n>, the suite statement whose code starts on line n;
-//              or <a>..<b>, every statement from the one <a> names to the one <b> names
+//              or <a>..<b>, every statement from the one <a> names to the one <b> names; or top:<n>, the
+//              file's top-level statement (outside the suite) whose code starts on line n
 //   <to>       a tests/browser file; made as `suite(async () => { … });` with a purpose line if missing.
 //              Moved statements go to the end of its suite body, in source order, with their comments.
 //   --top      the statements go to the end of <to> at its top level (the harness), each line losing the
@@ -102,8 +103,14 @@ function pick(chunks, what) {
 
 function move(from, to, whats, top) {
   const src = suiteOf(from);
-  const picked = [...new Set(whats.flatMap(w => pick(src.chunks, w)))].sort((a, b) => a - b);
-  const moved = picked.map(i => src.chunks[i]);
+  const tops = whats.filter(w => w.startsWith('top:'));
+  const picked = [...new Set(whats.filter(w => !tops.includes(w)).flatMap(w => pick(src.chunks, w)))];
+  const topChunks = tops.map(w => {
+    const stmt = src.sf.statements.find(s => line(src.sf, s.getStart()) === Number(w.slice(4)));
+    if (!stmt) throw new Error(`"${w}" names no top-level statement`);
+    return { ...chunkOf(src.sf, stmt), step: null, from: line(src.sf, stmt.getStart()), to: line(src.sf, stmt.end) };
+  });
+  const moved = [...topChunks, ...picked.map(i => src.chunks[i])].sort((a, b) => a.start - b.start);
   if (to === null) {
     // --drop: nowhere to write
   } else if (top) {

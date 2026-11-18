@@ -1,6 +1,6 @@
 /** Vite build: the app into dist/ (with the service worker), and the test pages into dist-test/ (--mode test). */
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
@@ -37,13 +37,8 @@ function serviceWorker(): Plugin {
 
 // The test pages: copies of the built index.html with classic scripts in <head> that run before the
 // app, and a list of classic scripts the test bridge appends once the app has booted. browser.html
-// runs the tests/browser files named in its query (tests/browser/harness.js); test.html the old suite
-// that is still to be split up.
-const OLD_SUITE = existsSync(join(root, 'tests', 'test.js'));
+// runs the tests/browser files named in its query (tests/browser/harness.js).
 const TEST_PAGES: Record<string, { before: string[]; after: string[] }> = {
-  ...(OLD_SUITE && {
-    'test.html': { before: ['tests/pre.js'], after: ['tests/browser/harness.js', 'tests/more.js', 'tests/test.js'] },
-  }),
   'browser.html': { before: ['tests/pre.js'], after: ['tests/browser/harness.js'] },
   'perf.html': { before: ['tests/pre.js'], after: ['tests/perf.js'] },
   // fixture-config.js is written by scripts/fixtures.mjs before each page load.
@@ -51,7 +46,6 @@ const TEST_PAGES: Record<string, { before: string[]; after: string[] }> = {
 };
 const TEST_FILES: Record<string, string> = {
   'tests/pre.js': 'tests/pre.js',
-  ...(OLD_SUITE && { 'tests/more.js': 'tests/more.js', 'tests/test.js': 'tests/test.js' }),
   'tests/perf.js': 'tests/perf.js',
   'tests/fixture-pre.js': 'tests/fixtures/fixture-pre.js',
   'tests/fixture-page.js': 'tests/fixtures/fixture-page.js',

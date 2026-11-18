@@ -1,7 +1,7 @@
 /** Runs the page tests (tests/browser/*.js, each in a fresh page) in headless Chrome, quietly. */
 // usage: node scripts/run-suite.mjs [--verbose] [--perf] [--app <dir>] [<feature> …]
-//   <feature>  a tests/browser file without .js: `map` runs map.js and map.*.js (not map-gestures.js);
-//              `old` runs what is left of the old suite (tests/test.js + more.js). Default: every file.
+//   <feature>  a tests/browser file without .js: `map` runs map.js and map.*.js (not map-gestures.js).
+//              Default: every file.
 //   default    prints each failing file's FAIL lines, its errors and a summary line, then one total line;
 //              exit 0 if all passed
 //   --verbose  every PASS and FAIL line, with stacks
@@ -35,9 +35,9 @@ try {
 function selectPages(wanted) {
   const dir = join(tests, 'browser');
   const files = existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.js') && f !== 'harness.js').map(f => f.slice(0, -3)).sort() : [];
-  const all = [...files.map(f => [f, `browser.html?f=${f}`]), ...(existsSync(join(tests, 'test.js')) ? [['old', 'test.html']] : [])];
+  const all = files.map(f => [f, `browser.html?f=${f}`]);
   if (!wanted.length) return all;
-  return wanted.flatMap(w => {
+  const picked = wanted.flatMap(w => {
     const hit = all.filter(([f]) => f === w || f.startsWith(w + '.'));
     if (!hit.length) {
       console.error(`no page tests named ${w} (tests/browser/${w}.js)`);
@@ -45,6 +45,8 @@ function selectPages(wanted) {
     }
     return hit;
   });
+  return [...new Set(picked)]; // `map map.select` names map.select twice
+
 }
 
 async function runPerf() {

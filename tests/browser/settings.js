@@ -296,4 +296,35 @@ suite(async () => {
     assert(!off.length, 'not thin: ' + off);
     deletePlan(plans.current);
   });
+
+  await step('users: phone width – the account section fits 390 px', async () => {
+    $('#settingsBtn').click();
+    const frame = document.createElement('iframe');
+    Object.assign(frame.style, {
+      width: '390px',
+      height: '900px',
+      position: 'fixed',
+      left: '-9999px',
+      top: '0',
+      border: '0',
+    });
+    frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body style="margin:0"><div class="modal-body" style="padding:0 16px">${$('#syncSection').outerHTML}</div></body>`;
+    await new Promise(res => {
+      frame.onload = res;
+      document.body.append(frame);
+    });
+    const doc = frame.contentDocument;
+    const wide = [...doc.querySelectorAll('#syncSection *')]
+      .filter(el => el.getBoundingClientRect().right > 390 - 16 + 0.5)
+      .map(el => `${el.tagName}.${el.className}:${Math.round(el.getBoundingClientRect().right)}`);
+    assert(
+      doc.documentElement.scrollWidth <= 390,
+      `no sideways scroll: ${doc.documentElement.scrollWidth} ${wide.join(' ')}`,
+    );
+    [...doc.querySelectorAll('.user-list li, .user-name')].forEach(el =>
+      assert(el.getBoundingClientRect().right <= 390 - 16 + 0.5, 'row inside the screen'),
+    );
+    frame.remove();
+    settings.close();
+  });
 });

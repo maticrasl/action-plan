@@ -203,3 +203,37 @@ const change = (id, value) => {
   $(id).value = value;
   $(id).dispatchEvent(new Event('change', { bubbles: true }));
 };
+
+const clearVisions = () => {
+  visions = { list: [], deleted: {} };
+  saveVisions();
+};
+const mkV = (title, parents = [], p = {}) => {
+  const v = { id: uid(), title, parents: parents.map(x => x.id), ...p };
+  visions.list.push(v);
+  return v;
+};
+const ids = list => [...list].map(x => x.id || x).sort();
+// Purpose counts the goals of every plan: these steps set the other plans aside while they run.
+let asideList = [];
+const setAside = () => {
+  asideList = plans.list.filter(p => p.id !== plans.current);
+  plans.list = plans.list.filter(p => p.id === plans.current);
+};
+const putBack = () => {
+  plans.list.push(...asideList);
+  asideList = [];
+};
+
+const clickEl = (el, detail = 1) =>
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail }));
+const press = (key, target = document.activeElement || document.body) => {
+  const ev = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+  target.dispatchEvent(ev);
+  return ev.defaultPrevented;
+};
+
+const $$ = sel => [...document.querySelectorAll(sel)];
+
+// The real Drive methods, before any test swaps them for fakes.
+const REAL_DRIVE = { ...drive };
