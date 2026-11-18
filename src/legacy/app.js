@@ -2137,7 +2137,7 @@ export function openForm(kind, id = null, links = {}) {
   const vr = kind === 'relation' && visionRel(id);
   if (vr) return openForm('vision', vr.type === 'serves' ? vr.to : vr.from);
   formCtx = { kind, id };
-  cal = null;
+  setCal(null);
   let item = null;
   if (id) item = kind === 'relation' ? db.relations.find(r => r.id === id) : findEntity(id)?.item;
   $('#deleteBtn').hidden = !item;
@@ -3069,6 +3069,7 @@ $('#modalForm').addEventListener('input', e => {
    Opens below the field on the field's date, else (for an end date) on the form's start date, else today. */
 
 export let cal = null; // { field, box, y, m, focus: 'yyyy-mm-dd' }
+export function setCal(v) { cal = v; }
 
 export function openCalendar(field) {
   closeCalendar();
