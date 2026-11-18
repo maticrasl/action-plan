@@ -2,7 +2,6 @@
 import { dayNum, dayStr } from '../../core/days';
 import { addDays, lastOccurrence } from '../../core/routines/schedule';
 import { findEntity } from '../../core/relations';
-import { endOf, fixedEnd, tlGrip } from '../../legacy/app.js';
 import { $, viewEl } from '../../ui/dom';
 import { ui } from '../../store/state';
 import { fmtRel, fmtSpan } from '../../core/dates';
@@ -14,6 +13,7 @@ import { toast } from '../../ui/toast';
 import { LONG_PRESS_MS, openCtxMenu } from '../map/menu';
 import type { Activity, Goal, ISODate, ItemKind } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
+import { endOf, fixedEnd, tlGrip } from './render';
 
 /* ---------- Moving dates in the timeline ----------
    The selected item's bar can be dragged along the time axis: from its middle it moves both dates,

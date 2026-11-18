@@ -2,7 +2,6 @@
 import { $, viewEl } from '../../ui/dom';
 import { ui } from '../../store/state';
 import { clamp } from '../../core/util';
-import { GR, TL, grCharts, grDrawW, graphFor } from '../../legacy/app.js';
 import { prefs } from '../../store/prefs';
 import { render } from '../index';
 import { findEntity } from '../../core/relations';
@@ -10,6 +9,8 @@ import { linkDrag } from './link';
 import { press, setPress } from './menu';
 import { MAP } from './layout';
 import { endTlDrag, tlDrag } from '../timeline/drag';
+import { TL } from '../timeline/render';
+import { GR, grCharts, grDrawW, graphFor } from '../graphs/states';
 
 // Safari's gesture events (not in TypeScript's DOM types).
 interface GestureEvent extends UIEvent {

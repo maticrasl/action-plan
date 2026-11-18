@@ -5,7 +5,6 @@ import { blockers } from '../core/progress';
 import { toast } from '../ui/toast';
 import { t } from '../i18n/index';
 import { save } from '../store/plans';
-import { TL, foldAllTl, openAddMenu, removeEntry, removeMeasurement, setGraphScale, toggleTlFold } from '../legacy/app.js';
 import { $, itemCount, viewEl } from '../ui/dom';
 import { ui, type Ui } from '../store/state';
 import { openForm, type FormKind } from '../ui/forms/form';
@@ -23,6 +22,10 @@ import { linkItems } from './map/link';
 import { zoomMap } from './map/zoom';
 import { nodeId } from './map/menu';
 import { removeRelation } from './map/render';
+import { TL, foldAllTl, toggleTlFold } from './timeline/render';
+import { removeMeasurement } from './graphs/states';
+import { removeEntry, setGraphScale } from './graphs/sums';
+import { openAddMenu } from './map/add-menu';
 
 export let lastNodeClick: { id: string | null; t: number } = { id: null, t: 0 };
 export function setLastNodeClick(v: typeof lastNodeClick) {

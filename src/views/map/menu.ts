@@ -6,7 +6,6 @@ import { today } from '../../core/dates';
 import { checkedOn } from '../../core/routines/checkins';
 import { ACTIVITY_STATUS } from '../../core/model';
 import { isCumulative } from '../../core/cumulative';
-import { hasGraph, openAddMenu, setTlCollapsed, timelineRows, tlCollapsed } from '../../legacy/app.js';
 import { findEntity, relsFrom } from '../../core/relations';
 import { prefs } from '../../store/prefs';
 import { setView } from '../../ui/nav';
@@ -35,6 +34,9 @@ import type { MenuOption } from '../../ui/menu';
 import type { FormKind } from '../../ui/forms/form';
 import type { GoalFilterTarget } from '../filters';
 import { selectsInView } from './keys';
+import { setTlCollapsed, timelineRows, tlCollapsed } from '../timeline/render';
+import { hasGraph } from '../graphs/states';
+import { openAddMenu } from './add-menu';
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 
