@@ -7,7 +7,7 @@ import { viewEl } from '../../ui/dom';
 import { zoomGraph } from '../map/zoom';
 import { ui } from '../../store/state';
 import { modal } from '../../ui/forms/form';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { GR, grCharts, signed } from './states';
 
 // Hover / touch / keyboard: a crosshair snaps to the nearest measurement and a tooltip lists its values.

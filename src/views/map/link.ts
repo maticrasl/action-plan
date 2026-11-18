@@ -1,6 +1,6 @@
 /** Linking two map boxes by dragging from one to the other, or picking it from the menu. */
 import { ui } from '../../store/state';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { findVision } from '../../core/visions';
 import { findEntity, possibleTypes } from '../../core/relations';
 import { toast } from '../../ui/toast';

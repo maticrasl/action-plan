@@ -16,7 +16,7 @@ import { db } from '../../core/state';
 import { categories } from '../../core/categories';
 import { closeCtxMenu, ctxMenu, showCtxMenu } from '../../ui/menu';
 import { visionRel } from '../../core/visions';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { openForm } from '../../ui/forms/form';
 import { toggleCheckin } from '../routines';
 import { openStateValue } from '../states';

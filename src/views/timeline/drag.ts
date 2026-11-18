@@ -7,7 +7,7 @@ import { ui } from '../../store/state';
 import { fmtRel, fmtSpan } from '../../core/dates';
 import { t } from '../../i18n/index';
 import { clamp } from '../../core/util';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { save } from '../../store/plans';
 import { toast } from '../../ui/toast';
 import { LONG_PRESS_MS, openCtxMenu } from '../map/menu';

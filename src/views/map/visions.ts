@@ -5,7 +5,7 @@ import { toast } from '../../ui/toast';
 import { t, tp } from '../../i18n/index';
 import { goalsReaching, purposeState, saveVisions } from '../../store/visions';
 import { save } from '../../store/plans';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { db, visions } from '../../core/state';
 import { ui } from '../../store/state';
 import { GLASS, MAP } from './layout';

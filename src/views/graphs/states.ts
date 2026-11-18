@@ -7,7 +7,7 @@ import { withUnit } from '../../ui/text';
 import { fmtDate, fmtDay, fmtRel, today } from '../../core/dates';
 import { deleteMeasurement, entriesOf, graphScale, isCumulative } from '../../core/cumulative';
 import { save } from '../../store/plans';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { toast } from '../../ui/toast';
 import { $, emptyState, esc, linkTag, matchesSearch, viewEl } from '../../ui/dom';
 import { relsFrom } from '../../core/relations';

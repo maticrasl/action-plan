@@ -23,7 +23,7 @@ import { $, esc } from '../../ui/dom';
 import { addDays, isRoutine, periodOf, periodUnit, routineStart } from '../../core/routines/schedule';
 import { periodProgress, routineStreak } from '../../core/routines/keeping';
 import { save } from '../../store/plans';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { toast } from '../../ui/toast';
 import { GraphPoint, GraphTarget, TipRow } from './states';
 import type { Entry, Goal, ISODate, Period, Scale, State } from '../../core/model';

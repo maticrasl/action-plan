@@ -41,7 +41,7 @@ import { ui } from '../store/state';
 import { periodText, scheduleText, shortSchedule, streakText, weekdayName } from '../ui/text';
 import { relsFrom } from '../core/relations';
 import { openAmountPop } from '../ui/amount-popover';
-import { render } from './index';
+import { requestRender as render } from '../ui/render';
 
 export function tickListItem(id: string, itemId: string, iso: ISODate = today()) {
   const a = db.activities.find(x => x.id === id);

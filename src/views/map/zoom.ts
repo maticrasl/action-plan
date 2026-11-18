@@ -3,7 +3,7 @@ import { $, viewEl } from '../../ui/dom';
 import { ui } from '../../store/state';
 import { clamp } from '../../core/util';
 import { prefs } from '../../store/prefs';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { findEntity } from '../../core/relations';
 import { linkDrag } from './link';
 import { press, setPress } from './menu';

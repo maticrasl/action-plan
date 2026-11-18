@@ -3,7 +3,7 @@ import { GLASS, MAP, glassThickness, layoutMap } from './layout';
 import { ui } from '../../store/state';
 import { ctxMenu } from '../../ui/menu';
 import { modal } from '../../ui/forms/form';
-import { render } from '../index';
+import { requestRender as render } from '../../ui/render';
 import { emptyState, esc, hideDoneToggle, itemCount, neighbourhood, statusLegend } from '../../ui/dom';
 import { db, visions } from '../../core/state';
 import { t, tp } from '../../i18n/index';

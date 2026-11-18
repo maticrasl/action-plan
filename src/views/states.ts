@@ -11,7 +11,7 @@ import { fmtRel } from '../core/dates';
 import { openAmountPop } from '../ui/amount-popover';
 import { save } from '../store/plans';
 import { toast } from '../ui/toast';
-import { render } from './index';
+import { requestRender as render } from '../ui/render';
 
 export function renderStates() {
   if (!db.states.length) return emptyState(t('states.emptyTitle'), t('states.emptyText'), 'state');
