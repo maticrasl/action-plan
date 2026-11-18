@@ -1,4 +1,4 @@
-/** The map, timeline and graphs views, their gestures and menus, and boot (phase 7 moves the views). */
+/** The timeline and graphs views, and boot (phase 7 moves the two views; the map is in views/map). */
 import { locale, t, tp } from '../i18n/index';
 import { clamp, fmtNum, isNum } from '../core/util';
 import { fmtDate, fmtDay, fmtRel, fmtSpan, today } from '../core/dates';
@@ -35,8 +35,6 @@ import { VIEWS, render } from '../views/index';
 import { zoomGraph } from '../views/map/zoom';
 import { MAP } from '../views/map/layout';
 import { arrowMarker, lineGlow, mapLineColour, mapRelSelection, mapSelection, relText } from '../views/map/render';
-
-/* ---------- Relationship map ---------- */
 
 // The ▸/▾ button that folds a goal (or the 'rest' group) in the timeline.
 export const foldBtn = (key, name, folded, tip = esc(t(folded ? 'tl.expand' : 'tl.collapse', { name }))) => `<button type="button" class="tl-fold" data-tl-fold="${key}" aria-expanded="${!folded}" aria-label="${tip}" title="${tip}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${folded ? 'M9 6l6 6-6 6' : 'M6 9l6 6 6-6'}"/></svg></button>`;
