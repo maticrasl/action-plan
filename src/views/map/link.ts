@@ -8,9 +8,9 @@ import { t } from '../../i18n/index';
 import { modal, openForm } from '../../ui/forms/form';
 import { $, viewEl } from '../../ui/dom';
 import { ctxMenu } from '../../ui/menu';
-import { selectsInView } from './menu';
 import { linkVision, visionLinkError } from './visions';
 import { endTlDrag, tlDrag } from '../timeline/drag';
+import { selectsInView } from './keys';
 
 /* ---------- Linking two map boxes ----------
    With a mouse, drag from one box to another; releasing anywhere but another box drops the link.
