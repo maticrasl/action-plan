@@ -1,5 +1,5 @@
-/* Service worker: lets the installed app open without a connection.
-   The app's own files are fetched from the network first, so an update shows on the next launch,
+/** Service worker: lets the installed app open without a connection. */
+/* The app's own files are fetched from the network first, so an update shows on the next launch,
    and from the cache when offline. Fonts are kept once loaded. Everything else (Google sign-in
    and Drive) goes straight to the network. */
 
