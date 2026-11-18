@@ -9,7 +9,7 @@
 | 04 store and sync | merged (PR #10) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-04` |
 | 05 shared UI | merged (PR #12) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-05` |
 | 06 views and tutorial | merged (PR #14) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-06` |
-| 07 map, timeline, graphs | not started |
+| 07 map, timeline, graphs | done on `restructure/phase-07` (both sessions), not pushed; waits for the owner check and "ship it" |
 | 08 close-out | not started |
 | 09 tests | not started |
 | 10 workflow | not started |
@@ -18,6 +18,8 @@
 
 Compare against these after phases 7 and 8. Average ms per draw (budget in brackets). After phase 1: within
 the baseline; the largest, 300 items + 20 visions map, 229 ms (was 198). After phase 3: the same (223 ms; state form 117).
+Phase 7 map session: 300 items map 149 ms, + 20 visions 218, all else at or under the baseline; state form 121 (over, as before).
+Phase 7 end: 300 items map 151, + 20 visions 222 (+12%), timeline 16, graphs 17, the rest at or under; state form 129 (over, as before).
 
 | Check | ms | | Check | ms |
 |---|---|---|---|---|
@@ -58,18 +60,14 @@ Phase 9 (tests) can make the first step restore English in `finally` and take th
 
 ## Notes for the next phase
 
-- Moving: `npm run move -- <from> <to> <names|Obj.prop|Arr[Title]:NAME|comment:<n>|line:<n>> [--section …] --fix-imports`, the
-  `/** … */` line, `--check`, `check`, commit; then `git mv` to .ts, types, Prettier, commit. `line:<n>` takes a listener; look lines
-  up again before each run (import edits shift them). Banners left without code are dropped in a commit of their own.
-- Layers: `core` ← `store` ← `sync` ← `ui` ← `views` ← `tutorial`; ESLint forbids `ui/` to import `legacy/`, `views/`, `tutorial/`,
-  and `views/` to import `tutorial/`. Upward: `requestRender()`, `connectSync`, `store/events.ts`, and `onRendered(fn)` in
-  `views/index.ts` (`main.ts` registers `decorateHelp`). Views do not import each other; shared parts: `views/filters.ts`,
-  `views/routines.ts`, `ui/goal-card.ts`.
-- Phase 7 re-points: `views/index.ts` takes `renderMap`/`renderTimeline`/`renderGraphs`/`markVisions` from `app.js`; the `#view`
-  click dispatcher in `views/events.ts` takes the map, timeline and graph actions (`TL`, `nodeId`, `zoomMap`, …) from it.
-  `markVisions` asks `isTourRunning()` (tutorial): moved into `views/`, it needs a hook set from `main.ts` (prep commit).
-- Boot (`bootUser`, `enterUser`) is still in `app.js` (phase 6's note 2 said `main.ts`; left for phase 8). `Ui` is typed: `ViewName`.
-- Listener order: `main.ts` imports `tutorial/tour` (tutorial.js's import order, `help` last) where tutorial.js was, and
-  `views/events` after `legacy/app.js`. The test build hides a missing import: after `npm run build`, look in `dist/`.
-- Unchanged: fixtures never regenerated; tests assign `x` only through `setX`; a name exported twice throws in the bridge. Legacy
-  files are CRLF. PowerShell mangles UTF-8 (Edit or Node); Node is off PATH (`C:\Program Files\nodejs`). Unit tests 118.
+- `app.js` now holds only Boot (`bootUser`, `enterUser`). Timeline: `timeline/rows.ts` (rows, folds), `render.ts`, `drag.ts`.
+  Graphs: `graphs/states.ts` (line graphs, axes, `grCharts`), `plot.ts` (shared plot), `sums.ts` (bar/step/routine cards),
+  `points.ts` (crosshair, tooltip, resize). `openAddMenu` is in `map/menu.ts`. `layout.ts` 441 lines (note 1); all else ≤ 400.
+- `main.ts` calls `listenGraphs()`, `listenMap()`, `listenTlDrag()`; no view listens while it loads now. Recorder of
+  `addEventListener` calls (per target, event and phase): 84 groups, 130 listeners, the same as before phase 7 (script not kept).
+- `move-decls --check` now accepts a leading `export` added or dropped; its import rewriting drops `type` modifiers and may merge
+  a type into a value import (fix those lines by hand after a move between typed files).
+- Moving as before: `line:<n>` numbers shift after each run; banners without code go in a commit of their own; `--check` per file.
+- Layers and hooks unchanged (`ui/` ← `views/` ← `tutorial/`); `markVisions` asks the tour through `setTourRunning` (`main.ts`).
+- Unchanged: fixtures never regenerated; tests assign only through `setX`; a name exported twice throws in the bridge. Legacy files
+  are CRLF. PowerShell mangles UTF-8 and strips quotes passed to `node -e` (write a script file). Unit tests 122.

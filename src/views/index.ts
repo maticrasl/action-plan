@@ -4,7 +4,6 @@ import { renderGoals } from './goals';
 import { bindDragDrop, renderActivities } from './activities';
 import { renderStates } from './states';
 import { renderVisions } from './visions';
-import { markVisions, renderGraphs, renderMap, renderTimeline } from '../legacy/app.js';
 import { startDueActivities } from '../core/progress';
 import { offerReached } from '../ui/reached';
 import { save } from '../store/plans';
@@ -15,6 +14,10 @@ import { $, viewEl } from '../ui/dom';
 import { closeCtxMenu } from '../ui/menu';
 import { closeAmountPop } from '../ui/amount-popover';
 import { updatePlanBadges } from '../ui/plan-switcher';
+import { renderMap } from './map/render';
+import { markVisions } from './map/visions';
+import { renderTimeline } from './timeline/render';
+import { renderGraphs } from './graphs/states';
 
 // Each view: what its Add button adds ('item' opens a menu of kinds) and the HTML it draws.
 export interface View {

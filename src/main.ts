@@ -24,6 +24,10 @@ import { toast } from './ui/toast';
 import { renderInstall } from './ui/install';
 import { renderLangSwitch } from './ui/settings';
 import { renderPlanSwitch } from './ui/plan-switcher';
+import { setTourRunning } from './views/map/visions';
+import { listenMap } from './views/map/index';
+import { listenTlDrag } from './views/timeline/drag';
+import { listenGraphs } from './views/graphs/points';
 
 // Screen parts below the views redraw, switch users and offer the tour through these.
 setRenderer(render);
@@ -45,6 +49,11 @@ on('storeReplaced', changed => {
 on('storageError', () => toast(t('err.storage')));
 on('syncChanged', () => renderSync());
 setSyncPaused(isTourRunning);
+setTourRunning(isTourRunning);
+// The graphs' pointing, the map's gestures, then the timeline's, in the order they had in app.js.
+listenGraphs();
+listenMap();
+listenTlDrag();
 
 setLang(detectLang());
 setDb(emptyDb());

@@ -10,10 +10,15 @@
 //   comment:<n>   the comment that starts on line n and stands alone between statements (a banner)
 //   line:<n>      the top-level statement whose code starts on line n, with its comments (a listener)
 //   --section     everything under one /* ---------- header ---------- */ up to the next header, header included
+//   --wrap <fn>   the line:<n> statements go, verbatim and in source order, into `export function <fn>() { … }`
+//                 at the end of <to> (or at the end of that function's body, if <to> has it): listeners that
+//                 one call registers, in an order main.ts controls
 //   --fix-imports rewrite the import lines of <from>, <to> and every file that imports a moved name;
 //                 without it the tool only prints what has to change
 //   --check       every declaration and comment in <to> must be in <ref>:<from> (moved) or <ref>:<to>
-//                 (already there), byte for byte; only `x = v;` → `setX(v);` may differ. Default ref HEAD.
+//                 (already there), byte for byte; only `x = v;` → `setX(v);` and a leading `export `
+//                 added or dropped may differ. Default ref HEAD.
+//                 A function without parameters passes when each statement in its body does (--wrap's).
 //                 --commit <rev> checks a committed move: <rev>'s files against its parent's.
 // New files are .js until their type commit renames them; imports to files outside src/legacy are
 // written without an extension, so the rename needs no import change.
@@ -36,6 +41,7 @@ const has = name => {
   return i >= 0 && args.splice(i, 1).length > 0;
 };
 const section = flag('--section');
+const wrap = flag('--wrap');
 const commit = flag('--commit');
 const ref = commit ? `${commit}~1` : (flag('--ref') ?? 'HEAD');
 const fix = has('--fix-imports');
@@ -67,7 +73,7 @@ function move() {
     const [obj, prop] = n.split('.');
     const arr = n.match(/^([\w$]+)\[(.+)\]:([\w$]+)$/);
     if (n.startsWith('comment:')) chunks.push(looseComment(sf, Number(n.slice(8))));
-    else if (n.startsWith('line:')) chunks.push(statementAt(sf, Number(n.slice(5))));
+    else if (n.startsWith('line:')) chunks.push({ ...statementAt(sf, Number(n.slice(5))), wrap: !!wrap });
     else if (arr) arrs.push({ name: arr[3], ...arrayChunk(sf, arr[1], arr[2]) });
     else if (prop) props.push({ name: prop, ...propertyChunk(sf, obj, prop) });
     else if (!byName.has(n)) throw new Error(`${rel(FROM)} has no top-level ${n}`);
@@ -164,18 +170,28 @@ function move() {
   for (const c of cuts) out = out.slice(0, c.start) + c.put + out.slice(c.end);
   out = out.replace(/\n{3,}/g, m => (text.includes(m) ? m : '\n\n'));
   const pieces = [
-    ...chunks.map(c => ({ start: c.start, end: c.end, text: c.text })),
+    ...chunks.map(c => ({ start: c.start, end: c.end, text: c.text, wrap: c.wrap })),
     ...props.map(p => ({ start: p.start, end: p.end, text: propertyAsDecl(p.name, p) })),
     ...arrs.map(a => ({ start: a.start, end: a.end, text: `${a.head}\n${arrayAsDecl(a.name, a)}` })),
   ].sort((a, b) => a.start - b.start);
-  let added = '';
-  pieces.forEach((p, i) => {
-    const t = p.text.endsWith('\n') ? p.text : p.text + '\n';
-    added += i && pieces[i - 1].end === p.start ? t : (i ? '\n' : '') + t;
-  });
+  const joined = list => {
+    let s = '';
+    list.forEach((p, i) => {
+      const t = p.text.endsWith('\n') ? p.text : p.text + '\n';
+      s += i && list[i - 1].end === p.start ? t : (i ? '\n' : '') + t;
+    });
+    return s;
+  };
+  const added = joined(pieces.filter(p => !p.wrap)), inWrap = joined(pieces.filter(p => p.wrap));
   const existed = existsSync(TO);
   const toText = existed ? readText(TO).text : '';
-  const newTo = toText ? toText.replace(/\n*$/, '\n\n') + added : added;
+  let newTo = toText ? (added ? toText.replace(/\n*$/, '\n\n') + added : toText) : added;
+  if (inWrap) {
+    const fn = parse(TO, newTo).statements.find(s => ts.isFunctionDeclaration(s) && s.name?.text === wrap);
+    const close = fn && newTo.lastIndexOf('\n', fn.body.end - 1) + 1;
+    newTo = fn ? newTo.slice(0, close) + '\n' + inWrap + newTo.slice(close) : (newTo ? newTo.replace(/\n*$/, '\n\n') : '') + `export function ${wrap}() {\n${inWrap}}\n`;
+    console.log(`wrapped ${pieces.filter(p => p.wrap).length} statement(s) in ${wrap}()${fn ? ' (added to its end)' : ''}: call it from where the listeners belong`);
+  }
   writeText(FROM, out);
   mkdirSync(dirname(TO), { recursive: true });
   writeText(TO, newTo);
@@ -382,6 +398,17 @@ function checkMove() {
       moved++;
       continue;
     }
+    // Listeners --wrap put in a function: each statement of its body must have been there.
+    if (ts.isFunctionDeclaration(stmt) && !stmt.parameters.length && stmt.body?.statements.length) {
+      const bad = stmt.body.statements.map(s => chunkOf(to, s)).filter(b => !found(b.text) && !hadStatement(hf, b.text));
+      bad.forEach(b => fails.push(`FAIL ${label}: its statement at line ${line(to, b.stmt)} is not in the old files`));
+      if (!bad.length) moved += stmt.body.statements.length;
+      continue;
+    }
+    if (!c.names.length && hadStatement(hf, c.text)) {
+      moved++;
+      continue;
+    }
     const want = expected(hf, c.names[0]);
     if (want === null) {
       if (c.names.length === 1 && /^set[A-Z]/.test(c.names[0])) console.log(`added by hand: ${c.names[0]} (a setter)`);
@@ -435,13 +462,22 @@ function arrayCandidates(hf, name) {
   return out;
 }
 
-// '' when `now` is `old` with only `x = v;` turned into `setX(v);`; else the differing lines.
+// Whether a statement without a name (a listener) was in the old <from>, up to `x = v;` → `setX(v);`.
+function hadStatement(hf, text) {
+  const now = text.replace(/\n$/, '');
+  return hf.statements.some(s => !ts.isImportDeclaration(s) && !setterDiff(chunkOf(hf, s).text.replace(/\n$/, ''), now));
+}
+
+// '' when `now` is `old` with only `x = v;` turned into `setX(v);`, or `export ` added to or dropped
+// from a line's start (a declaration another file now uses, or no longer); else the differing lines.
 function setterDiff(old, now) {
   const a = old.split('\n'), b = now.split('\n');
   const toSetter = l => l.replace(/\b([A-Za-z_$][\w$]*)\s*=\s*([^=;][^;]*);/g, (m, n, v) => `set${cap(n)}(${v});`);
+  const unexported = l => l.replace(/^export /, '');
   const bad = [];
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     if (a[i] === b[i] || (a[i] !== undefined && toSetter(a[i]) === b[i])) continue;
+    if (a[i] !== undefined && b[i] !== undefined && unexported(a[i]) === unexported(b[i])) continue;
     bad.push(`  line ${i + 1}: was ${JSON.stringify(a[i] ?? '')}`, `  line ${i + 1}: now ${JSON.stringify(b[i] ?? '')}`);
     if (bad.length >= 6) break;
   }

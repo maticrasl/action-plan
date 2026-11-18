@@ -5,19 +5,6 @@ import { blockers } from '../core/progress';
 import { toast } from '../ui/toast';
 import { t } from '../i18n/index';
 import { save } from '../store/plans';
-import {
-  TL,
-  foldAllTl,
-  linkItems,
-  nodeId,
-  openAddMenu,
-  removeEntry,
-  removeMeasurement,
-  removeRelation,
-  setGraphScale,
-  toggleTlFold,
-  zoomMap,
-} from '../legacy/app.js';
 import { $, itemCount, viewEl } from '../ui/dom';
 import { ui, type Ui } from '../store/state';
 import { openForm, type FormKind } from '../ui/forms/form';
@@ -31,6 +18,14 @@ import { openTemplates } from '../ui/templates-dialog';
 import { setToggle } from '../ui/settings';
 import { GOAL_FILTERS, type GoalFilterTarget } from './filters';
 import { VIEWS, render } from './index';
+import { linkItems } from './map/link';
+import { zoomMap } from './map/zoom';
+import { nodeId, openAddMenu } from './map/menu';
+import { removeRelation } from './map/render';
+import { TL } from './timeline/render';
+import { removeMeasurement } from './graphs/states';
+import { removeEntry, setGraphScale } from './graphs/sums';
+import { foldAllTl, toggleTlFold } from './timeline/rows';
 
 export let lastNodeClick: { id: string | null; t: number } = { id: null, t: 0 };
 export function setLastNodeClick(v: typeof lastNodeClick) {
@@ -98,9 +93,9 @@ viewEl.addEventListener('click', e => {
   if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date!, el);
   if (el.dataset.liTick) return tickListItem(el.dataset.liTick, el.dataset.li!, el.dataset.date);
   if (el.dataset.addAmount) return openStateAmount(el.dataset.addAmount, el);
-  if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date);
-  if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry);
-  if (el.dataset.grScale) return setGraphScale(el.dataset.state, el.dataset.grScale);
+  if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date!);
+  if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry!);
+  if (el.dataset.grScale) return setGraphScale(el.dataset.state!, el.dataset.grScale);
   if (el.dataset.cycle) return cycleStatus(el.dataset.cycle);
   if (el.dataset.open) {
     const ent = findEntity(el.dataset.open);
