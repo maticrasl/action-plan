@@ -11,7 +11,6 @@ import { openForm, type FormKind } from '../ui/forms/form';
 import { ctxMenu } from '../ui/menu';
 import { prefs } from '../store/prefs';
 import { shiftRoutineWeek, tickListItem, toggleCheckin } from './routines';
-import { openStateAmount, openStateValue } from './states';
 import { findEntity } from '../core/relations';
 import { loadSample } from '../ui/sample';
 import { openTemplates } from '../ui/templates-dialog';
@@ -26,6 +25,7 @@ import { TL } from './timeline/render';
 import { removeMeasurement } from './graphs/states';
 import { removeEntry, setGraphScale } from './graphs/sums';
 import { foldAllTl, toggleTlFold } from './timeline/rows';
+import { openStateAmount, openStateValue } from '../ui/state-value';
 
 export let lastNodeClick: { id: string | null; t: number } = { id: null, t: 0 };
 export function setLastNodeClick(v: typeof lastNodeClick) {

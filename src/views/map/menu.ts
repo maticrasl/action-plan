@@ -19,7 +19,6 @@ import { visionRel } from '../../core/visions';
 import { requestRender as render } from '../../ui/render';
 import { openForm } from '../../ui/forms/form';
 import { toggleCheckin } from '../routines';
-import { openStateValue } from '../states';
 import { startMapLink } from './link';
 import { removeEntity, save } from '../../store/plans';
 import { toast } from '../../ui/toast';
@@ -36,6 +35,7 @@ import type { GoalFilterTarget } from '../filters';
 import { selectsInView } from './keys';
 import { hasGraph } from '../graphs/states';
 import { setTlCollapsed, timelineRows, tlCollapsed } from '../timeline/rows';
+import { openStateValue } from '../../ui/state-value';
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 
