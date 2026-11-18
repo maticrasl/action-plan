@@ -1,96 +1,392 @@
 /* ---------- Graphs ---------- */
-.gr-list { display: flex; flex-direction: column; gap: 16px; }
+.gr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 /* A graph is a big pane: barely tinted, so the plot reads, and cut from the page's surface rather than the items'
    milk, so by night it stays dark instead of a light grey slab. */
-.gr-card { cursor: default; gap: 10px; --glass-tint: 5%; --glass-base: var(--surface); }
-.gr-card .card-head .btn { flex-shrink: 0; }
-.gr-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
-.gr-value { font-size: 26px; font-weight: 600; line-height: 1.1; }
-.gr-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); }
-.gr-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.gr-legend .key { width: 18px; height: 0; border-top: 2px solid; }
-.gr-legend .key-measure { border-color: var(--rel-state); }
-.gr-legend .key-target { border-color: var(--goal); border-top-style: dashed; }
-/* A sideways swipe moves the crosshair and scrolling up and down still works; a pinch zooms the graph. */
-.gr-plot { position: relative; touch-action: pan-y; border-radius: var(--r-sm); }
-.gr-plot:focus-visible { box-shadow: var(--focus); outline: none; }
-.gr-plot svg { display: block; overflow: visible; }
-.gr-grid { stroke: var(--line); stroke-width: 1; }
-.gr-grid.base { stroke: var(--line-strong); }
-.gr-axis { fill: var(--ink-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
-.gr-today { fill: color-mix(in srgb, var(--blaze) 6%, transparent); }
-.gr-today-line { stroke: var(--today-edge); stroke-width: 1.5; pointer-events: none; }
-/* Over a bar it needs more colour to show, and lets the hover layer through. */
-.gr-today.over { fill: color-mix(in srgb, var(--blaze) 8%, transparent); pointer-events: none; }
-.gr-target { stroke: var(--goal); stroke-width: 2; stroke-dasharray: 6 4; stroke-linecap: round; }
-.gr-target-end { fill: var(--goal); stroke: var(--surface); stroke-width: 2; }
-.gr-line { fill: none; stroke: var(--rel-state); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.gr-dot { fill: var(--rel-state); stroke: var(--surface); stroke-width: 2; }
-.gr-dot.last { stroke-width: 2.5; }
-.gr-area { pointer-events: none; }
-.gr-fill-stop { stop-color: var(--rel-state); stop-opacity: .2; }
-.gr-label { fill: var(--ink); font-size: 12.5px; font-weight: 500; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
-.gr-label.muted { fill: var(--ink-2); font-weight: 400; }
-.gr-cross { stroke: var(--ink-3); stroke-width: 1; }
-.gr-focus { fill: var(--rel-state); stroke: var(--surface); stroke-width: 2.5; }
-.gr-cross[hidden], .gr-focus[hidden] { display: none; }
-.gr-tip {
-  position: absolute; z-index: 5; pointer-events: none; min-width: 120px; max-width: 240px; padding: 8px 10px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-pop);
-  font-size: 12.5px; color: var(--ink-2); line-height: 1.4;
+.gr-card {
+  cursor: default;
+  gap: 10px;
+  --glass-tint: 5%;
+  --glass-base: var(--surface);
 }
-.gr-tip[hidden] { display: none; }
-.gr-tip-value { font-size: 16px; font-weight: 600; color: var(--ink); }
-.gr-tip-date { margin-bottom: 4px; }
-.gr-table summary { cursor: pointer; font-size: 13.5px; color: var(--ink-2); width: fit-content; }
-.gr-table table { width: 100%; max-width: 480px; margin-top: 8px; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
-.gr-table th, .gr-table td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); }
-.gr-table th { color: var(--ink-3); font-weight: 400; }
-.gr-table td.gr-del { width: 1%; padding-right: 0; text-align: right; }
-.gr-table td.gr-del .btn { padding: 2px 8px; }
-.gr-without { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.gr-plot.scroll { overflow-x: auto; overflow-y: hidden; touch-action: pan-x pan-y; cursor: grab; }
-.gr-plot.panning { cursor: grabbing; }
+.gr-card .card-head .btn {
+  flex-shrink: 0;
+}
+.gr-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+}
+.gr-value {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.gr-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.gr-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gr-legend .key {
+  width: 18px;
+  height: 0;
+  border-top: 2px solid;
+}
+.gr-legend .key-measure {
+  border-color: var(--rel-state);
+}
+.gr-legend .key-target {
+  border-color: var(--goal);
+  border-top-style: dashed;
+}
+/* A sideways swipe moves the crosshair and scrolling up and down still works; a pinch zooms the graph. */
+.gr-plot {
+  position: relative;
+  touch-action: pan-y;
+  border-radius: var(--r-sm);
+}
+.gr-plot:focus-visible {
+  box-shadow: var(--focus);
+  outline: none;
+}
+.gr-plot svg {
+  display: block;
+  overflow: visible;
+}
+.gr-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.gr-grid.base {
+  stroke: var(--line-strong);
+}
+.gr-axis {
+  fill: var(--ink-3);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.gr-today {
+  fill: color-mix(in srgb, var(--blaze) 6%, transparent);
+}
+.gr-today-line {
+  stroke: var(--today-edge);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+/* Over a bar it needs more colour to show, and lets the hover layer through. */
+.gr-today.over {
+  fill: color-mix(in srgb, var(--blaze) 8%, transparent);
+  pointer-events: none;
+}
+.gr-target {
+  stroke: var(--goal);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  stroke-linecap: round;
+}
+.gr-target-end {
+  fill: var(--goal);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.gr-line {
+  fill: none;
+  stroke: var(--rel-state);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.gr-dot {
+  fill: var(--rel-state);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.gr-dot.last {
+  stroke-width: 2.5;
+}
+.gr-area {
+  pointer-events: none;
+}
+.gr-fill-stop {
+  stop-color: var(--rel-state);
+  stop-opacity: 0.2;
+}
+.gr-label {
+  fill: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.gr-label.muted {
+  fill: var(--ink-2);
+  font-weight: 400;
+}
+.gr-cross {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+.gr-focus {
+  fill: var(--rel-state);
+  stroke: var(--surface);
+  stroke-width: 2.5;
+}
+.gr-cross[hidden],
+.gr-focus[hidden] {
+  display: none;
+}
+.gr-tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  min-width: 120px;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-pop);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+.gr-tip[hidden] {
+  display: none;
+}
+.gr-tip-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.gr-tip-date {
+  margin-bottom: 4px;
+}
+.gr-table summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  width: fit-content;
+}
+.gr-table table {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.gr-table th,
+.gr-table td {
+  text-align: left;
+  padding: 5px 10px 5px 0;
+  border-bottom: 1px solid var(--line);
+}
+.gr-table th {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.gr-table td.gr-del {
+  width: 1%;
+  padding-right: 0;
+  text-align: right;
+}
+.gr-table td.gr-del .btn {
+  padding: 2px 8px;
+}
+.gr-without {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.gr-plot.scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x pan-y;
+  cursor: grab;
+}
+.gr-plot.panning {
+  cursor: grabbing;
+}
 /* The values stay at the left while a wide graph scrolls under them. */
-.gr-yaxis { position: sticky; left: 0; z-index: 1; display: block; pointer-events: none; background: linear-gradient(to right, var(--surface) 80%, transparent); }
-.gr-bar { fill: color-mix(in srgb, var(--rel-state) 75%, transparent); }
-.gr-bar.met { fill: var(--ok); }
-.gr-bar.now { fill: color-mix(in srgb, var(--rel-state) 35%, transparent); }
-.gr-bar.met.now { fill: color-mix(in srgb, var(--ok) 55%, transparent); }
-.gr-goal { stroke: var(--goal); stroke-width: 2; stroke-dasharray: 4 3; }
-.gr-legend .key-bar { height: 10px; border: 0; border-radius: 2px; background: color-mix(in srgb, var(--rel-state) 75%, transparent); }
-.gr-legend .key-goal { border-color: var(--goal); border-top-style: dashed; }
-.gr-table tr.gr-period td { padding-top: 9px; }
-.gr-table tr.gr-entry td:first-child { padding-left: 14px; color: var(--ink-2); }
+.gr-yaxis {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: block;
+  pointer-events: none;
+  background: linear-gradient(to right, var(--surface) 80%, transparent);
+}
+.gr-bar {
+  fill: color-mix(in srgb, var(--rel-state) 75%, transparent);
+}
+.gr-bar.met {
+  fill: var(--ok);
+}
+.gr-bar.now {
+  fill: color-mix(in srgb, var(--rel-state) 35%, transparent);
+}
+.gr-bar.met.now {
+  fill: color-mix(in srgb, var(--ok) 55%, transparent);
+}
+.gr-goal {
+  stroke: var(--goal);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+.gr-legend .key-bar {
+  height: 10px;
+  border: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--rel-state) 75%, transparent);
+}
+.gr-legend .key-goal {
+  border-color: var(--goal);
+  border-top-style: dashed;
+}
+.gr-table tr.gr-period td {
+  padding-top: 9px;
+}
+.gr-table tr.gr-entry td:first-child {
+  padding-left: 14px;
+  color: var(--ink-2);
+}
 
 /* States that add up: the total and a + on the card, a quick amount by the button or tick */
-.cu-head { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
-/* With this period's sum too, the sums move under the title rather than squeeze it. */
-.card-head:has(.cu-now) { flex-wrap: wrap; row-gap: 8px; }
-/* The graph's scale switch: compact enough for five on one row of a phone. */
-.gr-scale .chip { padding: 5px 10px; }
-.cu-add { width: 30px; height: 30px; border: 1px solid var(--line-strong); }
-.cu-add svg { width: 16px; height: 16px; fill: none; stroke-width: 2.2; stroke-linecap: round; }
-.cu-periods { font-size: 13px; }
-.amount-pop {
-  position: fixed; z-index: 60; width: min(300px, calc(100vw - 16px)); display: flex; flex-direction: column; gap: 10px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-pop);
-  padding: 12px 14px; animation: rise .12s ease-out;
+.cu-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
-.amount-title { font-size: 14.5px; }
-.amount-hint { margin: -4px 0 0; font-size: 12.5px; color: var(--ink-2); }
-.amount-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 500; }
-.amount-input { display: flex; align-items: center; gap: 8px; }
-.amount-input input { flex: 1; min-width: 0; }
-.amount-unit { color: var(--ink-2); font-weight: 400; }
-.amount-err { font-size: 12.5px; color: var(--bad); font-weight: 400; }
-.amount-err:empty { display: none; }
-.amount-actions { display: flex; justify-content: flex-end; gap: 6px; }
-.entries .entry-day { align-items: center; gap: 12px; }
-.entry-amounts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 10px; }
-.entry { display: inline-flex; align-items: center; gap: 2px; }
-.entry.dropped strong { text-decoration: line-through; opacity: .5; }
-.entry-del { border: 0; background: none; color: var(--ink-3); width: 24px; height: 24px; border-radius: 999px; cursor: pointer; font-size: 15px; line-height: 1; }
-.entry-del:hover, .entry-del:focus-visible { color: var(--bad); background: var(--surface-2); }
-.entry-del[aria-pressed="true"] { color: var(--bad); }
-
+/* With this period's sum too, the sums move under the title rather than squeeze it. */
+.card-head:has(.cu-now) {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+/* The graph's scale switch: compact enough for five on one row of a phone. */
+.gr-scale .chip {
+  padding: 5px 10px;
+}
+.cu-add {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line-strong);
+}
+.cu-add svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+.cu-periods {
+  font-size: 13px;
+}
+.amount-pop {
+  position: fixed;
+  z-index: 60;
+  width: min(300px, calc(100vw - 16px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-pop);
+  padding: 12px 14px;
+  animation: rise 0.12s ease-out;
+}
+.amount-title {
+  font-size: 14.5px;
+}
+.amount-hint {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.amount-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.amount-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.amount-input input {
+  flex: 1;
+  min-width: 0;
+}
+.amount-unit {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.amount-err {
+  font-size: 12.5px;
+  color: var(--bad);
+  font-weight: 400;
+}
+.amount-err:empty {
+  display: none;
+}
+.amount-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.entries .entry-day {
+  align-items: center;
+  gap: 12px;
+}
+.entry-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 10px;
+}
+.entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.entry.dropped strong {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+.entry-del {
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+.entry-del:hover,
+.entry-del:focus-visible {
+  color: var(--bad);
+  background: var(--surface-2);
+}
+.entry-del[aria-pressed='true'] {
+  color: var(--bad);
+}

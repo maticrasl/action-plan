@@ -2,13 +2,31 @@
    Each nested row gets an elbow from its parent's dot, coloured by the relationship
    (contributes to / sub-activity of / sub-goal of / depends on, dashed); --up is the number of rows in between. */
 .tl-elbow {
-  position: absolute; z-index: 1; pointer-events: none;
-  left: calc(var(--tl-pad) + 3px + (var(--depth) - 1) * var(--tl-step)); width: calc(var(--tl-step) - 6px);
-  top: calc(-1 * var(--up) * var(--row) - var(--row) / 2 + 7px); bottom: 50%;
-  border-left: var(--w, 1.1px) solid var(--rel); border-bottom: var(--w, 1.1px) solid var(--rel);
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  left: calc(var(--tl-pad) + 3px + (var(--depth) - 1) * var(--tl-step));
+  width: calc(var(--tl-step) - 6px);
+  top: calc(-1 * var(--up) * var(--row) - var(--row) / 2 + 7px);
+  bottom: 50%;
+  border-left: var(--w, 1.1px) solid var(--rel);
+  border-bottom: var(--w, 1.1px) solid var(--rel);
 }
-.tl-elbow.dash { border-left-style: dashed; border-bottom-style: dashed; }
-.tl-label .tl-dot, .tl-label .tl-text { position: relative; z-index: 2; }
-.line-key { width: 20px; height: 0; border-top: 2.5px solid var(--rel); border-radius: 2px; }
-.line-key.dash { border-top-style: dashed; }
-
+.tl-elbow.dash {
+  border-left-style: dashed;
+  border-bottom-style: dashed;
+}
+.tl-label .tl-dot,
+.tl-label .tl-text {
+  position: relative;
+  z-index: 2;
+}
+.line-key {
+  width: 20px;
+  height: 0;
+  border-top: 2.5px solid var(--rel);
+  border-radius: 2px;
+}
+.line-key.dash {
+  border-top-style: dashed;
+}

@@ -7,42 +7,44 @@
    ========================================================= */
 
 /* `hidden` always hides, even on elements whose class sets a display. */
-[hidden] { display: none !important; }
+[hidden] {
+  display: none !important;
+}
 
 :root {
-  --bg: #F3F5F4;
-  --surface: #FFFFFF;
-  --surface-2: #E9EDEC;
-  --sunken: #E1E6E5;
-  --ink: #1E2A2E;
-  --ink-2: #56656A;
-  --ink-3: #85939A;
-  --line: #D3DBDA;
-  --line-strong: #B9C4C3;
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --surface-2: #e9edec;
+  --sunken: #e1e6e5;
+  --ink: #1e2a2e;
+  --ink-2: #56656a;
+  --ink-3: #85939a;
+  --line: #d3dbda;
+  --line-strong: #b9c4c3;
 
-  --goal: #1F4E79;
-  --goal-soft: #DCE7F2;
-  --state: #6A4FA0;
-  --state-soft: #ECE6F6;
-  --activity: #46555A;
-  --contrib: #00A08A;
-  --rel-state: #9C3DB8;
-  --blaze: #D2232A;
+  --goal: #1f4e79;
+  --goal-soft: #dce7f2;
+  --state: #6a4fa0;
+  --state-soft: #ece6f6;
+  --activity: #46555a;
+  --contrib: #00a08a;
+  --rel-state: #9c3db8;
+  --blaze: #d2232a;
   /* Visions are silver clouds (brighter once a goal serves them); the Purpose is gold. --vglow is the faint wide
      glow round everything working toward a vision; with a Purpose it turns gold. */
-  --vision: #ADB8C3;
-  --vision-lit: #CBD4DD;
-  --vision-ink: #7D8A95;
+  --vision: #adb8c3;
+  --vision-lit: #cbd4dd;
+  --vision-ink: #7d8a95;
   --vision-sheen: 55%;
-  --purpose: #D9A92B;
-  --on-purpose: #2B1F00;
-  --vglow-silver: rgb(104 124 146 / .5);
-  --vglow-gold: rgb(214 158 20 / .5);
+  --purpose: #d9a92b;
+  --on-purpose: #2b1f00;
+  --vglow-silver: rgb(104 124 146 / 0.5);
+  --vglow-gold: rgb(214 158 20 / 0.5);
 
-  --ok: #2E8B57;
-  --warn: #D9A21B;
-  --bad: #D2232A;
-  --grey: #8D9898;
+  --ok: #2e8b57;
+  --warn: #d9a21b;
+  --bad: #d2232a;
+  --grey: #8d9898;
 
   --fill-done: color-mix(in srgb, var(--ok) 22%, var(--surface));
   --fill-doing: color-mix(in srgb, var(--warn) 30%, var(--surface));
@@ -54,7 +56,7 @@
   /* Items are milk glass: an opal face that takes a light wash of their colour over this base, and how solid it is.
      On the map their slab and light are drawn by the map (GLASS in app.js), which reads this base and the item
      and status colours (--goal, --ok, …) as #RRGGBB: keep those six-digit hex in every theme. */
-  --glass-base: #FFFFFF;
+  --glass-base: #ffffff;
   --glass-tint: 12%;
   --glass-tint-state: 14%;
   --glass-alpha: 1;
@@ -62,8 +64,8 @@
      --glass-dim; the light from above leaves --glass-spec on the face, and --glass-rim is its lit top edge. */
   --glass-side-tint: 28%;
   --glass-dim: 0%;
-  --glass-spec: rgb(255 255 255 / .9);
-  --glass-rim: rgb(255 255 255 / .9);
+  --glass-spec: rgb(255 255 255 / 0.9);
+  --glass-rim: rgb(255 255 255 / 0.9);
   /* Grey items (still to do, waiting) take more of their grey, so they don't fade into the page. */
   --glass-tint-quiet: 24%;
   --glass-side-quiet: 50%;
@@ -71,16 +73,16 @@
   --pane: color-mix(in srgb, var(--surface) 88%, transparent);
   --field: color-mix(in srgb, var(--surface) 62%, transparent);
 
-  --nav-bg: #1E2A2E;
-  --nav-ink: #E9EEED;
+  --nav-bg: #1e2a2e;
+  --nav-ink: #e9eeed;
   --focus: 0 0 0 3px color-mix(in srgb, var(--goal) 35%, transparent);
-  --shadow-pop: 0 18px 48px rgba(20, 32, 36, .22);
+  --shadow-pop: 0 18px 48px rgba(20, 32, 36, 0.22);
   /* The chosen chip: solid ink by day; by night a lit tint, so it doesn't outshine the page. */
   --chip-on: var(--ink);
   --chip-on-ink: var(--bg);
   --chip-on-line: var(--ink);
 
-  --font: "Overpass", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font: 'Overpass', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --r-lg: 14px;
   --r-md: 10px;
   --r-sm: 6px;
@@ -88,48 +90,48 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #131A1C;
-    --surface: #1B2427;
+  :root:not([data-theme='light']) {
+    --bg: #131a1c;
+    --surface: #1b2427;
     --surface-2: #233033;
-    --sunken: #10171A;
-    --ink: #E6ECEA;
-    --ink-2: #A3B1B2;
-    --ink-3: #74858A;
-    --line: #2E3C40;
-    --line-strong: #44565B;
-    --goal: #8DB8E4;
-    --goal-soft: #1F3347;
-    --state: #B9A2E6;
-    --state-soft: #2E2742;
-    --activity: #B3C0C2;
-    --contrib: #0F9A88;
-    --rel-state: #D36AC6;
-    --blaze: #F0565C;
-    --vision: #46515A;
-    --vision-lit: #5B6873;
-    --vision-ink: #A3AEB7;
+    --sunken: #10171a;
+    --ink: #e6ecea;
+    --ink-2: #a3b1b2;
+    --ink-3: #74858a;
+    --line: #2e3c40;
+    --line-strong: #44565b;
+    --goal: #8db8e4;
+    --goal-soft: #1f3347;
+    --state: #b9a2e6;
+    --state-soft: #2e2742;
+    --activity: #b3c0c2;
+    --contrib: #0f9a88;
+    --rel-state: #d36ac6;
+    --blaze: #f0565c;
+    --vision: #46515a;
+    --vision-lit: #5b6873;
+    --vision-ink: #a3aeb7;
     --vision-sheen: 14%;
-    --purpose: #D9AE3A;
-    --vglow-silver: rgb(205 215 225 / .26);
-    --vglow-gold: rgb(236 190 64 / .32);
-    --ok: #5CC489;
-    --warn: #E9BB45;
-    --bad: #F0565C;
-    --grey: #7F8D8F;
-    --nav-bg: #0E1416;
-    --nav-ink: #DCE4E2;
-    --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
+    --purpose: #d9ae3a;
+    --vglow-silver: rgb(205 215 225 / 0.26);
+    --vglow-gold: rgb(236 190 64 / 0.32);
+    --ok: #5cc489;
+    --warn: #e9bb45;
+    --bad: #f0565c;
+    --grey: #7f8d8f;
+    --nav-bg: #0e1416;
+    --nav-ink: #dce4e2;
+    --shadow-pop: 0 18px 48px rgba(0, 0, 0, 0.5);
     /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
-    --glass-base: #343B3E;
+    --glass-base: #343b3e;
     --glass-tint: 20%;
     /* By night states take more colour, so they stand out from their band. */
     --glass-tint-state: 26%;
     --glass-alpha: 1;
     --glass-side-tint: 36%;
     --glass-dim: 10%;
-    --glass-spec: rgb(255 255 255 / .1);
-    --glass-rim: rgb(255 255 255 / .1);
+    --glass-spec: rgb(255 255 255 / 0.1);
+    --glass-rim: rgb(255 255 255 / 0.1);
     --glass-tint-quiet: 20%;
     --glass-side-quiet: 36%;
     --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
@@ -138,48 +140,48 @@
     color-scheme: dark;
   }
 }
-:root[data-theme="dark"] {
-  --bg: #131A1C;
-  --surface: #1B2427;
+:root[data-theme='dark'] {
+  --bg: #131a1c;
+  --surface: #1b2427;
   --surface-2: #233033;
-  --sunken: #10171A;
-  --ink: #E6ECEA;
-  --ink-2: #A3B1B2;
-  --ink-3: #74858A;
-  --line: #2E3C40;
-  --line-strong: #44565B;
-  --goal: #8DB8E4;
-  --goal-soft: #1F3347;
-  --state: #B9A2E6;
-  --state-soft: #2E2742;
-  --activity: #B3C0C2;
-  --contrib: #0F9A88;
-  --rel-state: #D36AC6;
-  --blaze: #F0565C;
-  --vision: #46515A;
-  --vision-lit: #5B6873;
-  --vision-ink: #A3AEB7;
+  --sunken: #10171a;
+  --ink: #e6ecea;
+  --ink-2: #a3b1b2;
+  --ink-3: #74858a;
+  --line: #2e3c40;
+  --line-strong: #44565b;
+  --goal: #8db8e4;
+  --goal-soft: #1f3347;
+  --state: #b9a2e6;
+  --state-soft: #2e2742;
+  --activity: #b3c0c2;
+  --contrib: #0f9a88;
+  --rel-state: #d36ac6;
+  --blaze: #f0565c;
+  --vision: #46515a;
+  --vision-lit: #5b6873;
+  --vision-ink: #a3aeb7;
   --vision-sheen: 14%;
-  --purpose: #D9AE3A;
-  --vglow-silver: rgb(205 215 225 / .26);
-  --vglow-gold: rgb(236 190 64 / .32);
-  --ok: #5CC489;
-  --warn: #E9BB45;
-  --bad: #F0565C;
-  --grey: #7F8D8F;
-  --nav-bg: #0E1416;
-  --nav-ink: #DCE4E2;
-  --shadow-pop: 0 18px 48px rgba(0, 0, 0, .5);
+  --purpose: #d9ae3a;
+  --vglow-silver: rgb(205 215 225 / 0.26);
+  --vglow-gold: rgb(236 190 64 / 0.32);
+  --ok: #5cc489;
+  --warn: #e9bb45;
+  --bad: #f0565c;
+  --grey: #7f8d8f;
+  --nav-bg: #0e1416;
+  --nav-ink: #dce4e2;
+  --shadow-pop: 0 18px 48px rgba(0, 0, 0, 0.5);
   /* By night on a neutral dark instead of the teal surface, so amber and red don't turn olive and maroon. */
-  --glass-base: #343B3E;
+  --glass-base: #343b3e;
   --glass-tint: 20%;
   /* By night states take more colour, so they stand out from their band. */
   --glass-tint-state: 26%;
   --glass-alpha: 1;
   --glass-side-tint: 36%;
   --glass-dim: 10%;
-  --glass-spec: rgb(255 255 255 / .1);
-  --glass-rim: rgb(255 255 255 / .1);
+  --glass-spec: rgb(255 255 255 / 0.1);
+  --glass-rim: rgb(255 255 255 / 0.1);
   --glass-tint-quiet: 20%;
   --glass-side-quiet: 36%;
   --chip-on: color-mix(in srgb, var(--ink) 18%, var(--surface));
@@ -188,8 +190,14 @@
   color-scheme: dark;
 }
 
-* { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; }
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
 body {
   background: var(--bg);
   color: var(--ink);
@@ -197,12 +205,38 @@ body {
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
 }
-button, input, select, textarea { font: inherit; color: inherit; }
-strong, b { font-weight: 500; }
-h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -.015em; line-height: 1.2; }
-svg { flex: none; }
-:focus-visible { outline: none; box-shadow: var(--focus); border-radius: var(--r-sm); }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition: none !important; animation: none !important; }
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
 }
-
+strong,
+b {
+  font-weight: 500;
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+svg {
+  flex: none;
+}
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: var(--r-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

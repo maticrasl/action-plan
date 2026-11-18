@@ -143,4 +143,3 @@ document.addEventListener('click', e => {
     openPlanDelete(plan);
   }
 });
-

@@ -1,6 +1,16 @@
 /** Stored data made safe to use (plans from storage, Drive and files), and reading and resetting plan files. */
 import { addDays, isRoutine } from './routines/schedule';
-import { SYNC_COLLS, emptyDb, type Activity, type Coll, type Db, type ISODate, type ISOTime, type IdSet, type Relation } from './model';
+import {
+  SYNC_COLLS,
+  emptyDb,
+  type Activity,
+  type Coll,
+  type Db,
+  type ISODate,
+  type ISOTime,
+  type IdSet,
+  type Relation,
+} from './model';
 import type { SyncItem } from './merge';
 import { migrateCumulative } from './cumulative';
 import { dayNum } from './days';

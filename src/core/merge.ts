@@ -1,7 +1,24 @@
 /** Change tracking and the per-item merge of plans and visions. */
 import { isCumulative, refreshTotal } from './cumulative';
 import { followList } from './routines/checkins';
-import { ACYCLIC, PARENT_REL, SYNC_COLLS, type Coll, emptyDb, type Activity, type Db, type Goal, type ISOTime, type IdSet, type Plan, type PlanList, type RelType, type Relation, type State, type VisionList } from './model';
+import {
+  ACYCLIC,
+  PARENT_REL,
+  SYNC_COLLS,
+  type Coll,
+  emptyDb,
+  type Activity,
+  type Db,
+  type Goal,
+  type ISOTime,
+  type IdSet,
+  type Plan,
+  type PlanList,
+  type RelType,
+  type Relation,
+  type State,
+  type VisionList,
+} from './model';
 import { dropRoutineDeps } from './normalize';
 import { mergeVisions } from './visions';
 import type { WithList } from './routines/checkins';
