@@ -12,7 +12,7 @@
 | 07 map, timeline, graphs | merged (PR #16) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-07` |
 | 08 close-out | merged (PR #18) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-08` |
 | 09 tests | merged (PR #20) and deployed by `deploy.yml` 2026-11-18; tag `before-phase-09` |
-| 10 workflow | not started |
+| 10 workflow | built on `restructure/phase-10`; waiting for the owner: memory changes (step 5), then "ship it" |
 
 ## Perf baseline
 
@@ -63,18 +63,18 @@ are off the list; confirmed on GitHub (PR #20 and its deploy passed).
   passed, longest read ~100 ms virtual. A `NO RESULT` now counts as a real failure; if it comes back, look for
   another kind of real async work (FileReader, crypto, workers) that the suite awaits.
 
-## Notes for the next phase
+## Notes (phase 10)
 
-- Tests: `tests/README.md`. Page tests are 34 files in `tests/browser` (187 steps, each file alone in a fresh page, 4 at
-  a time, ~45 s); unit tests 143 in 19 files; Playwright 3 (`tests/e2e`, on `dist/`). more.js and test.js are gone.
-- The suite's day is pinned (pre.js shifts Date to Wed 2026-11-18 noon). Run on Sunday 2026-06-14, two steps failed:
-  see `found-bugs.md`.
-- Unit tests load only modules that do not touch `document` while loading: views/* and most of ui/* stay page tests
-  (no jsdom: not an allowed dependency). sync.ts types clash with Node's setTimeout, so applyStore stays a page test.
-- `tsconfig.node.json` has the DOM lib (store and sync modules name Response); it also checks tests/e2e.
-- Assertions (assert/eq/expect): 2714 before, 2545 after. ~212 of the 279 page assertions removed duplicated unit
-  tests ported in phases 3–7; the other ~67 became 85 new expects. Nothing was dropped without a replacement.
-- `users.js` is 632 lines: one chain of logins on a fake Google; splitting it means replaying the logins.
-- `npm audit`: 11 high in the vite/vitest/typescript-eslint chain (picomatch), there before this phase.
-- CI (`check.yml`) installs Playwright's Chromium shell and fetches the `pre-restructure` tag; green on GitHub (~2.5–3 min).
-- Unchanged: no app code changed; fixtures never regenerated; `stateChange`'s unused `s` stays.
+- Built: `CLAUDE.md` (86 lines, from target-CLAUDE.md corrected), `docs/decisions.md`, `.claude/settings.json`
+  (allow list + Prettier hook via `scripts/format-edited.mjs`, limited by `.prettierignore` to src/ and tests/),
+  `.claude/skills/ship`, help-tip keys typed (`TipKey`), specs moved to `docs/specs`, finished plans deleted.
+- Proved in fresh headless sessions: the hook formats an edited file; allowed Bash and PowerShell commands run,
+  `git push` is refused. This session itself could not see the new settings (no settings file when it started).
+- Done-when: a fresh session given "add a 'paused' chip to the goals filter" found `views/goals.ts` and
+  `core/model.ts:47` by Grep in 8 turns ($0.32), saw the chip already exists, asked only which filter was meant.
+- Measure (step 7), 2026-11-18, Opus 5.5, fresh session: "right-click empty timeline space opens the Add menu"
+  (like `f47d3bf`): 32 turns, 45k context written, 1.05M cache reads, 10.4k output, $0.78; 7 reads, all ranged;
+  test first. Old cost unknown (owner); the README estimated severalfold. Throwaway branch deleted, never pushed.
+- Open: memory changes (step 5) with the owner; then set this file to done and ship. Delete `docs/restructure/`
+  after 2026-12-18.
+- Node is at `C:\Program Files\nodejs`; a Claude process started before the install has no `node` on PATH.
