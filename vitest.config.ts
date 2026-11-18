@@ -8,5 +8,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
+    // Node's own localStorage warns when touched; the store tests put a stand-in where the page has it.
+    execArgv: ['--no-experimental-webstorage'],
   },
 });
