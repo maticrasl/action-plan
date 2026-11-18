@@ -4,7 +4,7 @@ import { ui } from '../../store/state';
 import { ctxMenu } from '../../ui/menu';
 import { modal } from '../../ui/forms/form';
 import { requestRender as render } from '../../ui/render';
-import { emptyState, esc, hideDoneToggle, itemCount, neighbourhood, statusLegend } from '../../ui/dom';
+import { emptyState, esc, fitText, hideDoneToggle, itemCount, neighbourhood, statusLegend } from '../../ui/dom';
 import { db, visions } from '../../core/state';
 import { t, tp } from '../../i18n/index';
 import { categoryChips, goalSelect, scopeFor } from '../filters';
@@ -47,19 +47,6 @@ export const arrowMarker = (id: string, color: string, orient = 'auto-start-reve
 export const glowDefs = (W: number, H: number) =>
   `<filter id="node-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/></feMerge><feComposite in2="SourceGraphic" operator="out"/></filter>` +
   lineGlow(W, H);
-
-// Box text is cut to fit its box, ending in "…": measured on a canvas in the fonts the map's CSS sets,
-// with 4 % to spare, as SVG text can come out a little wider than the canvas measures it.
-export let fitCtx: CanvasRenderingContext2D;
-export function fitText(text: string, font: string, max: number) {
-  fitCtx ||= document.createElement('canvas').getContext('2d')!;
-  fitCtx.font = font;
-  const fits = (s: string) => fitCtx.measureText(s).width * 1.04 <= max;
-  if (fits(text)) return text;
-  let s = text;
-  while (s && !fits(s + '…')) s = s.slice(0, -1);
-  return s.trimEnd() + '…';
-}
 
 // A rounded rectangle from x0, y0 to x1, y1 as a path.
 export const roundedRect = (x0: number, y0: number, x1: number, y1: number, r: number) =>

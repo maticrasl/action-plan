@@ -12,7 +12,7 @@ import { db, visions } from '../core/state';
 import { currentPlan, plans } from '../store/state';
 import { t, tp, type PluralKey, type TextKey } from '../i18n/index';
 import { fmtDate, isoDate, today } from '../core/dates';
-import { $, esc } from './dom';
+import { $, esc, settings } from './dom';
 import { closeCtxMenu } from './menu';
 import { createPlan, planKey, save, uniqueName } from '../store/plans';
 import { toast } from './toast';
@@ -25,7 +25,6 @@ import { userStorage } from '../store/users';
 import { saveVisions } from '../store/visions';
 import { renderPlanSwitch } from './plan-switcher';
 import { requestRender } from './render';
-import { settings } from './settings';
 
 /* ---------- Import / export / sample ---------- */
 

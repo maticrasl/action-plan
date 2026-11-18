@@ -3,9 +3,8 @@ import { createPlan, uniqueName } from '../store/plans';
 import { TEMPLATES, TPL_AREAS, templateData, tplText, type Template, type TplText } from '../core/templates/index';
 import { toast } from './toast';
 import { t, tp, type TextKey } from '../i18n/index';
-import { $, esc } from './dom';
+import { $, esc, settings } from './dom';
 import { closeCtxMenu } from './menu';
-import { settings } from './settings';
 
 /* ---------- Templates (core/templates): ready-made plans to start from ---------- */
 

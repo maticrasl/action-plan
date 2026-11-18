@@ -1,6 +1,6 @@
 /** The plan switcher: the plans with their health, and new, rename, merge, export, import, delete. */
 import { createPlan, nameTaken, openPlan, planKey, readPlan, save, uniqueName } from '../store/plans';
-import { t, tp, type PluralKey, type TextKey } from '../i18n/index';
+import { t, type TextKey } from '../i18n/index';
 import { db, setDb } from '../core/state';
 import { today } from '../core/dates';
 import { isRoutine, runsOn } from '../core/routines/schedule';
@@ -144,15 +144,3 @@ document.addEventListener('click', e => {
   }
 });
 
-// What a plan holds, as list items for the delete and merge dialogs ('' when it is empty).
-export function planContents(data: Db) {
-  const count = (key: PluralKey, n: number) => (n ? `<li>${esc(tp(key, n))}</li>` : '');
-  const measured = data.states.reduce((sum, s) => sum + (s.cumulative ? s.entries || [] : s.history || []).length, 0);
-  return (
-    count('planDel.goals', data.goals.length) +
-    count('planDel.states', data.states.length) +
-    count('planDel.measurements', measured) +
-    count('planDel.activities', data.activities.length) +
-    count('planDel.relations', data.relations.length)
-  );
-}
