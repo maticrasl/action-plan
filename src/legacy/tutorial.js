@@ -1,5 +1,4 @@
 /** The guided tour and help mode. */
-import { render } from './app.js';
 import { I18N, lang, t } from '../i18n/index';
 import { clamp } from '../core/util';
 import { prefs } from '../store/prefs';
@@ -14,6 +13,7 @@ import { modal } from '../ui/forms/form';
 import { changeLanguage, settings } from '../ui/settings';
 import { renderPlanSwitch } from '../ui/plan-switcher';
 import { sampleData } from '../ui/plan-io';
+import { requestRender } from '../ui/render';
 
 /* =========================================================
    Tutorial mode: a guided tour and a help mode
@@ -243,7 +243,7 @@ export function setHelp(on) {
   ui.help = on;
   prefs.set('help', on);
   $('#helpBtn').setAttribute('aria-pressed', on);
-  render();
+  requestRender();
 }
 
 export function openHelpTip(dot) {

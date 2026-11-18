@@ -2,15 +2,20 @@
 import { locale, t } from '../i18n/index';
 import { USERS_KEY, addUser, currentUser, readUsers, removeUserKeys, saveUsers, setUsers, users } from '../store/users';
 import { drive, loadGis } from '../sync/drive';
-import { enterUser } from './app.js';
 import { prefs } from '../store/prefs';
 import { SYNC_EVERY, setSyncStatus, syncConfigured, syncConnected, syncNow, syncState } from '../sync/sync';
 import { plans } from '../store/state';
 import { SYNC_COLLS } from '../core/merge';
 import { db } from '../core/state';
-import { offerTour } from './tutorial.js';
 import { $, esc } from '../ui/dom';
 import { toast } from '../ui/toast';
+
+// Switching users and offering the tour belong to the app above the screen parts; main.ts connects them.
+let enterUser = () => false;
+let offerTour = () => {};
+export function connectSync(fns) {
+  ({ enterUser, offerTour } = fns);
+}
 
 /* ---------- Signing in and out: one user per Google account (users.js) ---------- */
 

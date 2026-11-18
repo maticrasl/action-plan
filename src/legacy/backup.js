@@ -1,5 +1,4 @@
 /** Full backup and restore of every plan and the visions. */
-import { render } from './app.js';
 import { t, tp } from '../i18n/index';
 import { uid } from '../core/util';
 import { fmtDate, isoDate, today } from '../core/dates';
@@ -16,6 +15,7 @@ import { toast } from '../ui/toast';
 import { renderPlanSwitch } from '../ui/plan-switcher';
 import { settings } from '../ui/settings';
 import { download } from '../ui/plan-io';
+import { requestRender } from '../ui/render';
 
 /* =========================================================
    Full backup: every plan and the visions in one file
@@ -67,7 +67,7 @@ export function restoreBackup({ store, exportedAt }) {
   save();
   saveVisions();
   renderPlanSwitch();
-  render();
+  requestRender();
   return { plans: added, visions: missing.length };
 }
 
