@@ -2,6 +2,7 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import layers from './scripts/lib/eslint-layers.mjs';
 
 export default tseslint.config(
   { ignores: ['dist/', 'dist-test/', 'node_modules/', 'tests/', 'scripts/'] },
@@ -27,6 +28,8 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none', ignoreRestSiblings: true }],
       '@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true, allowTernary: true }],
+      // Named here as well as in the preset: an `any` needs a type, or a comment saying why not.
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-irregular-whitespace': ['error', { skipRegExps: true }],
     },
   },
@@ -44,27 +47,29 @@ export default tseslint.config(
     },
   },
   {
-    // The screen parts sit below the views: they reach them only through what main.ts connects
-    // (ui/render.ts, connectSync in ui/sync-ui.ts).
-    files: ['src/ui/**/*.{js,ts}'],
+    // The layers (scripts/lib/eslint-layers.mjs). A lower layer reaches a higher one only through what main.ts
+    // connects: ui/render.ts and connectSync (ui/sync-ui.ts) for the screen parts, onRendered for help mode.
+    files: ['src/**/*.ts'],
+    plugins: { layers },
     rules: {
-      'no-restricted-imports': [
+      'layers/order': [
         'error',
         {
-          patterns: [
-            { group: ['**/legacy/**', '**/views/**', '**/tutorial/**'], message: 'ui/ must not import the views, tutorial or legacy code.' },
+          // Kept (phase 8): the map, timeline and graphs share the item menu (map/menu), the gestures (map/zoom),
+          // the line drawing (map/render, map/layout) and the timeline's drag state. Taking them apart is a redesign.
+          allow: [
+            'views/graphs/states.ts -> views/timeline/render.ts',
+            'views/map/link.ts -> views/timeline/drag.ts',
+            'views/map/menu.ts -> views/timeline/drag.ts',
+            'views/map/menu.ts -> views/timeline/rows.ts',
+            'views/map/zoom.ts -> views/graphs/points.ts',
+            'views/map/zoom.ts -> views/timeline/drag.ts',
+            'views/map/zoom.ts -> views/timeline/render.ts',
+            'views/timeline/drag.ts -> views/map/menu.ts',
+            'views/timeline/render.ts -> views/map/layout.ts',
+            'views/timeline/render.ts -> views/map/render.ts',
           ],
         },
-      ],
-    },
-  },
-  {
-    // The tutorial sits above the views: render() reaches help mode only through onRendered (main.ts).
-    files: ['src/views/**/*.{js,ts}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        { patterns: [{ group: ['**/tutorial/**'], message: 'views/ must not import the tutorial.' }] },
       ],
     },
   },
