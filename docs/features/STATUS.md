@@ -104,5 +104,7 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   session B is done.
 - Guidance 3, session B still to do: classes C and D, `tips-all` in the Guide, `seen` facts
   `menu` and `templates`, days and views recorded whenever tips are on (today only while Getting
-  started is on: `markDay`, `markView`), `tips.since` for `halfway`; decide whether `seen` syncs.
+  started is on: `markDay`, `markView`), `tips.since` for `halfway`; decide whether `seen` syncs;
+  and the owner's request of 2026-11-19: a "Show me another tip" a user can reach at any time, so
+  tips can be asked for when one is open to them (design it with the one-a-day rule).
 - Privacy texts were checked against the code (2026-11-19). `tips-all` waits for Guidance 3.

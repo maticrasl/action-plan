@@ -14,6 +14,8 @@ suite(async () => {
     const g = noStepsPlan();
     setView('dashboard');
     assert(tipCard(), 'a card on the Overview');
+    assert($('#view .tip .tip-label .tip-bulb[aria-hidden="true"]'), 'a light bulb beside "Tip", hidden from screen readers');
+    eq(getComputedStyle(tipCard()).borderLeftColor, getComputedStyle($('#view .tip .tip-bulb .glass')).fill, 'rule and bulb share the tip yellow');
     eq(tipCard().dataset.tipKey, `no-steps:${g.id}`, 'keyed to the goal');
     assert(tipCard().textContent.includes('“Learn the piano” has no steps yet'), 'names the goal');
     assert(tipCard().previousElementSibling?.classList.contains('summary'), 'right under the summary');

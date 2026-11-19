@@ -5,14 +5,31 @@
   margin-bottom: 16px;
   padding: 10px 40px 10px 14px;
   background: var(--surface-2);
-  border-left: 2px solid var(--state);
+  border-left: 3px solid var(--tip);
   border-radius: 0 var(--r-md) var(--r-md) 0;
 }
 .tip-label {
-  margin: 0 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--state);
+  color: var(--tip-ink);
+}
+/* The light bulb: a yellow glass in a dark outline, so it reads on light and dark alike. */
+.tip-bulb {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--tip-ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tip-bulb .glass {
+  fill: var(--tip);
 }
 .tip-text {
   margin: 0;

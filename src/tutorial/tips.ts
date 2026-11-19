@@ -61,11 +61,15 @@ function tipSays(c: Chosen, what: 'text' | 'btn'): string {
   return t(`tip.${c.tip.id}.${what}` as TextKey, vars);
 }
 
+// A light bulb, the familiar sign for a tip.
+const BULB =
+  '<svg class="tip-bulb" viewBox="0 0 24 24" aria-hidden="true"><path class="glass" d="M12 2.8a6.2 6.2 0 0 0-3.7 11.2c.8.6 1.2 1.4 1.2 2.3h5c0-.9.4-1.7 1.2-2.3A6.2 6.2 0 0 0 12 2.8z"/><path d="M9.6 18.8h4.8M10.6 21.3h2.8"/></svg>';
+
 export function tipHtml(c: Chosen, hint: boolean): string {
   const btn = (act: string, label: string, cls: string) =>
     `<button type="button" class="${cls}" data-tip="${act}">${esc(label)}</button>`;
   return `<section class="tip" data-tip-key="${esc(c.key)}" aria-labelledby="tipLabel">
-    <p class="tip-label" id="tipLabel">${esc(t('tip.label'))}</p>
+    <p class="tip-label" id="tipLabel">${BULB}${esc(t('tip.label'))}</p>
     <button type="button" class="tip-close" data-tip="close" aria-label="${esc(t('tip.close'))}" title="${esc(t('tip.close'))}">×</button>
     <p class="tip-text">${esc(tipSays(c, 'text'))}</p>
     ${hint ? `<p class="tip-hint">${esc(t('tip.settingsHint'))}</p>` : ''}
