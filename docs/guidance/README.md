@@ -43,7 +43,7 @@ and the walkthrough's welcome and weekly review live on the Guide page.
 
 ## Decisions I made that the owner should confirm
 
-Each is a default, chosen so work can go on. Changing 1 or 2 changes the plan a lot; say so
+Each is a default, chosen so work can go on. **Confirmed by the owner 2026-11-19: 1, 2, 4, 5** (3 taken with the Guide page). Changing 1 or 2 changes the plan a lot; say so
 before the first session.
 
 | # | Decision | Why | Alternative |

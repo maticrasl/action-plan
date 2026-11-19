@@ -261,73 +261,110 @@ export const en = {
     'user.removeConfirm':
       'Remove {name} from this device? Their plans are deleted here; what has synced stays in their Google Drive and comes back when they log in again. Changes not synced yet are lost.',
     'user.removed': '{name} removed from this device',
-    'btn.tutorial': 'Take the tour',
     'btn.help': 'Explanations on screen',
 
     'langPick.title': 'Choose your language',
     'langPick.text': 'You can change it any time in Settings.',
     'langPick.continue': 'Continue',
-    'tour.planName': 'Tutorial',
-    'tour.count': 'Step {n} of {total}',
-    'tour.start': 'Start',
-    'tour.next': 'Next',
-    'tour.back': 'Back',
-    'tour.skip': 'Skip tour',
-    'tour.keep': 'Keep sample plan',
-    'tour.finish': 'Remove and finish',
-    'tour.kept': 'The tutorial plan is yours to explore',
-    'tour.about.title': 'Welcome to Action Plan',
-    'tour.about.text':
-      'Action Plan helps you turn what you want to achieve into concrete steps. Set SMART goals, record where you stand today as measurable current states, and plan the activities that close the gap. Then see how everything connects on a map and follow your progress on a timeline and graphs. Use it for anything from fitness and savings to studying or renovating a house.',
-    'tour.welcome.title': 'A quick tour',
-    'tour.welcome.text':
-      'This short tour shows you around using a temporary sample plan, so your own data stays untouched. It takes about a minute.',
-    'tour.dashboard.title': 'Overview',
-    'tour.dashboard.text':
-      'Your starting point: overall progress, what is running late or waiting, and the next activities by due date.',
-    'tour.goals.title': 'Goals',
-    'tour.goals.text':
-      'Each goal is SMART: Specific, Measurable, Achievable, Relevant and Time-bound. The letters light up as you fill them in, and the trail shows how far you have come from the starting value to the target. A goal measured by a state that adds up picks how it counts: in total or per day, week, month or year.',
-    'tour.states.title': 'Current states',
-    'tour.states.text':
-      'Things you measure, such as your longest run or your savings. Tap its card to record a new value whenever it changes – the dated history shows where you stand; a state can measure progress toward goals. A state can also add up – kilometres per week, money in total: tap its card after each run or deposit. Long-press or right-click a card to edit it.',
-    'tour.graphs.title': 'Graphs',
-    'tour.graphs.text':
-      'Each current state’s measurements over time, with a dashed line for the goal’s target and the change since the first measurement. States that add up show their sums per day, week, month or year, or in total, and every routine shows how often you did it in each period – or per day, week, month or year, or in total. Hover over or tap a graph to read each value, and pinch or Ctrl + scroll to zoom in on a stretch of time; the table below it lists the measurements, where you can delete a wrong one.',
-    'tour.activities.title': 'Activities',
-    'tour.activities.text':
-      'The concrete steps that close the gap. Drag cards between To do, In progress and Done, or tap the circle to move one along. On its start date an activity moves to In progress by itself. A list moves along as you tick off its items, and is done once all of them are.',
-    'tour.routines.title': 'Routines',
-    'tour.routines.text':
-      'Some activities repeat – run 3 times a week, strength training every Monday and Thursday, a check-up every 2 months on the first Monday. Add one by choosing Routine when you add an activity, or Routine list for a checklist you go through each time, such as a morning routine – ticking its last item ticks the day off. Tick off each time you do it on the week strip (or on the Overview), and use its arrows to fill in earlier weeks, and watch the streak grow. When a routine improves a state that adds up, ticking it also asks how much – one entry after a run updates both. A goal can measure progress by how consistently you keep its routines.',
-    'tour.timeline.title': 'Timeline',
-    'tour.timeline.text':
-      'Goals and activities on a calendar. Coloured lines on the left show what contributes to a goal, what is a sub-activity and which prerequisites an activity waits for; dependencies are drawn as arrows and overdue periods in red; routines mark their days as done, missed or still to come. Select a bar and drag it to change its dates.',
-    'tour.map.title': 'Relationship map',
-    'tour.map.text':
-      'How everything connects: goals at the top, activities in the middle and current states at the bottom. Tap a box or a line to select it and highlight its links; double-click it or press Enter to edit it, or press Delete to remove it.',
-    'tour.mapLink.title': 'Link two items',
-    'tour.mapLink.text':
-      'With a mouse, drag from one box onto another. On a touch screen, long-press a box, choose “Link to…” and tap the other box. You’re then offered only the relationships that fit those two items. Releasing anywhere else drops the link.',
-    'tour.add.title': 'Add something new',
-    'tour.add.text':
-      'This button adds whatever fits the current view: a goal, a current state or an activity. On the map and the timeline, it asks which of them; on the map, right-clicking an empty spot offers the same.',
-    'tour.more.title': 'More views',
-    'tour.more.text': 'On a phone, Map, Timeline and Graphs are under More, to keep the tab bar tidy.',
-    'tour.sidebar.title': 'More room',
-    'tour.sidebar.text':
-      'Collapse the sidebar to keep only its icons and give the views more space. Click again to expand it.',
-    'tour.settings.title': 'Settings',
-    'tour.settings.text':
-      'Switch, merge or manage plans (a coloured dot by each shows green when all is well, yellow when something is due today, red when something is overdue), change language and theme, set display options, log in with Google to sync your devices (several people can each log in on one device, every one with their own plans), start a new plan from a ready-made template, export a plan to back it up or share it as a template, import plans, and install Action Plan as an app.',
-    'tour.sync.title': 'Sync status',
-    'tour.sync.text':
-      'This cloud shows whether your plans are synced with Google Drive. When it says sync is paused, click it to continue.',
-    'tour.help.title': 'Guide',
-    'tour.help.text':
-      'This opens the Guide: how the method works, what to do when you are stuck, and what happens to your data. There you can also switch on explanations of each screen. You can restart this tour from Settings.',
-    'tour.done.title': 'You are all set',
-    'tour.done.text': 'Keep the sample plan to explore on your own, or remove it and go back to your plan.',
+    'welcome.title': 'Welcome to Action Plan',
+    'welcome.text':
+      'Action Plan turns something you want into steps you can take: a goal, where you stand today, and what you do about it this week. How would you like to begin?',
+    'welcome.own': 'Start with my own goal',
+    'welcome.template': 'Start from a template',
+    'welcome.sample': 'Look at a sample plan first',
+    'welcome.self': 'I’ll find my own way',
+    'demo.banner': 'This is a sample plan. Look around and change anything; it is not your data.',
+    'demo.own': 'Start my own plan',
+    'demo.remove': 'Remove sample',
+
+    'walk.title': 'Getting started',
+    'walk.count': '{done} of {total}',
+    'walk.next': 'Next: {task}',
+    'walk.showMe': 'Show me',
+    'walk.skip': 'Skip this step',
+    'walk.more': 'More on this',
+    'walk.optional': 'optional',
+    'walk.skipped': 'skipped',
+    'walk.fold': 'Fold Getting started',
+    'walk.unfold': 'Unfold Getting started',
+    'walk.hide': 'Hide getting started',
+    'walk.hidden': 'Getting started is in the Guide whenever you want it.',
+    'walk.ticked': 'Getting started: {task} ✓',
+    'walk.tickedNext': 'Getting started: {task} ✓ Next: {next}',
+    'walk.start': 'Start',
+    'walk.continue': 'Continue',
+    'walk.again': 'Look again',
+    'walk.over': 'Start over',
+    'walk.close': 'Close',
+    'walk.doneWord': 'done',
+    'walk.days': '{n} of 3',
+    'walk.finished.title': 'You are set up',
+    'walk.finished.text':
+      'You have a goal, a starting point, steps, a routine and a rhythm of coming back. From here the plan is yours. The Guide has help for the moments when you get stuck.',
+    'walk.stage.first.title': 'Your first goal',
+    'walk.stage.first.lead': 'One goal, where you stand, and the first steps. About ten minutes.',
+    'walk.stage.first.done': 'You have a goal, a starting point and a first step done.',
+    'walk.stage.rhythm.title': 'Make it a rhythm',
+    'walk.stage.rhythm.lead': 'Goals are reached by what you repeat. This stage takes about a week.',
+    'walk.stage.rhythm.done': 'You have a routine going and you came back. That is the hard part.',
+    'walk.stage.safe.title': 'Keep it safe',
+    'walk.stage.safe.lead': 'Your plan lives in this browser. Two minutes to make sure it cannot get lost.',
+    'walk.stage.safe.done': 'Your plan has a copy outside this browser.',
+    'walk.stage.picture.title': 'See the whole picture',
+    'walk.stage.picture.lead': 'Three other ways to look at your plan, and the question behind it.',
+    'walk.stage.picture.done': 'You have seen all of it.',
+    'walk.goal.title': 'Write one goal',
+    'walk.goal.text':
+      'Pick one thing you would like to be different a few months from now. One goal is enough to begin. Only the title is needed to save it; the other questions make it clearer, and the letters light up as you answer them. If no number fits, set “Progress from” to “Activities done” or “Routines kept”. A rough first version is fine; you can improve it later.',
+    'walk.goal.btn': 'Write a goal',
+    'walk.state.title': 'Record where you stand',
+    'walk.state.text':
+      'A goal is a distance, and a distance needs a starting point. Add a current state: what you measure, how you measure it, and today’s honest value. Link it to your goal and the goal’s progress follows it.',
+    'walk.state.btn': 'Add a current state',
+    'walk.state.notNeeded': 'Not needed: your goal is measured by what you do.',
+    'walk.steps.title': 'Plan the first steps',
+    'walk.steps.text':
+      'List two or three things you can do for this goal. Make the first one so small that you can do it today or tomorrow; ten minutes is fine. Give each a due date: a step with a day gets done far more often than a step for “sometime”.',
+    'walk.steps.btn': 'Add an activity',
+    'walk.firstDone.title': 'Do the first step',
+    'walk.firstDone.text':
+      'Do the small one, now or today. Then tap the circle on its card until it says Done. A plan starts working when the first thing is finished.',
+    'walk.routine.title': 'Add one routine',
+    'walk.routine.text':
+      'Something you will do again and again: three runs a week, ten minutes of Spanish a day, a look at your money on the first of the month. Put the moment in its name, like “Run after work”, so the decision is already made when the moment comes. Start smaller than you think you need to; you can raise it later.',
+    'walk.routine.btn': 'Add a routine',
+    'walk.tick.title': 'Tick it off',
+    'walk.tick.text':
+      'The first time you do it, tick the day on its week strip, here on the Overview or in Activities. If you miss a day, nothing is lost: the next tick puts you back on track.',
+    'walk.measure.title': 'Record a new value',
+    'walk.measure.text':
+      'Measure again and tap the state’s card to record the value. Two points make a line: from now on Graphs shows which way you are going.',
+    'walk.measure.notNeeded': 'Not needed: this plan has no current states.',
+    'walk.days.title': 'Come back on three days',
+    'walk.days.text':
+      'Open your plan on three different days. Half a minute is enough: tick what you did, look at what is next. Choose a moment that already exists in your day, such as the morning coffee.',
+    'walk.backup.title': 'Make a copy',
+    'walk.backup.text':
+      'Log in with Google and your plans are kept the same on all your devices, in a hidden folder of your own Google Drive that only this app can read. Or export a full copy to a file now and then.',
+    'walk.backup.textLocal': 'Export a full copy of your plan to a file now and then, and keep it somewhere safe.',
+    'walk.backup.btn': 'Open Account and sync',
+    'walk.install.title': 'Install the app',
+    'walk.install.text':
+      'Put Action Plan on your home screen. It opens in its own window like any other app, also without a connection.',
+    'walk.views.title': 'Look at your plan three ways',
+    'walk.views.text':
+      'The Map shows what serves what. The Timeline shows when. Graphs show whether it is working. Open each once.',
+    'walk.views.btn.map': 'Open the Map',
+    'walk.views.btn.timeline': 'Open the Timeline',
+    'walk.views.btn.graphs': 'Open Graphs',
+    'walk.vision.title': 'Say what it is for',
+    'walk.vision.text':
+      'Above goals sit visions: a state you wish for that is never finished, such as “To be fit and live healthily”. Add one and link your goal to it. On the days a goal feels like a chore, this is the sentence that reminds you why.',
+    'walk.vision.btn': 'Add a vision',
+    'walk.review.title': 'Do a weekly review',
+    'walk.review.text':
+      'Once a week, five minutes: tick what is done, record fresh values, move dates that no longer hold, and choose the one step that matters most next week. Go through the list once now.',
+    'walk.review.btn': 'Open the weekly review',
 
     'help.off': 'Turn off explanations',
     'help.tipLabel': 'What is this?',

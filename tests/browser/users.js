@@ -38,7 +38,7 @@ suite(async () => {
     drive.remove = async () => {};
   };
   const realPrompt = window.prompt,
-    realOffer = offerTour;
+    realOffer = offerWelcome;
   let prompts = [],
     offers = 0,
     nameAnswer = null;
@@ -46,7 +46,7 @@ suite(async () => {
     prompts.push([msg, def]);
     return nameAnswer ?? def;
   };
-  offerTour = () => offers++;
+  offerWelcome = () => offers++;
   const SECRET = { A: 'SECRET-ana-goal', B: 'SECRET-bor-goal', G: 'SECRET-guest-goal', C: 'SECRET-cene-goal' };
   const fileText = acct => JSON.stringify(G.files[acct] || null);
   const keysText = u =>
@@ -107,7 +107,7 @@ suite(async () => {
       G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A',
       'token kept for this user',
     );
-    assert(!offers, 'no first-visit tour: the data is the same');
+    assert(!offers, 'no first-visit welcome: the data is the same');
   });
   await step(
     'users: another account on a device already logged in gets an empty user, as on a first visit',
@@ -136,7 +136,7 @@ suite(async () => {
         ui.view === 'dashboard' && theme === 'system' && !document.documentElement.dataset.theme,
         "default view and theme, not Ana's",
       );
-      eq(offers, 1, 'the first-visit language picker and tour are offered');
+      eq(offers, 1, 'the first-visit language picker and welcome are offered');
       noLeak(memText(), ['A'], "Bor's screen and memory");
       noLeak(fileText('perm-B'), ['A'], "Bor's Drive");
       noLeak(keysText(bor), ['A'], "Bor's stored keys");
@@ -149,15 +149,15 @@ suite(async () => {
         G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A',
         "Ana's token stays hers",
       );
-      // The real offer: a new user has not seen the tour, so the language picker opens.
+      // The real offer: a new user has not seen the tour nor Getting started, so the language picker opens.
       realOffer();
       await tick();
       await tick();
       assert($('.lang-pick'), 'language picker shown');
       $('.lang-pick [data-lang-done]').click();
-      assert(tour.step >= 0, 'then the tour');
-      endTour(false);
-      assert(prefs.get('tourSeen') === true && plans.list.length === 1, 'tour seen, its plan gone');
+      assert($('.welcome'), 'then the welcome card');
+      $('.welcome [data-begin="own"]').click();
+      assert(!$('.welcome') && getWalk().state === 'on' && plans.list.length === 1, 'Getting started on, no extra plan');
       addSecret(SECRET.B);
       await syncNow(true);
       await settle();
@@ -610,7 +610,7 @@ suite(async () => {
     users.list = users.list.filter(u => u.id !== 'tab2user');
     saveUsers();
   });
-  await step('users: a new user whose account already has plans in Drive gets no first-visit tour', async () => {
+  await step('users: a new user whose account already has plans in Drive gets no first-visit welcome', async () => {
     G.accounts.D = { id: 'perm-D', email: 'dana@example.com', name: 'Dana' };
     G.files['perm-D'] = JSON.parse(fileText('perm-B'));
     G.pick = 'B';
@@ -626,7 +626,7 @@ suite(async () => {
       SYNC_COLLS.some(c => allPlansData().some(p => p.data[c].length)),
       'her plans came down',
     );
-    eq(offers, before, 'no tour offered');
+    eq(offers, before, 'no welcome offered');
     removeUser(dana.id);
   });
 });

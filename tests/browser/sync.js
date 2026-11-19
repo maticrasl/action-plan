@@ -139,22 +139,6 @@ suite(async () => {
     await syncNow(true);
     eq(removed, ['dup1'], 'duplicates removed');
 
-    // During the tour sync leaves Drive alone (no retry loop); ending the tour syncs once.
-    let reads = 0;
-    drive.read = async () => {
-      reads++;
-      return { id: 'f', content: parseStore(JSON.stringify(file)), extra: [] };
-    };
-    clearTimeout(syncState.timer);
-    syncState.timer = null;
-    startTour();
-    await syncNow(false);
-    await syncNow(true);
-    assert(!reads && !syncState.again && !syncState.busy, 'no Drive calls during the tour');
-    endTour(false);
-    clearTimeout(syncState.timer);
-    await syncNow(false);
-    assert(reads === 1 && syncState.status === 'synced', 'syncs after the tour');
     currentUser().account = null;
     renderSync();
     assert($('#syncBtn').hidden, 'signed out: no cloud button');

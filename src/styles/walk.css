@@ -1,0 +1,209 @@
+/* ---------- Getting started: the card on the Overview and its list in the Guide ---------- */
+.walk {
+  margin-bottom: 16px;
+  padding: 14px 16px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--goal);
+  border-radius: var(--r-md);
+}
+.walk-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.walk-head h2,
+.walk.finished h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 17px;
+}
+.walk-n {
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.walk-fold {
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 6px);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.walk .trail {
+  margin: 8px 0 4px;
+}
+.walk-stages,
+.walk-tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.walk-stage {
+  border-top: 1px solid var(--line);
+}
+.walk-stage-head {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  align-items: baseline;
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.walk-stage-head span:first-child {
+  flex: 1;
+}
+.walk-stage.complete .walk-n {
+  color: var(--ok);
+}
+.walk-lead {
+  margin: -4px 0 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.walk-tasks {
+  padding-bottom: 8px;
+}
+.walk-task {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: baseline;
+  column-gap: 8px;
+  padding: 3px 0;
+  font-size: 14.5px;
+}
+/* The tick: an activity's check circle, filled when done, hollow when skipped. */
+.walk-tick {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  transform: translateY(3px);
+}
+.walk-task.done .walk-tick,
+.walk-task.notNeeded .walk-tick {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+.walk-task.skipped .walk-tick {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.walk-task-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.walk-task-name {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+button.walk-task-name[aria-expanded='true'] {
+  font-weight: 600;
+  text-decoration: none;
+}
+.walk-task:not(.open) .walk-task-name {
+  color: var(--ink-2);
+}
+.walk-task em {
+  font-style: normal;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.walk-note {
+  grid-column: 2 / -1;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.walk-body {
+  grid-column: 2 / -1;
+  margin: 4px 0 6px;
+}
+.walk-body p {
+  margin: 0;
+  max-width: 64ch;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.walk-views .on {
+  color: var(--ok);
+}
+.walk-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  margin-top: 8px;
+}
+.walk-foot {
+  margin: 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  text-align: right;
+}
+.walk.folded {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+.walk-line {
+  flex: 1;
+  margin: 0;
+  font-size: 14.5px;
+}
+.walk.finished p {
+  margin: 6px 0 0;
+  max-width: 64ch;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+/* In the Guide: one line, the list under it when opened. */
+.guide-walk {
+  margin: 4px 0 18px;
+}
+.guide-walk .walk-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ---------- The banner over a sample plan ---------- */
+.demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  font-size: 14.5px;
+}
+.demo-banner p {
+  flex: 1 1 240px;
+  margin: 0;
+}

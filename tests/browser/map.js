@@ -1,6 +1,6 @@
 /** Page tests: map keys and menus, short hints, + to add, light and dark glass, text inside the boxes. */
 suite(async () => {
-  await step('keyboard: map nodes, context menu, tour', async () => {
+  await step('keyboard: map nodes, context menu', async () => {
     fresh('Keys');
     const [g1, g2] = [mk('goal', { title: 'Key goal' }), mk('goal')];
     rel(g2, g1, 'subgoal');
@@ -41,25 +41,7 @@ suite(async () => {
     node().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     assert(modal.open && $('#f-title').value === 'Key goal', 'double-click opens the form');
     modal.close();
-
-    const count = plans.list.length,
-      cur = plans.current;
-    startTour();
-    const press = k => window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
-    const steps = [tour.step];
-    press('ArrowRight');
-    press('ArrowRight');
-    steps.push(tour.step);
-    press('ArrowLeft');
-    steps.push(tour.step);
-    press('ArrowLeft');
-    press('ArrowLeft');
-    steps.push(tour.step);
-    press('Escape');
-    steps.push(tour.step);
-    eq(steps, [0, 2, 1, 0, -1], 'tour steps');
-    assert(plans.list.length === count && plans.current === cur, 'tour plan removed, previous plan reopened');
-    return `menu=${btns.length} items, tour ${steps.join('>')}`;
+    return `menu=${btns.length} items`;
   });
   await step('map and timeline hints are short; the details are in the help', () => {
     for (const code of ['en', 'sl']) {

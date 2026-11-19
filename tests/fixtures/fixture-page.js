@@ -49,6 +49,13 @@
     'sample-sl'() {
       loadSample();
     },
+    // The sample as a demo plan beside the user's own, and Getting started with its usage facts.
+    demo() {
+      loadSample();
+      openPlan(plans.list[0].id);
+      replaceWalk({ state: 'on', started: day(-3), done: { goal: day(-2) }, skipped: ['install'], folded: true });
+      markSeen({ days: [day(-3), day(-1)], lastReview: day(-1) });
+    },
 
     // The data as the single-plan version stored it: one plan, no change stamps, no tombstones,
     // and an "is related to" link (dropped by later versions).

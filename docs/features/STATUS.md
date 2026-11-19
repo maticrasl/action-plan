@@ -25,7 +25,7 @@ first.
 ## Before these features
 
 - [x] Restructure finished (phase 10 done; see `docs/restructure/STATUS.md`) 2026-11-18
-- [ ] Guidance 1: Guide page (`docs/guidance/01-guide-page.md`)
+- [x] Guidance 1: Guide page (`docs/guidance/01-guide-page.md`) 2026-11-19
 - [ ] Guidance 2: Walkthrough (`docs/guidance/02-walkthrough.md`)
 - [ ] Guidance 3: Tips (`docs/guidance/03-tips.md`)
 
@@ -91,16 +91,13 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 - Plans written 2026-11-15 against commit `5b71e59`; the restructure (phases 1–10) has moved the
   code since: find files with `npm run map`, not by the paths in the plans.
 - `06-goal-form` built 2026-11-18 (#25), ahead of the order at the owner's request; tick it once the
-  owner has seen it work. Left out: part 5 (dropped by the owner). Its "Guidance" part: the Guide
-  articles are done with Guidance 1; the `goal-unfinished` tip and the walkthrough text wait for
-  Guidance 2 and 3.
-- Guidance 1, the Guide page, built 2026-11-19 on branch `feat/guide-page`, not ticked until the
-  owner has seen it. Articles in `src/i18n/guide.en.ts` / `guide.sl.ts`; view `src/views/guide.ts`.
-  Owner: the Guide is not among the views; only the `?` beside Settings opens it.
-  It treats guidance decisions 3 (`?` opens the Guide) and 4 (visions in the Guide, a Visions help
-  banner) as taken. "Take the tour" stays in Settings until Guidance 2 removes the tour.
-- Privacy texts were checked against the code; three sentences changed (p-where: Settings loads
-  Google's sign-in script; p-google: name and email read at login; p-delete: what "Remove from
-  this device" removes). `tips-all` waits for Guidance 3.
-- Done 2026-11-18 outside the list: the typeface ships with the app, the page tests pass on any
-  day, and two small bugs found on the way are fixed (`docs/restructure/found-bugs.md`).
+  owner has seen it work. Left out: part 5 (dropped by the owner). Its `goal-unfinished` tip waits
+  for Guidance 3.
+- Guidance 2, Getting started, built 2026-11-19 on branch `feat/walkthrough` (one session, as the
+  owner chose); not ticked until the owner has seen it. Design and where it differs from the plan:
+  `docs/specs/2026-11-19-walkthrough.md`. The tour is gone; the language picker and the Show me
+  ring stay (`tutorial/welcome.ts`, `tutorial/spotlight.ts`). Guidance decisions 1, 2, 4, 5
+  confirmed 2026-11-19.
+- Guidance 3 (tips) reads the same `seen` facts; days and views are recorded only while Getting
+  started is on, so tips that need them must record their own (`markDay`, `markView`).
+- Privacy texts were checked against the code (2026-11-19). `tips-all` waits for Guidance 3.

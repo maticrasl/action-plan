@@ -2,7 +2,7 @@
 
 Builds `docs/guidance/02-walkthrough.md` (what the user sees, tasks, texts, rules, tests). This
 file only records what differs from that plan, the data shape, the modules and the order of
-work. Status: **awaiting the owner's agreement.**
+work. Status: **agreed by the owner 2026-11-19: decisions 1, 2, 4, 5 confirmed, the `goal` text, one session.**
 
 ## Changes to the plan
 
@@ -63,3 +63,20 @@ shots of the card.
   per device) and 4 (one optional vision task): confirm or change.
 - The `goal` text above.
 - Two sessions (A then B), or one.
+
+## Built 2026-11-19: where it differs from the plan
+
+- **Template path**: a template's states have no value, so `state` stays open; a template plan
+  ticks `goal`, `steps` and `routine`, and `state` is next (the plan expected four ticks).
+- **Not needed** (`state`, `measure`) only once the plan has goals and none is measured; an
+  empty plan starts at 0 done.
+- **Install** is left out where the browser cannot install and has no hint; an app already
+  installed simply ticks it.
+- **Days and views** are recorded only while Getting started is on, so existing users' storage
+  is not touched (the stored-data fixtures stay as they are).
+- **Hide** is a button at the foot of the card, not a one-item menu.
+- **The tick toast** comes just after the edit's own toast (such as "Goal added") and replaces it.
+- The sample loaded from Settings is a demo too; "Start my own plan" goes back to the own plan
+  that was open before it.
+- A new state's form now takes a preset goal (`openForm('state', null, { measures: [id] })`);
+  it ignored it before.

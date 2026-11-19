@@ -100,12 +100,6 @@ export function applyStore(store: Store) {
 
 /* ---------- Sync ---------- */
 
-// True while sync must wait: during the tour the open plan is a temporary one (main.ts sets it).
-export let syncPaused = () => false;
-export function setSyncPaused(v: () => boolean) {
-  syncPaused = v;
-}
-
 export function scheduleSync(delay = SYNC_DELAY) {
   if (!syncConnected()) return;
   clearTimeout(syncState.timer as number);
@@ -114,8 +108,7 @@ export function scheduleSync(delay = SYNC_DELAY) {
 
 // `interactive` is true when a click started the sync, so Google may show its sign-in popup.
 export async function syncNow(interactive = false): Promise<void> {
-  // During the tour the open plan is a temporary one; endTour syncs once it is over.
-  if (!syncConnected() || syncPaused()) return;
+  if (!syncConnected()) return;
   if (syncState.busy) {
     syncState.again = true;
     return;
@@ -131,8 +124,6 @@ export async function syncNow(interactive = false): Promise<void> {
     const token = await drive.getToken(interactive);
     const remote = await drive.read(token);
     if (!mine()) return;
-    // A tour that started while this sync waited: endTour syncs once it is over.
-    if (syncPaused()) return setSyncStatus('idle');
     // From here until applyStore nothing waits, so no local edit can slip in between.
     let local = localStore();
     if (!prefs.get('syncedOnce', false) && remote.content?.plans.list.length) local = dropStarterPlans(local);

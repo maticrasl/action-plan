@@ -109,4 +109,4 @@ same address, so stored data and Google sign-in keep working.
   buttons (`views/map/glass.ts`).
 - Map lines stay simple; fix them in placement, and watch the draw time.
 - Phone landscape: no bottom tab bar, a slim icon rail instead.
-- Visions have no tour steps and no sample-plan entries. The Purpose is gold.
+- Visions have no sample-plan entries; Getting started has one optional vision task (2026-11-19). The Purpose is gold.

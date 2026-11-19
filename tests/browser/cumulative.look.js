@@ -243,15 +243,6 @@ suite(async () => {
         !sl['help.tip.addAmount'].includes('boljše od tekočega'),
       'help.tip.addAmount',
     );
-    assert(
-      en['tour.goals.text'].includes('picks how it counts') && sl['tour.goals.text'].includes('izbere, kako šteje'),
-      'tour.goals.text',
-    );
-    assert(
-      en['tour.graphs.text'].includes('per day, week, month or year, or in total') &&
-        sl['tour.graphs.text'].includes('po dnevih, tednih, mesecih ali letih ali skupno'),
-      'tour.graphs.text',
-    );
     // Sample plan and the Marathon template are in the new form.
     const sample = sampleData(),
       dist = sample.states.find(s => s.cumulative);
