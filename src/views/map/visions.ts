@@ -119,12 +119,14 @@ export let tourRunning = () => false;
 export function setTourRunning(v: () => boolean) {
   tourRunning = v;
 }
-// Items working toward a vision glow in every view. With a Purpose everything turns gold, the logo
-// at the top left too, and the first time it is found the user is congratulated (once, on any device).
+// Items working toward a vision glow in every view. With a Purpose (`purpose`) and every active goal
+// SMART (`golden`) the glow turns gold, the logo at the top left too; the Purpose card and tag are gold
+// either way. The first time a Purpose is found the user is congratulated (once, on any device).
 export function markVisions() {
   const ps = purposeState(),
     contrib = contributingIds();
   document.documentElement.classList.toggle('purpose', ps.on);
+  document.documentElement.classList.toggle('golden', ps.golden);
   viewEl
     .querySelectorAll<HTMLElement>('.glass[data-ctx-item], .tl-row[data-tl-node]')
     .forEach(el => el.classList.toggle('vglow', contrib.has((el.dataset.ctxItem || el.dataset.tlNode)!)));

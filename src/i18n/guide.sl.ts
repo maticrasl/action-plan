@@ -91,11 +91,11 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'smart-fit',
     group: 'stuck',
     title: 'Moj cilj ne ustreza obrazcu',
-    body: `<p>Obrazec cilja vpraša pet stvari in ga ne shrani, dokler ni vsak odgovor izpolnjen. Tako naj bi se želja spremenila v nekaj, kar lahko naredite, a lahko deluje kot izpit. Nekaj poti naprej:</p>
+    body: `<p>Obrazec cilja vpraša pet stvari. Shranite ga lahko samo z naslovom in se vrnete pozneje; črke pokažejo, kaj je še odprto. Nekaj poti naprej:</p>
 <ul>
 <li><strong>Natančen</strong> – opišite, kaj boste videli tisti dan, ko bo opravljeno. »Priti v formo« postane »Preteči od doma do jezera in nazaj brez hoje«.</li>
 <li><strong>Merljiv</strong> – če nobeno število ne ustreza, spremenite »Napredek iz« v <strong>»Opravljenih aktivnosti«</strong> (cilj je dosežen, ko so opravljeni njegovi koraki) ali <strong>»Izvajanje rutin«</strong> (cilj je to, kako redno vztrajate). Oboje sta pošteni meri.</li>
-<li><strong>Izvedljiv</strong> – en stavek o tem, zakaj zmorete: čas, ki ga imate, nekaj podobnega, kar ste že naredili, pomoč, ki jo lahko dobite. Če tega stavka ne morete napisati, cilj zmanjšajte, dokler ga ne morete.</li>
+<li><strong>Izvedljiv</strong> – poimenujte tisto, kar vas bo najverjetneje oviralo, in kaj boste naredili, ko pride. »Če sem po službi brez moči, namesto teka deset minut hodim.« Načrt za slab dan je tisto, kar naredi cilj izvedljiv.</li>
 <li><strong>Pomemben</strong> – zakaj je pomemben <em>vam</em>. »Zdravnik je rekel« je začetek; »Želim priti po stopnicah brez ustavljanja« je boljše.</li>
 <li><strong>Časovno določen</strong> – datum je ocena, ne obljuba. Izberite enega in ga premaknite, ko boste vedeli več.</li>
 </ul>
@@ -141,7 +141,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <ul>
 <li><strong>Zmanjšajte ga.</strong> Če korak čaka že več dni, ga skrajšajte, dokler ne traja deset minut. »Napiši življenjepis« postane »Odpri stari življenjepis in zapiši, kaj je zastarelo«. Težek je začetek; večina ljudi nadaljuje, ko enkrat začne.</li>
 <li><strong>Dajte mu čas in kraj.</strong> »V soboto po zajtrku za kuhinjsko mizo odprem stari življenjepis.« Korak, vezan na trenutek, je opravljen veliko pogosteje kot korak, ki ga nameravate narediti »ta teden«. Trenutek zapišite v naslov aktivnosti, dan pa v njen rok.</li>
-<li><strong>Poimenujte oviro, preden pride.</strong> Kaj vas bo najverjetneje ustavilo? Utrujenost po službi? Potem: »Če sem po službi brez moči, naredim samo pet minut.« To zapišite v »Podrobnosti«.</li>
+<li><strong>Poimenujte oviro, preden pride.</strong> Kaj vas bo najverjetneje ustavilo? Utrujenost po službi? Potem: »Če sem po službi brez moči, naredim samo pet minut.« Obrazec cilja to vpraša pod Izvedljiv; pri posameznem koraku to zapišite v »Podrobnosti«.</li>
 <li><strong>Še nocoj odstranite eno oviro.</strong> Copati pri vratih. Natisnjen obrazec. Odprt zavihek.</li>
 </ul>
 <p>Če se korak še vedno ne premakne, se vprašajte, ali si cilj želite ali le mislite, da bi ga morali. To je pošteno vprašanje, o njem govori [[let-go]].</p>`,
@@ -328,7 +328,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-goals',
     group: 'how',
     title: 'Cilji',
-    body: `<p>Cilj dodate z gumbom Dodaj v Ciljih. Obrazec vpraša pet stvari SMART; črke zasvetijo, ko jih izpolnjujete, cilj pa se shrani, ko sveti vseh pet.</p>
+    body: `<p>Cilj dodate z gumbom Dodaj v Ciljih. Obrazec vpraša pet stvari SMART; črke zasvetijo, ko jih izpolnjujete. Cilj se shrani že z naslovom; ostalo dopolnite, ko boste vedeli več.</p>
 <p><strong>»Napredek iz«</strong> določa, kako se cilj premika:</p>
 <ul>
 <li><strong>Meritve</strong> – vpišete merilo, začetno in ciljno vrednost. Povežite trenutno stanje in cilj sledi njegovi zadnji vrednosti.</li>
@@ -381,7 +381,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     group: 'how',
     title: 'Vizije in Smisel',
     body: `<p>Vizije so v pogledu Vizije in pripadajo vsem vašim načrtom skupaj. Dodajte vizijo, opišite, kako je videti, kot da je že resnična, in izberite cilje, ki ji služijo; ali pa odprite cilj in izberite »Služi vizijam«. Vizija lahko služi širšim vizijam.</p>
-<p>Pogled pove, koliko vizij je na vrhu in kateri aktivni cilji ne služijo nobeni. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj v vsakem načrtu, jo aplikacija pokaže v zlati barvi kot vaš <strong>Smisel</strong>.</p>`,
+<p>Pogled pove, koliko vizij je na vrhu in kateri aktivni cilji ne služijo nobeni. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj v vsakem načrtu, jo aplikacija pokaže v zlati barvi kot vaš <strong>Smisel</strong>.</p>
+<p>Sij okoli vsega, kar služi vašemu Smislu, je zlat, dokler je vsak aktiven cilj SMART. Napol izpolnjen shranjen cilj ga obarva srebrno, dokler ga ne dokončate.</p>`,
     action: { do: 'add-vision', label: 'Dodaj vizijo' },
     related: ['vision-how'],
   },

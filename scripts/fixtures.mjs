@@ -1,7 +1,8 @@
 /** Stored-data fixtures: proves the app reads and writes plans, sync files, exports and backups unchanged. */
-// usage: node scripts/fixtures.mjs [--generate] [app dir]
+// usage: node scripts/fixtures.mjs [--generate[=name]] [app dir]
 //   default     load each fixture into storage, boot, open every view, save, compare (npm run test:fixtures)
 //   --generate  write the fixtures from the current code (only before anything moves; never to make a test pass)
+//   --generate=name  write only that new fixture, leaving the others as they are
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
@@ -9,11 +10,12 @@ import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
 const FIX = join(ROOT, 'tests', 'fixtures');
 const PRIVATE = join(FIX, 'private');
 const CLOCK = '2026-11-16T11:00:00.000Z'; // the frozen "now" of every fixture page
-const STORAGE = ['sample-en', 'sample-sl', 'legacy-single', 'two-users', 'rich'];
+const STORAGE = ['sample-en', 'sample-sl', 'legacy-single', 'two-users', 'rich', 'goal-form'];
 const OUTPUTS = { sync: 'rich.sync.json', exportFull: 'rich.export-full.json', exportTemplate: 'rich.export-template.json', backup: 'rich.backup.json' };
 
 const args = process.argv.slice(2);
-const generate = args.includes('--generate');
+const generate = args.some(a => a.startsWith('--generate'));
+const only = args.find(a => a.startsWith('--generate='))?.slice('--generate='.length);
 const src = resolve(args.find(a => !a.startsWith('--')) || ROOT); // the app to test; fixtures stay this repo's
 
 const { dir, url, profiles, close } = await serveTestBuild(src);
@@ -35,7 +37,13 @@ const writeJson = (name, value) => writeFileSync(join(FIX, name), JSON.stringify
 const fresh = lang => ({ 'actionplan.lang': lang });
 
 async function generateAll() {
-  for (const name of ['sample-en', 'sample-sl', 'two-users', 'rich']) {
+  if (only) {
+    if (!STORAGE.includes(only) || only === 'legacy-single') throw new Error(`--generate=${only}: not a storage fixture`);
+    writeJson(`${only}.storage.json`, (await run('build:' + only, fresh('en'))).storage);
+    console.log(`wrote ${only}`);
+    return 0;
+  }
+  for (const name of ['sample-en', 'sample-sl', 'two-users', 'rich', 'goal-form']) {
     const out = await run('build:' + name, fresh(name === 'sample-sl' ? 'sl' : 'en'));
     writeJson(`${name}.storage.json`, out.storage);
     if (name === 'rich') for (const [k, file] of Object.entries(OUTPUTS)) writeJson(file, out[k]);

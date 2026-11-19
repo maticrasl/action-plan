@@ -81,15 +81,19 @@ owner may move a line; a line may not come before one it needs.
 | 10 | GitHub Issues for feedback | open |
 | 11 | Sample plan gets dates, a note, a reward | open |
 | 12 | Templates stay without personal fields | open |
-| 13 | Only the glow loses its gold | open |
-| 14 | Letters light by today's rules | open |
+| 13 | Only the glow loses its gold | changed 2026-11-18: the glow **and the blaze at the top left** lose their gold; the Purpose card and tag are always gold |
+| 14 | Letters light by today's rules | yes, 2026-11-18 |
 
 Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
-- No feature built yet. Plans written 2026-11-15 against commit `5b71e59`; the restructure (phases
-  1–10) has moved the code since: find files with `npm run map`, not by the paths in the plans.
+- Plans written 2026-11-15 against commit `5b71e59`; the restructure (phases 1–10) has moved the
+  code since: find files with `npm run map`, not by the paths in the plans.
+- `06-goal-form` built 2026-11-18 (#25), ahead of the order at the owner's request; tick it once the
+  owner has seen it work. Left out: part 5 (dropped by the owner). Its "Guidance" part: the Guide
+  articles are done with Guidance 1; the `goal-unfinished` tip and the walkthrough text wait for
+  Guidance 2 and 3.
 - Guidance 1, the Guide page, built 2026-11-19 on branch `feat/guide-page`, not ticked until the
   owner has seen it. Articles in `src/i18n/guide.en.ts` / `guide.sl.ts`; view `src/views/guide.ts`.
   Owner: the Guide is not among the views; only the `?` beside Settings opens it.
@@ -98,7 +102,5 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 - Privacy texts were checked against the code; three sentences changed (p-where: Settings loads
   Google's sign-in script; p-google: name and email read at login; p-delete: what "Remove from
   this device" removes). `tips-all` waits for Guidance 3.
-- `feat/smart-goals` (feature 06) is not merged; when it is, its Guidance part updates the
-  `smart-fit` and `h-goals` articles (they still say the form will not save until all five are lit).
 - Done 2026-11-18 outside the list: the typeface ships with the app, the page tests pass on any
   day, and two small bugs found on the way are fixed (`docs/restructure/found-bugs.md`).

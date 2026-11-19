@@ -91,11 +91,11 @@ export const guideEn = [
     id: 'smart-fit',
     group: 'stuck',
     title: 'My goal doesn’t fit the form',
-    body: `<p>The goal form asks five things and will not save until each has an answer. That is meant to turn a wish into something you can act on, but it can feel like an exam. Some ways through:</p>
+    body: `<p>The goal form asks five things. You can save with only a title and come back; the letters show what is still open. Some ways through:</p>
 <ul>
 <li><strong>Specific</strong> – describe what you would see on the day it is done. “Get fit” becomes “Run from home to the lake and back without walking”.</li>
 <li><strong>Measurable</strong> – if no number fits, change “Progress from” to <strong>“Activities done”</strong> (the goal is done when its steps are done) or <strong>“Routines kept”</strong> (the goal is how steadily you keep at it). Both are honest ways to measure.</li>
-<li><strong>Achievable</strong> – one sentence on why you can do this: time you have, something similar you did before, help you can get. If you cannot write that sentence, make the goal smaller until you can.</li>
+<li><strong>Achievable</strong> – name the one thing most likely to get in your way, and what you will do when it comes. “If I’m tired after work, I walk for ten minutes instead.” A plan for the bad day is what makes a goal realistic.</li>
 <li><strong>Relevant</strong> – why it matters <em>to you</em>. “My doctor said so” is a start; “I want to climb stairs without stopping” is better.</li>
 <li><strong>Time-bound</strong> – a date is a guess, not a promise. Choose one, and move it when you know more.</li>
 </ul>
@@ -141,7 +141,7 @@ export const guideEn = [
 <ul>
 <li><strong>Make it smaller.</strong> If a step has waited more than a few days, cut it until it takes ten minutes. “Write the CV” becomes “Open the old CV and list what is out of date”. Starting is the hard part; most people keep going once they have begun.</li>
 <li><strong>Give it a time and a place.</strong> “On Saturday after breakfast, at the kitchen table, I open the old CV.” A step tied to a moment gets done far more often than a step you mean to do “this week”. Put the moment in the activity’s title and the day in its due date.</li>
-<li><strong>Name the obstacle before it comes.</strong> What will most likely stop you? Tired after work? Then: “If I’m tired after work, I do just five minutes.” Write that in “Details”.</li>
+<li><strong>Name the obstacle before it comes.</strong> What will most likely stop you? Tired after work? Then: “If I’m tired after work, I do just five minutes.” The goal form asks this under Achievable; for a single step, write it in “Details”.</li>
 <li><strong>Remove one barrier tonight.</strong> Shoes by the door. The form printed. The tab left open.</li>
 </ul>
 <p>If a step still does not move, ask whether you want the goal or only think you ought to. That is a fair question, and [[let-go]] is about it.</p>`,
@@ -328,7 +328,7 @@ export const guideEn = [
     id: 'h-goals',
     group: 'how',
     title: 'Goals',
-    body: `<p>Add a goal with the Add button in Goals. The form asks the five SMART things; the letters light up as you fill them in, and the goal saves when all five are lit.</p>
+    body: `<p>Add a goal with the Add button in Goals. The form asks the five SMART things; the letters light up as you fill them in. A goal saves with a title alone; finish the rest when you know more.</p>
 <p><strong>“Progress from”</strong> decides how the goal moves:</p>
 <ul>
 <li><strong>A measurement</strong> – you give a metric, a starting value and a target. Link a current state and the goal follows its latest value.</li>
@@ -381,7 +381,8 @@ export const guideEn = [
     group: 'how',
     title: 'Visions and Purpose',
     body: `<p>Visions are in the Visions view and belong to all your plans together. Add one, describe what it looks like as if it were already true, and choose the goals that serve it; or open a goal and choose “Serves visions”. A vision can serve broader visions.</p>
-<p>The view tells you how many visions are at the top and which active goals serve none. When one vision is at the top of all the others and every active goal in every plan serves it, the app shows it in gold as your <strong>Purpose</strong>.</p>`,
+<p>The view tells you how many visions are at the top and which active goals serve none. When one vision is at the top of all the others and every active goal in every plan serves it, the app shows it in gold as your <strong>Purpose</strong>.</p>
+<p>The glow round everything that serves your Purpose is gold while every active goal is SMART. A goal saved half-finished turns it silver until you finish it.</p>`,
     action: { do: 'add-vision', label: 'Add a vision' },
     related: ['vision-how'],
   },

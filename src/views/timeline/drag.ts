@@ -4,7 +4,7 @@ import { addDays, lastOccurrence } from '../../core/routines/schedule';
 import { findEntity } from '../../core/relations';
 import { $, viewEl } from '../../ui/dom';
 import { ui } from '../../store/state';
-import { fmtRel, fmtSpan } from '../../core/dates';
+import { fmtRel, fmtSpan, today } from '../../core/dates';
 import { t } from '../../i18n/index';
 import { clamp } from '../../core/util';
 import { requestRender as render } from '../../ui/render';
@@ -70,8 +70,9 @@ export function previewTlDrag(d: TlDrag) {
   const { s, e } = tlDragDates(d),
     px = ui.tlPx,
     from = Number(scroll.dataset.from);
+  // A goal without a deadline runs to today (see renderTimeline).
   const a = dayNum(s || e),
-    b = dayNum(e || s),
+    b = d.kind === 'goal' && !e ? Math.max(a, dayNum(today())) : dayNum(e || s),
     left = (a - from) * px,
     width = (b - a + 1) * px;
   document.querySelectorAll(`[data-tl-node="${d.id}"]`).forEach(row => {

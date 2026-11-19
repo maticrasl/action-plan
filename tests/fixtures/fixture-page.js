@@ -211,6 +211,49 @@
       setView('timeline');
       save();
     },
+
+    // Feature 6 (goal form): a goal saved with a title alone, one with the obstacle and the plan for
+    // it, one with the old answer to "Why is this realistic?"; a Purpose found, its glow not golden.
+    'goal-form'() {
+      const life = { id: uid(), title: 'A good life', parents: [] };
+      visions.list.push(life);
+      saveVisions();
+      db.goals.push(
+        { id: uid(), title: 'Learn to cook', status: 'active', startDate: day(-3), visions: [life.id] },
+        {
+          id: uid(),
+          title: 'Run a half marathon',
+          status: 'active',
+          specific: 'Run 21 km without stopping by spring',
+          metric: 'Longest run',
+          unit: 'km',
+          baseline: '5',
+          current: '8',
+          target: '21',
+          obstacle: 'Tired after work and skip the run',
+          ifThen: 'If I am tired, I walk for ten minutes',
+          relevant: 'I want to feel strong',
+          startDate: day(-30),
+          deadline: day(150),
+          visions: [life.id],
+        },
+        {
+          id: uid(),
+          title: 'Read twelve books',
+          status: 'active',
+          specific: 'Read twelve books before the year ends',
+          metric: 'Books',
+          baseline: '0',
+          target: '12',
+          achievable: 'One a month fits my evenings',
+          relevant: 'Reading keeps me curious',
+          startDate: day(-40),
+          deadline: day(40),
+          visions: [life.id],
+        },
+      );
+      save();
+    },
   };
 
   try {

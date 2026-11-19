@@ -87,6 +87,10 @@
 .field .err:empty {
   display: none;
 }
+/* An unfinished SMART part: a hint, never an error; a refused save shows its own error instead. */
+.field.invalid .smart-hint {
+  display: none;
+}
 .row2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

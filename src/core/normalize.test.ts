@@ -4,6 +4,7 @@ import { today } from './dates';
 import { emptyDb, type Db } from './model';
 import { normalize, parsePlanFile, progressCounts, resetProgress } from './normalize';
 import { addDays, weekday } from './routines/schedule';
+import { smartCheck } from './progress';
 import { d, progressPlan } from './test-plans';
 
 // Ported from tests/more.js: the plan-file steps ("resetting progress…", "a template moves its dates…",
@@ -23,6 +24,45 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('normalize', () => {
+  test("a goal's obstacle and plan are kept as text and dropped otherwise; older goals load unchanged", () => {
+    const old = {
+      id: 'g0',
+      title: 'Read books',
+      status: 'active',
+      specific: 'Read twelve books this year',
+      metric: 'Books',
+      baseline: '0',
+      target: '12',
+      achievable: 'One a month is easy',
+      relevant: 'I want to learn',
+      startDate: '2026-01-01',
+      deadline: '2026-12-31',
+    };
+    const goals = [
+      old,
+      { id: 'g1', title: 'A', obstacle: 'Too tired', ifThen: 'Walk instead' },
+      { id: 'g2', title: 'B', obstacle: 5, ifThen: { x: 1 } },
+      { id: 'g3', title: 'C', obstacle: null, ifThen: ['a'] },
+    ];
+    const d = normalize({ goals, states: [], activities: [], relations: [] });
+    expect(d.goals[0]).toEqual(old);
+    expect(smartCheck(d.goals[0])).toMatchObject({ S: true, M: true, A: true, R: true, T: true });
+    expect([d.goals[1].obstacle, d.goals[1].ifThen]).toEqual(['Too tired', 'Walk instead']);
+    expect([
+      'obstacle' in d.goals[2],
+      'ifThen' in d.goals[2],
+      'obstacle' in d.goals[3],
+      'ifThen' in d.goals[3],
+    ]).toEqual([false, false, false, false]);
+    // A template keeps them, and the old answer.
+    const tpl = resetProgress(d, { shift: true });
+    expect([tpl.goals[0].achievable, tpl.goals[1].obstacle, tpl.goals[1].ifThen]).toEqual([
+      'One a month is easy',
+      'Too tired',
+      'Walk instead',
+    ]);
+  });
+
   test('"is related to" links are dropped; the rest stays', () => {
     const old = {
       goals: [

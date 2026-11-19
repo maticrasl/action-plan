@@ -80,10 +80,10 @@ gold. From now on:
 
 - The glow is **gold only while every active goal, in every plan, is SMART** (all five letters
   lit).
-- While any active goal is not, the glow stays as it is without a Purpose (silver). Nothing
-  else about the Purpose changes: the vision keeps its gold card and its "Purpose" tag, the
-  blaze at the top left stays gold, and the message "You have found your Purpose" is shown as
-  before.
+- While any active goal is not, the glow stays as it is without a Purpose (silver), and so does
+  the blaze at the top left (owner, 2026-11-18: "The glow and the Action App icon (top left).
+  Purpose is always golden."). The vision keeps its gold card and its "Purpose" tag, and the
+  message "You have found your Purpose" is shown as before.
 - The Visions view says why, under the line "You have found your Purpose: {name}":
 
   > The golden glow returns when every active goal is SMART. Still to finish: “Learn to cook”,
@@ -94,7 +94,7 @@ gold. From now on:
 - Paused and achieved goals do not count. Finishing the last unfinished goal brings the gold
   back at the next render, with no message.
 
-### 5. "New to this?" (small; drop it if the owner prefers)
+### 5. "New to this?" (dropped by the owner on 2026-11-18; not built)
 
 Under "Progress from" a link: **New to this? Make it a learning goal.** It sets "Progress from"
 to "Activities done" and shows the hint: "When something is new to you, aim at finding out how:
@@ -163,7 +163,7 @@ In the visions module, `purposeState()` gets one more field and keeps the rest:
 
 `markVisions` sets the page's `purpose` class from `on` as today, and a second class,
 `golden`, from `golden`. In the styles, the rule that turns the glow gold
-(`:root.purpose { --vglow: var(--vglow-gold) }`) moves to `:root.golden`. The gold blaze, the
+(`:root.purpose { --vglow: var(--vglow-gold) }`) and the gold blaze move to `:root.golden`. The
 gold Purpose card and tag, and the first-time message stay on `purpose` and `on`.
 
 The "found" line in the Visions view takes its glow from `--vglow`, so it follows by itself.

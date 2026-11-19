@@ -74,6 +74,16 @@ const mk = (kind, p = {}) => {
   collection(kind).push(x);
   return x;
 };
+// The fields that make a goal SMART, but for its dates (a deadline after its start date).
+const SMART = {
+  specific: 'Reach the level I set myself',
+  metric: 'Level',
+  baseline: '0',
+  target: '10',
+  obstacle: 'Busy weeks at work',
+  ifThen: 'Do ten minutes instead',
+  relevant: 'It matters to me',
+};
 const rel = (a, b, type) => {
   const e = addRelation(a.id, b.id, type);
   assert(!e, `${type}: ${e}`);
