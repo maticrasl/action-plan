@@ -229,7 +229,7 @@ suite(async () => {
     );
     setView('activities');
     const act = $('#view .col .card.activity');
-    assert(side(act) === 3, 'activities 3 px of glass');
+    assert(side(act) === 0 && css(act).boxShadow.includes('0px 0px 0px 1px'), 'activities flat, a 1 px edge');
     setView('goals');
     assert(side(card('doing')) === 5, 'goals 5 px of glass');
     // Milk glass: a solid face that glows from within; hovered, it takes more of its colour.

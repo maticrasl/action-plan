@@ -116,7 +116,8 @@ suite(async () => {
         getComputedStyle(node.querySelector('rect')).stroke === 'none',
       'no edge; the only blur is the glow of what is selected',
     );
-    // Goals are cut from thicker glass; the slab reaches down and to the right of the face, and casts no shadow.
+    // Goals are cut from thick glass: the slab reaches down and to the right of the face, and casts no shadow.
+    // Activities and states are flat: only an edge round the face.
     const reach = n => {
       const b = n.querySelector('use').getBBox();
       return [b.x + b.width, b.y + b.height];
@@ -124,8 +125,11 @@ suite(async () => {
     const goalBox = boxes.find(n => n.classList.contains('goal')),
       actBox = boxes.find(n => n.classList.contains('activity'));
     assert(
-      reach(actBox)[0] > MAP.NW && reach(actBox)[1] > MAP.NH && reach(goalBox)[1] > reach(actBox)[1],
-      `goals thicker: ${reach(goalBox)} vs ${reach(actBox)}`,
+      Math.round(reach(actBox)[0]) === MAP.NW &&
+        Math.round(reach(actBox)[1]) === MAP.NH &&
+        reach(goalBox)[0] > MAP.NW &&
+        reach(goalBox)[1] > MAP.NH,
+      `goals thick, activities flat: ${reach(goalBox)} vs ${reach(actBox)}`,
     );
     assert(
       slabs.every(g => !g.querySelector('[opacity]')) &&

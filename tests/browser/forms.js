@@ -38,6 +38,54 @@ suite(async () => {
     modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     assert(!modal.open, 'a real backdrop click still closes');
   });
+  await step('new item: relationships folded; open when editing or links are preset', () => {
+    const sec = () => modal.querySelector('details.link-sec');
+    for (const k of ['goal', 'state', 'vision']) {
+      openForm(k);
+      assert(sec() && !sec().open && sec().querySelector('[data-picker]'), `${k}: new form folds its link lists`);
+      modal.close();
+    }
+    openForm('activity', null, { repeat: 'once' });
+    assert(sec() && !sec().open && sec().querySelector('#f-parent'), 'activity: parent and link lists folded');
+    modal.close();
+    const g = db.goals[0];
+    openForm('goal', g.id);
+    assert(sec().open, 'editing: open');
+    modal.close();
+    openForm('activity', null, { repeat: 'once', contributes: [g.id] });
+    assert(sec().open, 'a preset link: open');
+    modal.close();
+  });
+  await step('changed form: Cancel, ×, backdrop and Escape ask before discarding', () => {
+    const realConfirm = window.confirm;
+    let asked = 0,
+      answer = false;
+    window.confirm = () => (asked++, answer);
+    try {
+      openForm('goal');
+      $('[data-close].btn').click();
+      assert(!modal.open && asked === 0, 'unchanged: closes without asking');
+      openForm('goal');
+      $('#f-title').value = 'Half typed';
+      $('#f-title').dispatchEvent(new Event('input', { bubbles: true }));
+      $('[data-close].btn').click();
+      assert(modal.open && asked === 1, 'Cancel asks; No keeps the form');
+      $('.modal-head [data-close]').click();
+      modal.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const esc = new Event('cancel', { cancelable: true });
+      modal.dispatchEvent(esc);
+      assert(modal.open && asked === 4 && esc.defaultPrevented, '×, backdrop and Escape ask too');
+      assert($('#f-title').value === 'Half typed', 'what was typed is kept');
+      answer = true;
+      $('[data-close].btn').click();
+      assert(!modal.open && asked === 5, 'Yes discards and closes');
+      assert(!db.goals.some(x => x.title === 'Half typed'), 'nothing saved');
+    } finally {
+      window.confirm = realConfirm;
+      if (modal.open) modal.close();
+    }
+  });
   await step('bad number is rejected', () => {
     openForm('state');
     $('#f-title').value = 'Bad number state';

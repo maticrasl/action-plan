@@ -11,7 +11,7 @@ import { updateProgressFields, updateSmartLive } from './goal';
 import { updateStateFields } from './state';
 import { addListRow, placeListRow, updateRepeatFields } from './activity';
 import { fillRelTypes } from './relation';
-import { finish, formCtx, modal, openForm, submitForm } from './form';
+import { finish, formChanged, formCtx, modal, openForm, submitForm } from './form';
 
 $('#modalForm').addEventListener('keydown', e => {
   // Ctrl+Enter (⌘+Enter on a Mac) saves from any field; the pickers and lists below never see it.
@@ -220,14 +220,17 @@ $('#modalForm').addEventListener('keydown', e => {
   focusDay();
 });
 // Escape closes the calendar, not the whole form; so does a click anywhere else.
+// Escape on a changed form asks first, as Cancel, × and a click outside do.
 modal.addEventListener('cancel', e => {
-  if (!cal) return;
-  e.preventDefault();
-  closeCalendar(true);
+  if (cal) {
+    e.preventDefault();
+    closeCalendar(true);
+  } else if (formChanged() && !confirm(t('confirm.discard'))) e.preventDefault();
 });
 
 modal.addEventListener('click', e => {
-  if (e.target === modal || (e.target as HTMLElement).closest('[data-close]')) modal.close();
+  if (e.target !== modal && !(e.target as HTMLElement).closest('[data-close]')) return;
+  if (!formChanged() || confirm(t('confirm.discard'))) modal.close();
 });
 $('#deleteBtn').addEventListener('click', () => {
   const { kind, id } = formCtx!;

@@ -139,7 +139,7 @@ suite(async () => {
     assert(ev.defaultPrevented && !ctxMenu.hidden, 'the menu opens instead of the browser menu');
     eq(
       [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx),
-      ['new:goal', 'new:activity', 'new:state', 'new:vision'],
+      ['new:vision', 'new:goal', 'new:activity', 'new:state'],
       'what the Add button offers',
     );
     ctxMenu.style.animation = 'none';

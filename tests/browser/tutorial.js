@@ -85,6 +85,21 @@ suite(async () => {
     setHelp(false);
     return per.join(' ');
   });
+  await step('Escape: closes a tip first, then help mode; not while a dialog is open', () => {
+    const esc = () =>
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    setView('goals');
+    setHelp(true);
+    $('[data-help-tip]').click();
+    esc();
+    assert(!$('#helpTip') && ui.help, 'first Escape closes only the tip');
+    $('#modal').showModal();
+    esc();
+    assert(ui.help, 'help stays on while a dialog is open');
+    $('#modal').close();
+    esc();
+    assert(!ui.help && $('#helpBtn').getAttribute('aria-pressed') === 'false', 'next Escape ends help mode');
+  });
   await step('tour: every step target resolves', async () => {
     setView('dashboard');
     const planCount = plans.list.length;

@@ -6,7 +6,7 @@ import { t } from '../../i18n/index';
 import { totalText, withUnit } from '../text';
 import { fmtDate, fmtRel, today } from '../../core/dates';
 import { $, esc } from '../dom';
-import { checklist } from './picker';
+import { checklist, linkSection } from './picker';
 import { db } from '../../core/state';
 import { area, date, field, formCtx, num, select, text, type New } from './form';
 import type { Entry, State } from '../../core/model';
@@ -31,7 +31,7 @@ export function stateForm(s: New<State>) {
       ${field('value', t('f.value'), num('value', '', t('f.optional')), `<span id="valueHint" data-plain="${esc(latest)}"></span>`)}
       ${field('date', t('f.asOf'), date('date', today()))}
     </div>
-    ${checklist('goals', t('f.describesGoals'), 'goal', db.goals, linked, t('f.describesHint'))}
+    ${linkSection(checklist('goals', t('f.describesGoals'), 'goal', db.goals, linked, t('f.describesHint')), !!s.id)}
     ${history.length > 1 ? `<div class="field" id="historyList"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtRel(h.date, true)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}
     ${isCumulative(s as State) && entriesOf(s as State).length ? entryList(s as State) : ''}`;
 }

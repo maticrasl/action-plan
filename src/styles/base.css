@@ -57,18 +57,18 @@
      On the map their slab and light are drawn by the map (GLASS in app.js), which reads this base and the item
      and status colours (--goal, --ok, …) as #RRGGBB: keep those six-digit hex in every theme. */
   --glass-base: #ffffff;
-  --glass-tint: 12%;
-  --glass-tint-state: 14%;
+  --glass-tint: 24%;
+  --glass-tint-state: 26%;
   --glass-alpha: 1;
   /* Outside the map, items are the same glass in CSS: their side is milky, a little of their tint, shaded by
      --glass-dim; the light from above leaves --glass-spec on the face, and --glass-rim is its lit top edge. */
-  --glass-side-tint: 28%;
+  --glass-side-tint: 48%;
   --glass-dim: 0%;
   --glass-spec: rgb(255 255 255 / 0.9);
   --glass-rim: rgb(255 255 255 / 0.9);
   /* Grey items (still to do, waiting) take more of their grey, so they don't fade into the page. */
-  --glass-tint-quiet: 24%;
-  --glass-side-quiet: 50%;
+  --glass-tint-quiet: 32%;
+  --glass-side-quiet: 60%;
   /* Menus, dialogs and fields are clear glass: what is behind them shows faintly through. */
   --pane: color-mix(in srgb, var(--surface) 88%, transparent);
   --field: color-mix(in srgb, var(--surface) 62%, transparent);

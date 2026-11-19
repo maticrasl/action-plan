@@ -56,7 +56,7 @@ export function setIncoming(toId: string, type: RelType, fromIds: string[]) {
 
 export const modal = $<HTMLDialogElement>('#modal');
 // The open form; `choose` holds a new activity's links while it asks whether the activity repeats.
-export let formCtx: { kind: FormKind; id: string | null; choose?: Links } | null = null;
+export let formCtx: { kind: FormKind; id: string | null; choose?: Links; snap?: string } | null = null;
 
 export function field(name: string, label: string, input: string, hint = '') {
   return `<div class="field" data-field="${name}"><label for="f-${name}">${label}</label>${input}${hint ? `<div class="hint">${hint}</div>` : ''}<div class="err"></div></div>`;
@@ -119,9 +119,20 @@ export function openForm(kind: FormKind, id: string | null = null, links: Links 
   }
   if (kind === 'activity') updateRepeatFields();
   if (kind === 'state') updateStateFields();
+  formCtx.snap = formSnapshot();
   if (!modal.open) modal.showModal();
   if (!item) setTimeout(() => modal.querySelector<HTMLElement>('input, select, textarea')?.focus(), 30);
 }
+
+// What the form holds now (its fields, and entries marked for deletion), to tell whether anything was changed.
+const formSnapshot = () =>
+  JSON.stringify([
+    ...[...modal.querySelectorAll<HTMLInputElement>('input:not(.picker-search), select, textarea')].map(i =>
+      i.type === 'checkbox' || i.type === 'radio' ? i.checked : i.value,
+    ),
+    modal.querySelectorAll('.dropped').length,
+  ]);
+export const formChanged = () => formCtx?.snap !== undefined && formSnapshot() !== formCtx.snap;
 
 // Targets an item links to by relation type – stored relations, or the presets of a new item.
 export const linksOf = (item: New<Item>, type: RelType): string[] =>
@@ -164,6 +175,7 @@ export function showErrors(errs: Errors) {
   const first = modal.querySelector<HTMLElement>(
     '.field.invalid input, .field.invalid textarea, .field.invalid select',
   );
+  first?.closest('details')?.setAttribute('open', '');
   first?.focus();
 }
 

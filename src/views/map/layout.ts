@@ -41,7 +41,7 @@ export const GLASS = {
   EYE: [86, 28, 300],
   GLOSS: 25,
   // quiet: the side of grey boxes still to do or waiting, as --glass-side-quiet does for cards (by night it matches sideTint).
-  day: { sideTint: 0.26, quiet: 0.5, deepen: 0, ambient: 0.97, reflect: 0.55, spec: 0.75, faceShade: 0.03 },
+  day: { sideTint: 0.5, quiet: 0.6, deepen: 0, ambient: 0.97, reflect: 0.3, spec: 0.75, faceShade: 0.03 },
   // By night only the brightness changes (on the dark base more tint would look lighter), and states take more colour.
   night: { sideTint: 0.38, stateTint: 0.46, deepen: 0, ambient: 0.75, reflect: 0.14, spec: 0.16, faceShade: 0.08 },
 };

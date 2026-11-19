@@ -100,8 +100,21 @@ document.addEventListener(
   },
   true,
 );
-addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeHelpTip();
-});
+// Escape closes an open tip, or else ends help mode when nothing else (a dialog, menu, the tour) takes it.
+// Capture phase: it must see those still open, before their own Escape closes them.
+addEventListener(
+  'keydown',
+  e => {
+    if (e.key !== 'Escape') return;
+    if ($('#helpTip')) closeHelpTip();
+    else if (
+      ui.help &&
+      !ui.mapLinkFrom &&
+      !document.querySelector('dialog[open], [role="dialog"], #ctxMenu:not([hidden]), #navSheet:not([hidden])')
+    )
+      setHelp(false);
+  },
+  true,
+);
 addEventListener('resize', closeHelpTip);
 addEventListener('scroll', closeHelpTip, true);
