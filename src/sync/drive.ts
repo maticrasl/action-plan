@@ -1,9 +1,10 @@
 /** Google Drive client: access token, account lookup, and reading and writing the sync file. */
 import { currentUser, saveUsers, userSession, users } from '../store/users';
 import { GOOGLE_CLIENT_ID } from './config';
-import { mergeStores, type Store } from '../core/merge';
+import { mergeStores, type FullStore, type Store } from '../core/merge';
 import { normalize, safeId } from '../core/normalize';
 import { normalizeVisions } from '../core/visions';
+import { readTips } from '../core/guidance/tip-history';
 import type { IdSet, ISOTime, Plan, User } from '../core/model';
 
 // The part of Google's sign-in script (loaded at run time by loadGis) this uses.
@@ -40,7 +41,7 @@ export interface Account {
 // The sync file in Drive: its id, content, and the ids of extra copies to remove.
 export interface Remote {
   id: string | null;
-  content: Required<Store> | null;
+  content: FullStore | null;
   extra: string[];
 }
 
@@ -210,7 +211,7 @@ export const drive = {
     ).json();
     const files = list.files || [];
     if (!files.length) return { id: null, content: null, extra: [] };
-    const contents: Required<Store>[] = [];
+    const contents: FullStore[] = [];
     for (const f of files)
       contents.push(parseStore(await (await driveFetch(token, `${DRIVE_API}/${f.id}?alt=media`)).text()));
     return {
@@ -252,9 +253,10 @@ type RawFile = {
   plans?: { list?: Plan[]; deleted?: IdSet<ISOTime> };
   data?: Record<string, unknown>;
   visions?: unknown;
+  tips?: unknown;
 } | null;
 
-export function parseStore(text: string): Required<Store> {
+export function parseStore(text: string): FullStore {
   let raw: RawFile;
   try {
     raw = JSON.parse(text);
@@ -267,6 +269,7 @@ export function parseStore(text: string): Required<Store> {
     plans: { list, deleted: raw.plans.deleted && typeof raw.plans.deleted === 'object' ? raw.plans.deleted : {} },
     data: Object.fromEntries(list.map(p => [p.id, normalize(raw.data?.[p.id])])),
     visions: normalizeVisions(raw.visions),
+    ...(raw.tips !== undefined && { tips: readTips(raw.tips) }),
   };
 }
 
@@ -276,5 +279,6 @@ export const toFile = (store: Store) => ({
   plans: store.plans,
   data: store.data,
   visions: store.visions,
+  ...(store.tips && { tips: store.tips }),
 });
 export type SyncFile = ReturnType<typeof toFile>;

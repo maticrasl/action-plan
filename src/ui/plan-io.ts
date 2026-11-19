@@ -19,7 +19,7 @@ import { toast } from './toast';
 import { uid } from '../core/util';
 import { SYNC_FORMAT, parseStore, toFile } from '../sync/drive';
 import { localStore } from '../sync/sync';
-import type { Store } from '../core/merge';
+import type { FullStore, Store } from '../core/merge';
 import { Db, SYNC_COLLS } from '../core/model';
 import { userStorage } from '../store/users';
 import { saveVisions } from '../store/visions';
@@ -171,7 +171,7 @@ export function backupAll() {
 
 // Reads a backup file; throws an error with code 'invalid', 'plan' (a single plan's export) or
 // 'version' (from a newer app).
-export function parseBackup(text: string): { store: Required<Store>; exportedAt?: string } {
+export function parseBackup(text: string): { store: FullStore; exportedAt?: string } {
   const fail = (code: string) => Object.assign(new Error(code), { code });
   let raw: { format?: unknown; version?: number; exportedAt?: string; [k: string]: unknown } | null;
   try {
@@ -191,7 +191,7 @@ export function parseBackup(text: string): { store: Required<Store>; exportedAt?
 
 // Adds every plan in the backup as a new plan named "{name} ({date of the backup})" and the visions
 // whose id is not here. The open plan stays open. Returns how many of each were added.
-export function restoreBackup({ store, exportedAt }: { store: Required<Store>; exportedAt?: string }) {
+export function restoreBackup({ store, exportedAt }: { store: FullStore; exportedAt?: string }) {
   const at = new Date(exportedAt!);
   const date = isNaN(+at) ? '' : ` (${fmtDate(isoDate(at))})`;
   let added = 0;
