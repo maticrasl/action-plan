@@ -186,6 +186,7 @@ export interface Db {
 // The plan index (actionplan.plans).
 export interface Plan extends Item {
   name: string;
+  demo?: true; // the sample plan: not the user's own (no walkthrough ticks there); older versions ignore it
 }
 export interface PlanList {
   current: string | null;

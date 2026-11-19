@@ -1,4 +1,4 @@
-/** Page tests: make-up days and their form option, nothing depending on a routine, the sample and tour. */
+/** Page tests: make-up days and their form option, nothing depending on a routine, the sample. */
 suite(async () => {
   await step('routines: set days can be made up on another day', () => {
     fresh('Make up');
@@ -175,7 +175,7 @@ suite(async () => {
     assert(t('help.tip.routines').includes('made up'), 'help explains making up');
     deletePlan(plans.current);
   });
-  await step('routines: sample plan, tour and wording', () => {
+  await step('routines: sample plan and wording', () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
       loadSample();
@@ -281,12 +281,6 @@ suite(async () => {
     );
     eq(periodText(at({ every: 1, unit: 'month' }, addDays(now, 40))), next(addDays(now, 40)), 'not started yet');
     eq(periodText({ ...offWeek, dueDate: addDays(now, 3) }), t('rt.ended'), 'not due again before it ends');
-    const i = TOUR_STEPS.findIndex(x => x.key === 'routines');
-    assert(
-      TOUR_STEPS[i - 1].key === 'activities' && TOUR_STEPS[i].target[0] === '.routines',
-      'tour step after activities',
-    );
-    assert(t('tour.routines.text').includes('streak') && sl['tour.routines.text'].includes('niz'), 'tour text');
     return db.activities
       .filter(isRoutine)
       .map(a => `${a.title}: ${periodText(a)}, ${streakText(routineStreak(a))}`)

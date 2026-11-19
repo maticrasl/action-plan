@@ -50,8 +50,8 @@ strings (always through `esc()` for user text) and replace the view's content.
 - Only `main.ts` runs code at load time (imports may be circular). Reassigned state is
   `export let` plus a setter in its owning module; others change it only through the setter.
 - Texts: `i18n/en.ts`, `i18n/sl.ts` (SL must have every EN key; the compiler checks). Sample
-  plan: `ui/sample.ts` with its texts in the i18n files. Tour: `tutorial/tour.ts`; help tips:
-  `tutorial/help.ts`.
+  plan: `ui/sample.ts` with its texts in the i18n files. Getting started (walkthrough):
+  `core/guidance/walk.ts` (tasks, checks), `tutorial/walkthrough.ts`; help tips: `tutorial/help.ts`.
 - Tests: unit tests beside the module (`x.test.ts`, Node); a module that touches `document`
   while loading (most of `views/`, `ui/`) is tested by page tests in `tests/browser/`. See `tests/README.md`.
 
@@ -66,8 +66,8 @@ strings (always through `esc()` for user text) and replace the view's content.
   stay readable by and from older versions. Add fields with a default in `core/normalize.ts`;
   never rename or reuse one. A change here needs a fixture in `tests/fixtures/` written by the
   old code. Never regenerate a fixture's expected output to make it pass. See `docs/decisions.md`.
-- **Every user-facing change:** texts in `i18n/en.ts` and `i18n/sl.ts`; tour steps and help
-  tips if a control was added, moved or renamed; the Guide's articles (`i18n/guide.en.ts`,
+- **Every user-facing change:** texts in `i18n/en.ts` and `i18n/sl.ts`; Getting started's tasks and
+  help tips if a control was added, moved or renamed; the Guide's articles (`i18n/guide.en.ts`,
   `guide.sl.ts`) that describe it; the sample plan if it uses the feature; phone layout
   (`npm run shot -- <view> --phone`).
 - User-facing guidance follows the voice rules in `docs/guidance/README.md`.

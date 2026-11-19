@@ -123,6 +123,7 @@ export function renderGuide() {
       <input type="search" id="guideSearch" class="search guide-search" data-guide-search value="${esc(guideState.query)}" placeholder="${esc(t('guide.search'))}" aria-label="${esc(t('guide.search'))}" autocomplete="off" spellcheck="false">
       <label class="guide-switch switch"><span>${esc(t('btn.help'))}</span><input type="checkbox" data-guide-help${ui.help ? ' checked' : ''}></label>
     </div>
+    <div class="guide-walk" data-walk-slot></div>
     <p class="guide-none" role="status"${shown.size ? ' hidden' : ''}>${esc(t('guide.noMatch', { query: guideState.query.trim() }))}</p>
     ${groups}
   </div>`;

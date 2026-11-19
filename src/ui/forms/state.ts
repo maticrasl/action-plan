@@ -8,11 +8,11 @@ import { fmtDate, fmtRel, today } from '../../core/dates';
 import { $, esc } from '../dom';
 import { checklist } from './picker';
 import { db } from '../../core/state';
-import { area, date, field, formCtx, num, select, text, type New } from './form';
+import { area, date, field, formCtx, linksOf, num, select, text, type New } from './form';
 import type { Entry, State } from '../../core/model';
 
 export function stateForm(s: New<State>) {
-  const linked = s.id ? relsFrom(s.id, 'measures').map(r => r.to) : [];
+  const linked = s.id ? relsFrom(s.id, 'measures').map(r => r.to) : linksOf(s, 'measures');
   const history = (s.history || []).slice().sort((a, b) => b.date.localeCompare(a.date));
   // The value field records a new measurement, so it starts empty and dated today.
   const latest =

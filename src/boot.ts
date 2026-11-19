@@ -18,7 +18,9 @@ import { reachedQueue } from './ui/reached';
 import { hideToast } from './ui/toast';
 import { THEMES, applyTheme, renderSettings, setTheme } from './ui/settings';
 import { renderPlanSwitch, storedHealth } from './ui/plan-switcher';
-import { endTour, isTourRunning } from './tutorial/tour';
+import { forgetWalk } from './store/walk';
+import { clearSpotlight } from './tutorial/spotlight';
+import { closeWelcome } from './tutorial/welcome';
 import { VIEWS, render } from './views/index';
 import { MAP } from './views/map/layout';
 import { TL } from './views/timeline/render';
@@ -66,7 +68,9 @@ export function bootUser() {
 // Another user takes over this device: nothing of the one before stays in memory, on screen or
 // in a sync on its way (syncNow stops itself). Returns true on that user's first visit.
 export function enterUser(id: string) {
-  if (isTourRunning()) endTour(false);
+  clearSpotlight();
+  closeWelcome();
+  forgetWalk();
   closeCtxMenu();
   closeAmountPop();
   reachedQueue.length = 0; // "goal reached" popups still waiting were the other user's

@@ -491,7 +491,7 @@ suite(async () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
       const words = { en: [/Delete/, /double-click/i, /Enter/], sl: [/Delete/, /dvojnim klik/i, /Enter/] }[code];
-      for (const key of ['help.view.map', 'tour.map.text'])
+      for (const key of ['help.view.map'])
         words.forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
       assert(t('map.relLabel', { rel: 'x' }).includes('x'), `${code} line label`);
     }

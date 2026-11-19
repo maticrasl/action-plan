@@ -6,7 +6,7 @@ const cases = [
   // [file, import line, expect an error]
   ['src/core/x.ts', "import { esc } from '../ui/dom';", true],
   ['src/ui/x.ts', "import { render } from '../views/index';", true],
-  ['src/views/x.ts', "import { endTour } from '../tutorial/tour';", true],
+  ['src/views/x.ts', "import { clearSpotlight } from '../tutorial/spotlight';", true],
   ['src/views/goals.ts', "import { renderMap } from './map/render';", true],
   ['src/views/filters.ts', "import { renderMap } from './map/render';", true],
   ['src/views/dashboard.ts', "import { render } from './index';", true],
@@ -18,7 +18,7 @@ const cases = [
   ['src/views/events.ts', "import { renderMap } from './map/render';", false],
   ['src/views/index.ts', "import { renderGoals } from './goals';", false],
   ['src/tutorial/x.ts', "import { render } from '../views/index';", false],
-  ['src/boot.ts', "import { endTour } from './tutorial/tour';", false],
+  ['src/boot.ts', "import { clearSpotlight } from './tutorial/spotlight';", false],
   ['src/test-bridge.ts', "import { modules } from './test-modules';", false],
   ['src/views/map/zoom.ts', "import { tlDrag } from '../timeline/drag';", false], // allowed in eslint.config.js
 ];

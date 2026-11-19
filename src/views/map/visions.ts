@@ -114,11 +114,6 @@ export const visionDefs = (W: number, H: number) =>
   `<filter id="vision-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="12" result="b"/><feComposite in="b" in2="SourceGraphic" operator="out"/></filter>` +
   `<filter id="vision-line-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="8"/></filter>`;
 
-// Whether the tour is on, set from main.ts (the tutorial sits above the views): it holds back the congratulations.
-export let tourRunning = () => false;
-export function setTourRunning(v: () => boolean) {
-  tourRunning = v;
-}
 // Items working toward a vision glow in every view. With a Purpose (`purpose`) and every active goal
 // SMART (`golden`) the glow turns gold, the logo at the top left too; the Purpose card and tag are gold
 // either way. The first time a Purpose is found the user is congratulated (once, on any device).
@@ -130,7 +125,7 @@ export function markVisions() {
   viewEl
     .querySelectorAll<HTMLElement>('.glass[data-ctx-item], .tl-row[data-tl-node]')
     .forEach(el => el.classList.toggle('vglow', contrib.has((el.dataset.ctxItem || el.dataset.tlNode)!)));
-  if (!ps.on || visions.purposeFound || tourRunning()) return;
+  if (!ps.on || visions.purposeFound) return;
   visions.purposeFound = today();
   saveVisions();
   $('#purposeText').textContent = t('purpose.text', { name: ps.root!.title });

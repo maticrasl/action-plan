@@ -11,7 +11,7 @@ import { toast } from './toast';
 
 // A plan that exercises every feature: all relationship types, sub-goals, three levels of
 // sub-activities, dependency chains, and every status (not started, in progress, late, waiting, done).
-// The sample plan's data (also used by the guided tour in tutorial.js).
+// The sample plan's data.
 export function sampleData(): Omit<Db, 'deleted'> {
   const d = (n: number) => {
     const x = new Date();
@@ -356,7 +356,8 @@ export function sampleData(): Omit<Db, 'deleted'> {
   return data;
 }
 
+// Marked as a demo: a banner says so, and Getting started neither shows nor ticks there.
 export function loadSample() {
-  createPlan(uniqueName(t('plan.sampleName')), sampleData() as Db);
+  createPlan(uniqueName(t('plan.sampleName')), sampleData() as Db, true);
   toast(t('toast.sample'));
 }
