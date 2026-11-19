@@ -26,7 +26,7 @@ first.
 
 - [x] Restructure finished (phase 10 done; see `docs/restructure/STATUS.md`) 2026-11-18
 - [x] Guidance 1: Guide page (`docs/guidance/01-guide-page.md`) 2026-11-19
-- [ ] Guidance 2: Walkthrough (`docs/guidance/02-walkthrough.md`)
+- [x] Guidance 2: Walkthrough (`docs/guidance/02-walkthrough.md`) 2026-11-19
 - [ ] Guidance 3: Tips (`docs/guidance/03-tips.md`)
 
 `feedback-link` below needs only the restructure. It may be built before the guidance work; its
@@ -94,7 +94,7 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   owner has seen it work. Left out: part 5 (dropped by the owner). Its `goal-unfinished` tip waits
   for Guidance 3.
 - Guidance 2, Getting started, built 2026-11-19 on branch `feat/walkthrough` (one session, as the
-  owner chose); not ticked until the owner has seen it. Design and where it differs from the plan:
+  owner chose); shipped as #28, reviewed by the owner and ticked 2026-11-19. Design and where it differs from the plan:
   `docs/specs/2026-11-19-walkthrough.md`. The tour is gone; the language picker and the Show me
   ring stay (`tutorial/welcome.ts`, `tutorial/spotlight.ts`). Guidance decisions 1, 2, 4, 5
   confirmed 2026-11-19.
