@@ -136,6 +136,53 @@ describe('Purpose', () => {
     ps = purposeOf(both);
     expect([ps.on, ps.active]).toEqual([false, 0]);
   });
+
+  test('the golden glow needs every active goal, in every plan, SMART', () => {
+    const smart: Partial<Goal> = {
+      specific: 'Run a marathon in under four hours',
+      metric: 'Marathons',
+      baseline: '0',
+      target: '1',
+      obstacle: 'Bad weather days',
+      ifThen: 'Run on the treadmill',
+      relevant: 'Fitness matters to me',
+      startDate: '2026-01-01',
+      deadline: '2026-12-31',
+    };
+    const A = mkV('A meaningful life');
+    const g1 = goal({ ...smart, title: 'Marathon', visions: [A.id] }),
+      g2 = goal({ title: 'Cook more', visions: [A.id] });
+    const other = emptyDb();
+    const og = goal({ title: 'Sleep better', visions: [A.id] }, other);
+    const both: PlanData[] = [
+      { plan: planA, data: db },
+      { plan: planB, data: other },
+    ];
+    let ps = purposeOf(both);
+    expect([ps.on, ps.golden, ps.vague.map(v => [v.goal.id, v.plan.id])]).toEqual([
+      true,
+      false,
+      [
+        [g2.id, planA.id],
+        [og.id, planB.id],
+      ],
+    ]);
+    expect(ps.vague.some(v => v.goal.id === g1.id)).toBe(false);
+    g2.status = 'paused';
+    og.status = 'achieved';
+    ps = purposeOf(both);
+    expect([ps.on, ps.golden, ps.vague]).toEqual([true, true, []]);
+    og.status = 'active';
+    Object.assign(og, smart);
+    expect(purposeOf(both).golden).toBe(true);
+    // No Purpose, no gold, whatever the goals.
+    mkV('A second root');
+    ps = purposeOf(both);
+    expect([ps.on, ps.golden, ps.vague]).toEqual([false, false, []]);
+    // Vague goals are listed without a Purpose too.
+    g1.deadline = undefined;
+    expect(purposeOf(both).vague.map(v => v.goal.id)).toEqual([g1.id]);
+  });
 });
 
 describe('mergeVisions', () => {

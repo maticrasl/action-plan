@@ -57,6 +57,10 @@ export function normalize(input: unknown): Db {
   d.relations = dropRoutineDeps(d.relations, d.activities);
   if (data?.deleted && typeof data.deleted === 'object' && !Array.isArray(data.deleted))
     d.deleted = data.deleted as IdSet<ISOTime>;
+  d.goals.forEach(g => {
+    if (typeof g.obstacle !== 'string') delete g.obstacle;
+    if (typeof g.ifThen !== 'string') delete g.ifThen;
+  });
   d.activities.forEach(a => {
     if (Array.isArray(a.list)) a.list = a.list.filter(i => i && safeId(i.id) && typeof i.text === 'string');
     else delete a.list;

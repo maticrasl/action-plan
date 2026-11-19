@@ -81,15 +81,19 @@ owner may move a line; a line may not come before one it needs.
 | 10 | GitHub Issues for feedback | open |
 | 11 | Sample plan gets dates, a note, a reward | open |
 | 12 | Templates stay without personal fields | open |
-| 13 | Only the glow loses its gold | open |
-| 14 | Letters light by today's rules | open |
+| 13 | Only the glow loses its gold | changed 2026-11-18: the glow **and the blaze at the top left** lose their gold; the Purpose card and tag are always gold |
+| 14 | Letters light by today's rules | yes, 2026-11-18 |
 
 Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
-- No feature built yet. Plans written 2026-11-15 against commit `5b71e59`; the restructure (phases
-  1–10) has moved the code since: find files with `npm run map`, not by the paths in the plans.
+- Plans written 2026-11-15 against commit `5b71e59`; the restructure (phases 1–10) has moved the
+  code since: find files with `npm run map`, not by the paths in the plans.
+- `06-goal-form` built 2026-11-18 on `feat/smart-goals`, ahead of the order at the owner's request
+  (it needs nothing before it); `check` passes. Tick it once the owner has seen it work. Left out:
+  part 5 (learning-goal link, dropped by the owner) and the "Guidance" part (Guide articles, the
+  `goal-unfinished` tip, the walkthrough text): add those with Guidance 1–3.
 - Next open line: Guidance 1, the Guide page. `feedback-link` may come first (see above).
 - Done 2026-11-18 outside the list: the typeface ships with the app (findings 12; the Guide's privacy
   article in `docs/guidance/guide-content.en.md` already says so), the page tests pass on any

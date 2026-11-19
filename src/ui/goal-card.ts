@@ -9,6 +9,7 @@ import {
   goalProgress,
   goalRoutines,
   goalState,
+  hasPercent,
   measuringState,
 } from '../core/progress';
 import { isRoutine } from '../core/routines/schedule';
@@ -35,7 +36,7 @@ export function goalCard(g: Goal) {
   return `<article class="card glass goal st-${goalState(g)}" data-open="${g.id}" data-ctx-item="${g.id}">
     <div class="card-head"><h3>${esc(g.title)}</h3>${smartBadge(g)}</div>
     ${g.category ? `<div><button type="button" class="tag cat" data-category="${esc(g.category)}">${esc(g.category)}</button></div>` : ''}
-    <p class="desc">${esc(g.specific)}</p>
+    ${g.specific ? `<p class="desc">${esc(g.specific)}</p>` : ''}
     ${
       byRoutines(g)
         ? `${trail(pct, '0 %', '100 %')}
@@ -43,8 +44,10 @@ export function goalCard(g: Goal) {
         : measured
           ? `${trail(pct, '0', esc(tp('goals.actsTotal', counted)))}
     <div class="meta"><span>${t('f.progressActs')}: <strong>${goalCurrent(g)} / ${counted}</strong></span></div>`
-          : `${trail(pct, `${fmtNum(isNum(g.baseline) ? g.baseline! : 0)}${unit}`, `${fmtNum(g.target!)}${unit}`)}
-    <div class="meta"><span>${esc(g.metric)}: <strong>${fmtNum(goalCurrent(g))}${unit}</strong></span></div>
+          : !hasPercent(g)
+            ? `<p class="meta no-target">${t('goals.noTarget')}</p>`
+            : `${trail(pct, `${fmtNum(isNum(g.baseline) ? g.baseline! : 0)}${unit}`, `${fmtNum(g.target!)}${unit}`)}
+    <div class="meta"><span>${g.metric?.trim() ? esc(g.metric) : t('goals.progress')}: <strong>${fmtNum(goalCurrent(g))}${unit}</strong></span></div>
     ${isCumulative(st) && goalPeriod(g) !== 'total' ? `<div class="meta cu-periods">${esc(t(('cu.goalLine.' + goalPeriod(g)) as TextKey, { now: withUnit(fmtNum(stateTotal(st, goalPeriod(g))), st.unit || g.unit || ''), last: withUnit(fmtNum(lastPeriodTotal(st, goalPeriod(g) as Period)), st.unit || g.unit || '') }))}</div>` : ''}`
     }
     <div class="meta">

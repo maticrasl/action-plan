@@ -11,7 +11,10 @@ import {
   goalProgress,
   goalReached,
   goalScope,
+  goalErrors,
   goalState,
+  hasPercent,
+  isSmart,
   smartCheck,
 } from './progress';
 import { addRelation } from './relations';
@@ -201,6 +204,92 @@ test('SMART check edge cases', () => {
   expect(smartCheck({ ...good, target: '0' }).errs.target).toBe(t('err.targetSame'));
   expect(smartCheck({ ...good, startDate: '2099-12-31' }).errs.deadline).toBe(t('err.deadlineOrder'));
   expect(smartCheck({ ...good, target: 'many' }).errs.target).toBe(t('err.target'));
+});
+
+describe('a goal saves unfinished; the letters still need real answers', () => {
+  const smart: Goal = {
+    id: 'g',
+    status: 'active',
+    title: 'Read books',
+    specific: 'Read twelve books this year',
+    metric: 'Books',
+    baseline: '0',
+    target: '12',
+    obstacle: 'Too tired at night',
+    ifThen: 'Read on the bus',
+    relevant: 'I want to learn',
+    startDate: '2026-01-01',
+    deadline: '2099-12-31',
+  };
+
+  test('each letter on both sides of its threshold', () => {
+    const lit = (g: Partial<Goal>) => {
+      const c = smartCheck({ ...smart, ...g });
+      return 'SMART'
+        .split('')
+        .filter(l => c[l as 'S'])
+        .join('');
+    };
+    expect(lit({})).toBe('SMART');
+    expect(lit({ title: 'Run' })).toBe('MART');
+    expect(lit({ title: 'Runs' })).toBe('SMART');
+    expect(lit({ specific: 'x'.repeat(14) })).toBe('MART');
+    expect(lit({ specific: 'x'.repeat(15) })).toBe('SMART');
+    expect(lit({ metric: ' ' })).toBe('SART');
+    expect(lit({ target: '' })).toBe('SART');
+    expect(lit({ target: '0' })).toBe('SART');
+    expect(lit({ progress: 'activities', metric: '', target: '' })).toBe('SMART');
+    expect(lit({ relevant: 'x'.repeat(9) })).toBe('SMAT');
+    expect(lit({ relevant: 'x'.repeat(10) })).toBe('SMART');
+    expect(lit({ deadline: '' })).toBe('SMAR');
+    expect(lit({ deadline: '2026-01-01' })).toBe('SMAR');
+    expect(lit({ deadline: '2026-01-02' })).toBe('SMART');
+  });
+
+  test('A: both new answers, or the old one', () => {
+    const A = (g: Partial<Goal>) => smartCheck({ ...smart, obstacle: '', ifThen: '', achievable: '', ...g }).A;
+    const ten = 'x'.repeat(10),
+      nine = 'x'.repeat(9);
+    expect(A({ obstacle: ten, ifThen: ten })).toBe(true);
+    expect(A({ obstacle: ten, ifThen: nine })).toBe(false);
+    expect(A({ obstacle: ten })).toBe(false);
+    expect(A({ ifThen: ten })).toBe(false);
+    expect(A({ achievable: ten })).toBe(true);
+    expect(A({ achievable: nine })).toBe(false);
+    expect(A({})).toBe(false);
+    expect(smartCheck({ ...smart, obstacle: '' }).errs.obstacle).toBe(t('hint.obstacle'));
+  });
+
+  test('isSmart: all five lit', () => {
+    expect(isSmart(smart)).toBe(true);
+    expect(isSmart({ id: 'x', title: 'Only a title', status: 'active' })).toBe(false);
+    expect(isSmart({ ...smart, deadline: undefined })).toBe(false);
+  });
+
+  test('goalErrors: only contradictions stop a save', () => {
+    expect(goalErrors({ id: 'x', title: 'Only a title', status: 'active' })).toEqual({});
+    expect(goalErrors(smart)).toEqual({});
+    expect(goalErrors({ ...smart, deadline: '2026-01-01' })).toEqual({ deadline: t('err.deadlineOrder') });
+    expect(goalErrors({ ...smart, deadline: '2025-12-31' })).toEqual({ deadline: t('err.deadlineOrder') });
+    expect(goalErrors({ ...smart, deadline: '2026-01-02' })).toEqual({});
+    expect(goalErrors({ ...smart, deadline: '' })).toEqual({});
+    expect(goalErrors({ ...smart, startDate: '' })).toEqual({});
+    expect(goalErrors({ ...smart, target: '0' })).toEqual({ target: t('err.targetSame') });
+    expect(goalErrors({ ...smart, target: '' })).toEqual({});
+    expect(goalErrors({ ...smart, baseline: '', target: '0' })).toEqual({});
+    // Measured by its activities, the metric fields are only kept for switching back.
+    expect(goalErrors({ ...smart, target: '0', progress: 'activities' })).toEqual({});
+  });
+
+  test('hasPercent: a measurement needs a numeric target', () => {
+    expect(hasPercent(smart)).toBe(true);
+    expect(hasPercent({ ...smart, target: '' })).toBe(false);
+    expect(hasPercent({ ...smart, target: undefined, metric: '' })).toBe(false);
+    expect(hasPercent({ ...smart, metric: '' })).toBe(true);
+    expect(hasPercent({ ...smart, target: '', progress: 'activities' })).toBe(true);
+    expect(hasPercent({ ...smart, target: '', progress: 'routines' })).toBe(true);
+    expect(goalProgress({ ...smart, target: '' })).toBe(0);
+  });
 });
 
 test('a goal counting a state that adds up per period: the higher of this and the last; reached only by a complete one', () => {

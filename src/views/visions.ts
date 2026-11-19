@@ -35,7 +35,7 @@ export function visionOrder() {
 // How far the visions are from a Purpose, or that it is found.
 export function purposeStatus(ps: PurposeState) {
   if (ps.on)
-    return `<div class="vis-status found" role="status">${esc(t('vis.found', { name: ps.root!.title }))}</div>`;
+    return `<div class="vis-status found" role="status">${esc(t('vis.found', { name: ps.root!.title }))}</div>${vagueLine(ps)}`;
   const lines: string[] = [];
   if (ps.roots.length > 1)
     lines.push(tp('vis.manyRoots', ps.roots.length, { names: ps.roots.map(v => `“${v.title}”`).join(', ') }));
@@ -51,6 +51,21 @@ export function purposeStatus(ps: PurposeState) {
       }),
     );
   return lines.length ? `<div class="vis-status">${lines.map(l => `<p>${esc(l)}</p>`).join('')}</div>` : '';
+}
+
+// With a Purpose, why the glow is not gold: the active goals that are not SMART. Those in the open plan
+// open their form; those in other plans are named with their plan.
+function vagueLine(ps: PurposeState) {
+  if (!ps.vague.length) return '';
+  const names = ps.vague
+    .map(({ plan, goal }) =>
+      plan.id === plans.current
+        ? `<button type="button" class="vis-goal" data-open="${goal.id}">“${esc(goal.title)}”</button>`
+        : esc(`“${t('vis.goalInPlan', { goal: goal.title, plan: plan.name })}”`),
+    )
+    .join(', ');
+  const [before, after] = t('vis.vague', { names: '\u0000' }).split('\u0000');
+  return `<div class="vis-status vis-vague"><p>${esc(before)}${names}${esc(after ?? '')}</p></div>`;
 }
 
 export const purposeTag = () => `<span class="tag purpose">${esc(t('vis.purpose'))}</span>`;
