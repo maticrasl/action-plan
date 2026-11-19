@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { emptyDb, type Db } from '../model';
 import { setDb } from '../state';
+import { I18N } from '../../i18n/index';
 import { emptyTips, type Tips } from './tip-history';
 import type { Tip, TipHit, TipInput } from './tip-facts';
 import { CATALOGUE, allowed, choose, closeTip, showsHint, snooze, tipOfDay, type TipBlocks } from './tip-choice';
@@ -143,5 +144,12 @@ describe('catalogue', () => {
   test('ids are unique, and every tip has a Guide article or none on purpose', () => {
     const ids = CATALOGUE.map(t => t.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+  test('every tip has its text, and its button when it has an action, in both languages', () => {
+    for (const l of ['en', 'sl'] as const) {
+      const s = I18N[l].strings as unknown as Record<string, unknown>;
+      const missing = CATALOGUE.flatMap(t => [`tip.${t.id}.text`, ...(t.action ? [`tip.${t.id}.btn`] : [])]).filter(k => !s[k]);
+      expect(missing, l).toEqual([]);
+    }
   });
 });

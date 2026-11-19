@@ -8,6 +8,7 @@ import './ui/forms/events';
 import { decorateDemo, offerWelcome } from './tutorial/welcome';
 import { decorateWalk, listenWalk } from './tutorial/walkthrough';
 import { decorateHelp } from './tutorial/help';
+import { decorateTips, listenTips } from './tutorial/tips';
 import './store/users';
 import './store/visions';
 import { bootUser, enterUser } from './boot';
@@ -33,9 +34,10 @@ import { listenGuide } from './views/guide';
 // Screen parts below the views redraw, switch users and offer the welcome through these.
 setRenderer(render);
 // The tutorial sits above the views: after every draw help mode's tips go on, then Getting started
-// (its card above the help banner), then the sample plan's banner above both.
+// (its card above the help banner), the tip of the day, then the sample plan's banner above them.
 onRendered(decorateHelp);
 onRendered(decorateWalk);
+onRendered(decorateTips);
 onRendered(decorateDemo);
 // Through the live bindings: offerWelcome can be replaced (setOfferWelcome), as the suite does.
 connectSync({ enterUser: (id: string) => enterUser(id), offerWelcome: () => offerWelcome() });
@@ -58,6 +60,7 @@ listenMap();
 listenTlDrag();
 listenGuide();
 listenWalk();
+listenTips();
 
 setLang(detectLang());
 setDb(emptyDb());

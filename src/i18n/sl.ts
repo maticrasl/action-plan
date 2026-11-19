@@ -294,6 +294,82 @@ export const sl: Language = {
     'demo.own': 'Začni svoj načrt',
     'demo.remove': 'Odstrani vzorec',
 
+    'settings.tips': 'Nasveti',
+    'tip.label': 'Nasvet',
+    'tip.why': 'Zakaj to pomaga',
+    'tip.later': 'Ne zdaj',
+    'tip.close': 'Tega ne prikaži več',
+    'tip.settingsHint': 'Nasvete lahko izklopite v Nastavitvah.',
+    'tip.back.text':
+      'Lepo, da ste spet tu. Ni treba nadoknaditi vsega: izberite en korak za danes in premaknite datume, ki ne držijo več.',
+    'tip.back.btn': 'Odpri Časovnico',
+    'tip.overdue-pile.text':
+      '{n} korakov je čez rok. Pretečen datum je stara ocena, ne sodba. Vzemite si pet minut in jih premaknite, razdelite ali izbrišite.',
+    'tip.overdue-pile.btn': 'Odpri Časovnico',
+    'tip.routine-missed.text':
+      '»{name}« je bila nekajkrat izpuščena. Ena kljukica jo vrne na pot. Če urnik ne ustreza vašim tednom, spremenite urnik.',
+    'tip.routine-missed.btn': 'Uredi rutino',
+    'tip.routine-low.text':
+      '»{name}« je bila opravljena približno {pct} % časa. Manjša rutina, ki jo izvajate, je boljša od večje, ki jo izpuščate. Poskusite z malo manj in povečajte, ko bo držalo.',
+    'tip.routine-low.btn': 'Uredi rutino',
+    'tip.goal-behind.text':
+      '»{name}« je pri {pct} %, do roka pa je še {days} dni. Tri poštene možnosti: ta teden mu naredite prostor, premaknite datum ali znižajte cilj.',
+    'tip.goal-behind.btn': 'Odpri cilj',
+    'tip.goal-past.text':
+      '»{name}« je šel čez rok pri {pct} %. To je {pct} % dlje, kot ste začeli. Dajte mu nov datum ali ga zaustavite, če zdaj ni pravi čas.',
+    'tip.goal-past.btn': 'Odpri cilj',
+    'tip.stuck-step.text':
+      '»{name}« je v teku že {n} tednov. Korak, ki se noče končati, je pogosto več korakov v enem. Razdelite ga ali ga spremenite v seznam.',
+    'tip.stuck-step.btn': 'Odpri aktivnost',
+    'tip.wrong-way.text':
+      '»{name}« se je trikrat zapored oddaljilo od cilja. Več truda morda ni odgovor; morda so napačni koraki. Katera aktivnost naj bi ga premaknila?',
+    'tip.wrong-way.btn': 'Odpri Grafe',
+    'tip.too-many-goals.text':
+      'Imate {n} aktivnih ciljev. Večina ljudi hitreje napreduje z dvema ali tremi naenkrat. Zaustavite tiste, ki lahko počakajo; vse obdržijo in se vrnejo z enim dotikom.',
+    'tip.too-many-goals.btn': 'Odpri Cilje',
+    'tip.too-many-routines.text':
+      '{n} rutin naenkrat je veliko. Kateri dve sta zdaj najpomembnejši? Druge za zdaj končajte in jih vračajte eno za drugo.',
+    'tip.too-many-routines.btn': 'Odpri Aktivnosti',
+    'tip.no-steps.text': '»{name}« še nima korakov. Katera je najmanjša stvar, ki jo lahko zanj naredite ta teden?',
+    'tip.no-steps.btn': 'Dodaj aktivnost',
+    'tip.steps-ran-out.text': 'Vsi koraki za »{name}« so opravljeni, cilj pa še ni dosežen. Kaj pride naslednje?',
+    'tip.steps-ran-out.btn': 'Dodaj aktivnost',
+    'tip.no-dates.text':
+      '{n} korakov nima datuma. Korak z dnevom in trenutkom je opravljen veliko pogosteje kot korak za »nekoč«. Dajte naslednjemu dan.',
+    'tip.no-dates.btn': 'Odpri Aktivnosti',
+    'tip.only-result.text':
+      '»{name}« je rezultat. Kaj bi delali vsak teden, da postane verjeten? Dodajte to kot rutino.',
+    'tip.only-result.btn': 'Dodaj rutino',
+    'tip.stale-state.text':
+      '»{name}« je bilo nazadnje izmerjeno pred {days} dnevi. Sveža vrednost pokaže, ali to, kar delate, deluje.',
+    'tip.stale-state.btn': 'Zapiši vrednost',
+    'tip.no-measure.text':
+      '»{name}« ima cilj, nič pa ne meri poti do njega. Dodajte mu trenutno stanje in cilj se premakne, ko merite.',
+    'tip.no-measure.btn': 'Dodaj trenutno stanje',
+    'tip.far-goal.text':
+      'Do »{name}« je še {n} mesecev. Bližji podcilj vam da nekaj, kar dosežete prej, in pokaže, ali ste na poti.',
+    'tip.far-goal.btn': 'Dodaj podcilj',
+    'tip.waiting.text':
+      '»{name}« čaka na »{other}«, ki se še ni začel. Začnite tistega ali odstranite povezavo, če ne drži več.',
+    'tip.waiting.btn': 'Odpri »{other}«',
+    'tip.many-doing.text':
+      '{n} aktivnosti je v teku. Če eno končate, boste naredili več kot z začetkom nove. Katera je najbliže koncu?',
+    'tip.many-doing.btn': 'Odpri Aktivnosti',
+    'tip.no-vision.text':
+      'Čemu služijo vaši cilji? Vizija je en stavek o življenju, ki ga skupaj gradijo. To je razlog, ki ga boste pogledali v težkih dneh.',
+    'tip.no-vision.btn': 'Dodaj vizijo',
+    'tip.goal-unfinished.text':
+      '»{name}« je pri {n} od 5. Odprto je še: {part}. Nekaj minut zdaj naredi cilj lažji za delo.',
+    'tip.goal-unfinished.btn': 'Odpri cilj',
+    'tip.week.text':
+      'Nov teden. Pet minut zdaj: kaj se je premaknilo prejšnji teden in kateri korak je ta teden najpomembnejši?',
+    'tip.week.btn': 'Odpri tedenski pregled',
+    'tip.month.text': 'Nov mesec je dober trenutek za merjenje. Zapišite sveže vrednosti trenutnih stanj.',
+    'tip.month.btn': 'Odpri Stanja',
+    'tip.new-year.text':
+      'Novo leto je dober trenutek za nov začetek. Želje do februarja zbledijo, koraki z datumi ne. Poglejte svoje cilje in izberite tistega za ta mesec.',
+    'tip.new-year.btn': 'Odpri Cilje',
+
     'walk.title': 'Prvi koraki',
     'walk.count': '{done} od {total}',
     'walk.next': 'Naslednje: {task}',
