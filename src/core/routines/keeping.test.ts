@@ -4,6 +4,7 @@ import { isComplete } from '../progress';
 import { setDb } from '../state';
 import { addDays, daysBetween, isDueDay, type Routine } from './schedule';
 import {
+  byUrgency,
   consistency,
   madeUpDays,
   missedDays,
@@ -217,5 +218,22 @@ describe('periods, streaks, consistency and states', () => {
     r.checkins = ticks(...done);
     expect(routineStreak(r).n).toBe(4);
     expect(periodProgress(r).target).toBe(1);
+  });
+});
+
+describe('routines in order of urgency', () => {
+  test('late, then due today, then by next due day; met, then inactive, last', () => {
+    onDay(WED);
+    const start = { startDate: '2026-10-01' };
+    const rs = [
+      routine({ days: [4] }, { ...start, id: 'fri' }),
+      routine({ times: 1, per: 'week' }, { ...start, id: 'met', checkins: ticks(MON) }),
+      routine({ days: [0] }, { startDate: '2027-01-04', id: 'notStarted' }),
+      routine({ days: [3] }, { ...start, id: 'thu' }),
+      routine({ days: [2] }, { ...start, id: 'today' }),
+      routine({ days: [0, 1, 2, 3, 4, 5, 6] }, { ...start, id: 'ended', dueDate: '2026-10-20' }),
+      routine({ days: [0, 1, 2, 3, 4, 5, 6] }, { ...start, id: 'late' }),
+    ];
+    expect([...rs].sort(byUrgency).map(r => r.id)).toEqual(['late', 'today', 'thu', 'fri', 'met', 'notStarted', 'ended']);
   });
 });

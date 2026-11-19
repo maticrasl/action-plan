@@ -472,4 +472,17 @@ suite(async () => {
     );
     setView('dashboard');
   });
+  await step('phone: the on-screen keyboard (a resize, same width) keeps the value popup open', async () => {
+    setView('graphs');
+    const sc = [...document.querySelectorAll('#view .gr-card')].find(c => findEntity(c.dataset.gr).kind === 'state');
+    sc.querySelector('.gr-plot').dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 200 }),
+    );
+    ctxMenu.querySelector('[data-ctx="value"]').click();
+    window.dispatchEvent(new Event('resize'));
+    await new Promise(r => setTimeout(r, 250));
+    assert($('.amount-pop') && amountPop, 'popup still open');
+    closeAmountPop();
+    setView('dashboard');
+  });
 });

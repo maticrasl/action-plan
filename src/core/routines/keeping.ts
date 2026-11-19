@@ -4,6 +4,7 @@ import {
   daysBetween,
   isDueDay,
   isFlexible,
+  nextDueDay,
   periodOf,
   periodUnit,
   routineStart,
@@ -176,4 +177,28 @@ export function consistency(a: Routine, from: ISODate = ''): number | null {
     }
   }
   return total ? kept / total : null;
+}
+
+// Routines in order of urgency: late, then due today (or a day to make up), then the others running,
+// then those whose period is met, and last those not running (not started, ended or waiting);
+// within each, the next due day first (a flexible routine's: the end of its period).
+const urgency = (a: Routine): [number, ISODate] => {
+  const now = today(),
+    state = routineState(a),
+    ask = routineToday(a);
+  const rank =
+    !runsOn(a, now) || state === 'blocked'
+      ? 4
+      : state === 'late'
+        ? 0
+        : ask === 'due' || ask === 'makeUp'
+          ? 1
+          : state === 'done'
+            ? 3
+            : 2;
+  return [rank, (isFlexible(a) ? periodOf(a, now).to : nextDueDay(a, now)) || '9999'];
+};
+export function byUrgency(a: Routine, b: Routine): number {
+  const [x, y] = [urgency(a), urgency(b)];
+  return x[0] - y[0] || x[1].localeCompare(y[1]);
 }
