@@ -2,6 +2,7 @@
 import { ui } from '../store/state';
 import { $, esc } from '../ui/dom';
 import { I18N, t, type TextKey } from '../i18n/index';
+import { VIEW_ARTICLE } from '../i18n/guide';
 import { clamp } from '../core/util';
 import { setHelp } from '../ui/settings';
 
@@ -38,14 +39,20 @@ export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] =
 
 export function decorateHelp() {
   closeHelpTip();
-  if (!ui.help) return;
+  // The Guide is the explanation itself: no banner, no tips there.
+  if (!ui.help || ui.view === 'guide') return;
   const view = $('#view');
-  // A view without a help text of its own (Visions) shows no banner.
+  // Each view's banner ends with a link to its "How do I…" article in the Guide.
+  const article = VIEW_ARTICLE[ui.view];
   if (I18N.en.strings[('help.view.' + ui.view) as TextKey])
     view.insertAdjacentHTML(
       'afterbegin',
       `<aside class="help-banner">
-    <span class="help-mark" aria-hidden="true">?</span><p>${t(('help.view.' + ui.view) as TextKey)}</p>
+    <span class="help-mark" aria-hidden="true">?</span><p>${t(('help.view.' + ui.view) as TextKey)}${
+      article
+        ? ` <button type="button" class="guide-ref" data-guide-open="${article}">${esc(t('guide.more'))}</button>`
+        : ''
+    }</p>
     <button type="button" class="btn ghost" data-help-off>${t('help.off')}</button></aside>`,
     );
   HELP_TIPS.forEach(({ sel, key, where = 'afterend' }) => {

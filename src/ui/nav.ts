@@ -5,7 +5,11 @@ import { requestRender } from './render';
 import { $ } from './dom';
 import { t } from '../i18n/index';
 
+// The view open before the current one (the Guide's ? button goes back to it).
+export let lastView: ViewName = 'dashboard';
+
 export function setView(view: ViewName) {
+  if (view !== ui.view) lastView = ui.view;
   ui.view = view;
   ui.mapLinkFrom = null;
   ui.search = '';

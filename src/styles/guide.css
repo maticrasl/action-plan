@@ -1,0 +1,259 @@
+/* ---------- Guide: a calm printed handbook ----------
+   One left-aligned column of about 66 characters. Each group heading carries the trail blaze, the
+   waymark of the app's brand; everything else stays quiet: hairlines between questions, the open one
+   unfolding in place with a thin summit-blue rule beside its text. */
+.guide {
+  max-width: 44rem;
+  padding-bottom: 48px;
+}
+.guide-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-bottom: 8px;
+}
+.guide-tools .guide-search {
+  flex: 1 1 18rem;
+  max-width: 28rem;
+  width: auto;
+}
+.guide-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.guide-none {
+  margin: 24px 0 0;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+
+.guide-group {
+  margin-top: 36px;
+}
+.guide-group h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+/* The blaze: a red ring round a white dot, painted on trees along Slovenian paths. */
+.guide-group h2::before {
+  content: '';
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 34%, var(--blaze) 36%);
+}
+
+.guide-art {
+  border-bottom: 1px solid var(--line);
+}
+.guide-art h3 {
+  margin: 0;
+  font: inherit;
+}
+.guide-q {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0 12px 25px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16.5px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+/* A small chevron in the blaze's column: pointing right when closed, down when open. */
+.guide-q::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1.15em;
+  width: 6px;
+  height: 6px;
+  border-right: 1.6px solid var(--ink-3);
+  border-bottom: 1.6px solid var(--ink-3);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+.guide-q[aria-expanded='true']::before {
+  transform: rotate(45deg) translate(-2px, -1px);
+  border-color: var(--goal);
+}
+.guide-q:hover {
+  color: var(--goal);
+}
+.guide-q[aria-expanded='true'] {
+  color: var(--goal);
+  font-weight: 600;
+}
+.guide-q:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: var(--r-sm);
+}
+
+.guide-a {
+  margin: 0 0 20px 25px;
+  padding-left: 18px;
+  border-left: 2px solid var(--goal-soft);
+  max-width: 66ch;
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+.guide-text > :first-child {
+  margin-top: 2px;
+}
+.guide-text p,
+.guide-text ul,
+.guide-text ol {
+  margin: 0 0 12px;
+}
+.guide-text ul,
+.guide-text ol {
+  padding-left: 1.25em;
+}
+.guide-text li {
+  margin-bottom: 6px;
+}
+.guide-text li::marker {
+  color: var(--ink-3);
+}
+.guide-text strong {
+  font-weight: 650;
+}
+
+/* Links to other articles read as words in the text. */
+.guide-ref {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--goal);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.guide-ref:hover {
+  text-decoration-thickness: 2px;
+}
+.guide-ref:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 3px;
+}
+
+.guide-act {
+  margin: 16px 0 4px;
+}
+.guide-hint {
+  margin: 12px 0 0;
+  font-size: 14.5px;
+  color: var(--ink-2);
+}
+.guide-related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 18px 0 0;
+  font-size: 14.5px;
+}
+.guide-related span {
+  color: var(--ink-2);
+}
+
+/* The weekly review: a short checklist; each line's place is a quiet link at its end. */
+.guide-review {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.guide-review li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--line);
+}
+.guide-review li:first-child {
+  border-top: 0;
+}
+.guide-review label {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex: 1 1 22rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+.guide-review input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  position: relative;
+  top: 2px;
+  accent-color: var(--goal);
+}
+.guide-go {
+  margin-left: 27px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--goal);
+  cursor: pointer;
+}
+.guide-go:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.guide-go:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 3px;
+}
+
+/* The help banner's link to the Guide sits at the end of its text. */
+.help-banner .guide-ref {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .guide-group {
+    margin-top: 28px;
+  }
+  .guide-tools .guide-search {
+    max-width: none;
+  }
+  .guide-a {
+    margin-left: 4px;
+    padding-left: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-q::before {
+    transition: none;
+  }
+}

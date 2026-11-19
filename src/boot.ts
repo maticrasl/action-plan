@@ -10,7 +10,7 @@ import { setOtherPlansCache } from './store/visions';
 import { drive } from './sync/drive';
 import { syncState } from './sync/sync';
 import { renderSync } from './ui/sync-ui';
-import { $, settings } from './ui/dom';
+import { settings } from './ui/dom';
 import { closeCtxMenu } from './ui/menu';
 import { applyNavCollapsed } from './ui/nav';
 import { closeAmountPop } from './ui/amount-popover';
@@ -59,7 +59,6 @@ export function bootUser() {
   ui.help = prefs.get<unknown>('help', false) === true;
   ui.navCollapsed = prefs.get<unknown>('navCollapsed', false) === true;
   applyNavCollapsed();
-  $('#helpBtn').setAttribute('aria-pressed', String(ui.help));
   render();
   return firstVisit;
 }

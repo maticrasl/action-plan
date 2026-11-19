@@ -12,7 +12,7 @@ import { closeCtxMenu } from '../ui/menu';
 import { setView } from '../ui/nav';
 import { toast } from '../ui/toast';
 import { modal } from '../ui/forms/form';
-import { changeLanguage, setHelp } from '../ui/settings';
+import { changeLanguage } from '../ui/settings';
 import { renderPlanSwitch } from '../ui/plan-switcher';
 import { sampleData } from '../ui/sample';
 import { EDGE, closeHelpTip } from './help';
@@ -303,7 +303,6 @@ export function chooseLanguage(done: () => void) {
 /* ---------- Boot (called from main.ts) ---------- */
 
 export function initTutorial() {
-  $('#helpBtn').addEventListener('click', () => setHelp(!ui.help));
   $('#tutorialBtn').addEventListener('click', startTour);
 }
 

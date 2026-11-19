@@ -55,8 +55,10 @@ strings (always through `esc()` for user text) and replace the view's content.
   never rename or reuse one. A change here needs a fixture in `tests/fixtures/` written by the
   old code. Never regenerate a fixture's expected output to make it pass. See `docs/decisions.md`.
 - **Every user-facing change:** texts in `i18n/en.ts` and `i18n/sl.ts`; tour steps and help
-  tips if a control was added, moved or renamed; the sample plan if it uses the feature; phone
-  layout (`npm run shot -- <view> --phone`).
+  tips if a control was added, moved or renamed; the Guide's articles (`i18n/guide.en.ts`,
+  `guide.sl.ts`) that describe it; the sample plan if it uses the feature; phone layout
+  (`npm run shot -- <view> --phone`).
+- User-facing guidance follows the voice rules in `docs/guidance/README.md`.
 - **Design work** uses the `frontend-design` skill.
 - New file at most ~400 lines (data files exempt), starting with a one-line `/** purpose */`.
   No new dependency without asking. No `any` without a comment.

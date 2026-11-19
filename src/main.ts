@@ -28,6 +28,7 @@ import { setTourRunning } from './views/map/visions';
 import { listenMap } from './views/map/index';
 import { listenTlDrag } from './views/timeline/drag';
 import { listenGraphs } from './views/graphs/points';
+import { listenGuide } from './views/guide';
 
 // Screen parts below the views redraw, switch users and offer the tour through these.
 setRenderer(render);
@@ -54,6 +55,7 @@ setTourRunning(isTourRunning);
 listenGraphs();
 listenMap();
 listenTlDrag();
+listenGuide();
 
 setLang(detectLang());
 setDb(emptyDb());

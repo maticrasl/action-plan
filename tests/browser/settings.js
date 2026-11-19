@@ -58,11 +58,11 @@ suite(async () => {
     more.click();
     const items = [...sheet.querySelectorAll('[data-sheet-view]')].map(b => b.dataset.sheetView);
     assert(!sheet.hidden && more.getAttribute('aria-expanded') === 'true', 'opens');
-    assert(items.join() === 'visions,map,timeline,graphs', 'lists the extra views');
+    assert(items.join() === 'visions,map,timeline,graphs,guide', 'lists the extra views');
     assert(sheet.querySelector('[data-sheet-view="timeline"]').textContent.trim() === t('nav.timeline'), 'with labels');
     assert(document.activeElement === sheet.querySelector('button'), 'first item focused');
     sheet.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
-    assert(document.activeElement.dataset.sheetView === 'graphs', 'arrows wrap');
+    assert(document.activeElement.dataset.sheetView === 'guide', 'arrows wrap');
     sheet.querySelector('[data-sheet-view="timeline"]').click();
     assert(
       ui.view === 'timeline' && sheet.hidden && more.classList.contains('active'),

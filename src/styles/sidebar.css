@@ -65,7 +65,7 @@
   .nav-item,
   .nav-collapsed .nav-item {
     justify-content: center;
-    padding: 8px 0;
+    padding: 6px 0;
   }
   .nav-item span {
     position: absolute;

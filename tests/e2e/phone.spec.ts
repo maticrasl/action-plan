@@ -23,7 +23,7 @@ test('tab bar at the bottom, More sheet, floating add button, a form that fits',
   await page.locator('#navMore').tap();
   const sheet = page.locator('#navSheet');
   await expect(sheet).toBeVisible();
-  await expect(sheet.locator('[data-sheet-view]')).toHaveCount(4);
+  await expect(sheet.locator('[data-sheet-view]')).toHaveCount(5); // visions, map, timeline, graphs, guide
   await sheet.locator('[data-sheet-view="timeline"]').tap();
   await expect(sheet).toBeHidden();
   await expect(page.locator('#navMore')).toHaveClass(/active/);
