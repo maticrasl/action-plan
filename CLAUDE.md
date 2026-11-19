@@ -4,6 +4,18 @@ Personal planning app: goals, activities, states, visions; map, timeline and gra
 Browser only, no server. Data lives in `localStorage` and optionally syncs through the user's
 Google Drive. English and Slovenian. Deployed to GitHub Pages; a few real users.
 
+## Priorities
+
+The owner's order when choices compete: small files, automated tests, low token use.
+- **Small files**: an agent reads only what it needs. ~400 lines is a guide, not a limit.
+  Existing larger files are sized on purpose (recent refactor); leave them unless a task
+  makes one clearly hard to work in, then propose a split instead of doing it unasked.
+- **Automated tests** over manual checks: a test proves a change once and keeps proving it.
+- **Quiet output**: commands print failures and one summary line. A new script or check
+  follows that. Use `--verbose` or a default reporter only on the one failing file.
+- **Cheap lookups**: `map`, `outline`, Grep with a narrow pattern, `Read` with offset and limit.
+  Never dump whole files, logs or full test output into the conversation.
+
 ## Stack
 
 TypeScript (strict), no UI framework, no runtime dependencies. Vite build. Views build HTML
