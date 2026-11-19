@@ -155,6 +155,9 @@ export function repeatOnOptions(unit: string): Record<string, string> {
 export const nthOptions = (nth: number | undefined) =>
   Object.fromEntries([1, 2, 3, 4, ...(nth === 5 ? [5] : []), -1].map(n => [n, nthWord(n, 0)]));
 
+// The n-th weekday a new monthly routine takes from a date: its fifth is offered as the last.
+const startNth = (d: ISODate) => (nthInMonth(d) > 4 ? -1 : nthInMonth(d));
+
 export const formStart = () => parseDateInput($<HTMLInputElement>('#f-startDate')?.value || '') || today();
 
 export function repeatFields(a: New<Activity>) {
@@ -166,7 +169,11 @@ export function repeatFields(a: New<Activity>) {
   const on = r?.times ? 'times' : unit === 'week' ? 'days' : r?.on || 'day';
   // A monthly day or n-th weekday, the start's until chosen (updateRepeatFields follows the start date).
   const month = r?.unit === 'month' && !r.times ? r : monthRule({ on: 'day' } as Sched, start);
-  const nthPick = { ...month, ...monthRule({ on: 'nth' } as Sched, start), ...(month.on === 'nth' ? month : {}) };
+  const nthPick = {
+    ...month,
+    ...monthRule({ on: 'nth', nth: startNth(start) } as Sched, start),
+    ...(month.on === 'nth' ? month : {}),
+  };
   const weekdays = Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map(i => [i, weekdayName(i, 'long')]));
   const picked = r?.unit === 'month' && !r.times ? 'data-picked' : '';
   const days = r?.days || [weekday(start)];
@@ -266,7 +273,7 @@ export function updateRepeatFields(e?: Event) {
       w = $<HTMLSelectElement>('#f-weekday');
     if (!d.hasAttribute('data-picked')) d.value = String(monthDay(start));
     if (!n.hasAttribute('data-picked') && !w.hasAttribute('data-picked')) {
-      n.value = String(nthInMonth(start) > 4 ? -1 : nthInMonth(start));
+      n.value = String(startNth(start));
       w.value = String(weekday(start));
     }
   }

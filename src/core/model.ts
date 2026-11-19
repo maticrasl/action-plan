@@ -80,7 +80,10 @@ export interface Goal extends Item {
   baseline?: string;
   current?: string;
   target?: string;
+  // The old answer to "Why is this realistic?"; new goals ask for the obstacle and the plan for it.
   achievable?: string;
+  obstacle?: string;
+  ifThen?: string;
   relevant?: string;
   startDate?: ISODate;
   deadline?: ISODate;
@@ -92,6 +95,7 @@ export interface Goal extends Item {
   // When the "target reached" offer was made (cleared when the target is no longer reached).
   offeredAt?: ISODate;
   createdAt?: ISODate;
+  statusSince?: ISODate; // the day the status last changed (stamped on save; absent on older items)
 }
 
 // One measurement of a state.
@@ -163,6 +167,7 @@ export interface Activity extends Item {
   droppedItems?: IdSet;
   scale?: Scale; // a routine's graph
   createdAt?: ISODate;
+  statusSince?: ISODate; // the day the status last changed (stamped on save; absent on older items)
 }
 
 export interface Relation extends Item {
@@ -183,6 +188,7 @@ export interface Db {
 // The plan index (actionplan.plans).
 export interface Plan extends Item {
   name: string;
+  demo?: true; // the sample plan: not the user's own (no walkthrough ticks there); older versions ignore it
 }
 export interface PlanList {
   current: string | null;

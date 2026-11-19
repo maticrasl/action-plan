@@ -2,7 +2,7 @@
 import { byDeadline, byDueDate, deadlineTag, emptyState, esc, itemCount, linkTag, statusCheck } from '../ui/dom';
 import { t, tp } from '../i18n/index';
 import { db } from '../core/state';
-import { activityState, blockers, goalProgress } from '../core/progress';
+import { activityState, blockers, goalProgress, hasPercent } from '../core/progress';
 import { isRoutine, type Routine } from '../core/routines/schedule';
 import { daysUntil, today } from '../core/dates';
 import { routineToday } from '../core/routines/keeping';
@@ -17,7 +17,15 @@ export function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
 
   const active = db.goals.filter(g => g.status !== 'achieved' && g.status !== 'paused').sort(byDeadline);
-  const avg = active.length ? active.reduce((s, g) => s + goalProgress(g), 0) / active.length : 0;
+  // The average counts only goals with a percentage; a measured goal without a target has none.
+  const measured = active.filter(hasPercent),
+    noTarget = active.length - measured.length;
+  const avg = measured.length ? measured.reduce((s, g) => s + goalProgress(g), 0) / measured.length : 0;
+  const headline =
+    active.length && !measured.length
+      ? tp('dash.headlineNone', active.length)
+      : tp('dash.headline', active.length, { pct: `<strong>${Math.round(avg)}&nbsp;%</strong>` }) +
+        (noTarget ? ' ' + tp('dash.noTarget', noTarget) : '');
   // Routines have no status of their own: they get their own list, and the counts leave them out.
   const oneOff = db.activities.filter(a => !isRoutine(a));
   // Only the routines today still asks for: a set day (or a missed one to make up), or a flexible
@@ -44,7 +52,7 @@ export function renderDashboard() {
   const waiting = todo.filter(a => blockers(a).length).length;
   return `
     <section class="summary">
-      <p class="summary-line">${tp('dash.headline', active.length, { pct: `<strong>${Math.round(avg)}&nbsp;%</strong>` })}</p>
+      <p class="summary-line">${headline}</p>
       <ul class="facts">
         <li>${t('dash.factDone', { done: doneActs, total: oneOff.length })}</li>
         ${overdue ? `<li class="fact-late">${tp('dash.factLate', overdue)}</li>` : ''}

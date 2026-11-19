@@ -20,12 +20,12 @@ suite(async () => {
       eq(s.description, 'My own words stay as they were.', `${code}: saved unchanged`);
       // The help no longer asks to describe where you stand today.
       assert(
-        !/where you stand today|kje ste danes/i.test(t('help.view.states') + t('tour.states.text')),
-        `${code}: help and tour updated`,
+        !/where you stand today|kje ste danes/i.test(t('help.view.states')),
+        `${code}: help updated`,
       );
       assert(
-        /measure|meri/i.test(t('help.view.states')) && /measure|meri/i.test(t('tour.states.text')),
-        `${code}: they talk about measuring`,
+        /measure|meri/i.test(t('help.view.states')),
+        `${code}: it talks about measuring`,
       );
       deletePlan(plans.current);
     }

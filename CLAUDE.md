@@ -4,6 +4,18 @@ Personal planning app: goals, activities, states, visions; map, timeline and gra
 Browser only, no server. Data lives in `localStorage` and optionally syncs through the user's
 Google Drive. English and Slovenian. Deployed to GitHub Pages; a few real users.
 
+## Priorities
+
+The owner's order when choices compete: small files, automated tests, low token use.
+- **Small files**: an agent reads only what it needs. ~400 lines is a guide, not a limit.
+  Existing larger files are sized on purpose (recent refactor); leave them unless a task
+  makes one clearly hard to work in, then propose a split instead of doing it unasked.
+- **Automated tests** over manual checks: a test proves a change once and keeps proving it.
+- **Quiet output**: commands print failures and one summary line. A new script or check
+  follows that. Use `--verbose` or a default reporter only on the one failing file.
+- **Cheap lookups**: `map`, `outline`, Grep with a narrow pattern, `Read` with offset and limit.
+  Never dump whole files, logs or full test output into the conversation.
+
 ## Stack
 
 TypeScript (strict), no UI framework, no runtime dependencies. Vite build. Views build HTML
@@ -38,8 +50,8 @@ strings (always through `esc()` for user text) and replace the view's content.
 - Only `main.ts` runs code at load time (imports may be circular). Reassigned state is
   `export let` plus a setter in its owning module; others change it only through the setter.
 - Texts: `i18n/en.ts`, `i18n/sl.ts` (SL must have every EN key; the compiler checks). Sample
-  plan: `ui/sample.ts` with its texts in the i18n files. Tour: `tutorial/tour.ts`; help tips:
-  `tutorial/help.ts`.
+  plan: `ui/sample.ts` with its texts in the i18n files. Getting started (walkthrough):
+  `core/guidance/walk.ts` (tasks, checks), `tutorial/walkthrough.ts`; help tips: `tutorial/help.ts`.
 - Tests: unit tests beside the module (`x.test.ts`, Node); a module that touches `document`
   while loading (most of `views/`, `ui/`) is tested by page tests in `tests/browser/`. See `tests/README.md`.
 
@@ -54,9 +66,11 @@ strings (always through `esc()` for user text) and replace the view's content.
   stay readable by and from older versions. Add fields with a default in `core/normalize.ts`;
   never rename or reuse one. A change here needs a fixture in `tests/fixtures/` written by the
   old code. Never regenerate a fixture's expected output to make it pass. See `docs/decisions.md`.
-- **Every user-facing change:** texts in `i18n/en.ts` and `i18n/sl.ts`; tour steps and help
-  tips if a control was added, moved or renamed; the sample plan if it uses the feature; phone
-  layout (`npm run shot -- <view> --phone`).
+- **Every user-facing change:** texts in `i18n/en.ts` and `i18n/sl.ts`; Getting started's tasks and
+  help tips if a control was added, moved or renamed; the Guide's articles (`i18n/guide.en.ts`,
+  `guide.sl.ts`) that describe it; the sample plan if it uses the feature; phone layout
+  (`npm run shot -- <view> --phone`).
+- User-facing guidance follows the voice rules in `docs/guidance/README.md`.
 - **Design work** uses the `frontend-design` skill.
 - New file at most ~400 lines (data files exempt), starting with a one-line `/** purpose */`.
   No new dependency without asking. No `any` without a comment.

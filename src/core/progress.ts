@@ -19,8 +19,8 @@ import { isRoutine, type Routine } from './routines/schedule';
 import { PARENT_REL, type Activity, type Goal, type NodeState, type Period, type State } from './model';
 import type { Entity, ParentKind } from './relations';
 
-// The goal form's fields that can be wrong, and the SMART letters they make up.
-export type SmartField = 'title' | 'specific' | 'metric' | 'target' | 'achievable' | 'relevant' | 'deadline';
+// The goal form's fields that can be unfinished, and the SMART letters they make up.
+export type SmartField = 'title' | 'specific' | 'metric' | 'target' | 'obstacle' | 'relevant' | 'deadline';
 export interface SmartCheck {
   S: boolean;
   M: boolean;
@@ -38,6 +38,8 @@ export interface Scope {
 
 /* ---------- SMART & progress ---------- */
 
+// Which letters are lit, and for each unlit one the hint the form shows under its field. A goal
+// saves without them (goalErrors says what stops a save); they decide the golden glow.
 export function smartCheck(g: Goal): SmartCheck {
   const errs: SmartCheck['errs'] = {};
   if (!g.title || g.title.trim().length < 4) errs.title = t('err.title');
@@ -48,19 +50,35 @@ export function smartCheck(g: Goal): SmartCheck {
     if (!isNum(g.target)) errs.target = t('err.target');
     else if (isNum(g.baseline) && Number(g.baseline) === Number(g.target)) errs.target = t('err.targetSame');
   }
-  if (!g.achievable || g.achievable.trim().length < 10) errs.achievable = t('err.achievable');
-  if (!g.relevant || g.relevant.trim().length < 10) errs.relevant = t('err.relevant');
+  // The obstacle and what to do then, or the answer a goal saved before them has to "Why is this realistic?".
+  const long = (s: string | undefined) => !!s && s.trim().length >= 10;
+  if (!(long(g.obstacle) && long(g.ifThen)) && !long(g.achievable)) errs.obstacle = t('hint.obstacle');
+  if (!long(g.relevant)) errs.relevant = t('err.relevant');
   if (!g.deadline) errs.deadline = t('err.deadline');
   else if (g.startDate && g.deadline <= g.startDate) errs.deadline = t('err.deadlineOrder');
   return {
     S: !errs.title && !errs.specific,
     M: !errs.metric && !errs.target,
-    A: !errs.achievable,
+    A: !errs.obstacle,
     R: !errs.relevant,
     T: !errs.deadline,
     errs,
   };
 }
+export const isSmart = (g: Goal): boolean => {
+  const c = smartCheck(g);
+  return c.S && c.M && c.A && c.R && c.T;
+};
+// What stops a goal from saving: only answers that contradict each other.
+export function goalErrors(g: Goal): SmartCheck['errs'] {
+  const errs: SmartCheck['errs'] = {};
+  if (g.deadline && g.startDate && g.deadline <= g.startDate) errs.deadline = t('err.deadlineOrder');
+  if (ownMetric(g) && isNum(g.target) && isNum(g.baseline) && Number(g.baseline) === Number(g.target))
+    errs.target = t('err.targetSame');
+  return errs;
+}
+// Whether a goal has a percentage: one measured by a measurement needs a numeric target.
+export const hasPercent = (g: Goal): boolean => !ownMetric(g) || isNum(g.target);
 
 // Latest numeric current-state linked via "measures" wins; otherwise the goal's own value.
 export function measuringState(g: Goal): State | null {

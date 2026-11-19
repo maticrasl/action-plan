@@ -142,26 +142,49 @@ suite(async () => {
       ['400', '500'],
       'box titles in lighter type',
     );
-    // The side is lit from the left: the bottom (shaded from the corner to its left end) is lighter at its left end,
-    // and the right side is darker still. Each is one strip with a gradient; the corners are small pieces.
+    // The side is lit from the left: the bottom (shaded from the corner to its left end) gets more light toward its
+    // left end, and the right side less still. Each is one strip with a gradient; the corners are small pieces.
+    const light = run =>
+      glassLighting()
+        .side.goal.filter(x => x.run === run)
+        .map(x => x.light);
+    assert(
+      light('b').at(-1) > light('b')[0] && Math.max(...light('r')) < light('b').at(-1),
+      `lit from the left: bottom ${light('b')[0].toFixed(2)} → ${light('b').at(-1).toFixed(2)}, right ${Math.max(...light('r')).toFixed(2)}`,
+    );
+    // In colour, by day and by night, the bottom is lighter at its left end. By night the right side is darker
+    // still; by day the white glass reflects more sky on the right side, which faces sideways, than on the bottom.
+    // The slab's defs are drawn for each theme apart (glassDefs reads the theme's colours); the map stays as it is.
     const slab = goalBox.querySelector('use').getAttribute('href'),
-      lums = run =>
-        [...document.querySelectorAll(`${slab}-${run} stop`)].map(x =>
+      cut = slab.lastIndexOf('-'),
+      key = `--${slab.slice('#glass-'.length, cut)}|${slab.slice(cut + 1)}`;
+    assert($(slab).querySelectorAll('path').length < 20, 'the side in few pieces');
+    const shaded = theme => {
+      const was = document.documentElement.dataset.theme,
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      document.documentElement.dataset.theme = theme;
+      defs.innerHTML = glassDefs(new Set([key]));
+      if (was) document.documentElement.dataset.theme = was;
+      else delete document.documentElement.dataset.theme;
+      const lums = run =>
+        [...defs.querySelectorAll(`[id="${slab.slice(1)}-${run}"] stop`)].map(x =>
           x
             .getAttribute('stop-color')
             .match(/\d+/g)
             .reduce((sum, v) => sum + +v, 0),
         );
-    const bottom = lums('b'),
-      right = lums('r');
-    assert(
-      bottom.length > 10 &&
-        right.length > 5 &&
-        bottom.at(-1) > bottom[0] &&
-        Math.max(...right) < bottom.at(-1) &&
-        $(slab).querySelectorAll('path').length < 20,
-      `side shaded by the light: bottom ${bottom[0]} → ${bottom.at(-1)}, right ${Math.max(...right)}`,
-    );
+      const bottom = lums('b'),
+        right = lums('r');
+      assert(
+        bottom.length > 10 &&
+          right.length > 5 &&
+          bottom.at(-1) > bottom[0] &&
+          (theme === 'light' || Math.max(...right) < bottom.at(-1)),
+        `${theme}: side shaded by the light: bottom ${bottom[0]} → ${bottom.at(-1)}, right ${Math.max(...right)}`,
+      );
+      return bottom[0];
+    };
+    assert(shaded('light') > shaded('dark'), 'day glass is lighter than night glass');
     // Lines meet a box's bottom below its glass, so no arrowhead hides under the slab.
     const at = b =>
       b

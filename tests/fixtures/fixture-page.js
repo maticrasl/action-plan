@@ -49,6 +49,13 @@
     'sample-sl'() {
       loadSample();
     },
+    // The sample as a demo plan beside the user's own, and Getting started with its usage facts.
+    demo() {
+      loadSample();
+      openPlan(plans.list[0].id);
+      replaceWalk({ state: 'on', started: day(-3), done: { goal: day(-2) }, skipped: ['install'], folded: true });
+      markSeen({ days: [day(-3), day(-1)], lastReview: day(-1) });
+    },
 
     // The data as the single-plan version stored it: one plan, no change stamps, no tombstones,
     // and an "is related to" link (dropped by later versions).
@@ -209,6 +216,49 @@
       prefs.set('hideDone', true);
       prefs.set('mapHidden', ['improves']);
       setView('timeline');
+      save();
+    },
+
+    // Feature 6 (goal form): a goal saved with a title alone, one with the obstacle and the plan for
+    // it, one with the old answer to "Why is this realistic?"; a Purpose found, its glow not golden.
+    'goal-form'() {
+      const life = { id: uid(), title: 'A good life', parents: [] };
+      visions.list.push(life);
+      saveVisions();
+      db.goals.push(
+        { id: uid(), title: 'Learn to cook', status: 'active', startDate: day(-3), visions: [life.id] },
+        {
+          id: uid(),
+          title: 'Run a half marathon',
+          status: 'active',
+          specific: 'Run 21 km without stopping by spring',
+          metric: 'Longest run',
+          unit: 'km',
+          baseline: '5',
+          current: '8',
+          target: '21',
+          obstacle: 'Tired after work and skip the run',
+          ifThen: 'If I am tired, I walk for ten minutes',
+          relevant: 'I want to feel strong',
+          startDate: day(-30),
+          deadline: day(150),
+          visions: [life.id],
+        },
+        {
+          id: uid(),
+          title: 'Read twelve books',
+          status: 'active',
+          specific: 'Read twelve books before the year ends',
+          metric: 'Books',
+          baseline: '0',
+          target: '12',
+          achievable: 'One a month fits my evenings',
+          relevant: 'Reading keeps me curious',
+          startDate: day(-40),
+          deadline: day(40),
+          visions: [life.id],
+        },
+      );
       save();
     },
   };

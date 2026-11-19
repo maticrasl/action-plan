@@ -5,7 +5,8 @@ import { plans, plansVersion, setPlans, setPlansVersion } from '../store/state';
 import { db, setDb, visions } from '../core/state';
 import { PLANS_KEY, planKey, readPlan } from '../store/plans';
 import { I18N, t } from '../i18n/index';
-import { mergeStores, takePlanSnapshot, takeSnapshot, type Store } from '../core/merge';
+import { mergeStores, takePlanSnapshot, takeSnapshot, type FullStore, type Store } from '../core/merge';
+import { getTips, hasTips, saveTips } from '../store/tips';
 import { uid } from '../core/util';
 import { SYNC_COLLS, emptyDb, type Plan } from '../core/model';
 import { emit } from '../store/events';
@@ -39,14 +40,15 @@ export const syncState = { status: 'idle' as string, busy: false, again: false, 
 /* ---------- Stores: this device ↔ the sync file ---------- */
 
 // Everything on this device, as a detached copy.
-export function localStore(): Required<Store> {
+export function localStore(): FullStore {
   const data = Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? db : readPlan(p.id)]));
-  return JSON.parse(JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data, visions }));
+  const tips = hasTips() ? getTips() : undefined;
+  return JSON.parse(JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data, visions, tips }));
 }
 
 // The empty starter plan a new device makes on its first visit would otherwise sync as an extra
 // "My plan"; on the first sync it is dropped when the Drive file already has plans.
-export function dropStarterPlans(store: Required<Store>): Required<Store> {
+export function dropStarterPlans(store: FullStore): FullStore {
   const starterNames = new Set(Object.values(I18N).map(l => l.strings['plan.defaultName']));
   const isStarter = (p: Plan) => {
     const d = store.data[p.id];
@@ -57,6 +59,7 @@ export function dropStarterPlans(store: Required<Store>): Required<Store> {
     plans: { ...store.plans, list },
     data: Object.fromEntries(list.map(p => [p.id, store.data[p.id]])),
     visions: store.visions,
+    ...(store.tips && { tips: store.tips }),
   };
 }
 
@@ -92,6 +95,7 @@ export function applyStore(store: Store) {
   }
   takePlanSnapshot(plans);
   if (store.visions) applyVisions(store.visions);
+  if (store.tips) saveTips(store.tips);
   setPlansVersion(plansVersion + 1);
   setDb(readPlan(plans.current as string));
   takeSnapshot(db);
@@ -99,12 +103,6 @@ export function applyStore(store: Store) {
 }
 
 /* ---------- Sync ---------- */
-
-// True while sync must wait: during the tour the open plan is a temporary one (main.ts sets it).
-export let syncPaused = () => false;
-export function setSyncPaused(v: () => boolean) {
-  syncPaused = v;
-}
 
 export function scheduleSync(delay = SYNC_DELAY) {
   if (!syncConnected()) return;
@@ -114,8 +112,7 @@ export function scheduleSync(delay = SYNC_DELAY) {
 
 // `interactive` is true when a click started the sync, so Google may show its sign-in popup.
 export async function syncNow(interactive = false): Promise<void> {
-  // During the tour the open plan is a temporary one; endTour syncs once it is over.
-  if (!syncConnected() || syncPaused()) return;
+  if (!syncConnected()) return;
   if (syncState.busy) {
     syncState.again = true;
     return;
@@ -131,8 +128,6 @@ export async function syncNow(interactive = false): Promise<void> {
     const token = await drive.getToken(interactive);
     const remote = await drive.read(token);
     if (!mine()) return;
-    // A tour that started while this sync waited: endTour syncs once it is over.
-    if (syncPaused()) return setSyncStatus('idle');
     // From here until applyStore nothing waits, so no local edit can slip in between.
     let local = localStore();
     if (!prefs.get('syncedOnce', false) && remote.content?.plans.list.length) local = dropStarterPlans(local);

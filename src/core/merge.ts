@@ -21,6 +21,8 @@ import {
 } from './model';
 import { dropRoutineDeps } from './normalize';
 import { mergeVisions } from './visions';
+import { today } from './dates';
+import { mergeTips, type Tips } from './guidance/tip-history';
 import type { WithList } from './routines/checkins';
 
 export type SyncItem = Goal | State | Activity | Relation;
@@ -34,7 +36,10 @@ export interface Store {
   plans: { list: Plan[]; deleted?: IdSet<ISOTime> };
   data: Record<string, Db>;
   visions?: VisionList;
+  tips?: Tips; // tip history; absent from files that never had any
 }
+// A store with every part read (the tips stay optional, so files without them keep their shape).
+export type FullStore = Required<Omit<Store, 'tips'>> & Pick<Store, 'tips'>;
 // Method syntax keeps the parameters bivariant, so mergeState (states only) fits.
 type MergeItem = { merge(x: SyncItem, y: SyncItem): SyncItem }['merge'];
 
@@ -55,6 +60,7 @@ export const TOMBSTONE_DAYS = 365; // deletions older than this are forgotten
 /* ---------- Change tracking ---------- */
 
 export let syncSnapshot = new Map<string, string>(); // item id → its content (without updatedAt) as last saved
+let statusSnapshot = new Map<string, string>(); // goal or activity id → its status as last saved
 
 export const itemContent = (item: { updatedAt?: ISOTime }): string => {
   const { updatedAt, ...rest } = item;
@@ -64,12 +70,29 @@ export const itemContent = (item: { updatedAt?: ISOTime }): string => {
 // Call whenever `db` is replaced by stored data, so only later edits count as changes.
 export function takeSnapshot(data: Db): void {
   syncSnapshot = new Map(SYNC_COLLS.flatMap(c => data[c].map((x): [string, string] => [x.id, itemContent(x)])));
+  statusSnapshot = new Map([...data.goals, ...data.activities].map((x): [string, string] => [x.id, statusKey(x)]));
+}
+const statusKey = (x: Goal | Activity) => `${x.status}|${('autoStarted' in x && x.autoStarted) || ''}`;
+
+// A goal or activity whose status changed, or that is new, has had it since today. An activity the
+// app started on its start date has `autoStarted` for that, so `statusSince` is left out.
+function stampStatus(data: Db): void {
+  const day = today();
+  [...data.goals, ...data.activities].forEach(x => {
+    const before = statusSnapshot.get(x.id);
+    if (before?.split('|')[0] === x.status) return;
+    const autoStart =
+      'autoStarted' in x && x.status === 'doing' && !!x.autoStarted && !!before && !before.endsWith(`|${x.autoStarted}`);
+    if (autoStart) delete x.statusSince;
+    else x.statusSince = day;
+  });
 }
 
 export function stampChanges(data: Db): void {
   const now = new Date().toISOString();
   const present = new Set();
   data.deleted ||= {};
+  stampStatus(data);
   SYNC_COLLS.forEach(c =>
     data[c].forEach(x => {
       present.add(x.id);
@@ -283,7 +306,7 @@ export function lastTouched(entry: Plan, data: Db | undefined): ISOTime {
   return times.reduce((a, b) => (b > a ? b : a), '');
 }
 
-export function mergeStores(a: Store, b: Store): Required<Store> {
+export function mergeStores(a: Store, b: Store): FullStore {
   const deleted = mergeDeleted(a.plans.deleted || {}, b.plans.deleted || {});
   const entries = new Map<string, Plan>();
   [...a.plans.list, ...b.plans.list].forEach(p => {
@@ -305,5 +328,6 @@ export function mergeStores(a: Store, b: Store): Required<Store> {
     plans: { list, deleted: Object.fromEntries(Object.entries(deleted).filter(([id]) => !kept.has(id))) },
     data,
     visions: mergeVisions(a.visions, b.visions),
+    ...((a.tips || b.tips) && { tips: mergeTips(a.tips, b.tips) }),
   };
 }

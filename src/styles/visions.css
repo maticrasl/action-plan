@@ -2,15 +2,16 @@
 :root {
   --vglow: var(--vglow-silver);
 }
-:root.purpose {
+/* With a Purpose and every active goal SMART the glow and the blaze at the top left turn gold (the
+   app's icon stays as it is). The Purpose card and tag are gold with a Purpose alone (.purpose). */
+:root.golden {
   --vglow: var(--vglow-gold);
 }
-/* With a Purpose the blaze at the top left turns gold (the app's icon stays as it is). */
-:root.purpose .brand .blaze-mark circle:first-child,
+:root.golden .brand .blaze-mark circle:first-child,
 .blaze-mark.gold circle:first-child {
   fill: var(--purpose);
 }
-:root.purpose .brand .blaze-mark circle:last-child,
+:root.golden .brand .blaze-mark circle:last-child,
 .blaze-mark.gold circle:last-child {
   fill: #fff4d2;
 }
@@ -78,6 +79,21 @@
 }
 .vis-status p {
   margin: 0;
+}
+/* It names goals and visions: a long word breaks rather than widening a phone screen. */
+.vis-status {
+  overflow-wrap: anywhere;
+}
+/* A goal named in a line opens its form. */
+.vis-goal {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 .vis-status.found {
   background: color-mix(in srgb, var(--purpose) 24%, var(--surface));

@@ -520,6 +520,7 @@ suite(async () => {
       frame.onload = res;
       document.body.append(frame);
     });
+    await fontsLoaded(frame.contentDocument);
     const doc = frame.contentDocument,
       card = doc.querySelector('.card').getBoundingClientRect();
     const items = [...doc.querySelectorAll('.li-tick')].map(b => b.getBoundingClientRect());

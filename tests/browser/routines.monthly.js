@@ -90,6 +90,7 @@ suite(async () => {
       frame.onload = res;
       document.body.append(frame);
     });
+    await fontsLoaded(frame.contentDocument);
     [...frame.contentDocument.querySelectorAll('.card')].forEach(c => {
       const card = c.getBoundingClientRect(),
         h = c.querySelector('h3').getBoundingClientRect(),
@@ -110,7 +111,7 @@ suite(async () => {
     changeLanguage('en');
     deletePlan(plans.current);
   });
-  changeLanguage('en'); // also when the step above failed in Slovenian (it does on CI's Linux fonts)
+  changeLanguage('en'); // also when the step above failed in Slovenian
   await step('monthly routines: the form shows the right fields and saves each option', () => {
     fresh('Monthly');
     const shown = sel => !$(sel).closest('[hidden]');
@@ -253,6 +254,24 @@ suite(async () => {
     eq($('#f-nth').value, '1', 'a choice made by hand stays');
     modal.close();
     return `${a1.repeat.day} | ${a2.repeat.on} | ${scheduleText(a3)}`;
+  });
+  await step('monthly routines: a new one on a fifth weekday offers no fifth, but the last', () => {
+    const nthOn = day => {
+      setToday(() => day);
+      try {
+        openForm('activity', null, { repeat: 'once' });
+        change('#f-repeat', 'custom');
+        change('#f-unit', 'month');
+        change('#f-on', 'nth');
+        const got = [$('#f-nth').value, $('#f-weekday').value, [...$('#f-nth').options].map(o => o.value)];
+        modal.close();
+        return got;
+      } finally {
+        setToday(() => isoDate(new Date()));
+      }
+    };
+    eq(nthOn('2026-12-30'), ['-1', '2', ['1', '2', '3', '4', '-1']], 'the fifth Wednesday: last Wednesday');
+    eq(nthOn('2026-10-28'), ['4', '2', ['1', '2', '3', '4', '-1']], 'a fourth Wednesday stays the fourth');
   });
   await step('monthly routines: check-ins, streaks and the week strip', () => {
     const now = today(),

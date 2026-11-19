@@ -44,6 +44,9 @@
   --ok: #2e8b57;
   --warn: #d9a21b;
   --bad: #d2232a;
+  /* Tips: a lamp yellow, lighter than Purpose's gold; the word "Tip" in a dark amber for contrast. */
+  --tip: #f5c732;
+  --tip-ink: #7d5a06;
   --grey: #8d9898;
 
   --fill-done: color-mix(in srgb, var(--ok) 22%, var(--surface));
@@ -118,6 +121,8 @@
     --ok: #5cc489;
     --warn: #e9bb45;
     --bad: #f0565c;
+    --tip: #f6cf52;
+    --tip-ink: #f6cf52;
     --grey: #7f8d8f;
     --nav-bg: #0e1416;
     --nav-ink: #dce4e2;
@@ -168,6 +173,8 @@
   --ok: #5cc489;
   --warn: #e9bb45;
   --bad: #f0565c;
+  --tip: #f6cf52;
+  --tip-ink: #f6cf52;
   --grey: #7f8d8f;
   --nav-bg: #0e1416;
   --nav-ink: #dce4e2;

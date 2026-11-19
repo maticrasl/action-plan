@@ -167,6 +167,7 @@ suite(async () => {
         frame.onload = res;
         document.body.append(frame);
       });
+      await fontsLoaded(frame.contentDocument);
       const doc = frame.contentDocument,
         rs = [...doc.querySelectorAll('.act-choice-btn')].map(b => b.getBoundingClientRect());
       assert(rs.length === 4 && rs.every(r => r.left >= 15 && r.right <= 375), `${lang}: inside the gutters`);

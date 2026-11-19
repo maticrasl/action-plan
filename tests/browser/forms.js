@@ -4,9 +4,14 @@ suite(async () => {
   await step('goal form: invalid then valid save', () => {
     setView('goals');
     openForm('goal');
-    $('#f-title').value = 'Hi';
+    $('#f-title').value = ' ';
+    $('#f-target').value = '12abc';
     submitForm();
     const invalid = [...modal.querySelectorAll('.field.invalid')].map(f => f.dataset.field).join(',');
+    assert(modal.open && invalid === 'target', 'a bad number is refused: ' + invalid);
+    $('#f-target').value = '';
+    submitForm();
+    assert(modal.open && modal.querySelector('[data-field="title"].invalid'), 'a title is required');
     Object.entries({
       title: 'Test goal one',
       specific: 'A specific outcome that is long enough',
@@ -14,7 +19,8 @@ suite(async () => {
       unit: 'p',
       baseline: '1,5',
       target: '10.5',
-      achievable: 'Yes it is doable',
+      obstacle: 'Busy evenings at work',
+      ifThen: 'Read at lunch instead',
       relevant: 'Matters a lot to me',
       deadline: '2099-01-01',
     }).forEach(([k, v]) => {

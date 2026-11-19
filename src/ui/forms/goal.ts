@@ -2,7 +2,7 @@
 import { t, type TextKey } from '../../i18n/index';
 import { db, visions } from '../../core/state';
 import { reaches, relsTo } from '../../core/relations';
-import { measuringState, smartCheck } from '../../core/progress';
+import { measuringState, smartCheck, type SmartField } from '../../core/progress';
 import { PERIODS, goalPeriod, isCumulative, stateTotal } from '../../core/cumulative';
 import { $, esc, smartBadge } from '../dom';
 import { statusLabels, withUnit } from '../text';
@@ -83,7 +83,13 @@ export function goalForm(g: New<Goal>) {
       </div>
       </div>`,
     )}
-    ${smartSection('A', field('achievable', t('f.achievable'), area('achievable', g.achievable, t('f.achievablePh'))))}
+    ${smartSection(
+      'A',
+      `
+      ${field('obstacle', t('f.obstacle'), area('obstacle', g.obstacle, t('f.obstaclePh')))}
+      ${field('ifThen', t('f.ifThen'), area('ifThen', g.ifThen, t('f.ifThenPh')))}
+      ${g.achievable?.trim() ? field('achievable', t('f.achievable'), area('achievable', g.achievable, t('f.achievablePh'))) : ''}`,
+    )}
     ${smartSection('R', field('relevant', t('f.relevant'), area('relevant', g.relevant, t('f.relevantPh'))))}
     ${smartSection(
       'T',
@@ -126,6 +132,8 @@ export function updateProgressFields() {
   $('#routinesHint').hidden = by !== 'routines';
 }
 
+// The letters, the line above them, and under each unfinished field a quiet hint (not an error:
+// the goal saves without it).
 export function updateSmartLive() {
   if (formCtx?.kind !== 'goal') return;
   const { v } = formValues();
@@ -133,6 +141,17 @@ export function updateSmartLive() {
   modal
     .querySelectorAll<HTMLElement>('.smart-block')
     .forEach(b => b.classList.toggle('ok', !!c[b.dataset.smart as 'S']));
+  modal.querySelectorAll<HTMLElement>('.smart-block .field[data-field]').forEach(f => {
+    const msg = c.errs[f.dataset.field as SmartField] || '';
+    let hint = f.querySelector<HTMLElement>('.smart-hint');
+    if (!hint && !msg) return;
+    if (!hint) {
+      hint = Object.assign(document.createElement('div'), { className: 'hint smart-hint' });
+      f.querySelector('.err')!.before(hint);
+    }
+    hint.textContent = msg;
+    hint.hidden = !msg;
+  });
   const okCount = 'SMART'.split('').filter(l => c[l as 'S']).length;
   $('#smartLive').innerHTML = smartBadge(v as unknown as Goal);
   $('#smartLiveText').textContent = okCount === 5 ? t('smart.ok') : t('smart.partial', { n: okCount });

@@ -2,6 +2,7 @@
 import { db, visions } from './state';
 import { safeId } from './normalize';
 import { mergeDeleted, newerOf, newestFirst, stamp } from './merge';
+import { isSmart } from './progress';
 import type { Db, Goal, IdSet, ISOTime, Plan, Vision, VisionList, VisionRel } from './model';
 import type { TextKey } from '../i18n/index';
 
@@ -16,6 +17,8 @@ export interface Purpose {
   root: Vision | null;
   roots: Vision[];
   unlinked: { plan: Plan; goal: Goal }[];
+  vague: { plan: Plan; goal: Goal }[];
+  golden: boolean;
   active: number;
 }
 // A vision list as storage, Drive or a file may hold it, before it is checked.
@@ -115,20 +118,23 @@ export function contributingIds(data: Db = db): Set<string> {
 
 // Purpose: one vision at the top, at least one active goal, and every active goal (in every plan,
 // `all` as allPlansData gives them) serving a vision. `unlinked` lists the active goals that serve
-// none, as { plan, goal }.
+// none, as { plan, goal }, and `vague` those that are not SMART. The glow is golden only with a
+// Purpose and no vague goal.
 export function purposeOf(all: PlanData[]): Purpose {
   const roots = visionRoots(),
-    unlinked: Purpose['unlinked'] = [];
+    unlinked: Purpose['unlinked'] = [],
+    vague: Purpose['vague'] = [];
   let active = 0;
   all.forEach(({ plan, data }) =>
     data.goals.forEach(g => {
       if (!isActiveGoal(g)) return;
       active++;
       if (!goalVisionIds(g, data).length) unlinked.push({ plan, goal: g });
+      if (!isSmart(g)) vague.push({ plan, goal: g });
     }),
   );
   const on = visions.list.length > 0 && roots.length === 1 && active > 0 && !unlinked.length;
-  return { on, root: on ? roots[0] : null, roots, unlinked, active };
+  return { on, root: on ? roots[0] : null, roots, unlinked, vague, golden: on && !vague.length, active };
 }
 
 // Two copies of the list: the newer version of each vision wins, deletions as for plans, and the

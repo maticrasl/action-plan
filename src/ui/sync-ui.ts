@@ -10,11 +10,11 @@ import { db } from '../core/state';
 import { $, esc } from './dom';
 import { toast } from './toast';
 
-// Switching users and offering the tour belong to the app above the screen parts; main.ts connects them.
+// Switching users and offering the welcome belong to the app above the screen parts; main.ts connects them.
 let enterUser: (id: string) => boolean = () => false;
-let offerTour: () => void = () => {};
-export function connectSync(fns: { enterUser: (id: string) => boolean; offerTour: () => void }) {
-  ({ enterUser, offerTour } = fns);
+let offerWelcome: () => void = () => {};
+export function connectSync(fns: { enterUser: (id: string) => boolean; offerWelcome: () => void }) {
+  ({ enterUser, offerWelcome } = fns);
 }
 
 /* ---------- Signing in and out: one user per Google account (users.js) ---------- */
@@ -59,7 +59,7 @@ export async function logIn(hint = '', target: User | null = null) {
   renderSync();
   await syncNow(true);
   // A first visit, unless the sync brought back plans from the account's other devices.
-  if (firstVisit && plans.list.length === 1 && !SYNC_COLLS.some(c => db[c].length)) offerTour();
+  if (firstVisit && plans.list.length === 1 && !SYNC_COLLS.some(c => db[c].length)) offerWelcome();
 }
 
 // The guest's space opens (made, empty, when there is none); the one before keeps their data, apart.

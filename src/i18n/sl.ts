@@ -12,6 +12,19 @@ export const sl: Language = {
     'nav.goals': 'Cilji',
     'nav.states': 'Stanja',
     'nav.graphs': 'Grafi',
+    'view.guide': 'Vodnik',
+    'guide.search': 'Iščite po vodniku …',
+    'guide.noMatch': 'Za »{query}« ni zadetkov. Poskusite z drugo besedo.',
+    'guide.group.start': 'Za začetek',
+    'guide.group.stuck': 'Ko se zatakne',
+    'guide.group.how': 'Kako …',
+    'guide.group.data': 'Vaši podatki in zasebnost',
+    'guide.group.limits': 'Česa aplikacija ne zmore',
+    'guide.related': 'Sorodno',
+    'guide.more': 'Več v Vodniku',
+    'guide.open': 'Odpri Vodnik',
+    'guide.review.done': 'Tedenski pregled končan',
+    'guide.review.toast': 'Tedenski pregled je končan. Se vidimo naslednji teden.',
     'nav.visions': 'Vizije',
     'view.visions': 'Vizije',
     'kind.vision': 'Vizija',
@@ -51,6 +64,7 @@ export const sl: Language = {
     },
     'vis.noGoals': 'Aktivnih ciljev še ni. Smisel potrebuje cilje, ki služijo vašim vizijam.',
     'vis.found': 'Našli ste svoj Smisel: {name}',
+    'vis.vague': 'Zlati sij se vrne, ko bodo vsi aktivni cilji SMART. Še dokončati: {names}.',
     'vis.purpose': 'Smisel',
     'vis.alsoUnder': 'Služi tudi',
     'vis.servedBy': 'Služijo ji',
@@ -122,6 +136,8 @@ export const sl: Language = {
       'Povlecite vrstico, da premaknete njene datume, ali enega od njenih koncev, da spremenite le ta datum. Na zaslonu na dotik jo najprej pridržite.',
     'tl.dragHintMove':
       'Povlecite vrstico, da premaknete njene datume (konec je odvisen od števila ponovitev). Na zaslonu na dotik jo najprej pridržite.',
+    'tl.dragHintOpen':
+      'Povlecite vrstico, da premaknete njen začetni datum; roka še nima. Na zaslonu na dotik jo najprej pridržite.',
     'tl.datesMoved': '»{name}«: {dates}',
     'f.category': 'Kategorija',
     'f.categoryPh': 'npr. Zdravje',
@@ -262,76 +278,234 @@ export const sl: Language = {
     'user.removeConfirm':
       'Odstranim {name} s te naprave? Načrti se tu izbrišejo; kar je sinhronizirano, ostane v Google Drive tega računa in se vrne ob naslednji prijavi. Še nesinhronizirane spremembe se izgubijo.',
     'user.removed': '{name} – odstranjeno s te naprave',
-    'btn.tutorial': 'Vodeni ogled',
-    'btn.help': 'Način pomoči',
+    'btn.help': 'Razlage na zaslonu',
 
     'langPick.title': 'Izberite jezik',
     'langPick.text': 'Kadar koli ga lahko spremenite v nastavitvah.',
     'langPick.continue': 'Nadaljuj',
-    'tour.planName': 'Vodič',
-    'tour.count': 'Korak {n} od {total}',
-    'tour.start': 'Začni',
-    'tour.next': 'Naprej',
-    'tour.back': 'Nazaj',
-    'tour.skip': 'Preskoči ogled',
-    'tour.keep': 'Obdrži vzorčni načrt',
-    'tour.finish': 'Odstrani in končaj',
-    'tour.kept': 'Načrt iz vodiča je vaš za raziskovanje',
-    'tour.about.title': 'Dobrodošli v Akcijskem načrtu',
-    'tour.about.text':
-      'Akcijski načrt vam pomaga spremeniti to, kar želite doseči, v konkretne korake. Postavite cilje SMART, kot merljiva trenutna stanja zabeležite, kje ste danes, in načrtujte aktivnosti, ki zaprejo vrzel. Nato si na zemljevidu oglejte, kako je vse povezano, napredek pa spremljajte na časovnici in grafih. Uporabite ga za karkoli, od telesne pripravljenosti in varčevanja do učenja ali prenove hiše.',
-    'tour.welcome.title': 'Kratek ogled',
-    'tour.welcome.text':
-      'Ta kratek ogled vam predstavi aplikacijo na začasnem vzorčnem načrtu, zato vaši podatki ostanejo nedotaknjeni. Traja približno minuto.',
-    'tour.dashboard.title': 'Pregled',
-    'tour.dashboard.text': 'Vaše izhodišče: skupni napredek, kaj zamuja ali čaka in naslednje aktivnosti po roku.',
-    'tour.goals.title': 'Cilji',
-    'tour.goals.text':
-      'Vsak cilj je SMART: specifičen, merljiv, dosegljiv, relevanten in časovno opredeljen. Črke zasvetijo, ko jih izpolnite, pot pa kaže, koliko ste prehodili od začetne do ciljne vrednosti. Cilj, ki ga meri stanje, ki se sešteva, izbere, kako šteje: skupno ali na dan, teden, mesec ali leto.',
-    'tour.states.title': 'Trenutna stanja',
-    'tour.states.text':
-      'Stvari, ki jih merite, na primer najdaljši tek ali prihranke. Ob vsaki spremembi tapnite njegovo kartico in vpišite novo vrednost – zgodovina z datumi pokaže, kje ste; stanje lahko meri napredek proti ciljem. Stanje se lahko tudi sešteva – kilometri na teden, denar skupno: po vsakem teku ali pologu tapnite njegovo kartico. Kartico uredite tako, da jo pridržite ali kliknete z desno tipko.',
-    'tour.graphs.title': 'Grafi',
-    'tour.graphs.text':
-      'Meritve vsakega trenutnega stanja skozi čas, s črtkano črto za ciljno vrednost in spremembo od prve meritve. Stanja, ki se seštevajo, pokažejo vsote po dnevih, tednih, mesecih ali letih ali skupno, vsaka rutina pa pokaže, kolikokrat ste jo opravili v posameznem obdobju – ali po dnevih, tednih, mesecih ali letih ali skupaj. Za posamezne vrednosti se z miško postavite na graf ali ga tapnite, z razmikom prstov ali s Ctrl + koleščkom pa povečate izbrano obdobje; v tabeli pod njim so meritve, kjer lahko napačno izbrišete.',
-    'tour.activities.title': 'Aktivnosti',
-    'tour.activities.text':
-      'Konkretni koraki, ki zapirajo vrzel. Kartice vlecite med stolpci Za izvedbo, V teku in Opravljeno ali tapnite krožec, da jo premaknete naprej. Ko pride njen začetni datum, se aktivnost sama premakne v stolpec V teku. Seznam se premika naprej, ko odkljukate njegove postavke, in je opravljen, ko so odkljukane vse.',
-    'tour.routines.title': 'Rutine',
-    'tour.routines.text':
-      'Nekatere aktivnosti se ponavljajo – trikrat na teden tek, vsak ponedeljek in četrtek vaje za moč, vsaka 2 meseca na prvi ponedeljek pregled. Dodate jo tako, da ob dodajanju aktivnosti izberete Rutina, ali Rutinski seznam za seznam opravil, ki ga vsakič opravite, na primer jutranjo rutino – zadnja odkljukana postavka odkljuka dan. Vsakič, ko jo opravite, jo odkljukajte na tedenskem traku (ali v Pregledu), s puščicama pa izpolnite tudi pretekle tedne, in opazujte, kako niz raste. Ko rutina izboljšuje stanje, ki se sešteva, vas ob kljukici vpraša še, koliko – en vnos po teku posodobi oboje. Cilj lahko napredek meri po tem, kako redno izvajate njegove rutine.',
-    'tour.timeline.title': 'Časovnica',
-    'tour.timeline.text':
-      'Cilji in aktivnosti na koledarju. Barvne črte na levi kažejo, kaj prispeva k cilju, kaj je podaktivnost in na katere predpogoje čaka aktivnost; odvisnosti so prikazane s puščicami, zamujena obdobja pa rdeče; rutine označijo svoje dni kot opravljene, izpuščene ali prihajajoče. Izbrano vrstico povlecite, da spremenite njene datume.',
-    'tour.map.title': 'Zemljevid povezav',
-    'tour.map.text':
-      'Kako je vse povezano: cilji zgoraj, aktivnosti na sredini in trenutna stanja spodaj. Tapnite polje ali črto, da jo izberete in poudarite njene povezave; z dvojnim klikom ali tipko Enter jo uredite, s tipko Delete pa odstranite.',
-    'tour.mapLink.title': 'Povežite dva elementa',
-    'tour.mapLink.text':
-      'Z miško povlecite od enega polja do drugega. Na zaslonu na dotik polje pridržite, izberite »Poveži z …« in tapnite drugo polje. Nato vam ponudimo le povezave, ki ustrezajo tema elementoma. Če spustite drugje, povezave ni.',
-    'tour.add.title': 'Dodajte nekaj novega',
-    'tour.add.text':
-      'Ta gumb doda, kar ustreza trenutnemu pogledu: cilj, trenutno stanje ali aktivnost. Na zemljevidu in časovnici vpraša, katerega od njih; na zemljevidu enako ponudi desni klik na prazno mesto.',
-    'tour.more.title': 'Več pogledov',
-    'tour.more.text':
-      'Na telefonu so Zemljevid, Časovnica in Grafi pod gumbom Več, da je spodnja vrstica preglednejša.',
-    'tour.sidebar.title': 'Več prostora',
-    'tour.sidebar.text':
-      'Strnite stransko vrstico, da ostanejo vidne le ikone in imajo pogledi več prostora. Za razširitev znova kliknite.',
-    'tour.settings.title': 'Nastavitve',
-    'tour.settings.text':
-      'Preklapljajte med načrti, jih združujte in urejajte (barvna pika ob vsakem je zelena, ko je vse v redu, rumena, ko je nekaj treba opraviti danes, in rdeča, ko je nekaj zamujeno), spremenite jezik in temo, nastavite prikaz, se prijavite z Googlom za sinhronizacijo naprav (na eni napravi se lahko prijavi več ljudi, vsak s svojimi načrti), začnite nov načrt iz pripravljene predloge, izvozite načrt za varnostno kopijo ali ga delite kot predlogo, uvozite načrte ter namestite Akcijski načrt kot aplikacijo.',
-    'tour.sync.title': 'Stanje sinhronizacije',
-    'tour.sync.text':
-      'Oblak kaže, ali so načrti sinhronizirani z Google Drive. Ko piše, da je sinhronizacija ustavljena, ga kliknite za nadaljevanje.',
-    'tour.help.title': 'Način pomoči',
-    'tour.help.text':
-      'Vklopite ga kadar koli za razlago vsakega zaslona in namige ⓘ ob kontrolnikih. Ta ogled lahko znova zaženete v Nastavitvah.',
-    'tour.done.title': 'Pripravljeni ste',
-    'tour.done.text': 'Obdržite vzorčni načrt in ga raziščite sami ali pa ga odstranite in se vrnite k svojemu načrtu.',
+    'welcome.title': 'Dobrodošli v Akcijskem načrtu',
+    'welcome.text':
+      'Akcijski načrt spremeni nekaj, kar si želite, v korake, ki jih lahko naredite: cilj, kje ste danes in kaj boste glede tega naredili ta teden. Kako želite začeti?',
+    'welcome.own': 'Začnem s svojim ciljem',
+    'welcome.template': 'Začnem s predlogo',
+    'welcome.sample': 'Najprej pogledam vzorčni načrt',
+    'welcome.self': 'Raje brez vodenja',
+    'demo.banner': 'To je vzorčni načrt. Oglejte si ga in spremenite, kar želite; to niso vaši podatki.',
+    'demo.own': 'Začni svoj načrt',
+    'demo.remove': 'Odstrani vzorec',
 
-    'help.off': 'Izklopi pomoč',
+    'settings.tips': 'Nasveti',
+    'tip.label': 'Nasvet',
+    'tip.why': 'Zakaj to pomaga',
+    'tip.later': 'Ne zdaj',
+    'tip.close': 'Tega ne prikaži več',
+    'tip.settingsHint': 'Nasvete lahko izklopite v Nastavitvah.',
+    'tip.another': 'Še en nasvet',
+    'tip.none': 'Ta hip ni več nasvetov o vašem načrtu.',
+    'tip.all': 'Nasveti in triki',
+    'tip.back.text':
+      'Lepo, da ste spet tu. Ni treba nadoknaditi vsega: izberite en korak za danes in premaknite datume, ki ne držijo več.',
+    'tip.back.btn': 'Odpri Časovnico',
+    'tip.overdue-pile.text':
+      '{n} korakov je čez rok. Pretečen datum je stara ocena, ne sodba. Vzemite si pet minut in jih premaknite, razdelite ali izbrišite.',
+    'tip.overdue-pile.btn': 'Odpri Časovnico',
+    'tip.routine-missed.text':
+      '»{name}« je bila nekajkrat izpuščena. Ena kljukica jo vrne na pot. Če urnik ne ustreza vašim tednom, spremenite urnik.',
+    'tip.routine-missed.btn': 'Uredi rutino',
+    'tip.routine-low.text':
+      '»{name}« je bila opravljena približno {pct} % časa. Manjša rutina, ki jo izvajate, je boljša od večje, ki jo izpuščate. Poskusite z malo manj in povečajte, ko bo držalo.',
+    'tip.routine-low.btn': 'Uredi rutino',
+    'tip.goal-behind.text':
+      '»{name}« je pri {pct} %, do roka pa je še {days} dni. Tri poštene možnosti: ta teden mu naredite prostor, premaknite datum ali znižajte cilj.',
+    'tip.goal-behind.btn': 'Odpri cilj',
+    'tip.goal-past.text':
+      '»{name}« je šel čez rok pri {pct} %. To je {pct} % dlje, kot ste začeli. Dajte mu nov datum ali ga zaustavite, če zdaj ni pravi čas.',
+    'tip.goal-past.btn': 'Odpri cilj',
+    'tip.stuck-step.text':
+      '»{name}« je v teku že {n} tednov. Korak, ki se noče končati, je pogosto več korakov v enem. Razdelite ga ali ga spremenite v seznam.',
+    'tip.stuck-step.btn': 'Odpri aktivnost',
+    'tip.wrong-way.text':
+      '»{name}« se je trikrat zapored oddaljilo od cilja. Več truda morda ni odgovor; morda so napačni koraki. Katera aktivnost naj bi ga premaknila?',
+    'tip.wrong-way.btn': 'Odpri Grafe',
+    'tip.too-many-goals.text':
+      'Imate {n} aktivnih ciljev. Večina ljudi hitreje napreduje z dvema ali tremi naenkrat. Zaustavite tiste, ki lahko počakajo; vse obdržijo in se vrnejo z enim dotikom.',
+    'tip.too-many-goals.btn': 'Odpri Cilje',
+    'tip.too-many-routines.text':
+      '{n} rutin naenkrat je veliko. Kateri dve sta zdaj najpomembnejši? Druge za zdaj končajte in jih vračajte eno za drugo.',
+    'tip.too-many-routines.btn': 'Odpri Aktivnosti',
+    'tip.no-steps.text': '»{name}« še nima korakov. Katera je najmanjša stvar, ki jo lahko zanj naredite ta teden?',
+    'tip.no-steps.btn': 'Dodaj aktivnost',
+    'tip.steps-ran-out.text': 'Vsi koraki za »{name}« so opravljeni, cilj pa še ni dosežen. Kaj pride naslednje?',
+    'tip.steps-ran-out.btn': 'Dodaj aktivnost',
+    'tip.no-dates.text':
+      '{n} korakov nima datuma. Korak z dnevom in trenutkom je opravljen veliko pogosteje kot korak za »nekoč«. Dajte naslednjemu dan.',
+    'tip.no-dates.btn': 'Odpri Aktivnosti',
+    'tip.only-result.text':
+      '»{name}« je rezultat. Kaj bi delali vsak teden, da postane verjeten? Dodajte to kot rutino.',
+    'tip.only-result.btn': 'Dodaj rutino',
+    'tip.stale-state.text':
+      '»{name}« je bilo nazadnje izmerjeno pred {days} dnevi. Sveža vrednost pokaže, ali to, kar delate, deluje.',
+    'tip.stale-state.btn': 'Zapiši vrednost',
+    'tip.no-measure.text':
+      '»{name}« ima cilj, nič pa ne meri poti do njega. Dodajte mu trenutno stanje in cilj se premakne, ko merite.',
+    'tip.no-measure.btn': 'Dodaj trenutno stanje',
+    'tip.far-goal.text':
+      'Do »{name}« je še {n} mesecev. Bližji podcilj vam da nekaj, kar dosežete prej, in pokaže, ali ste na poti.',
+    'tip.far-goal.btn': 'Dodaj podcilj',
+    'tip.waiting.text':
+      '»{name}« čaka na »{other}«, ki se še ni začel. Začnite tistega ali odstranite povezavo, če ne drži več.',
+    'tip.waiting.btn': 'Odpri »{other}«',
+    'tip.many-doing.text':
+      '{n} aktivnosti je v teku. Če eno končate, boste naredili več kot z začetkom nove. Katera je najbliže koncu?',
+    'tip.many-doing.btn': 'Odpri Aktivnosti',
+    'tip.no-vision.text':
+      'Čemu služijo vaši cilji? Vizija je en stavek o življenju, ki ga skupaj gradijo. To je razlog, ki ga boste pogledali v težkih dneh.',
+    'tip.no-vision.btn': 'Dodaj vizijo',
+    'tip.goal-unfinished.text':
+      '»{name}« je pri {n} od 5. Odprto je še: {part}. Nekaj minut zdaj naredi cilj lažji za delo.',
+    'tip.goal-unfinished.btn': 'Odpri cilj',
+    'tip.week.text':
+      'Nov teden. Pet minut zdaj: kaj se je premaknilo prejšnji teden in kateri korak je ta teden najpomembnejši?',
+    'tip.week.btn': 'Odpri tedenski pregled',
+    'tip.month.text': 'Nov mesec je dober trenutek za merjenje. Zapišite sveže vrednosti trenutnih stanj.',
+    'tip.month.btn': 'Odpri Stanja',
+    'tip.new-year.text':
+      'Novo leto je dober trenutek za nov začetek. Želje do februarja zbledijo, koraki z datumi ne. Poglejte svoje cilje in izberite tistega za ta mesec.',
+    'tip.new-year.btn': 'Odpri Cilje',
+    'tip.routine-holds.text':
+      '»{name}«: štirikrat zapored. Približno zdaj začne iti lažje. Če želite, jo malo povečajte, ali pa jo pustite; tudi to, da drži, šteje.',
+    'tip.halfway.text': '»{name}« je čez polovico.',
+    'tip.achieved.text':
+      'Dosegli ste »{name}«. Preden začnete naslednjega: kaj je naredilo razliko? In ali je kakšna majhna rutina vredna, da ostane, da rezultat zdrži?',
+    'tip.achieved.btn': 'Odpri cilj',
+    'tip.first-month.text':
+      'Mesec dni se vračate k svojemu načrtu. Ta navada je vredna več kot katerikoli posamezen cilj v njem.',
+    'tip.try-map.text':
+      'V vašem načrtu je zdaj dovolj, da je vreden pogled na Zemljevid: pokaže, kaj čemu služi in kaj ničemur.',
+    'tip.try-map.btn': 'Odpri Zemljevid',
+    'tip.try-timeline.text': 'Časovnica pokaže vaše korake na koledarju. Povlecite trak, da premaknete njegove datume.',
+    'tip.try-timeline.btn': 'Odpri Časovnico',
+    'tip.try-graphs.text': '»{name}« ima dovolj meritev za črto. Grafi jo pokažejo ob vaši ciljni vrednosti.',
+    'tip.try-graphs.btn': 'Odpri Grafe',
+    'tip.make-up.text':
+      'Ko določen dan za »{name}« ne gre, vam rutina lahko dovoli, da ga nadoknadite na drug dan. To je stikalo pod Ponavljanjem.',
+    'tip.make-up.btn': 'Uredi rutino',
+    'tip.adds-up.text':
+      'Če »{name}« vsakič dopolnite, na primer s kilometri ali denarjem, se lahko sešteva samo: vklopite »Se sešteva« in vpišite le, kar je novega.',
+    'tip.adds-up.btn': 'Odpri stanje',
+    'tip.use-list.text': '»{name}« je videti kot več stvari v eni. Kot seznam jih lahko odkljukate eno za drugo.',
+    'tip.use-list.btn': 'Odpri aktivnost',
+    'tip.routine-list.text':
+      'Več stvari, ki jih delate vsak dan, je lahko en rutinski seznam, na primer »Jutranja rutina«: odkljukajte postavke in dan se odkljuka sam.',
+    'tip.routine-list.btn': 'Dodaj rutinski seznam',
+    'tip.templates.text':
+      'Ne veste, kako cilj razdeliti na korake? Predloge pokažejo, kako so urejeni podobni cilji. Vzemite, kar vam ustreza.',
+    'tip.templates.btn': 'Začni s predlogo',
+    'tip.backup.text':
+      'Vaši načrti so samo v tem brskalniku. Prijavite se z Googlom ali izvozite kopijo, da jih počiščen brskalnik ne odnese s seboj.',
+    'tip.backup.btn': 'Shrani kopijo',
+    'tip.install.text': 'Akcijski načrt je lahko na vašem začetnem zaslonu in se odpre kot vsaka druga aplikacija, tudi brez povezave.',
+    'tip.install.btn': 'Namesti aplikacijo',
+    'tip.menu.text':
+      'Pridržite katerokoli kartico ali jo kliknite z desno tipko za meni: prikažite jo na Zemljevidu, dodajte ji korak, spremenite njeno stanje.',
+    'tip.ctrl-enter.text': 'Ctrl + Enter shrani obrazec, v katerem ste.',
+    'tip.share.text':
+      'Načrt, ki je pomagal vam, lahko pomaga še komu. Izvozite ga kot predlogo: vaše korake brez vaših številk.',
+    'tip.share.btn': 'Izvozi načrt',
+
+    'walk.title': 'Prvi koraki',
+    'walk.count': '{done} od {total}',
+    'walk.next': 'Naslednje: {task}',
+    'walk.showMe': 'Pokaži mi',
+    'walk.skip': 'Preskoči ta korak',
+    'walk.more': 'Več o tem',
+    'walk.optional': 'neobvezno',
+    'walk.skipped': 'preskočeno',
+    'walk.fold': 'Zloži Prve korake',
+    'walk.unfold': 'Razpri Prve korake',
+    'walk.hide': 'Skrij prve korake',
+    'walk.hidden': 'Prvi koraki so v Vodniku, kadar jih želite.',
+    'walk.ticked': 'Prvi koraki: {task} ✓',
+    'walk.tickedNext': 'Prvi koraki: {task} ✓ Naslednje: {next}',
+    'walk.start': 'Začni',
+    'walk.continue': 'Nadaljuj',
+    'walk.again': 'Poglej znova',
+    'walk.over': 'Začni znova',
+    'walk.close': 'Zapri',
+    'walk.doneWord': 'opravljeno',
+    'walk.days': '{n} od 3',
+    'walk.finished.title': 'Pripravljeni ste',
+    'walk.finished.text':
+      'Imate cilj, izhodišče, korake, rutino in navado, da se vračate. Od tu naprej je načrt vaš. Vodnik vam pomaga v trenutkih, ko se zatakne.',
+    'walk.stage.first.title': 'Vaš prvi cilj',
+    'walk.stage.first.lead': 'En cilj, kje ste in prvi koraki. Približno deset minut.',
+    'walk.stage.first.done': 'Imate cilj, izhodišče in prvi opravljen korak.',
+    'walk.stage.rhythm.title': 'Naj postane ritem',
+    'walk.stage.rhythm.lead': 'Cilje dosežemo s tem, kar ponavljamo. Ta del traja približno teden dni.',
+    'walk.stage.rhythm.done': 'Rutina teče in vrnili ste se. To je najtežji del.',
+    'walk.stage.safe.title': 'Na varnem',
+    'walk.stage.safe.lead': 'Vaš načrt živi v tem brskalniku. Dve minuti, da se ne more izgubiti.',
+    'walk.stage.safe.done': 'Vaš načrt ima kopijo zunaj tega brskalnika.',
+    'walk.stage.picture.title': 'Celotna slika',
+    'walk.stage.picture.lead': 'Trije drugi pogledi na vaš načrt in vprašanje, ki stoji za njim.',
+    'walk.stage.picture.done': 'Videli ste vse.',
+    'walk.goal.title': 'Napišite en cilj',
+    'walk.goal.text':
+      'Izberite eno stvar, ki bi jo radi imeli drugače čez nekaj mesecev. Za začetek je en cilj dovolj. Za shranjevanje je potreben le naslov; druga vprašanja ga naredijo jasnejšega, črke pa zasvetijo, ko nanje odgovorite. Če nobena številka ne ustreza, nastavite »Napredek iz« na »Opravljenih aktivnosti« ali »Izvajanje rutin«. Groba prva različica je v redu; izboljšate jo lahko pozneje.',
+    'walk.goal.btn': 'Napiši cilj',
+    'walk.state.title': 'Zapišite, kje ste',
+    'walk.state.text':
+      'Cilj je razdalja, razdalja pa potrebuje izhodišče. Dodajte trenutno stanje: kaj merite, kako merite in današnjo pošteno vrednost. Povežite ga s ciljem in napredek cilja mu sledi.',
+    'walk.state.btn': 'Dodaj trenutno stanje',
+    'walk.state.notNeeded': 'Ni potrebno: vaš cilj se meri s tem, kar naredite.',
+    'walk.steps.title': 'Načrtujte prve korake',
+    'walk.steps.text':
+      'Zapišite dve ali tri stvari, ki jih lahko naredite za ta cilj. Prvo naredite tako majhno, da jo lahko opravite danes ali jutri; deset minut je dovolj. Vsaki dajte rok: korak z dnevom je opravljen veliko pogosteje kot korak za »nekoč«.',
+    'walk.steps.btn': 'Dodaj aktivnost',
+    'walk.firstDone.title': 'Naredite prvi korak',
+    'walk.firstDone.text':
+      'Naredite tistega majhnega, zdaj ali danes. Nato tapnite krogec na njegovi kartici, dokler ne piše Opravljeno. Načrt začne delovati, ko je prva stvar opravljena.',
+    'walk.routine.title': 'Dodajte eno rutino',
+    'walk.routine.text':
+      'Nekaj, kar boste delali znova in znova: trikrat na teden tek, deset minut španščine na dan, pogled na denar prvega v mesecu. V ime zapišite trenutek, na primer »Tek po službi«, da je odločitev že sprejeta, ko trenutek pride. Začnite manjše, kot mislite, da je treba; povečate lahko pozneje.',
+    'walk.routine.btn': 'Dodaj rutino',
+    'walk.tick.title': 'Odkljukajte jo',
+    'walk.tick.text':
+      'Ko jo prvič opravite, odkljukajte dan na njenem tedenskem traku, tu na Pregledu ali v Aktivnostih. Če dan izpustite, ni nič izgubljeno: naslednja kljukica vas vrne na pot.',
+    'walk.measure.title': 'Zapišite novo vrednost',
+    'walk.measure.text':
+      'Izmerite znova in tapnite kartico stanja, da zapišete vrednost. Dve točki naredita črto: odslej Grafi kažejo, v katero smer greste.',
+    'walk.measure.notNeeded': 'Ni potrebno: ta načrt nima trenutnih stanj.',
+    'walk.days.title': 'Vrnite se na tri dni',
+    'walk.days.text':
+      'Odprite načrt na tri različne dni. Pol minute je dovolj: odkljukajte, kar ste naredili, poglejte, kaj je naslednje. Izberite trenutek, ki ga dan že ima, na primer jutranjo kavo.',
+    'walk.backup.title': 'Naredite kopijo',
+    'walk.backup.text':
+      'Prijavite se z Googlom in vaši načrti so enaki na vseh vaših napravah, v skriti mapi vašega Google Drive, ki jo bere le ta aplikacija. Ali pa občasno izvozite celotno kopijo v datoteko.',
+    'walk.backup.textLocal': 'Občasno izvozite celotno kopijo načrta v datoteko in jo shranite na varno.',
+    'walk.backup.btn': 'Odpri Račun in sinhronizacijo',
+    'walk.install.title': 'Namestite aplikacijo',
+    'walk.install.text':
+      'Postavite Akcijski načrt na začetni zaslon. Odpre se v svojem oknu kot vsaka druga aplikacija, tudi brez povezave.',
+    'walk.views.title': 'Poglejte načrt na tri načine',
+    'walk.views.text':
+      'Zemljevid pokaže, kaj čemu služi. Časovnica pokaže, kdaj. Grafi pokažejo, ali deluje. Odprite vsakega enkrat.',
+    'walk.views.btn.map': 'Odpri Zemljevid',
+    'walk.views.btn.timeline': 'Odpri Časovnico',
+    'walk.views.btn.graphs': 'Odpri Grafe',
+    'walk.vision.title': 'Povejte, čemu služi',
+    'walk.vision.text':
+      'Nad cilji so vizije: stanje, ki si ga želite in ni nikoli dokončano, na primer »Biti v formi in živeti zdravo«. Dodajte eno in nanjo povežite svoj cilj. Na dneve, ko je cilj videti kot obveznost, vas ta stavek spomni, zakaj.',
+    'walk.vision.btn': 'Dodaj vizijo',
+    'walk.review.title': 'Naredite tedenski pregled',
+    'walk.review.text':
+      'Enkrat na teden, pet minut: odkljukajte opravljeno, zapišite sveže vrednosti, premaknite datume, ki ne držijo več, in izberite en korak, ki je naslednji teden najpomembnejši. Zdaj enkrat pojdite skozi seznam.',
+    'walk.review.btn': 'Odpri tedenski pregled',
+
+    'help.off': 'Izklopi razlage',
     'help.tipLabel': 'Kaj je to?',
+    'help.view.visions':
+      'Vizije so stanja, ki si jih želite in jih nikoli ne zaključite; cilji so način, kako se jim približujete. Dodajte vizijo, izberite cilje, ki ji služijo, in ožje vizije postavite pod širše. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj, je označena kot vaš Smisel.',
     'help.view.dashboard':
       'Pregled povzame vaš načrt: povprečni napredek aktivnih ciljev, opravljene, zamujene in čakajoče aktivnosti ter kaj je na vrsti: aktivnosti z rokom do danes ali zamujene (Prikaži vse doda še ostale v teku).',
     'help.view.goals':
@@ -521,19 +695,19 @@ export const sl: Language = {
     'smart.R': 'Relevanten',
     'smart.T': 'Časovno opredeljen',
     'smart.ok': 'Ta cilj je SMART.',
-    'smart.partial': 'Izpolnjenih kriterijev SMART: {n}/5 – za shranjevanje izpolnite vse.',
+    'smart.partial': '{n} od 5. Cilj lahko shranite zdaj in ga dokončate, ko boste vedeli več.',
 
-    'err.title': 'Cilju dajte jasno ime.',
+    'err.title': 'Jasno ime iz nekaj besed.',
     'err.titleRequired': 'Naziv je obvezen.',
-    'err.specific': 'Natančno opišite, kaj boste dosegli (vsaj 15 znakov).',
+    'err.specific': 'Natančno opišite, kaj boste naredili (15 znakov ali več).',
     'err.metric': 'Navedite, kaj boste merili.',
-    'err.target': 'Določite številčno ciljno vrednost.',
+    'err.target': 'Številka, h kateri merite, pokaže, kako daleč ste.',
     'err.targetSame': 'Ciljna vrednost se mora razlikovati od začetne.',
-    'err.achievable': 'Pojasnite, zakaj je cilj izvedljiv: viri, znanje, čas.',
-    'err.relevant': 'Pojasnite, zakaj vam je ta cilj pomemben.',
+    'hint.obstacle': 'Navedite eno oviro in kaj boste naredili, ko pride.',
+    'err.relevant': 'Povejte, zakaj vam je ta cilj pomemben.',
     'err.number': 'Vnesite število, npr. 78,5 ali 78.5.',
     'err.date': 'Vnesite datum v obliki dd/mm/llll, npr. 24/10/2026.',
-    'err.deadline': 'Določite rok.',
+    'err.deadline': 'Z datumom postane cilj: izberite ga in ga premaknite, ko boste vedeli več.',
     'err.deadlineOrder': 'Rok mora biti po začetnem datumu.',
     'err.unknown': 'Neznan element',
     'err.self': 'Element ne more biti povezan sam s seboj',
@@ -562,6 +736,18 @@ export const sl: Language = {
     'dash.headline': {
       one: 'Do aktivnega cilja ste v povprečju prehodili {pct} poti.',
       other: 'Do svojih aktivnih ciljev ({n}) ste v povprečju prehodili {pct} poti.',
+    },
+    'dash.noTarget': {
+      one: '{n} cilj še nima ciljne vrednosti.',
+      two: '{n} cilja še nimata ciljne vrednosti.',
+      few: '{n} cilji še nimajo ciljne vrednosti.',
+      other: '{n} ciljev še nima ciljne vrednosti.',
+    },
+    'dash.headlineNone': {
+      one: '{n} aktivni cilj, še brez ciljne vrednosti.',
+      two: '{n} aktivna cilja, še brez ciljne vrednosti.',
+      few: '{n} aktivni cilji, še nobeden s ciljno vrednostjo.',
+      other: '{n} aktivnih ciljev, še nobeden s ciljno vrednostjo.',
     },
     'dash.factDone': 'opravljenih {done} od {total} aktivnosti',
     'dash.factLate': {
@@ -714,6 +900,8 @@ export const sl: Language = {
     'goals.activities': 'aktivnosti: {done}/{total}',
     'goals.routines': { one: '{n} rutina', two: '{n} rutini', few: '{n} rutine', other: '{n} rutin' },
     'goals.consistency': 'Izvajanje rutin',
+    'goals.noTarget': 'Ciljne vrednosti še ni',
+    'goals.progress': 'Napredek',
     'goals.actsTotal': { one: '{n} aktivnost', two: '{n} aktivnosti', few: '{n} aktivnosti', other: '{n} aktivnosti' },
     'goals.measuredBy': 'Merjeno s trenutnim stanjem',
     'goals.partOf': 'Del cilja',
@@ -952,6 +1140,10 @@ export const sl: Language = {
     'f.target': 'Ciljna vrednost',
     'f.achievable': 'Zakaj je cilj izvedljiv?',
     'f.achievablePh': 'Viri, znanje in čas, ki jih imate na voljo.',
+    'f.obstacle': 'Kaj vas bo najverjetneje oviralo?',
+    'f.obstaclePh': 'Po službi mi zmanjka moči in tek izpustim.',
+    'f.ifThen': 'Kaj boste takrat naredili?',
+    'f.ifThenPh': 'Če mi zmanjka moči, obujem superge in se deset minut sprehodim.',
     'f.relevant': 'Zakaj je pomemben?',
     'f.relevantPh': 'Kako se povezuje z vašimi širšimi prioritetami.',
     'f.startDate': 'Začetni datum',
@@ -1004,6 +1196,8 @@ export const sl: Language = {
     'confirm.deleteMeasurement': 'Izbrišem meritev {value} z dne {date}?',
     'toast.goalCreated': 'Cilj SMART ustvarjen',
     'toast.goalUpdated': 'Cilj posodobljen',
+    'toast.goalAddedPartial': 'Cilj dodan. {n} od 5: dokončajte ga, ko boste vedeli več.',
+    'toast.goalUpdatedPartial': 'Cilj posodobljen. {n} od 5: dokončajte ga, ko boste vedeli več.',
     'toast.stateAdded': 'Trenutno stanje dodano',
     'toast.stateUpdated': 'Trenutno stanje posodobljeno',
     'toast.measurementDeleted': 'Meritev izbrisana',

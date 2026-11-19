@@ -1,6 +1,6 @@
 /** Page tests: map keys and menus, short hints, + to add, light and dark glass, text inside the boxes. */
 suite(async () => {
-  await step('keyboard: map nodes, context menu, tour', async () => {
+  await step('keyboard: map nodes, context menu', async () => {
     fresh('Keys');
     const [g1, g2] = [mk('goal', { title: 'Key goal' }), mk('goal')];
     rel(g2, g1, 'subgoal');
@@ -41,25 +41,7 @@ suite(async () => {
     node().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     assert(modal.open && $('#f-title').value === 'Key goal', 'double-click opens the form');
     modal.close();
-
-    const count = plans.list.length,
-      cur = plans.current;
-    startTour();
-    const press = k => window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
-    const steps = [tour.step];
-    press('ArrowRight');
-    press('ArrowRight');
-    steps.push(tour.step);
-    press('ArrowLeft');
-    steps.push(tour.step);
-    press('ArrowLeft');
-    press('ArrowLeft');
-    steps.push(tour.step);
-    press('Escape');
-    steps.push(tour.step);
-    eq(steps, [0, 2, 1, 0, -1], 'tour steps');
-    assert(plans.list.length === count && plans.current === cur, 'tour plan removed, previous plan reopened');
-    return `menu=${btns.length} items, tour ${steps.join('>')}`;
+    return `menu=${btns.length} items`;
   });
   await step('map and timeline hints are short; the details are in the help', () => {
     for (const code of ['en', 'sl']) {
@@ -267,15 +249,19 @@ suite(async () => {
     // Long routine text: short on the box, cut with "…" if still too wide, in full in the tooltip.
     changeLanguage('sl');
     fresh('Long text');
+    // Dates from today, so the streak is there on any day the suite starts: ticked the 10th of the
+    // last two months, started a year ago.
+    const [y, m] = [+today().slice(0, 4), +today().slice(5, 7) - 1],
+      since = isoOf(y - 1, m, 1);
     const monthly = mk('activity', {
       title: 'Mesečni pregled financ',
-      startDate: '2026-01-01',
+      startDate: since,
       repeat: { every: 1, unit: 'month', times: 1 },
-      checkins: { '2026-09-10': 1, '2026-10-10': 1 },
+      checkins: { [isoOf(y, m - 2, 10)]: 1, [isoOf(y, m - 1, 10)]: 1 },
     });
     const weekly = mk('activity', {
       title: 'Tek trikrat na teden',
-      startDate: '2026-01-01',
+      startDate: since,
       repeat: { every: 1, unit: 'week', times: 3 },
       checkins: {},
     });
@@ -300,7 +286,7 @@ suite(async () => {
       tip = x => node(x).querySelector('title').textContent;
     const p = periodProgress(monthly),
       s = routineStreak(monthly);
-    assert(s.n > 0, `the monthly routine has a streak (${s.n})`);
+    eq(s.n, 2, 'the monthly routine: met the last two months');
     eq(
       sub(monthly),
       `${t('map.rt.month', { done: p.done, target: 1 })}, ${t('map.rt.streak', { n: s.n })}`,

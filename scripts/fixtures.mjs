@@ -1,7 +1,8 @@
 /** Stored-data fixtures: proves the app reads and writes plans, sync files, exports and backups unchanged. */
-// usage: node scripts/fixtures.mjs [--generate] [app dir]
+// usage: node scripts/fixtures.mjs [--generate[=name]] [app dir]
 //   default     load each fixture into storage, boot, open every view, save, compare (npm run test:fixtures)
 //   --generate  write the fixtures from the current code (only before anything moves; never to make a test pass)
+//   --generate=name  write only that new fixture, leaving the others as they are
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
@@ -9,11 +10,12 @@ import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
 const FIX = join(ROOT, 'tests', 'fixtures');
 const PRIVATE = join(FIX, 'private');
 const CLOCK = '2026-11-16T11:00:00.000Z'; // the frozen "now" of every fixture page
-const STORAGE = ['sample-en', 'sample-sl', 'legacy-single', 'two-users', 'rich'];
+const STORAGE = ['sample-en', 'sample-sl', 'legacy-single', 'two-users', 'rich', 'goal-form', 'demo'];
 const OUTPUTS = { sync: 'rich.sync.json', exportFull: 'rich.export-full.json', exportTemplate: 'rich.export-template.json', backup: 'rich.backup.json' };
 
 const args = process.argv.slice(2);
-const generate = args.includes('--generate');
+const generate = args.some(a => a.startsWith('--generate'));
+const only = args.find(a => a.startsWith('--generate='))?.slice('--generate='.length);
 const src = resolve(args.find(a => !a.startsWith('--')) || ROOT); // the app to test; fixtures stay this repo's
 
 const { dir, url, profiles, close } = await serveTestBuild(src);
@@ -35,7 +37,13 @@ const writeJson = (name, value) => writeFileSync(join(FIX, name), JSON.stringify
 const fresh = lang => ({ 'actionplan.lang': lang });
 
 async function generateAll() {
-  for (const name of ['sample-en', 'sample-sl', 'two-users', 'rich']) {
+  if (only) {
+    if (!STORAGE.includes(only) || only === 'legacy-single') throw new Error(`--generate=${only}: not a storage fixture`);
+    writeJson(`${only}.storage.json`, (await run('build:' + only, fresh('en'))).storage);
+    console.log(`wrote ${only}`);
+    return 0;
+  }
+  for (const name of ['sample-en', 'sample-sl', 'two-users', 'rich', 'goal-form', 'demo']) {
     const out = await run('build:' + name, fresh(name === 'sample-sl' ? 'sl' : 'en'));
     writeJson(`${name}.storage.json`, out.storage);
     if (name === 'rich') for (const [k, file] of Object.entries(OUTPUTS)) writeJson(file, out[k]);
@@ -53,7 +61,7 @@ async function generateAll() {
 async function checkAll() {
   const fails = [];
   const compare = (label, want, got) => {
-    const diff = firstDiff(want, got);
+    const diff = firstDiff(want, withoutNew(want, got));
     if (diff) fails.push(`FAIL ${label}: ${diff}`);
   };
   let checks = 0;
@@ -76,6 +84,17 @@ async function checkAll() {
   fails.forEach(f => console.log(f));
   console.log(`fixtures: ${checks} checks, ${fails.length} failed`);
   return fails.length ? 1 : 0;
+}
+
+// Data a newer version adds beside the old data, which fixtures written before it cannot hold: the
+// tip history (preference `tips` and the sync file's `tips`, docs/specs/2026-11-19-tips.md), and the
+// days and views the tips note (preference `seen`, session B). Left out of the comparison only when
+// the fixture has none; everything else must still match exactly.
+const NEW_KEYS = [/^actionplan\.(u\.[^.]+\.)?v1\.(tips|seen)$/, /^tips$/];
+function withoutNew(want, got) {
+  if (!got || typeof got !== 'object' || Array.isArray(got)) return got;
+  const extra = Object.keys(got).filter(k => !(k in want) && NEW_KEYS.some(re => re.test(k)));
+  return extra.length ? Object.fromEntries(Object.entries(got).filter(([k]) => !extra.includes(k))) : got;
 }
 
 // Where two JSON values first differ, as "path: want … got …"; '' when equal. Stored strings that

@@ -59,6 +59,7 @@ suite(async () => {
         frame.onload = res;
         document.body.append(frame);
       });
+      await fontsLoaded(frame.contentDocument);
       const doc = frame.contentDocument,
         card = doc.querySelector('.gr-card').getBoundingClientRect();
       const btns = [...doc.querySelectorAll('.gr-scale button')].map(b => b.getBoundingClientRect());
@@ -109,6 +110,7 @@ suite(async () => {
           frame.onload = res;
           document.body.append(frame);
         });
+        await fontsLoaded(frame.contentDocument);
         const doc = frame.contentDocument,
           card = doc.querySelector('.card').getBoundingClientRect();
         const title = doc.querySelector('.card-head h3'),
@@ -240,15 +242,6 @@ suite(async () => {
       !en['help.tip.addAmount'].includes('the better of this period') &&
         !sl['help.tip.addAmount'].includes('boljše od tekočega'),
       'help.tip.addAmount',
-    );
-    assert(
-      en['tour.goals.text'].includes('picks how it counts') && sl['tour.goals.text'].includes('izbere, kako šteje'),
-      'tour.goals.text',
-    );
-    assert(
-      en['tour.graphs.text'].includes('per day, week, month or year, or in total') &&
-        sl['tour.graphs.text'].includes('po dnevih, tednih, mesecih ali letih ali skupno'),
-      'tour.graphs.text',
     );
     // Sample plan and the Marathon template are in the new form.
     const sample = sampleData(),

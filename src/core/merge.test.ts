@@ -76,6 +76,42 @@ describe('change tracking', () => {
     expect(data.deleted.old).toBeUndefined();
   });
 
+  test('statusSince: set on a status change and on new items, kept otherwise', () => {
+    const data = plan({
+      goals: [goal({ id: 'g' })],
+      activities: [act({ id: 'a', statusSince: '2026-01-01' }), act({ id: 'old' })],
+    });
+    takeSnapshot(data);
+    data.activities[0].title = 'renamed';
+    stampChanges(data);
+    expect(data.activities[0].statusSince).toBe('2026-01-01'); // an edit is not a status change
+    expect(data.activities[1].statusSince).toBeUndefined(); // old item, untouched: stays unknown
+    data.activities[0].status = 'doing';
+    data.goals[0].status = 'achieved';
+    data.activities.push(act({ id: 'new' }));
+    stampChanges(data);
+    expect(data.activities[0].statusSince).toBe(today());
+    expect(data.goals[0].statusSince).toBe(today());
+    expect(data.activities[2].statusSince).toBe(today());
+    expect(data.activities[0].updatedAt).toBeTruthy();
+    vi.setSystemTime(new Date('2026-11-20T11:00:00Z'));
+    stampChanges(data); // nothing changed: no new stamps
+    expect(data.activities[0].statusSince).toBe('2026-11-16');
+  });
+
+  test('statusSince: an auto-start leaves it out (autoStarted says since when); a later manual start stamps it', () => {
+    const data = plan({ activities: [act({ id: 'a', startDate: '2026-11-10', statusSince: '2026-11-01' })] });
+    takeSnapshot(data);
+    Object.assign(data.activities[0], { status: 'doing', autoStarted: '2026-11-10' });
+    stampChanges(data);
+    expect(data.activities[0].statusSince).toBeUndefined();
+    data.activities[0].status = 'todo';
+    stampChanges(data);
+    data.activities[0].status = 'doing'; // by hand: autoStarted is unchanged
+    stampChanges(data);
+    expect(data.activities[0].statusSince).toBe(today());
+  });
+
   test('a plan rename is stamped and a deleted plan recorded', () => {
     const idx = {
       current: 'p1',
@@ -360,6 +396,14 @@ describe('mergePlans', () => {
 });
 
 describe('mergeStores', () => {
+  test('tips: merged when either side has them, left out when neither has', () => {
+    const s = (tips?: Store['tips']): Store => ({ plans: { list: [] }, data: {}, ...(tips && { tips }) });
+    expect(mergeStores(s(), s())).not.toHaveProperty('tips');
+    const t = { off: true, shown: { k: { n: 1, last: '2026-11-19' } }, since: {} };
+    expect(mergeStores(s(), s(t)).tips).toEqual(t);
+    expect(mergeStores(s(t), s({ off: false, shown: { k: { n: 2, last: '2026-11-01' } }, since: {} })).tips!.shown.k.n).toBe(2);
+  });
+
   test('the newer plan name wins; a plan deleted on one side and untouched on the other stays deleted', () => {
     const a = plan({ goals: [goal({ id: 'g' })] }),
       b = copy(a);

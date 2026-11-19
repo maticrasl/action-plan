@@ -12,6 +12,19 @@ export const en = {
     'nav.goals': 'Goals',
     'nav.states': 'States',
     'nav.graphs': 'Graphs',
+    'view.guide': 'Guide',
+    'guide.search': 'Search the guide…',
+    'guide.noMatch': 'Nothing found for “{query}”. Try another word.',
+    'guide.group.start': 'Start here',
+    'guide.group.stuck': 'When you are stuck',
+    'guide.group.how': 'How do I…',
+    'guide.group.data': 'Your data and privacy',
+    'guide.group.limits': 'What this app cannot do',
+    'guide.related': 'Related',
+    'guide.more': 'More in the Guide',
+    'guide.open': 'Open the Guide',
+    'guide.review.done': 'Review done',
+    'guide.review.toast': 'Review done. See you next week.',
     'nav.visions': 'Visions',
     'view.visions': 'Visions',
     'kind.vision': 'Vision',
@@ -47,6 +60,7 @@ export const en = {
     },
     'vis.noGoals': 'There are no active goals yet. Purpose needs goals that serve your visions.',
     'vis.found': 'You have found your Purpose: {name}',
+    'vis.vague': 'The golden glow returns when every active goal is SMART. Still to finish: {names}.',
     'vis.purpose': 'Purpose',
     'vis.alsoUnder': 'Also serves',
     'vis.servedBy': 'Served by',
@@ -117,6 +131,8 @@ export const en = {
       'Drag the bar to move its dates, or one of its ends to change only that date. On a touch screen, long-press first.',
     'tl.dragHintMove':
       'Drag the bar to move its dates (its end follows from the number of times it runs). On a touch screen, long-press first.',
+    'tl.dragHintOpen':
+      'Drag the bar to move its start date; it has no deadline yet. On a touch screen, long-press first.',
     'tl.datesMoved': '“{name}”: {dates}',
     'f.category': 'Category',
     'f.categoryPh': 'e.g. Health',
@@ -245,76 +261,234 @@ export const en = {
     'user.removeConfirm':
       'Remove {name} from this device? Their plans are deleted here; what has synced stays in their Google Drive and comes back when they log in again. Changes not synced yet are lost.',
     'user.removed': '{name} removed from this device',
-    'btn.tutorial': 'Take the tour',
-    'btn.help': 'Help mode',
+    'btn.help': 'Explanations on screen',
 
     'langPick.title': 'Choose your language',
     'langPick.text': 'You can change it any time in Settings.',
     'langPick.continue': 'Continue',
-    'tour.planName': 'Tutorial',
-    'tour.count': 'Step {n} of {total}',
-    'tour.start': 'Start',
-    'tour.next': 'Next',
-    'tour.back': 'Back',
-    'tour.skip': 'Skip tour',
-    'tour.keep': 'Keep sample plan',
-    'tour.finish': 'Remove and finish',
-    'tour.kept': 'The tutorial plan is yours to explore',
-    'tour.about.title': 'Welcome to Action Plan',
-    'tour.about.text':
-      'Action Plan helps you turn what you want to achieve into concrete steps. Set SMART goals, record where you stand today as measurable current states, and plan the activities that close the gap. Then see how everything connects on a map and follow your progress on a timeline and graphs. Use it for anything from fitness and savings to studying or renovating a house.',
-    'tour.welcome.title': 'A quick tour',
-    'tour.welcome.text':
-      'This short tour shows you around using a temporary sample plan, so your own data stays untouched. It takes about a minute.',
-    'tour.dashboard.title': 'Overview',
-    'tour.dashboard.text':
-      'Your starting point: overall progress, what is running late or waiting, and the next activities by due date.',
-    'tour.goals.title': 'Goals',
-    'tour.goals.text':
-      'Each goal is SMART: Specific, Measurable, Achievable, Relevant and Time-bound. The letters light up as you fill them in, and the trail shows how far you have come from the starting value to the target. A goal measured by a state that adds up picks how it counts: in total or per day, week, month or year.',
-    'tour.states.title': 'Current states',
-    'tour.states.text':
-      'Things you measure, such as your longest run or your savings. Tap its card to record a new value whenever it changes – the dated history shows where you stand; a state can measure progress toward goals. A state can also add up – kilometres per week, money in total: tap its card after each run or deposit. Long-press or right-click a card to edit it.',
-    'tour.graphs.title': 'Graphs',
-    'tour.graphs.text':
-      'Each current state’s measurements over time, with a dashed line for the goal’s target and the change since the first measurement. States that add up show their sums per day, week, month or year, or in total, and every routine shows how often you did it in each period – or per day, week, month or year, or in total. Hover over or tap a graph to read each value, and pinch or Ctrl + scroll to zoom in on a stretch of time; the table below it lists the measurements, where you can delete a wrong one.',
-    'tour.activities.title': 'Activities',
-    'tour.activities.text':
-      'The concrete steps that close the gap. Drag cards between To do, In progress and Done, or tap the circle to move one along. On its start date an activity moves to In progress by itself. A list moves along as you tick off its items, and is done once all of them are.',
-    'tour.routines.title': 'Routines',
-    'tour.routines.text':
-      'Some activities repeat – run 3 times a week, strength training every Monday and Thursday, a check-up every 2 months on the first Monday. Add one by choosing Routine when you add an activity, or Routine list for a checklist you go through each time, such as a morning routine – ticking its last item ticks the day off. Tick off each time you do it on the week strip (or on the Overview), and use its arrows to fill in earlier weeks, and watch the streak grow. When a routine improves a state that adds up, ticking it also asks how much – one entry after a run updates both. A goal can measure progress by how consistently you keep its routines.',
-    'tour.timeline.title': 'Timeline',
-    'tour.timeline.text':
-      'Goals and activities on a calendar. Coloured lines on the left show what contributes to a goal, what is a sub-activity and which prerequisites an activity waits for; dependencies are drawn as arrows and overdue periods in red; routines mark their days as done, missed or still to come. Select a bar and drag it to change its dates.',
-    'tour.map.title': 'Relationship map',
-    'tour.map.text':
-      'How everything connects: goals at the top, activities in the middle and current states at the bottom. Tap a box or a line to select it and highlight its links; double-click it or press Enter to edit it, or press Delete to remove it.',
-    'tour.mapLink.title': 'Link two items',
-    'tour.mapLink.text':
-      'With a mouse, drag from one box onto another. On a touch screen, long-press a box, choose “Link to…” and tap the other box. You’re then offered only the relationships that fit those two items. Releasing anywhere else drops the link.',
-    'tour.add.title': 'Add something new',
-    'tour.add.text':
-      'This button adds whatever fits the current view: a goal, a current state or an activity. On the map and the timeline, it asks which of them; on the map, right-clicking an empty spot offers the same.',
-    'tour.more.title': 'More views',
-    'tour.more.text': 'On a phone, Map, Timeline and Graphs are under More, to keep the tab bar tidy.',
-    'tour.sidebar.title': 'More room',
-    'tour.sidebar.text':
-      'Collapse the sidebar to keep only its icons and give the views more space. Click again to expand it.',
-    'tour.settings.title': 'Settings',
-    'tour.settings.text':
-      'Switch, merge or manage plans (a coloured dot by each shows green when all is well, yellow when something is due today, red when something is overdue), change language and theme, set display options, log in with Google to sync your devices (several people can each log in on one device, every one with their own plans), start a new plan from a ready-made template, export a plan to back it up or share it as a template, import plans, and install Action Plan as an app.',
-    'tour.sync.title': 'Sync status',
-    'tour.sync.text':
-      'This cloud shows whether your plans are synced with Google Drive. When it says sync is paused, click it to continue.',
-    'tour.help.title': 'Help mode',
-    'tour.help.text':
-      'Turn this on any time for an explanation of each screen and ⓘ tips on the controls. You can restart this tour from Settings.',
-    'tour.done.title': 'You are all set',
-    'tour.done.text': 'Keep the sample plan to explore on your own, or remove it and go back to your plan.',
+    'welcome.title': 'Welcome to Action Plan',
+    'welcome.text':
+      'Action Plan turns something you want into steps you can take: a goal, where you stand today, and what you do about it this week. How would you like to begin?',
+    'welcome.own': 'Start with my own goal',
+    'welcome.template': 'Start from a template',
+    'welcome.sample': 'Look at a sample plan first',
+    'welcome.self': 'I’ll find my own way',
+    'demo.banner': 'This is a sample plan. Look around and change anything; it is not your data.',
+    'demo.own': 'Start my own plan',
+    'demo.remove': 'Remove sample',
 
-    'help.off': 'Turn off help',
+    'settings.tips': 'Tips',
+    'tip.label': 'Tip',
+    'tip.why': 'Why this helps',
+    'tip.later': 'Not now',
+    'tip.close': "Don't show this again",
+    'tip.settingsHint': 'Tips can be turned off in Settings.',
+    'tip.another': 'Another tip',
+    'tip.none': 'No more tips about your plan right now.',
+    'tip.all': 'Tips and tricks',
+    'tip.back.text':
+      'Good to see you. There is no need to catch up on everything: choose one step for today, and move the dates that no longer hold.',
+    'tip.back.btn': 'Open the Timeline',
+    'tip.overdue-pile.text':
+      '{n} steps are past their date. A passed date is an old guess, not a verdict. Take five minutes to move, split or delete them.',
+    'tip.overdue-pile.btn': 'Open the Timeline',
+    'tip.routine-missed.text':
+      '“{name}” has been missed a few times. One tick puts it back on track. If the schedule does not fit your weeks, change the schedule.',
+    'tip.routine-missed.btn': 'Edit the routine',
+    'tip.routine-low.text':
+      '“{name}” was kept about {pct}% of the time. A smaller routine that you keep beats a bigger one that you miss. Try a little less, and raise it when it holds.',
+    'tip.routine-low.btn': 'Edit the routine',
+    'tip.goal-behind.text':
+      '“{name}” is at {pct}% with {days} days to go. Three honest options: make room for it this week, move the date, or lower the target.',
+    'tip.goal-behind.btn': 'Open the goal',
+    'tip.goal-past.text':
+      '“{name}” passed its date at {pct}%. That is {pct}% further than where you began. Give it a new date, or pause it if now is not the time.',
+    'tip.goal-past.btn': 'Open the goal',
+    'tip.stuck-step.text':
+      '“{name}” has been in progress for {n} weeks. A step that will not finish is often several steps in one. Split it, or turn it into a list.',
+    'tip.stuck-step.btn': 'Open the activity',
+    'tip.wrong-way.text':
+      '“{name}” has moved away from the target three times in a row. More effort may not be the answer; the steps may be the wrong ones. Which activity was meant to move it?',
+    'tip.wrong-way.btn': 'Open Graphs',
+    'tip.too-many-goals.text':
+      'You have {n} active goals. Most people move faster on two or three at a time. Pause the ones that can wait; they keep everything and come back with one tap.',
+    'tip.too-many-goals.btn': 'Open Goals',
+    'tip.too-many-routines.text':
+      '{n} routines at once is a lot to keep. Which two matter most right now? Let the others end for the moment and bring them back one at a time.',
+    'tip.too-many-routines.btn': 'Open Activities',
+    'tip.no-steps.text': '“{name}” has no steps yet. What is the smallest thing you could do for it this week?',
+    'tip.no-steps.btn': 'Add an activity',
+    'tip.steps-ran-out.text': 'Every step for “{name}” is done, and the goal is not reached yet. What comes next?',
+    'tip.steps-ran-out.btn': 'Add an activity',
+    'tip.no-dates.text':
+      '{n} steps have no date. A step with a day and a moment gets done far more often than one for “sometime”. Give the next one a day.',
+    'tip.no-dates.btn': 'Open Activities',
+    'tip.only-result.text':
+      '“{name}” is a result. What would you do every week that makes it likely? Add that as a routine.',
+    'tip.only-result.btn': 'Add a routine',
+    'tip.stale-state.text':
+      '“{name}” was last measured {days} days ago. A fresh value shows whether what you are doing is working.',
+    'tip.stale-state.btn': 'Record a value',
+    'tip.no-measure.text':
+      '“{name}” has a target and nothing that measures the way there. Add a current state for it, and the goal moves when you measure.',
+    'tip.no-measure.btn': 'Add a current state',
+    'tip.far-goal.text':
+      '“{name}” is {n} months away. A nearer sub-goal gives you something to reach sooner and shows whether you are on the way.',
+    'tip.far-goal.btn': 'Add sub-goal',
+    'tip.waiting.text':
+      '“{name}” is waiting for “{other}”, which has not started. Start that one, or remove the link if it no longer holds.',
+    'tip.waiting.btn': 'Open “{other}”',
+    'tip.many-doing.text':
+      '{n} activities are in progress. Finishing one will do more for you than starting another. Which is closest to done?',
+    'tip.many-doing.btn': 'Open Activities',
+    'tip.no-vision.text':
+      'What are your goals for? A vision is one sentence about the life they add up to. It is the reason you will look at on the hard days.',
+    'tip.no-vision.btn': 'Add a vision',
+    'tip.goal-unfinished.text':
+      '“{name}” is at {n} of 5. The open part is {part}. A few minutes now make the goal easier to act on.',
+    'tip.goal-unfinished.btn': 'Open the goal',
+    'tip.week.text':
+      'A new week. Five minutes now: what moved last week, and what is the one step that matters most this week?',
+    'tip.week.btn': 'Open the weekly review',
+    'tip.month.text': 'A new month is a good moment to measure. Record fresh values for your current states.',
+    'tip.month.btn': 'Open States',
+    'tip.new-year.text':
+      "A new year is a good moment to begin again. Wishes fade by February; steps with dates do not. Look at your goals and choose this month's one.",
+    'tip.new-year.btn': 'Open Goals',
+    'tip.routine-holds.text':
+      '“{name}”: four in a row. This is about when it starts to feel easier. Raise it a little if you like, or leave it; holding steady counts.',
+    'tip.halfway.text': '“{name}” is past halfway.',
+    'tip.achieved.text':
+      'You reached “{name}”. Before the next one: what made the difference? And is there a small routine worth keeping so the result stays?',
+    'tip.achieved.btn': 'Open the goal',
+    'tip.first-month.text':
+      'A month of coming back to your plan. That habit is worth more than any single goal in it.',
+    'tip.try-map.text':
+      'Your plan has enough in it now for the Map to be worth a look: it shows what serves what, and what serves nothing.',
+    'tip.try-map.btn': 'Open the Map',
+    'tip.try-timeline.text': 'The Timeline shows your steps on a calendar. Drag a bar to move its dates.',
+    'tip.try-timeline.btn': 'Open the Timeline',
+    'tip.try-graphs.text': '“{name}” has enough measurements to draw a line. Graphs shows it against your target.',
+    'tip.try-graphs.btn': 'Open Graphs',
+    'tip.make-up.text':
+      'When a set day of “{name}” does not work out, the routine can let you make it up on another day. It is a switch under Repeats.',
+    'tip.make-up.btn': 'Edit the routine',
+    'tip.adds-up.text':
+      'If “{name}” is something you add to each time, such as kilometres or money, it can add up by itself: switch on “Adds up” and enter only what is new.',
+    'tip.adds-up.btn': 'Open the state',
+    'tip.use-list.text': '“{name}” looks like several things in one. As a list, you can tick them one by one.',
+    'tip.use-list.btn': 'Open the activity',
+    'tip.routine-list.text':
+      'Several things you do every day can be one routine list, such as “Morning routine”: tick the items, and the day ticks itself.',
+    'tip.routine-list.btn': 'Add a routine list',
+    'tip.templates.text':
+      'Not sure how to break a goal into steps? The templates show how similar goals are laid out. Borrow what fits.',
+    'tip.templates.btn': 'Start from a template',
+    'tip.backup.text':
+      'Your plans are in this browser only. Log in with Google or export a copy, so that a cleared browser does not take them with it.',
+    'tip.backup.btn': 'Keep a copy',
+    'tip.install.text': 'Action Plan can sit on your home screen and open like any other app, also without a connection.',
+    'tip.install.btn': 'Install app',
+    'tip.menu.text':
+      'Long-press or right-click any card for a menu: show it on the Map, add a step for it, change its status.',
+    'tip.ctrl-enter.text': 'Ctrl + Enter saves the form you are in.',
+    'tip.share.text':
+      'A plan that worked for you may help someone else. Export it as a template: your steps without your numbers.',
+    'tip.share.btn': 'Export plan',
+
+    'walk.title': 'Getting started',
+    'walk.count': '{done} of {total}',
+    'walk.next': 'Next: {task}',
+    'walk.showMe': 'Show me',
+    'walk.skip': 'Skip this step',
+    'walk.more': 'More on this',
+    'walk.optional': 'optional',
+    'walk.skipped': 'skipped',
+    'walk.fold': 'Fold Getting started',
+    'walk.unfold': 'Unfold Getting started',
+    'walk.hide': 'Hide getting started',
+    'walk.hidden': 'Getting started is in the Guide whenever you want it.',
+    'walk.ticked': 'Getting started: {task} ✓',
+    'walk.tickedNext': 'Getting started: {task} ✓ Next: {next}',
+    'walk.start': 'Start',
+    'walk.continue': 'Continue',
+    'walk.again': 'Look again',
+    'walk.over': 'Start over',
+    'walk.close': 'Close',
+    'walk.doneWord': 'done',
+    'walk.days': '{n} of 3',
+    'walk.finished.title': 'You are set up',
+    'walk.finished.text':
+      'You have a goal, a starting point, steps, a routine and a rhythm of coming back. From here the plan is yours. The Guide has help for the moments when you get stuck.',
+    'walk.stage.first.title': 'Your first goal',
+    'walk.stage.first.lead': 'One goal, where you stand, and the first steps. About ten minutes.',
+    'walk.stage.first.done': 'You have a goal, a starting point and a first step done.',
+    'walk.stage.rhythm.title': 'Make it a rhythm',
+    'walk.stage.rhythm.lead': 'Goals are reached by what you repeat. This stage takes about a week.',
+    'walk.stage.rhythm.done': 'You have a routine going and you came back. That is the hard part.',
+    'walk.stage.safe.title': 'Keep it safe',
+    'walk.stage.safe.lead': 'Your plan lives in this browser. Two minutes to make sure it cannot get lost.',
+    'walk.stage.safe.done': 'Your plan has a copy outside this browser.',
+    'walk.stage.picture.title': 'See the whole picture',
+    'walk.stage.picture.lead': 'Three other ways to look at your plan, and the question behind it.',
+    'walk.stage.picture.done': 'You have seen all of it.',
+    'walk.goal.title': 'Write one goal',
+    'walk.goal.text':
+      'Pick one thing you would like to be different a few months from now. One goal is enough to begin. Only the title is needed to save it; the other questions make it clearer, and the letters light up as you answer them. If no number fits, set “Progress from” to “Activities done” or “Routines kept”. A rough first version is fine; you can improve it later.',
+    'walk.goal.btn': 'Write a goal',
+    'walk.state.title': 'Record where you stand',
+    'walk.state.text':
+      'A goal is a distance, and a distance needs a starting point. Add a current state: what you measure, how you measure it, and today’s honest value. Link it to your goal and the goal’s progress follows it.',
+    'walk.state.btn': 'Add a current state',
+    'walk.state.notNeeded': 'Not needed: your goal is measured by what you do.',
+    'walk.steps.title': 'Plan the first steps',
+    'walk.steps.text':
+      'List two or three things you can do for this goal. Make the first one so small that you can do it today or tomorrow; ten minutes is fine. Give each a due date: a step with a day gets done far more often than a step for “sometime”.',
+    'walk.steps.btn': 'Add an activity',
+    'walk.firstDone.title': 'Do the first step',
+    'walk.firstDone.text':
+      'Do the small one, now or today. Then tap the circle on its card until it says Done. A plan starts working when the first thing is finished.',
+    'walk.routine.title': 'Add one routine',
+    'walk.routine.text':
+      'Something you will do again and again: three runs a week, ten minutes of Spanish a day, a look at your money on the first of the month. Put the moment in its name, like “Run after work”, so the decision is already made when the moment comes. Start smaller than you think you need to; you can raise it later.',
+    'walk.routine.btn': 'Add a routine',
+    'walk.tick.title': 'Tick it off',
+    'walk.tick.text':
+      'The first time you do it, tick the day on its week strip, here on the Overview or in Activities. If you miss a day, nothing is lost: the next tick puts you back on track.',
+    'walk.measure.title': 'Record a new value',
+    'walk.measure.text':
+      'Measure again and tap the state’s card to record the value. Two points make a line: from now on Graphs shows which way you are going.',
+    'walk.measure.notNeeded': 'Not needed: this plan has no current states.',
+    'walk.days.title': 'Come back on three days',
+    'walk.days.text':
+      'Open your plan on three different days. Half a minute is enough: tick what you did, look at what is next. Choose a moment that already exists in your day, such as the morning coffee.',
+    'walk.backup.title': 'Make a copy',
+    'walk.backup.text':
+      'Log in with Google and your plans are kept the same on all your devices, in a hidden folder of your own Google Drive that only this app can read. Or export a full copy to a file now and then.',
+    'walk.backup.textLocal': 'Export a full copy of your plan to a file now and then, and keep it somewhere safe.',
+    'walk.backup.btn': 'Open Account and sync',
+    'walk.install.title': 'Install the app',
+    'walk.install.text':
+      'Put Action Plan on your home screen. It opens in its own window like any other app, also without a connection.',
+    'walk.views.title': 'Look at your plan three ways',
+    'walk.views.text':
+      'The Map shows what serves what. The Timeline shows when. Graphs show whether it is working. Open each once.',
+    'walk.views.btn.map': 'Open the Map',
+    'walk.views.btn.timeline': 'Open the Timeline',
+    'walk.views.btn.graphs': 'Open Graphs',
+    'walk.vision.title': 'Say what it is for',
+    'walk.vision.text':
+      'Above goals sit visions: a state you wish for that is never finished, such as “To be fit and live healthily”. Add one and link your goal to it. On the days a goal feels like a chore, this is the sentence that reminds you why.',
+    'walk.vision.btn': 'Add a vision',
+    'walk.review.title': 'Do a weekly review',
+    'walk.review.text':
+      'Once a week, five minutes: tick what is done, record fresh values, move dates that no longer hold, and choose the one step that matters most next week. Go through the list once now.',
+    'walk.review.btn': 'Open the weekly review',
+
+    'help.off': 'Turn off explanations',
     'help.tipLabel': 'What is this?',
+    'help.view.visions':
+      'Visions are states you wish for and never finish; goals are how you move toward them. Add a vision, choose the goals that serve it, and put narrower visions under broader ones. When one vision stands above all the others and every active goal serves it, it is marked as your Purpose.',
     'help.view.dashboard':
       'The overview sums up your plan: average progress of active goals, finished, late and waiting activities, and what is due next: the activities due by today or overdue (Show all adds the others in progress).',
     'help.view.goals':
@@ -474,19 +648,19 @@ export const en = {
     'smart.R': 'Relevant',
     'smart.T': 'Time-bound',
     'smart.ok': 'This goal is SMART.',
-    'smart.partial': '{n}/5 SMART criteria met – complete all to save.',
+    'smart.partial': '{n} of 5. You can save now and finish it when you know more.',
 
-    'err.title': 'Give the goal a clear name.',
+    'err.title': 'A clear name of a few words.',
     'err.titleRequired': 'A title is required.',
-    'err.specific': 'Describe exactly what will be accomplished (at least 15 characters).',
+    'err.specific': 'Describe exactly what you will have done (15 characters or more).',
     'err.metric': 'Name what you will measure.',
-    'err.target': 'Set a numeric target.',
+    'err.target': 'A number to aim at shows how far you are.',
     'err.targetSame': 'Target must differ from the starting value.',
-    'err.achievable': 'Explain why this is realistic: resources, skills, time.',
-    'err.relevant': 'Explain why this goal matters to you.',
+    'hint.obstacle': 'Name one thing, and what you will do when it comes.',
+    'err.relevant': 'Say why this goal matters to you.',
     'err.number': 'Enter a number, e.g. 78.5 or 78,5.',
     'err.date': 'Enter a date as dd/mm/yyyy, e.g. 24/10/2026.',
-    'err.deadline': 'Set a deadline.',
+    'err.deadline': 'A date makes it a goal: choose one, and move it when you know more.',
     'err.deadlineOrder': 'Deadline must be after the start date.',
     'err.unknown': 'Unknown item',
     'err.self': 'An item cannot relate to itself',
@@ -514,6 +688,11 @@ export const en = {
     'dash.headline': {
       one: 'On average you’re {pct} of the way to your active goal.',
       other: 'On average you’re {pct} of the way to your {n} active goals.',
+    },
+    'dash.noTarget': { one: '{n} goal has no target yet.', other: '{n} goals have no target yet.' },
+    'dash.headlineNone': {
+      one: '{n} active goal, without a target yet.',
+      other: '{n} active goals, none with a target yet.',
     },
     'dash.factDone': '{done} of {total} activities done',
     'dash.factLate': { one: '{n} activity running late', other: '{n} activities running late' },
@@ -622,6 +801,8 @@ export const en = {
     'goals.activities': '{done}/{total} activities',
     'goals.routines': { one: '{n} routine', other: '{n} routines' },
     'goals.consistency': 'Routines kept',
+    'goals.noTarget': 'No target yet',
+    'goals.progress': 'Progress',
     'goals.actsTotal': { one: '{n} activity', other: '{n} activities' },
     'goals.measuredBy': 'Measured by current state',
     'goals.partOf': 'Part of',
@@ -853,6 +1034,10 @@ export const en = {
     'f.target': 'Target value',
     'f.achievable': 'Why is this realistic?',
     'f.achievablePh': 'Resources, skills, time you have available.',
+    'f.obstacle': 'What is most likely to get in the way?',
+    'f.obstaclePh': 'I’m tired after work and skip the run.',
+    'f.ifThen': 'What will you do then?',
+    'f.ifThenPh': 'If I’m tired, I put on my shoes and walk for ten minutes.',
     'f.relevant': 'Why does it matter?',
     'f.relevantPh': 'How it connects to your bigger priorities.',
     'f.startDate': 'Start date',
@@ -905,6 +1090,8 @@ export const en = {
     'confirm.deleteMeasurement': 'Delete the measurement {value} of {date}?',
     'toast.goalCreated': 'SMART goal created',
     'toast.goalUpdated': 'Goal updated',
+    'toast.goalAddedPartial': 'Goal added. {n} of 5: finish it when you know more.',
+    'toast.goalUpdatedPartial': 'Goal updated. {n} of 5: finish it when you know more.',
     'toast.stateAdded': 'Current state added',
     'toast.stateUpdated': 'Current state updated',
     'toast.measurementDeleted': 'Measurement deleted',

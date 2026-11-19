@@ -18,6 +18,7 @@ import { renderMap } from './map/render';
 import { markVisions } from './map/visions';
 import { renderTimeline } from './timeline/render';
 import { renderGraphs } from './graphs/states';
+import { renderGuide } from './guide';
 
 // Each view: what its Add button adds ('item' opens a menu of kinds) and the HTML it draws.
 export interface View {
@@ -34,6 +35,7 @@ export const VIEWS: Record<ViewName, View> = {
   map: { add: 'item', render: renderMap },
   timeline: { add: 'item', render: renderTimeline },
   graphs: { add: 'state', render: renderGraphs },
+  guide: { add: 'item', render: renderGuide },
 };
 
 export function render() {
@@ -51,6 +53,7 @@ export function render() {
     .querySelectorAll<HTMLElement>('.nav-item')
     .forEach(b => b.classList.toggle('active', b.dataset.view === ui.view));
   $('#navMore').classList.toggle('active', !!$(`.nav-extra[data-view="${ui.view}"]`));
+  $('#helpBtn').setAttribute('aria-pressed', String(ui.view === 'guide'));
   closeCtxMenu();
   closeAmountPop();
   const old = ui.mapRefocus ? null : $('.map-wrap, .tl-scroll');

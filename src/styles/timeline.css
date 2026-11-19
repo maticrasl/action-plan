@@ -360,6 +360,11 @@
 .tl-bar.glass.goal {
   --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side);
 }
+/* A goal without a deadline yet runs to today and fades out: it has no end. */
+.tl-bar.tl-open {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+}
 /* Turned 45°, a milestone's side runs straight down. */
 .tl-milestone.glass {
   --slab: 1.5px 0 0 var(--side), 2.5px 0 0 var(--side);

@@ -78,15 +78,23 @@ How to change them safely:
 **Page tests stay in-page.** The old suite was fast and thorough; it was split by feature
 (`tests/browser/`), not rewritten. Playwright covers only what a page cannot test about itself:
 phone viewport and touch, offline start, upgrading from the old app. The suite's day is pinned
-(Wednesday 2026-11-18) so date-dependent steps do not change from day to day.
+(Wednesday 2026-11-18) so date-dependent steps do not change from day to day, and so is the
+colour scheme (light, `scripts/lib/chrome.mjs`), so a dark system does not run another suite
+than GitHub's runner. A step about the night look sets `data-theme="dark"` itself.
 
 **Speed budgets do not gate.** `npm run perf` runs on real time and varies between machines and
 runs; a failing budget blocked the suite on unchanged code. It compares against
 `tests/perf-baseline.json` and flags a change over 25%; look into a flag, but it never fails the
 checks. `npm run perf -- --save` stores a new baseline after an accepted change.
 
-**CI skip list.** A few steps fail on GitHub's Linux fonts only (`tests/ci-skip.txt`). They run
-there without counting and still gate locally.
+**The typeface ships with the app.** Overpass is in `src/styles/fonts/` (SIL Open Font License),
+not loaded from Google Fonts: nothing is fetched from another site until the user logs in, the
+installed app has it offline, and the page tests measure text in the same font on every machine
+(the harness waits for it, `fontsLoaded`).
+
+**CI skip list.** A step that fails on GitHub's Linux Chrome only, for a rendering reason, can be
+listed in `tests/ci-skip.txt`: it runs there without counting and still gates locally. Empty
+since the typeface ships with the app (2026-11-18).
 
 ## Releases
 
@@ -101,4 +109,4 @@ same address, so stored data and Google sign-in keep working.
   buttons (`views/map/glass.ts`).
 - Map lines stay simple; fix them in placement, and watch the draw time.
 - Phone landscape: no bottom tab bar, a slim icon rail instead.
-- Visions have no tour steps and no sample-plan entries. The Purpose is gold.
+- Visions have no sample-plan entries; Getting started has one optional vision task (2026-11-19). The Purpose is gold.

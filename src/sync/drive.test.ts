@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { emptyDb } from '../core/model';
-import { SYNC_FORMAT, SyncError, parseStore } from './drive';
+import { SYNC_FORMAT, SyncError, parseStore, toFile } from './drive';
 
 // Ported from tests/more.js "sync file: parsing and starter plans" (its parsing; the starter plans and
 // applying a store are checked in the page, as sync.ts runs only there).
@@ -34,4 +34,13 @@ test('invalid plan entries are dropped, plan data and deletions normalized', () 
   expect(st.plans.list.map(p => p.id)).toEqual(['a']);
   expect(st.data.a).toEqual(emptyDb());
   expect(st.plans.deleted).toEqual({});
+});
+
+test('tips: read from the file when present, left out of the file when there are none', () => {
+  const base = { format: SYNC_FORMAT, plans: { list: [] } };
+  expect(parseStore(JSON.stringify(base)).tips).toBeUndefined();
+  const st = parseStore(JSON.stringify({ ...base, tips: { off: true, shown: { k: { n: 1, last: '2026-11-19' } } } }));
+  expect(st.tips).toMatchObject({ off: true, shown: { k: { n: 1, last: '2026-11-19' } } });
+  expect(toFile(st)).toHaveProperty('tips.off', true);
+  expect(toFile({ ...st, tips: undefined })).not.toHaveProperty('tips');
 });

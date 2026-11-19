@@ -143,12 +143,6 @@ suite(async () => {
     runCtxAction('link', a.id);
     assert(modal.open && $('#f-from').value === a.id && !ui.mapLinkFrom, 'timeline opens the form');
     modal.close();
-    const i = TOUR_STEPS.findIndex(x => x.key === 'mapLink');
-    assert(TOUR_STEPS[i - 1].key === 'map' && TOUR_STEPS[i].view === 'map', 'tour step after the map');
-    assert(
-      t('tour.mapLink.text').includes('drag') && I18N.sl.strings['tour.mapLink.text'].includes('povlecite'),
-      'tour text in both languages',
-    );
   });
   await step('zoom: limits, ctrl+wheel and timeline presets', async () => {
     fresh('Zoom');

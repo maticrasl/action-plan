@@ -48,6 +48,14 @@ const assert = (c, m) => {
   if (!c) throw new Error(m || 'assertion failed');
 };
 const tick = () => new Promise(r => setTimeout(r, 0));
+// Loads every font face the document's styles declare (the app's Overpass, src/styles/fonts.css), so
+// text is measured in it and not in a fallback that differs between machines. A frame that links
+// css/styles.css awaits it for its own document once it has loaded.
+const fontsLoaded = async (doc = document) => {
+  const faces = [...doc.fonts];
+  assert(faces.length, 'no font faces declared');
+  await Promise.all(faces.map(f => f.load()));
+};
 
 const d = n => {
   const x = new Date();
@@ -65,6 +73,16 @@ const mk = (kind, p = {}) => {
   const x = { id: uid(), title: `${kind} ${Math.random().toString(36).slice(2, 6)}`, ...base, ...p };
   collection(kind).push(x);
   return x;
+};
+// The fields that make a goal SMART, but for its dates (a deadline after its start date).
+const SMART = {
+  specific: 'Reach the level I set myself',
+  metric: 'Level',
+  baseline: '0',
+  target: '10',
+  obstacle: 'Busy weeks at work',
+  ifThen: 'Do ten minutes instead',
+  relevant: 'It matters to me',
 };
 const rel = (a, b, type) => {
   const e = addRelation(a.id, b.id, type);
@@ -231,6 +249,7 @@ if (location.pathname.endsWith('/browser.html')) {
     const files = new URLSearchParams(location.search).get('f').split(',');
     for (const f of files) await loadScript(`tests/browser/${f}.js`);
     if (!suites.length) throw new Error(`no suite in ${files}`);
+    await fontsLoaded();
     for (const fn of suites) await fn();
     await tick();
     log('errors: ' + (__errors.length ? __errors.join(' || ') : 'none'));
