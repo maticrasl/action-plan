@@ -12,6 +12,19 @@ export const en = {
     'nav.goals': 'Goals',
     'nav.states': 'States',
     'nav.graphs': 'Graphs',
+    'view.guide': 'Guide',
+    'guide.search': 'Search the guide…',
+    'guide.noMatch': 'Nothing found for “{query}”. Try another word.',
+    'guide.group.start': 'Start here',
+    'guide.group.stuck': 'When you are stuck',
+    'guide.group.how': 'How do I…',
+    'guide.group.data': 'Your data and privacy',
+    'guide.group.limits': 'What this app cannot do',
+    'guide.related': 'Related',
+    'guide.more': 'More in the Guide',
+    'guide.open': 'Open the Guide',
+    'guide.review.done': 'Review done',
+    'guide.review.toast': 'Review done. See you next week.',
     'nav.visions': 'Visions',
     'view.visions': 'Visions',
     'kind.vision': 'Vision',
@@ -249,7 +262,7 @@ export const en = {
       'Remove {name} from this device? Their plans are deleted here; what has synced stays in their Google Drive and comes back when they log in again. Changes not synced yet are lost.',
     'user.removed': '{name} removed from this device',
     'btn.tutorial': 'Take the tour',
-    'btn.help': 'Help mode',
+    'btn.help': 'Explanations on screen',
 
     'langPick.title': 'Choose your language',
     'langPick.text': 'You can change it any time in Settings.',
@@ -310,14 +323,16 @@ export const en = {
     'tour.sync.title': 'Sync status',
     'tour.sync.text':
       'This cloud shows whether your plans are synced with Google Drive. When it says sync is paused, click it to continue.',
-    'tour.help.title': 'Help mode',
+    'tour.help.title': 'Guide',
     'tour.help.text':
-      'Turn this on any time for an explanation of each screen and ⓘ tips on the controls. You can restart this tour from Settings.',
+      'This opens the Guide: how the method works, what to do when you are stuck, and what happens to your data. There you can also switch on explanations of each screen. You can restart this tour from Settings.',
     'tour.done.title': 'You are all set',
     'tour.done.text': 'Keep the sample plan to explore on your own, or remove it and go back to your plan.',
 
-    'help.off': 'Turn off help',
+    'help.off': 'Turn off explanations',
     'help.tipLabel': 'What is this?',
+    'help.view.visions':
+      'Visions are states you wish for and never finish; goals are how you move toward them. Add a vision, choose the goals that serve it, and put narrower visions under broader ones. When one vision stands above all the others and every active goal serves it, it is marked as your Purpose.',
     'help.view.dashboard':
       'The overview sums up your plan: average progress of active goals, finished, late and waiting activities, and what is due next: the activities due by today or overdue (Show all adds the others in progress).',
     'help.view.goals':

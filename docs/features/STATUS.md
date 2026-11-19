@@ -90,11 +90,17 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 
 - Plans written 2026-11-15 against commit `5b71e59`; the restructure (phases 1–10) has moved the
   code since: find files with `npm run map`, not by the paths in the plans.
-- `06-goal-form` built 2026-11-18 on `feat/smart-goals`, ahead of the order at the owner's request
-  (it needs nothing before it); `check` passes. Tick it once the owner has seen it work. Left out:
-  part 5 (learning-goal link, dropped by the owner) and the "Guidance" part (Guide articles, the
-  `goal-unfinished` tip, the walkthrough text): add those with Guidance 1–3.
-- Next open line: Guidance 1, the Guide page. `feedback-link` may come first (see above).
-- Done 2026-11-18 outside the list: the typeface ships with the app (findings 12; the Guide's privacy
-  article in `docs/guidance/guide-content.en.md` already says so), the page tests pass on any
+- `06-goal-form` built 2026-11-18 (#25), ahead of the order at the owner's request; tick it once the
+  owner has seen it work. Left out: part 5 (dropped by the owner). Its "Guidance" part: the Guide
+  articles are done with Guidance 1; the `goal-unfinished` tip and the walkthrough text wait for
+  Guidance 2 and 3.
+- Guidance 1, the Guide page, built 2026-11-19 on branch `feat/guide-page`, not ticked until the
+  owner has seen it. Articles in `src/i18n/guide.en.ts` / `guide.sl.ts`; view `src/views/guide.ts`.
+  Owner: the Guide is not among the views; only the `?` beside Settings opens it.
+  It treats guidance decisions 3 (`?` opens the Guide) and 4 (visions in the Guide, a Visions help
+  banner) as taken. "Take the tour" stays in Settings until Guidance 2 removes the tour.
+- Privacy texts were checked against the code; three sentences changed (p-where: Settings loads
+  Google's sign-in script; p-google: name and email read at login; p-delete: what "Remove from
+  this device" removes). `tips-all` waits for Guidance 3.
+- Done 2026-11-18 outside the list: the typeface ships with the app, the page tests pass on any
   day, and two small bugs found on the way are fixed (`docs/restructure/found-bugs.md`).

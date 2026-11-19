@@ -12,6 +12,19 @@ export const sl: Language = {
     'nav.goals': 'Cilji',
     'nav.states': 'Stanja',
     'nav.graphs': 'Grafi',
+    'view.guide': 'Vodnik',
+    'guide.search': 'Iščite po vodniku …',
+    'guide.noMatch': 'Za »{query}« ni zadetkov. Poskusite z drugo besedo.',
+    'guide.group.start': 'Za začetek',
+    'guide.group.stuck': 'Ko se zatakne',
+    'guide.group.how': 'Kako …',
+    'guide.group.data': 'Vaši podatki in zasebnost',
+    'guide.group.limits': 'Česa aplikacija ne zmore',
+    'guide.related': 'Sorodno',
+    'guide.more': 'Več v Vodniku',
+    'guide.open': 'Odpri Vodnik',
+    'guide.review.done': 'Tedenski pregled končan',
+    'guide.review.toast': 'Tedenski pregled je končan. Se vidimo naslednji teden.',
     'nav.visions': 'Vizije',
     'view.visions': 'Vizije',
     'kind.vision': 'Vizija',
@@ -266,7 +279,7 @@ export const sl: Language = {
       'Odstranim {name} s te naprave? Načrti se tu izbrišejo; kar je sinhronizirano, ostane v Google Drive tega računa in se vrne ob naslednji prijavi. Še nesinhronizirane spremembe se izgubijo.',
     'user.removed': '{name} – odstranjeno s te naprave',
     'btn.tutorial': 'Vodeni ogled',
-    'btn.help': 'Način pomoči',
+    'btn.help': 'Razlage na zaslonu',
 
     'langPick.title': 'Izberite jezik',
     'langPick.text': 'Kadar koli ga lahko spremenite v nastavitvah.',
@@ -327,14 +340,16 @@ export const sl: Language = {
     'tour.sync.title': 'Stanje sinhronizacije',
     'tour.sync.text':
       'Oblak kaže, ali so načrti sinhronizirani z Google Drive. Ko piše, da je sinhronizacija ustavljena, ga kliknite za nadaljevanje.',
-    'tour.help.title': 'Način pomoči',
+    'tour.help.title': 'Vodnik',
     'tour.help.text':
-      'Vklopite ga kadar koli za razlago vsakega zaslona in namige ⓘ ob kontrolnikih. Ta ogled lahko znova zaženete v Nastavitvah.',
+      'Tu se odpre Vodnik: kako deluje metoda, kaj storiti, ko se zatakne, in kaj se zgodi z vašimi podatki. Tam lahko vklopite tudi razlage vsakega zaslona. Ta ogled lahko znova zaženete v Nastavitvah.',
     'tour.done.title': 'Pripravljeni ste',
     'tour.done.text': 'Obdržite vzorčni načrt in ga raziščite sami ali pa ga odstranite in se vrnite k svojemu načrtu.',
 
-    'help.off': 'Izklopi pomoč',
+    'help.off': 'Izklopi razlage',
     'help.tipLabel': 'Kaj je to?',
+    'help.view.visions':
+      'Vizije so stanja, ki si jih želite in jih nikoli ne zaključite; cilji so način, kako se jim približujete. Dodajte vizijo, izberite cilje, ki ji služijo, in ožje vizije postavite pod širše. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj, je označena kot vaš Smisel.',
     'help.view.dashboard':
       'Pregled povzame vaš načrt: povprečni napredek aktivnih ciljev, opravljene, zamujene in čakajoče aktivnosti ter kaj je na vrsti: aktivnosti z rokom do danes ali zamujene (Prikaži vse doda še ostale v teku).',
     'help.view.goals':

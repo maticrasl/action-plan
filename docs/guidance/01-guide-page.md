@@ -7,8 +7,9 @@ The article texts are in `guide-content.en.md`.
 
 ## What the user sees
 
-A new view, **Guide**, after Graphs in the navigation (on phones under More). The `?` button in
-the top bar opens it from anywhere; pressing `?` while on the Guide returns to the previous view.
+A new view, **Guide**. It is not among the views in the navigation (owner, 2026-11-19): its
+button is the `?` at the top right, beside Settings, which opens it from anywhere; pressing `?`
+while on the Guide returns to the previous view.
 
 ```
 Guide
@@ -68,7 +69,7 @@ Guide
 
 | Key | English |
 |---|---|
-| `nav.guide`, `view.guide` | Guide |
+| `view.guide` | Guide |
 | `guide.search` | Search the guide… |
 | `guide.noMatch` | Nothing found for “{query}”. Try another word. |
 | `guide.group.start` | Start here |
@@ -100,7 +101,7 @@ Guide
 ## Test cases
 
 Main paths
-- The Guide opens from the navigation, from `?`, from Settings; `?` again returns to the
+- The Guide opens from `?` and from Settings, and is not in the navigation; `?` again returns to the
   previous view.
 - Every article id in the English file exists in the Slovenian file, in the same group.
 - Every `related` id and every id used by `openGuide` anywhere in the code exists.

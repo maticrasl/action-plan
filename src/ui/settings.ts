@@ -120,6 +120,11 @@ $('#settingsBtn').addEventListener('click', () => {
   renderSettings();
   settings.showModal();
 });
+// Opens Settings as its button does (sync-ui also listens there), scrolled to a section if one is named.
+export function openSettings(sectionId = '') {
+  $('#settingsBtn').click();
+  if (sectionId) $(`#${sectionId}`).scrollIntoView({ block: 'start' });
+}
 settings.addEventListener('click', e => {
   if (e.target === settings || (e.target as HTMLElement).closest('[data-settings-close]')) settings.close();
 });
@@ -144,6 +149,5 @@ $('#templatesBtn').addEventListener('click', openTemplates);
 export function setHelp(on: boolean) {
   ui.help = on;
   prefs.set('help', on);
-  $('#helpBtn').setAttribute('aria-pressed', String(on));
   requestRender();
 }

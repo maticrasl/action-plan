@@ -23,6 +23,7 @@ import type { Store } from '../core/merge';
 import { Db, SYNC_COLLS } from '../core/model';
 import { userStorage } from '../store/users';
 import { saveVisions } from '../store/visions';
+import { markSeen } from '../store/seen';
 import { renderPlanSwitch } from './plan-switcher';
 import { requestRender } from './render';
 
@@ -71,12 +72,14 @@ export async function exportPlan(kind: string, share = false) {
         files: [new File([blob], name, { type: 'application/json' })],
         title: currentPlan()!.name,
       });
+      if (kind === 'full') markSeen({ exported: true });
       return;
     } catch (e) {
       if ((e as Error | null)?.name === 'AbortError') return;
     }
   }
   download(blob, name);
+  if (kind === 'full') markSeen({ exported: true });
 }
 export const exportJson = () => exportPlan('full');
 export const canShareFiles = () => {
@@ -163,6 +166,7 @@ export const backupFile = () => ({ ...toFile(localStore()), kind: 'backup', expo
 export function backupAll() {
   const blob = new Blob([JSON.stringify(backupFile(), null, 2)], { type: 'application/json' });
   download(blob, `${t('backup.file')} ${today()}.json`);
+  markSeen({ exported: true });
 }
 
 // Reads a backup file; throws an error with code 'invalid', 'plan' (a single plan's export) or

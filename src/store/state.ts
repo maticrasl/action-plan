@@ -2,7 +2,16 @@
 import type { GoalStatus, ISODate, PlanList, RelType, VisionRel } from '../core/model';
 
 // The views, by the names in the navigation, views/index.ts's VIEWS and the stored `view` preference.
-export type ViewName = 'dashboard' | 'goals' | 'activities' | 'states' | 'visions' | 'map' | 'timeline' | 'graphs';
+export type ViewName =
+  | 'dashboard'
+  | 'goals'
+  | 'activities'
+  | 'states'
+  | 'visions'
+  | 'map'
+  | 'timeline'
+  | 'graphs'
+  | 'guide';
 
 // Ids are of items, relations or visions; a goal filter of '' means all goals. The last three
 // fields are set later, not by freshUi.
