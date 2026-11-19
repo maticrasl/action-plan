@@ -92,6 +92,7 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   1–10) has moved the code since: find files with `npm run map`, not by the paths in the plans.
 - Guidance 1, the Guide page, built 2026-11-19 on branch `feat/guide-page`, not ticked until the
   owner has seen it. Articles in `src/i18n/guide.en.ts` / `guide.sl.ts`; view `src/views/guide.ts`.
+  Owner: the Guide is not among the views; only the `?` beside Settings opens it.
   It treats guidance decisions 3 (`?` opens the Guide) and 4 (visions in the Guide, a Visions help
   banner) as taken. "Take the tour" stays in Settings until Guidance 2 removes the tour.
 - Privacy texts were checked against the code; three sentences changed (p-where: Settings loads

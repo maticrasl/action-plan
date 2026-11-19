@@ -15,12 +15,15 @@ suite(async () => {
     closeCtxMenu();
   };
 
-  await step('opens from the navigation, from ?, from Settings; ? again goes back', () => {
+  await step('opens from ? at the top right and from Settings, not from the views; ? again goes back', () => {
     fresh('Guide plan');
     setView('goals');
-    $('.nav-item[data-view="guide"]').click();
-    eq(ui.view, 'guide', 'navigation');
+    assert(!$('.nav [data-view="guide"]'), 'not among the views');
+    assert($('.topbar-actions #helpBtn + #settingsBtn'), '? sits beside Settings');
+    $('#helpBtn').click();
+    eq(ui.view, 'guide', '? opens it');
     eq($('#viewTitle').textContent, t('view.guide'), 'title');
+    assert(![...document.querySelectorAll('.nav-item')].some(b => b.classList.contains('active')), 'no view marked');
     assert($('#helpBtn').getAttribute('aria-pressed') === 'true', '? shows it is on the Guide');
     $('#helpBtn').click();
     eq(ui.view, 'goals', '? returns to the view before');

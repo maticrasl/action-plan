@@ -12,7 +12,6 @@ export const sl: Language = {
     'nav.goals': 'Cilji',
     'nav.states': 'Stanja',
     'nav.graphs': 'Grafi',
-    'nav.guide': 'Vodnik',
     'view.guide': 'Vodnik',
     'guide.search': 'Iščite po vodniku …',
     'guide.noMatch': 'Za »{query}« ni zadetkov. Poskusite z drugo besedo.',

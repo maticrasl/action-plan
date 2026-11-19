@@ -12,7 +12,6 @@ export const en = {
     'nav.goals': 'Goals',
     'nav.states': 'States',
     'nav.graphs': 'Graphs',
-    'nav.guide': 'Guide',
     'view.guide': 'Guide',
     'guide.search': 'Search the guide…',
     'guide.noMatch': 'Nothing found for “{query}”. Try another word.',
