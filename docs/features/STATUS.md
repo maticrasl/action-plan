@@ -98,6 +98,11 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   `docs/specs/2026-11-19-walkthrough.md`. The tour is gone; the language picker and the Show me
   ring stay (`tutorial/welcome.ts`, `tutorial/spotlight.ts`). Guidance decisions 1, 2, 4, 5
   confirmed 2026-11-19.
-- Guidance 3 (tips) reads the same `seen` facts; days and views are recorded only while Getting
-  started is on, so tips that need them must record their own (`markDay`, `markView`).
+- Guidance 3 (tips), session A built 2026-11-19 on branch `feat/tips`: engine, classes A and B
+  (with `goal-unfinished`), the card, Settings › Display › Tips, tip history synced, `statusSince`
+  on items. Design: `docs/specs/2026-11-19-tips.md`. Not ticked until the owner has seen it and
+  session B is done.
+- Guidance 3, session B still to do: classes C and D, `tips-all` in the Guide, `seen` facts
+  `menu` and `templates`, days and views recorded whenever tips are on (today only while Getting
+  started is on: `markDay`, `markView`), `tips.since` for `halfway`; decide whether `seen` syncs.
 - Privacy texts were checked against the code (2026-11-19). `tips-all` waits for Guidance 3.
