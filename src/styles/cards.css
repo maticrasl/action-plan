@@ -44,6 +44,11 @@
 :is(.card, .row).glass {
   --mute: 0.25;
 }
+/* Activities and states are flat: a thin edge in their side colour instead of a slab. */
+.glass:not(.goal) {
+  --slab: 0 0 0 1px var(--side);
+  --depth: 0px;
+}
 .glass.goal {
   --slab:
     1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side), 4px 4px 0 var(--side), 5px 5px 0 var(--side);

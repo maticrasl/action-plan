@@ -2,7 +2,8 @@
 suite(async () => {
   const art = id => $(`#view [data-art="${id}"]`);
   const isOpen = id => art(id).querySelector('[data-guide-toggle]').getAttribute('aria-expanded') === 'true';
-  const openIds = () => [...$('#view').querySelectorAll('[data-guide-toggle][aria-expanded="true"]')].map(b => b.dataset.guideToggle);
+  const openIds = () =>
+    [...$('#view').querySelectorAll('[data-guide-toggle][aria-expanded="true"]')].map(b => b.dataset.guideToggle);
   const shownArts = () => [...$('#view').querySelectorAll('[data-art]')].filter(a => !a.hidden).map(a => a.dataset.art);
   const search = q => {
     const box = $('#guideSearch');
@@ -36,6 +37,25 @@ suite(async () => {
     assert(!settings.open && ui.view === 'guide', 'Settings › Open the Guide');
     $('#helpBtn').click();
     eq(ui.view, 'timeline', 'and back');
+  });
+
+  await step('Escape leaves the Guide for the view before; not while a dialog is open or a search has text', () => {
+    const esc = (target = document.body) =>
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    setView('states');
+    $('#helpBtn').click();
+    modal.showModal();
+    esc();
+    eq(ui.view, 'guide', 'a dialog open: stays');
+    modal.close();
+    search('zzz');
+    esc($('#guideSearch'));
+    eq(ui.view, 'guide', 'Escape in a search with text: stays (the box clears it)');
+    search('');
+    esc($('#guideSearch'));
+    eq(ui.view, 'states', 'back to the view before');
+    esc();
+    eq(ui.view, 'states', 'outside the Guide: nothing');
   });
 
   await step('every article is listed, in its group, closed', () => {
@@ -210,7 +230,10 @@ suite(async () => {
     try {
       setGuideFacts(() => ({ ...real(), syncSetUp: false, noSync: true }));
       render();
-      assert(text().includes('Sync is not set up for this copy') && !text().includes('Log in with Google'), 'not set up');
+      assert(
+        text().includes('Sync is not set up for this copy') && !text().includes('Log in with Google'),
+        'not set up',
+      );
       openGuide('p-device');
       assert(!art('p-device').textContent.includes('kept apart'), 'one user: no word about several');
       setGuideFacts(() => ({ ...real(), multiUser: true }));

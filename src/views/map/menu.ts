@@ -388,7 +388,7 @@ export function openAddMenu(x: number, y: number, byKey: boolean) {
     '',
     '',
     '',
-    ['goal', 'activity', 'state', ...(ui.view === 'map' || ui.view === 'guide' ? ['vision'] : [])].map(k => ({
+    [...(ui.view === 'map' || ui.view === 'guide' ? ['vision'] : []), 'goal', 'activity', 'state'].map(k => ({
       act: 'new:' + k,
       label: t(('add.' + k) as TextKey),
     })),

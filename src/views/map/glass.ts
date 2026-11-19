@@ -183,10 +183,7 @@ export function glassDefs(used: Set<string>) {
   const root = getComputedStyle(document.documentElement),
     night = root.colorScheme === 'dark',
     g: GlassLook = GLASS[night ? 'night' : 'day'];
-  const rgb = (name: string) => {
-    const h = root.getPropertyValue(name).trim();
-    return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-  };
+  const rgb = (name: string) => hexRgb(root.getPropertyValue(name));
   const mix = (a: number[], b: number[], t: number) => a.map((v, i) => v + (b[i] - v) * t);
   const css = (c: number[]) => `rgb(${c.map(v => Math.round(Math.max(0, Math.min(255, v)))).join(',')})`;
   const { peak, far, rings, side, strips } = glassLighting(),
@@ -209,9 +206,12 @@ export function glassDefs(used: Set<string>) {
           ),
         );
       };
-      const id = `glass-${glassKey(key)}`,
-        paint = (d: string, c: string) =>
-          `<path d="${d}" fill="${c}" stroke="${c}" stroke-width=".35" stroke-linejoin="round"/>`;
+      const id = `glass-${glassKey(key)}`;
+      // Activities and states are flat: a thin edge round the face (which covers its inner half), no slab.
+      if (kind !== 'goal')
+        return `<g id="${id}"><rect width="${MAP.NW}" height="${MAP.NH}" rx="${GLASS.R}" fill="none" stroke="${css(mix(base, tint, tinted))}" stroke-width="2"/></g>`;
+      const paint = (d: string, c: string) =>
+        `<path d="${d}" fill="${c}" stroke="${c}" stroke-width=".35" stroke-linejoin="round"/>`;
       const corners = side[kind]
         .filter(x => !x.run)
         .map(x => paint(x.path, colour(x)))
@@ -233,6 +233,12 @@ export function glassDefs(used: Set<string>) {
   return (
     slabs + ring('glass-spec', '#fff', x => g.spec * x.spec) + ring('glass-shade', '#000', x => g.faceShade * x.shade)
   );
+}
+// A CSS colour as #RGB or #RRGGBB (the build shortens #ffffff to #fff), as [r, g, b].
+export function hexRgb(value: string) {
+  let h = value.trim().slice(1);
+  if (h.length === 3) h = [...h].map(c => c + c).join('');
+  return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
 }
 export const glassKey = (key: string) => key.replace('--', '').replace('|', '-');
 // The colour a box takes, as in the CSS: its status's, or else its kind's.

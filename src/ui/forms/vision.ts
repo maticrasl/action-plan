@@ -2,7 +2,7 @@
 import { db, visions } from '../../core/state';
 import { ownVisions, visionAncestors } from '../../core/visions';
 import { t } from '../../i18n/index';
-import { checklist } from './picker';
+import { checklist, linkSection } from './picker';
 import type { Vision } from '../../core/model';
 import type { New } from './form';
 import { area, field, text } from './form';
@@ -17,6 +17,9 @@ export function visionForm(v: New<Vision>) {
   return `
     ${field('title', t('f.vision'), text('title', v.title, t('f.visionPh')))}
     ${field('description', t('f.visionDesc'), area('description', v.description, t('f.visionDescPh')))}
-    ${checklist('parents', t('f.visionParents'), 'vision', options, parents, t('f.visionParentsHint'))}
-    ${checklist('goals', t('f.visionGoals'), 'goal', db.goals, goals)}`;
+    ${linkSection(
+      `${checklist('parents', t('f.visionParents'), 'vision', options, parents, t('f.visionParentsHint'))}
+      ${checklist('goals', t('f.visionGoals'), 'goal', db.goals, goals)}`,
+      !!v.id,
+    )}`;
 }

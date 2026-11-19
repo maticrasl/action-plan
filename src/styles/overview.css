@@ -106,31 +106,16 @@
   padding: 0;
   font-weight: 600;
 }
-/* Tick boxes are holes cut through the glass, as deep as the card's slab (--depth): the page shows through them.
-   Seen from where the slabs' sides are seen (below and to the right), a hole shows its far walls, the top and the
-   left. They are shaded like the slab sides that face the same way: the top faces down, like a slab's bottom side,
-   which reflects the darker room below, so it is the darker wall; the left faces right, like a slab's right side,
-   so it is the lighter one. The light, to the left, can't reach the floor next to the left wall, so that wall throws
-   a soft shadow onto it. Ticked, a tile of green glass fills the hole and stands out of it. In progress, the walls
-   are amber. Hovered, they turn green. */
+/* Tick boxes are flat: an outline in the card's side colour on the page. Ticked, they fill green. In progress,
+   the outline is amber. Hovered, it turns green. */
 :is(.check, .li-box) {
   --wall: var(--side, var(--line-strong));
-  --wall-top: color-mix(in srgb, var(--wall) 80%, #000);
-  --wall-left: var(--wall);
-  --d: var(--depth, 3px);
   background: var(--bg);
-  box-shadow:
-    inset 0 var(--d) 0 var(--wall-top),
-    inset var(--d) 0 0 var(--wall-left),
-    inset calc(var(--d) + 1px) 0 3px -1px rgb(0 0 0 / 0.14);
+  box-shadow: inset 0 0 0 1.5px var(--wall);
 }
 :is(.check.done, .li-tick.done .li-box) {
-  --side: color-mix(in srgb, var(--ok) 72%, #000);
-  background: linear-gradient(to bottom, rgb(255 255 255 / 0.35), transparent 70%), var(--ok);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.35),
-    1px 1px 0 var(--side),
-    2px 2px 0 var(--side);
+  background: var(--ok);
+  box-shadow: none;
 }
 .check.doing {
   --wall: color-mix(in srgb, var(--warn) 80%, var(--glass-base));

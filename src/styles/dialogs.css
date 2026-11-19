@@ -292,3 +292,18 @@
   cursor: pointer;
   white-space: nowrap;
 }
+/* A form's relationships: a section that folds (folded for a new item); open, its fields keep the body's spacing. */
+.link-sec {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.link-sec summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--goal);
+}
+.link-sec[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

@@ -16,6 +16,7 @@ import { t, type TextKey } from '../i18n/index';
 import { categoryChips, goalSelect, scopeFor, searchBox } from './filters';
 import { ui } from '../store/state';
 import { isRoutine, type Routine } from '../core/routines/schedule';
+import { byUrgency } from '../core/routines/keeping';
 import { activityState, blockers, isComplete } from '../core/progress';
 import { ACTIVITY_STATUS, type Activity, type ActivityStatus } from '../core/model';
 import { listTicks, routineCard, routineLegend } from './routines';
@@ -29,7 +30,9 @@ export function renderActivities() {
   const scope = scopeFor(ui.activityGoal);
   const all = db.activities.filter(matchesSearch).filter(a => !scope || scope.activity.has(a.id));
   const list = all.filter(a => !isRoutine(a));
-  const routines = all.filter((a): a is Routine => isRoutine(a) && !(ui.hideDone && isComplete('activity', a)));
+  const routines = all
+    .filter((a): a is Routine => isRoutine(a) && !(ui.hideDone && isComplete('activity', a)))
+    .sort(byUrgency);
   const statuses = ACTIVITY_STATUS.filter(s => !(ui.hideDone && s === 'done'));
   const cols = statuses
     .map(status => {

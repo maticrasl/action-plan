@@ -69,7 +69,7 @@ suite(async () => {
       // The map draws visions too, so it offers one as well.
       assert(
         !ctxMenu.hidden &&
-          acts() === 'new:goal,new:activity,new:state,new:vision' &&
+          acts() === 'new:vision,new:goal,new:activity,new:state' &&
           !ctxMenu.querySelector('.ctx-head'),
         `offers the kinds: ${acts()}`,
       );
@@ -95,7 +95,7 @@ suite(async () => {
       // From the keyboard: the first item focused; Escape returns to the button.
       btn.focus();
       btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
-      assert(document.activeElement === ctxMenu.querySelector('[data-ctx="new:goal"]'), 'keyboard: first item focused');
+      assert(document.activeElement === ctxMenu.querySelector('[data-ctx="new:vision"]'), 'keyboard: first item focused');
       ctxMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       assert(ctxMenu.hidden && document.activeElement === btn, 'Escape returns to the button');
       // A box's menu afterwards is still the item's own.

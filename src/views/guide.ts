@@ -67,9 +67,11 @@ export const GUIDE_DO: Record<GuideAction, () => void> = {
 
 // The words search looks in: the title, the text as it shows now, and the review's lines.
 const searchText = (a: Article, facts: Record<GuideFact, boolean>) =>
-  [a.title, plainText(withRefs(liveBody(a.body, facts), titleOf)), ...(a.review ?? []).map(r => plainText(r.text))].join(
-    ' ',
-  );
+  [
+    a.title,
+    plainText(withRefs(liveBody(a.body, facts), titleOf)),
+    ...(a.review ?? []).map(r => plainText(r.text)),
+  ].join(' ');
 
 function actionHtml(a: Article) {
   if (!a.action) return '';
@@ -187,6 +189,22 @@ export const toggleGuide = () => (ui.view === 'guide' ? setView(lastView) : open
 
 export function listenGuide() {
   $('#helpBtn').addEventListener('click', toggleGuide);
+  // Escape leaves the Guide for the view before, unless something else takes it: a tip, a dialog, a menu,
+  // or a search field it clears. Capture phase: it must see those still open, before their Escape closes them.
+  addEventListener(
+    'keydown',
+    e => {
+      const field = e.target as HTMLInputElement;
+      if (e.key !== 'Escape' || ui.view !== 'guide' || (field.matches?.('input, textarea') && field.value)) return;
+      if (
+        !document.querySelector(
+          '#helpTip, dialog[open], [role="dialog"], #ctxMenu:not([hidden]), #navSheet:not([hidden])',
+        )
+      )
+        setView(lastView);
+    },
+    true,
+  );
   $('#guideBtn').addEventListener('click', () => {
     settings.close();
     openGuide('');

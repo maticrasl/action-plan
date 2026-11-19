@@ -18,7 +18,7 @@ import {
 } from '../../core/routines/schedule';
 import { dateInput, parseDateInput, today } from '../../core/dates';
 import { $, esc, linkTag } from '../dom';
-import { checklist } from './picker';
+import { checklist, linkSection } from './picker';
 import { doneLast } from '../../core/util';
 import { consistency, routineStreak } from '../../core/routines/keeping';
 import { area, date, field, linksOf, modal, num, select, text, type Errors, type FormVals, type New } from './form';
@@ -46,7 +46,8 @@ export function activityForm(a: New<Activity>) {
       ${field('dueDate', t('f.dueDate'), date('dueDate', a.dueDate))}
     </div>
     ${repeatFields(a)}
-    ${field('parent', t('f.parentActivity'), select('parent', parents, pick('subactivity')[0] || ''), t('f.parentActivityHint'))}
+    ${linkSection(
+      `${field('parent', t('f.parentActivity'), select('parent', parents, pick('subactivity')[0] || ''), t('f.parentActivityHint'))}
     ${children.length ? `<div class="field"><span class="label">${t('f.subActivities')}</span><div class="links">${children.map(linkTag).join('')}</div></div>` : ''}
     ${checklist('goals', t('f.contributes'), 'goal', db.goals, pick('contributes'))}
     ${checklist('states', t('f.improves'), 'state', db.states, pick('improves'))}
@@ -56,6 +57,8 @@ export function activityForm(a: New<Activity>) {
       'activity',
       others.filter(x => !isRoutine(x)),
       pick('depends'),
+    )}`,
+      !!a.id,
     )}`;
 }
 

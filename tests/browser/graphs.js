@@ -402,7 +402,7 @@ suite(async () => {
     deletePlan(plans.current);
     return `${periodTotals(km, 'day').length} days`;
   });
-  await step('graphs: right-click anywhere on a graph opens its item menu; tick boxes are holes in the glass', () => {
+  await step('graphs: right-click anywhere on a graph opens its item menu; tick boxes are flat', () => {
     loadSample();
     setView('graphs');
     const card = $('#view .gr-card'),
@@ -443,43 +443,25 @@ suite(async () => {
       `dark graph pane ${getComputedStyle(pane).backgroundColor}`,
     );
     $(`#themeSeg [data-theme-set="${was}"]`).click();
-    // Tick boxes are holes in the glass, as deep as the card's slab: the page's colour, the far (top and left) inner
-    // walls showing, shaded like the slab sides facing the same way: the left one the card's own side colour, the top
-    // one (facing down, like the slab's bottom) darker; no ring. Done, a tile of green glass stands out of it.
+    // Tick boxes are flat: the page's colour inside an outline in the card's edge colour. Done, they fill green.
     setView('activities');
     const css = el => getComputedStyle(el),
       open = $('#view .col .card .check:not(.done):not(.doing)'),
       doing = $('#view .col .card .check.doing'),
       done = $('#view .col .card .check.done');
-    const steps = el => (css(el).boxShadow.match(/[1-9]\d*px [1-9]\d*px 0px/g) || []).length;
     const bg = css(document.body).backgroundColor,
-      depth = css(open.closest('.glass')).getPropertyValue('--depth').trim();
-    const sh = css(open).boxShadow;
-    const top = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 3px 0px 0px inset/),
-      left = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 3px 0px 0px 0px inset/);
+      sh = css(open).boxShadow,
+      ring = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 0px 0px 1.5px inset/),
+      edge = css(open.closest('.glass')).boxShadow.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 0px 0px 1px/);
     assert(
-      open &&
-        depth === '3px' &&
-        css(open).backgroundColor === bg &&
-        css(open).borderTopWidth === '0px' &&
-        top &&
-        left &&
-        lum(top[1]) < lum(left[1]),
-      `an empty box is a hole ${depth} deep, top wall darker: ${sh}`,
-    );
-    const cardSide = css(open.closest('.glass')).boxShadow.match(/(rgba?\([^)]*\)|color\([^)]*\)) 1px 1px 0px/);
-    assert(
-      cardSide && cardSide[1] === left[1],
-      `the left wall is the card's side: ${left[1]} vs ${cardSide && cardSide[1]}`,
+      open && css(open).backgroundColor === bg && ring && edge && ring[1] === edge[1],
+      `an empty box is flat: ${sh}`,
     );
     assert(doing && css(doing).backgroundColor === bg, 'in progress: no amber floor');
     // The checklist in a routine card is clear, part of the card's glass.
     const list = $('#view .card.routine .li-ticks');
     assert(!list || css(list).backgroundColor === 'rgba(0, 0, 0, 0)', 'routine checklist is clear glass');
-    assert(
-      steps(done) === 2 && !css(done).boxShadow.includes('2px 2px 0px 0px inset'),
-      'done: a green tile with its side',
-    );
+    assert(css(done).boxShadow === 'none', 'done: a flat green box');
     assert(
       css(done).backgroundColor ===
         css(document.documentElement)
@@ -488,6 +470,19 @@ suite(async () => {
           .replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(', ')})`),
       'done tile is green',
     );
+    setView('dashboard');
+  });
+  await step('phone: the on-screen keyboard (a resize, same width) keeps the value popup open', async () => {
+    setView('graphs');
+    const sc = [...document.querySelectorAll('#view .gr-card')].find(c => findEntity(c.dataset.gr).kind === 'state');
+    sc.querySelector('.gr-plot').dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 200 }),
+    );
+    ctxMenu.querySelector('[data-ctx="value"]').click();
+    window.dispatchEvent(new Event('resize'));
+    await new Promise(r => setTimeout(r, 250));
+    assert($('.amount-pop') && amountPop, 'popup still open');
+    closeAmountPop();
     setView('dashboard');
   });
 });

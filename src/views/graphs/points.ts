@@ -121,7 +121,12 @@ export function listenGraphs() {
     showGraphPoint(plot, next);
   });
 
+  // Graphs fit the width: a resize that keeps it (a phone's on-screen keyboard opening) must not redraw,
+  // which would close the value popup whose field brought the keyboard up.
+  let width = innerWidth;
   addEventListener('resize', () => {
+    if (innerWidth === width) return;
+    width = innerWidth;
     clearTimeout(grResize);
     grResize = setTimeout(() => {
       if (ui.view === 'graphs' && !modal.open) render();

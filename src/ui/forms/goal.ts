@@ -10,7 +10,7 @@ import { fmtNum } from '../../core/util';
 import { today } from '../../core/dates';
 import { categorySuggestions } from '../../core/categories';
 import { GOAL_STATUS } from '../../core/model';
-import { checklist } from './picker';
+import { checklist, linkSection } from './picker';
 import { ownVisions } from '../../core/visions';
 import {
   area,
@@ -110,7 +110,8 @@ export function goalForm(g: New<Goal>) {
       ${field('status', t('f.status'), select('status', statusLabels(GOAL_STATUS, 'goal.'), g.status || 'active'))}
       ${field('parent', t('f.parent'), select('parent', parents, parent))}
     </div>
-    ${checklist('visions', t('f.goalVisions'), 'vision', visions.list, g.id ? ownVisions(g as Goal) : (g.links?.visions as string[] | undefined) || [])}
+    ${linkSection(
+      `${checklist('visions', t('f.goalVisions'), 'vision', visions.list, g.id ? ownVisions(g as Goal) : (g.links?.visions as string[] | undefined) || [])}
     ${checklist('activities', t('f.goalActivities'), 'activity', db.activities, linkedFrom(g, 'contributes'))}
     ${checklist(
       'depends',
@@ -118,6 +119,8 @@ export function goalForm(g: New<Goal>) {
       'goal',
       db.goals.filter(x => x.id !== g.id),
       linksOf(g, 'depends'),
+    )}`,
+      !!g.id,
     )}`;
 }
 

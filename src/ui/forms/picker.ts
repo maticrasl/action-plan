@@ -41,6 +41,13 @@ export function checklist(name: string, label: string, kind: string, items: Pick
     <div class="pick-list" role="listbox" aria-label="${esc(label)}" hidden>${options}<div class="pick-empty"></div></div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
 }
 
+// A form's relationships in a section that folds: folded for a new item (a simpler form), unless a link is preset.
+export function linkSection(inner: string, editing: boolean) {
+  if (!inner.trim()) return '';
+  const open = editing || inner.includes('data-picked-id') || /<option value="[^"]+" selected/.test(inner);
+  return `<details class="link-sec"${open ? ' open' : ''}><summary>${t('f.linksSection')}</summary>${inner}</details>`;
+}
+
 // A chosen item: its hidden input carries the link when the form is saved.
 export const pickedTag = (name: string, kind: string, item: Pickable) =>
   `<span class="tag ${kind}" data-picked-id="${item.id}"><input type="hidden" name="${name}" value="${item.id}">${esc(item.title)}<button type="button" data-unpick="${item.id}" title="${esc(t('pick.remove', { name: item.title }))}" aria-label="${esc(t('pick.remove', { name: item.title }))}">×</button></span>`;
