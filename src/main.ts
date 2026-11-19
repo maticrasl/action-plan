@@ -8,7 +8,8 @@ import './ui/forms/events';
 import { decorateDemo, offerWelcome } from './tutorial/welcome';
 import { decorateWalk, listenWalk } from './tutorial/walkthrough';
 import { decorateHelp } from './tutorial/help';
-import { decorateTips, listenTips } from './tutorial/tips';
+import { askForTip, decorateTips, listenTips } from './tutorial/tips';
+import { setAskTip } from './views/guide';
 import './store/users';
 import './store/visions';
 import { bootUser, enterUser } from './boot';
@@ -38,6 +39,7 @@ setRenderer(render);
 onRendered(decorateHelp);
 onRendered(decorateWalk);
 onRendered(decorateTips);
+setAskTip(askForTip);
 onRendered(decorateDemo);
 // Through the live bindings: offerWelcome can be replaced (setOfferWelcome), as the suite does.
 connectSync({ enterUser: (id: string) => enterUser(id), offerWelcome: () => offerWelcome() });

@@ -25,6 +25,7 @@ export const GUIDE_ACTIONS = [
   'view-map',
   'view-timeline',
   'view-graphs',
+  'ask-tip',
 ] as const;
 export type GuideAction = (typeof GUIDE_ACTIONS)[number];
 

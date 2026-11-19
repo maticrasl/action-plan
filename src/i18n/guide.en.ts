@@ -43,6 +43,30 @@ export const guideEn = [
 </ul>`,
     related: ['method'],
   },
+  {
+    id: 'tips-all',
+    group: 'start',
+    title: 'Tips and tricks',
+    body: `<p>Things the app can do that are easy to miss:</p>
+<ul>
+<li>The <strong>Map</strong> shows what serves what, and what serves nothing.</li>
+<li>The <strong>Timeline</strong> shows your steps on a calendar. Drag a bar to move its dates.</li>
+<li><strong>Graphs</strong> draw a current state’s measurements as a line, against your target.</li>
+<li>When a set day does not work out, a routine can let you make it up on another day: a switch under Repeats.</li>
+<li>A current state you add to each time, such as kilometres or money, can add up by itself: switch on “Adds up” and enter only what is new.</li>
+<li>An activity that holds several things can be a list, so you can tick them one by one.</li>
+<li>Several things you do every day can be one routine list, such as “Morning routine”: tick the items, and the day ticks itself.</li>
+<li>The templates show how similar goals are laid out. Borrow what fits.</li>
+<li>Your plans are in this browser only until you log in with Google or export a copy.</li>
+<li>Action Plan can sit on your home screen and open like any other app, also without a connection.</li>
+<li>Long-press or right-click any card for a menu: show it on the Map, add a step for it, change its status.</li>
+<li>Ctrl + Enter saves the form you are in.</li>
+<li>A plan that worked for you can be exported as a template: your steps without your numbers.</li>
+</ul>
+<p>Tips appear on the Overview now and then. Settings › Display turns them off. When you are open to one, ask for it here.</p>`,
+    action: { do: 'ask-tip', label: 'Show me a tip' },
+    related: ['method'],
+  },
 
   /* ---------- When you are stuck ---------- */
   {

@@ -14,7 +14,8 @@ Read `README.md` first (decision 7, voice rules, seen flags, demo marker).
  │ A smaller routine that you keep beats a bigger one that you   │
  │ miss. Try twice a week, and raise it when it holds.           │
  │                                                               │
- │ [ Edit the routine ]   Why this helps          Not now        │
+ │ [ Edit the routine ]  Why this helps  Another tip             │
+ │                                       Don't show this again   │
  └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -24,8 +25,10 @@ Read `README.md` first (decision 7, voice rules, seen flags, demo marker).
 - **Buttons.**
   - The **action** does the thing the tip suggests (opens the form, the view, the dialog).
   - **Why this helps** opens the Guide article. Left out for tips without one.
-  - **Not now** hides the tip for 7 days.
-  - **×** means "not this one again" for this tip and this item.
+  - **×** is *Not now*: it hides the tip for 7 days (owner, 2026-11-19).
+  - **Don't show this again** means "not this one again" for this tip and this item.
+  - **Another tip** shows the next tip that is true now; see "Asking for a tip" in
+    `docs/specs/2026-11-19-tips.md`. *Show me a tip* in the Guide's Tips and tricks does the same.
 - The first three tips a user ever sees carry a last line: *Tips can be turned off in
   Settings.*
 - **Settings › Display › Tips** (switch, on by default). Off: no tip is chosen or shown, and
@@ -58,8 +61,8 @@ where `key` is the tip id, plus the item id for tips about one item (`routine-lo
 - Class A and B tips may come back for the same item after their **cooldown** (below) while the
   condition still holds, at most **3 times** in all. After that the app has said it; stop.
 - Class C and D tips show **once** per key.
-- **×** sets `closed`: never again for that key.
-- **Not now** sets `snoozed` to today + 7 days.
+- **Don't show this again** sets `closed`: never again for that key.
+- **×** (Not now) sets `snoozed` to today + 7 days.
 
 **A tip about several items** names the one that fits best (most overdue, lowest kept share,
 nearest deadline) and is keyed to it.

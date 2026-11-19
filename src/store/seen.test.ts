@@ -28,5 +28,12 @@ describe('seen', () => {
   test('fields of the wrong type are left out', () => {
     storage.setItem('actionplan.v1.seen', JSON.stringify({ exported: 'yes', lastReview: 5, other: 1 }));
     expect(getSeen()).toEqual({ other: 1 });
+    storage.setItem('actionplan.v1.seen', JSON.stringify({ menu: 1, templates: 'x' }));
+    expect(getSeen()).toEqual({});
+  });
+  test('the menu and the templates are remembered once used', () => {
+    markSeen({ menu: true });
+    markSeen({ templates: true });
+    expect(getSeen()).toEqual({ menu: true, templates: true });
   });
 });

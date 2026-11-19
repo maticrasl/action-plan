@@ -43,6 +43,30 @@ export const guideSl: readonly Article<ArticleId>[] = [
 </ul>`,
     related: ['method'],
   },
+  {
+    id: 'tips-all',
+    group: 'start',
+    title: 'Nasveti in triki',
+    body: `<p>Stvari, ki jih aplikacija zmore in jih je lahko spregledati:</p>
+<ul>
+<li><strong>Zemljevid</strong> pokaže, kaj čemu služi in kaj ničemur.</li>
+<li><strong>Časovnica</strong> pokaže vaše korake na koledarju. Povlecite trak, da premaknete njegove datume.</li>
+<li><strong>Grafi</strong> narišejo meritve trenutnega stanja kot črto, ob vaši ciljni vrednosti.</li>
+<li>Ko določen dan ne gre, vam rutina lahko dovoli, da ga nadoknadite na drug dan: stikalo pod Ponavljanjem.</li>
+<li>Trenutno stanje, ki ga vsakič dopolnite, na primer s kilometri ali denarjem, se lahko sešteva samo: vklopite »Se sešteva« in vpišite le, kar je novega.</li>
+<li>Aktivnost, ki vsebuje več stvari, je lahko seznam, da jih odkljukate eno za drugo.</li>
+<li>Več stvari, ki jih delate vsak dan, je lahko en rutinski seznam, na primer »Jutranja rutina«: odkljukajte postavke in dan se odkljuka sam.</li>
+<li>Predloge pokažejo, kako so urejeni podobni cilji. Vzemite, kar vam ustreza.</li>
+<li>Vaši načrti so samo v tem brskalniku, dokler se ne prijavite z Googlom ali izvozite kopije.</li>
+<li>Akcijski načrt je lahko na vašem začetnem zaslonu in se odpre kot vsaka druga aplikacija, tudi brez povezave.</li>
+<li>Pridržite katerokoli kartico ali jo kliknite z desno tipko za meni: prikažite jo na Zemljevidu, dodajte ji korak, spremenite njeno stanje.</li>
+<li>Ctrl + Enter shrani obrazec, v katerem ste.</li>
+<li>Načrt, ki je pomagal vam, lahko izvozite kot predlogo: vaše korake brez vaših številk.</li>
+</ul>
+<p>Nasveti se na Pregledu pojavijo vsake toliko. Izklopite jih v Nastavitvah › Prikaz. Ko ste odprti za kakšnega, ga prosite tukaj.</p>`,
+    action: { do: 'ask-tip', label: 'Pokaži mi nasvet' },
+    related: ['method'],
+  },
 
   /* ---------- Ko se zatakne ---------- */
   {

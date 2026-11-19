@@ -1,5 +1,6 @@
 /** The floating menu: shown at a point and kept on screen, moved through by keys, closed by a press elsewhere. */
 import { $, esc } from './dom';
+import { getSeen, markSeen } from '../store/seen';
 
 export const ctxMenu = $('#ctxMenu');
 
@@ -30,6 +31,7 @@ export function showCtxMenu(
   byKey = false,
 ) {
   ctxOpenedAt = performance.now();
+  if (!getSeen().menu) markSeen({ menu: true }); // the tip about the menu is not needed any more
   ctxMenu.innerHTML =
     (title
       ? `<div class="ctx-head"><span class="tag ${tagClass}">${tag}</span><strong title="${esc(title)}">${esc(title)}</strong></div>`

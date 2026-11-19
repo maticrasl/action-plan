@@ -36,6 +36,12 @@ const titleOf = (id: string) => articles().find(a => a.id === id)?.title ?? id;
 const ref = (id: string) =>
   `<button type="button" class="guide-ref" data-guide-open="${esc(id)}">${esc(titleOf(id))}</button>`;
 
+// Asking for a tip lives in the tutorial, above the views; main.ts connects it.
+let askTip = () => {};
+export function setAskTip(f: () => void) {
+  askTip = f;
+}
+
 // What each action button does.
 const view = (v: ViewName) => () => setView(v);
 export const GUIDE_DO: Record<GuideAction, () => void> = {
@@ -56,6 +62,7 @@ export const GUIDE_DO: Record<GuideAction, () => void> = {
   'view-map': view('map'),
   'view-timeline': view('timeline'),
   'view-graphs': view('graphs'),
+  'ask-tip': () => askTip(),
 };
 
 // The words search looks in: the title, the text as it shows now, and the review's lines.

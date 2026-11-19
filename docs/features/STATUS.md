@@ -102,9 +102,10 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   (with `goal-unfinished`), the card, Settings › Display › Tips, tip history synced, `statusSince`
   on items. Design: `docs/specs/2026-11-19-tips.md`. Not ticked until the owner has seen it and
   session B is done.
-- Guidance 3, session B still to do: classes C and D, `tips-all` in the Guide, `seen` facts
-  `menu` and `templates`, days and views recorded whenever tips are on (today only while Getting
-  started is on: `markDay`, `markView`), `tips.since` for `halfway`; decide whether `seen` syncs;
-  and the owner's request of 2026-11-19: a "Show me another tip" a user can reach at any time, so
-  tips can be asked for when one is open to them (design it with the one-a-day rule).
-- Privacy texts were checked against the code (2026-11-19). `tips-all` waits for Guidance 3.
+- Guidance 3, session B built 2026-11-19 on branch `feat/tips-b`: classes C and D, `tips-all` in
+  the Guide, `seen` facts `menu` and `templates`, days and views recorded whenever tips are on,
+  `tips.since` for `halfway`; `seen` stays per device; tips asked for (Another tip on the card,
+  Show me a tip in Tips and tricks). Owner's change: × now means Not now; "Don't show this again"
+  is its own button. What was decided: `docs/specs/2026-11-19-tips.md`, "Session B". Not ticked
+  until the owner has seen it.
+- Privacy texts were checked against the code (2026-11-19).

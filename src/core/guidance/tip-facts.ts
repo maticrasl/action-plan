@@ -12,6 +12,23 @@ export interface TipInput {
   today: ISODate;
   lastReview?: ISODate; // the last weekly review (seen)
   prevDay?: ISODate; // the last day a tip of the day was chosen before today
+  since?: Record<string, ISODate>; // facts the tips saw first on a day (tips.since)
+  seen?: TipSeen;
+  device?: TipDevice; // unknown in tests of rules that do not need it; tips that need it stay quiet
+}
+// What this device remembers of using the app (store/seen).
+export interface TipSeen {
+  days?: ISODate[]; // days opened (the last 30)
+  views?: Record<string, boolean | undefined>;
+  menu?: boolean; // a card's menu was opened
+  templates?: boolean; // the templates were opened
+  exported?: boolean; // a full copy was saved
+}
+export interface TipDevice {
+  synced: boolean; // signed in with Google, so the plans are in Drive
+  canInstall: boolean; // the browser offers a way to install the app
+  installed: boolean;
+  fine: boolean; // a mouse or trackpad (Ctrl + Enter makes sense)
 }
 // One thing a tip can say: the item or period it is keyed to, the numbers in its text, and the
 // item its button acts on (the keyed item when not given).
@@ -35,7 +52,13 @@ export type TipAction =
   | 'addSubgoal'
   | 'addVision'
   | 'recordValue'
-  | 'review';
+  | 'review'
+  | 'map'
+  | 'addRoutineList'
+  | 'templates'
+  | 'backup'
+  | 'install'
+  | 'share';
 export interface Tip {
   id: string;
   cls: TipClass;

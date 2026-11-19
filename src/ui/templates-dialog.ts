@@ -5,6 +5,7 @@ import { toast } from './toast';
 import { t, tp, type TextKey } from '../i18n/index';
 import { $, esc, settings } from './dom';
 import { closeCtxMenu } from './menu';
+import { getSeen, markSeen } from '../store/seen';
 
 /* ---------- Templates (core/templates): ready-made plans to start from ---------- */
 
@@ -69,6 +70,7 @@ export function openTemplates() {
   closeCtxMenu();
   if (settings.open) settings.close();
   renderTemplates();
+  if (!getSeen().templates) markSeen({ templates: true });
   tplDialog.showModal();
   tplDialog.querySelector('.modal-body')!.scrollTop = 0;
 }

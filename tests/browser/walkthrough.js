@@ -169,17 +169,20 @@ suite(async () => {
     return fits.id;
   });
 
-  await step('walkthrough: days and views are counted only while it is on', () => {
+  await step('walkthrough: days and views are counted while it or the tips are on', () => {
     fresh('Walk days');
     replaceWalk({ state: 'off', done: {}, skipped: [] });
+    const tipsBefore = getTips();
+    saveTips({ ...tipsBefore, off: true });
     markSeen({ days: [], views: {} });
     setView('map');
-    assert(!getSeen().days.length && !getSeen().views.map, 'off: nothing recorded');
+    assert(!getSeen().days.length && !getSeen().views.map, 'both off: nothing recorded');
     startWalk();
     setView('timeline');
     assert(getSeen().days.includes(today()) && getSeen().views.timeline, 'on: today and the view');
     setView('dashboard');
     eq(walkView(getWalk(), walkInput(getWalk())).days, 1, 'one day so far');
+    saveTips(tipsBefore);
   });
 
   await step('walkthrough: without sync set up the copy task offers the export only', () => {
