@@ -37,3 +37,26 @@ export const NO_VISION_DAYS = 14; // no-vision: days since the first item
 export const WEEK_REVIEW_DAYS = 6; // week: last weekly review at least this many days ago
 export const NEW_YEAR_LAST_DAY = 14; // new-year: shown 1 to this day of January
 export const UNFINISHED_AGE = 7; // goal-unfinished: goal older than this many days
+
+// Class C
+export const HOLDS_PERIODS = 4; // routine-holds: weeks or months met in a row
+export const HALFWAY = 50; // halfway: progress passed (%)
+export const HALFWAY_FROM = 40; // halfway: the goal was seen under this (%)
+export const ACHIEVED_DAYS = 7; // achieved: marked Achieved within this many days
+export const FIRST_MONTH_DAYS = 30; // first-month: days since the first item
+export const FIRST_MONTH_OPENED = 8; // first-month: days opened in the last 30
+
+// Class D
+export const DISCOVER_AFTER = 5; // every class D tip: days since the first item
+export const TRY_MAP_ITEMS = 6; // try-map: items in the plan
+export const TRY_TIMELINE_ITEMS = 4; // try-timeline: items with dates
+export const TRY_GRAPHS_VALUES = 3; // try-graphs: measurements of one state
+export const MAKE_UP_DAYS = 14; // make-up: a set day missed within this many days
+export const ADDS_UP_VALUES = 3; // adds-up: values that only grow
+export const USE_LIST_PARTS = 3; // use-list: lines, or commas, in the details
+export const ROUTINE_LIST = 3; // routine-list: daily routines
+export const BACKUP_ITEMS = 10; // backup: items in the plan
+export const BACKUP_DAYS = 7; // backup: days since the first item
+export const INSTALL_DAYS = 5; // install: days opened
+export const MENU_ITEMS = 10; // menu and ctrl-enter: items in the plan
+export const SHARE_DAYS = 30; // share: days since the first item

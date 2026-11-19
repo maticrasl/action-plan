@@ -1,6 +1,10 @@
 /** Page tests: the tip of the day: where it shows, its buttons, the Settings switch, the hint, blocks, escaping. */
 const tipCard = () => $('#view .tip');
-const resetTips = () => userStorage.removeItem(`${STORAGE_KEY}.tips`);
+const resetTips = () => {
+  userStorage.removeItem(`${STORAGE_KEY}.tips`);
+  userStorage.removeItem(`${STORAGE_KEY}.seen`);
+  setAsked(null);
+};
 const storedTips = () => JSON.parse(userStorage.getItem(`${STORAGE_KEY}.tips`));
 // A plan whose goal has had no steps for ten days: the tip "no-steps" is the one chosen.
 const noStepsPlan = (title = 'Learn the piano') => {
@@ -50,20 +54,115 @@ suite(async () => {
     setView('dashboard');
   });
 
-  await step('tips: Not now and × remove the card and are stored', () => {
+  await step('tips: × puts the tip off for a week; Don’t show this again closes it; both are stored', () => {
     const g = noStepsPlan();
     const key = `no-steps:${g.id}`;
     setView('dashboard');
-    $('#view .tip [data-tip="later"]').click();
-    assert(!tipCard(), 'Not now: gone');
+    eq($('#view .tip .tip-close').getAttribute('aria-label'), 'Not now', '× says what it does');
+    $('#view .tip .tip-close').click();
+    assert(!tipCard(), '×: gone');
     eq(storedTips().shown[key].snoozed, d(7), 'put off for 7 days');
+    assert(!storedTips().shown[key].closed, 'not closed for good');
     noStepsPlan('Second');
     setView('dashboard');
     const key2 = tipCard().dataset.tipKey;
-    $('#view .tip [data-tip="close"]').click();
-    assert(!tipCard(), '×: gone');
+    const never = $('#view .tip [data-tip="never"]');
+    eq(never.textContent, "Don't show this again", 'an explicit button');
+    never.click();
+    assert(!tipCard(), 'gone');
     eq(storedTips().shown[key2].closed, true, 'closed for good');
     eq(localStore().tips.shown[key2].closed, true, 'and carried to the sync file');
+  });
+
+  await step('tips: Another tip goes through the true tips, records none of them, then says nothing is left', () => {
+    const g = noStepsPlan();
+    const day = `no-steps:${g.id}`;
+    setView('dashboard');
+    const keys = [];
+    for (let i = 0; i < 30 && !$('#view .tip-none'); i++) {
+      $('#view .tip [data-tip="another"]').click();
+      if (tipCard() && !$('#view .tip-none')) keys.push(tipCard().dataset.tipKey);
+    }
+    assert(keys.length >= 2, `several tips offered: ${keys}`);
+    eq(new Set(keys).size, keys.length, 'each once');
+    assert(!keys.includes(day), 'not the tip of the day again');
+    eq(Object.keys(storedTips().shown), [day], 'asked-for tips are not recorded');
+    assert($('#view .tip-none [data-guide-open="tips-all"]'), 'nothing left: a link to Tips and tricks');
+    setView('goals');
+    assert(!$('#view .tip-none'), 'only on the Overview');
+    setView('dashboard');
+    $('#view .tip-none .tip-close').click();
+    eq(tipCard()?.dataset.tipKey, day, '×: the tip of the day is back');
+  });
+
+  await step('tips: an asked-for tip that is acted on gives way to the tip of the day', () => {
+    const g = noStepsPlan();
+    setView('dashboard');
+    $('#view .tip [data-tip="another"]').click();
+    const key = tipCard().dataset.tipKey;
+    assert(key !== `no-steps:${g.id}`, key);
+    $('#view .tip .tip-close').click();
+    eq(tipCard()?.dataset.tipKey, `no-steps:${g.id}`, 'put off: the tip of the day again');
+    eq(storedTips().shown[key].snoozed, d(7), 'and the asked-for tip is put off');
+  });
+
+  await step('tips: Show me a tip in Tips and tricks opens the Overview with a tip, also when tips are off', () => {
+    const g = noStepsPlan();
+    saveTips({ ...getTips(), off: true });
+    openGuide('tips-all');
+    const art = $('#view [data-art="tips-all"]');
+    assert(art && art.textContent.includes('Ctrl + Enter saves'), 'the article lists the tricks');
+    $('[data-guide-do="ask-tip"]', art).click();
+    eq(ui.view, 'dashboard', 'on the Overview');
+    assert(tipCard() && tipCard().dataset.tipKey.startsWith('no-steps:' + g.id), `a tip: ${tipCard()?.dataset.tipKey}`);
+    eq(storedTips().day, undefined, 'tips off: nothing recorded');
+  });
+
+  await step('tips: days, views, the menu and the templates are noted while tips are on', () => {
+    const g = noStepsPlan();
+    setView('map');
+    eq(getSeen().views?.map, true, 'Map opened');
+    assert(getSeen().days?.includes(today()), 'today');
+    openCtxMenu(g.id, 10, 10);
+    closeCtxMenu();
+    eq(getSeen().menu, true, 'the menu');
+    openTemplates();
+    tplDialog.close();
+    eq(getSeen().templates, true, 'the templates');
+    resetTips();
+    saveTips({ ...getTips(), off: true });
+    setView('timeline');
+    assert(!getSeen().views?.timeline && !getSeen().days, 'tips off: nothing noted');
+    setView('dashboard');
+  });
+
+  await step('tips: a goal reached this week is praised on Goals; its button opens the goal', () => {
+    resetTips();
+    fresh('Tips');
+    const g = mk('goal', { title: 'Run 5 km', createdAt: d(-10), status: 'achieved', statusSince: d(-2) });
+    setView('goals');
+    eq(tipCard()?.dataset.tipKey, `achieved:${g.id}`, 'the achieved tip');
+    assert(tipCard().textContent.includes('You reached “Run 5 km”'), 'names it');
+    $('#view .tip [data-tip="do"]').click();
+    assert(modal.open, 'the goal form');
+    modal.close();
+    setView('dashboard');
+  });
+
+  await step('tips: the class D buttons open what they name', () => {
+    noStepsPlan();
+    TIP_DO.map();
+    eq(ui.view, 'map', 'try-map: the Map');
+    TIP_DO.share();
+    assert(planExp.open && $('input[name="exportKind"][value="template"]', planExp).checked, 'share: export as a template');
+    planExp.close();
+    TIP_DO.templates();
+    assert(tplDialog.open, 'templates');
+    tplDialog.close();
+    TIP_DO.addRoutineList();
+    assert(modal.open && $('#modalBody').textContent.length, 'routine-list: the form');
+    modal.close();
+    setView('dashboard');
   });
 
   await step('tips: the Settings switch removes the card at once and brings it back', () => {

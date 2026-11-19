@@ -87,9 +87,10 @@ async function checkAll() {
 }
 
 // Data a newer version adds beside the old data, which fixtures written before it cannot hold: the
-// tip history (preference `tips` and the sync file's `tips`, docs/specs/2026-11-19-tips.md). Left out
-// of the comparison only when the fixture has none; everything else must still match exactly.
-const NEW_KEYS = [/^actionplan\.(u\.[^.]+\.)?v1\.tips$/, /^tips$/];
+// tip history (preference `tips` and the sync file's `tips`, docs/specs/2026-11-19-tips.md), and the
+// days and views the tips note (preference `seen`, session B). Left out of the comparison only when
+// the fixture has none; everything else must still match exactly.
+const NEW_KEYS = [/^actionplan\.(u\.[^.]+\.)?v1\.(tips|seen)$/, /^tips$/];
 function withoutNew(want, got) {
   if (!got || typeof got !== 'object' || Array.isArray(got)) return got;
   const extra = Object.keys(got).filter(k => !(k in want) && NEW_KEYS.some(re => re.test(k)));

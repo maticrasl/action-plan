@@ -63,10 +63,12 @@ Related: `method`
 
 ### `tips-all` · Tips and tricks
 
-*(Added with feature 3. A plain list of the texts of the class D tips in `03-tips.md`, without
-item names: write each as a general sentence, e.g. “When a set day does not work out, a routine
-can let you make it up on another day: a switch under Repeats.” Ends with: “Tips appear on the
-Overview now and then. Settings › Display turns them off.”)*
+Things the app can do that are easy to miss: the class D tips of `03-tips.md` as general
+sentences, without item names (the text itself is in `src/i18n/guide.en.ts`). Ends with: “Tips
+appear on the Overview now and then. Settings › Display turns them off. When you are open to one,
+ask for it here.” Action: **Show me a tip** (opens the Overview with a tip asked for).
+
+Related: `method`
 
 ---
 

@@ -300,6 +300,9 @@ export const sl: Language = {
     'tip.later': 'Ne zdaj',
     'tip.close': 'Tega ne prikaži več',
     'tip.settingsHint': 'Nasvete lahko izklopite v Nastavitvah.',
+    'tip.another': 'Še en nasvet',
+    'tip.none': 'Ta hip ni več nasvetov o vašem načrtu.',
+    'tip.all': 'Nasveti in triki',
     'tip.back.text':
       'Lepo, da ste spet tu. Ni treba nadoknaditi vsega: izberite en korak za danes in premaknite datume, ki ne držijo več.',
     'tip.back.btn': 'Odpri Časovnico',
@@ -369,6 +372,46 @@ export const sl: Language = {
     'tip.new-year.text':
       'Novo leto je dober trenutek za nov začetek. Želje do februarja zbledijo, koraki z datumi ne. Poglejte svoje cilje in izberite tistega za ta mesec.',
     'tip.new-year.btn': 'Odpri Cilje',
+    'tip.routine-holds.text':
+      '»{name}«: štirikrat zapored. Približno zdaj začne iti lažje. Če želite, jo malo povečajte, ali pa jo pustite; tudi to, da drži, šteje.',
+    'tip.halfway.text': '»{name}« je čez polovico.',
+    'tip.achieved.text':
+      'Dosegli ste »{name}«. Preden začnete naslednjega: kaj je naredilo razliko? In ali je kakšna majhna rutina vredna, da ostane, da rezultat zdrži?',
+    'tip.achieved.btn': 'Odpri cilj',
+    'tip.first-month.text':
+      'Mesec dni se vračate k svojemu načrtu. Ta navada je vredna več kot katerikoli posamezen cilj v njem.',
+    'tip.try-map.text':
+      'V vašem načrtu je zdaj dovolj, da je vreden pogled na Zemljevid: pokaže, kaj čemu služi in kaj ničemur.',
+    'tip.try-map.btn': 'Odpri Zemljevid',
+    'tip.try-timeline.text': 'Časovnica pokaže vaše korake na koledarju. Povlecite trak, da premaknete njegove datume.',
+    'tip.try-timeline.btn': 'Odpri Časovnico',
+    'tip.try-graphs.text': '»{name}« ima dovolj meritev za črto. Grafi jo pokažejo ob vaši ciljni vrednosti.',
+    'tip.try-graphs.btn': 'Odpri Grafe',
+    'tip.make-up.text':
+      'Ko določen dan za »{name}« ne gre, vam rutina lahko dovoli, da ga nadoknadite na drug dan. To je stikalo pod Ponavljanjem.',
+    'tip.make-up.btn': 'Uredi rutino',
+    'tip.adds-up.text':
+      'Če »{name}« vsakič dopolnite, na primer s kilometri ali denarjem, se lahko sešteva samo: vklopite »Se sešteva« in vpišite le, kar je novega.',
+    'tip.adds-up.btn': 'Odpri stanje',
+    'tip.use-list.text': '»{name}« je videti kot več stvari v eni. Kot seznam jih lahko odkljukate eno za drugo.',
+    'tip.use-list.btn': 'Odpri aktivnost',
+    'tip.routine-list.text':
+      'Več stvari, ki jih delate vsak dan, je lahko en rutinski seznam, na primer »Jutranja rutina«: odkljukajte postavke in dan se odkljuka sam.',
+    'tip.routine-list.btn': 'Dodaj rutinski seznam',
+    'tip.templates.text':
+      'Ne veste, kako cilj razdeliti na korake? Predloge pokažejo, kako so urejeni podobni cilji. Vzemite, kar vam ustreza.',
+    'tip.templates.btn': 'Začni s predlogo',
+    'tip.backup.text':
+      'Vaši načrti so samo v tem brskalniku. Prijavite se z Googlom ali izvozite kopijo, da jih počiščen brskalnik ne odnese s seboj.',
+    'tip.backup.btn': 'Shrani kopijo',
+    'tip.install.text': 'Akcijski načrt je lahko na vašem začetnem zaslonu in se odpre kot vsaka druga aplikacija, tudi brez povezave.',
+    'tip.install.btn': 'Namesti aplikacijo',
+    'tip.menu.text':
+      'Pridržite katerokoli kartico ali jo kliknite z desno tipko za meni: prikažite jo na Zemljevidu, dodajte ji korak, spremenite njeno stanje.',
+    'tip.ctrl-enter.text': 'Ctrl + Enter shrani obrazec, v katerem ste.',
+    'tip.share.text':
+      'Načrt, ki je pomagal vam, lahko pomaga še komu. Izvozite ga kot predlogo: vaše korake brez vaših številk.',
+    'tip.share.btn': 'Izvozi načrt',
 
     'walk.title': 'Prvi koraki',
     'walk.count': '{done} od {total}',

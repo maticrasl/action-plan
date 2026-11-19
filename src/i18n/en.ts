@@ -283,6 +283,9 @@ export const en = {
     'tip.later': 'Not now',
     'tip.close': "Don't show this again",
     'tip.settingsHint': 'Tips can be turned off in Settings.',
+    'tip.another': 'Another tip',
+    'tip.none': 'No more tips about your plan right now.',
+    'tip.all': 'Tips and tricks',
     'tip.back.text':
       'Good to see you. There is no need to catch up on everything: choose one step for today, and move the dates that no longer hold.',
     'tip.back.btn': 'Open the Timeline',
@@ -352,6 +355,46 @@ export const en = {
     'tip.new-year.text':
       "A new year is a good moment to begin again. Wishes fade by February; steps with dates do not. Look at your goals and choose this month's one.",
     'tip.new-year.btn': 'Open Goals',
+    'tip.routine-holds.text':
+      '“{name}”: four in a row. This is about when it starts to feel easier. Raise it a little if you like, or leave it; holding steady counts.',
+    'tip.halfway.text': '“{name}” is past halfway.',
+    'tip.achieved.text':
+      'You reached “{name}”. Before the next one: what made the difference? And is there a small routine worth keeping so the result stays?',
+    'tip.achieved.btn': 'Open the goal',
+    'tip.first-month.text':
+      'A month of coming back to your plan. That habit is worth more than any single goal in it.',
+    'tip.try-map.text':
+      'Your plan has enough in it now for the Map to be worth a look: it shows what serves what, and what serves nothing.',
+    'tip.try-map.btn': 'Open the Map',
+    'tip.try-timeline.text': 'The Timeline shows your steps on a calendar. Drag a bar to move its dates.',
+    'tip.try-timeline.btn': 'Open the Timeline',
+    'tip.try-graphs.text': '“{name}” has enough measurements to draw a line. Graphs shows it against your target.',
+    'tip.try-graphs.btn': 'Open Graphs',
+    'tip.make-up.text':
+      'When a set day of “{name}” does not work out, the routine can let you make it up on another day. It is a switch under Repeats.',
+    'tip.make-up.btn': 'Edit the routine',
+    'tip.adds-up.text':
+      'If “{name}” is something you add to each time, such as kilometres or money, it can add up by itself: switch on “Adds up” and enter only what is new.',
+    'tip.adds-up.btn': 'Open the state',
+    'tip.use-list.text': '“{name}” looks like several things in one. As a list, you can tick them one by one.',
+    'tip.use-list.btn': 'Open the activity',
+    'tip.routine-list.text':
+      'Several things you do every day can be one routine list, such as “Morning routine”: tick the items, and the day ticks itself.',
+    'tip.routine-list.btn': 'Add a routine list',
+    'tip.templates.text':
+      'Not sure how to break a goal into steps? The templates show how similar goals are laid out. Borrow what fits.',
+    'tip.templates.btn': 'Start from a template',
+    'tip.backup.text':
+      'Your plans are in this browser only. Log in with Google or export a copy, so that a cleared browser does not take them with it.',
+    'tip.backup.btn': 'Keep a copy',
+    'tip.install.text': 'Action Plan can sit on your home screen and open like any other app, also without a connection.',
+    'tip.install.btn': 'Install app',
+    'tip.menu.text':
+      'Long-press or right-click any card for a menu: show it on the Map, add a step for it, change its status.',
+    'tip.ctrl-enter.text': 'Ctrl + Enter saves the form you are in.',
+    'tip.share.text':
+      'A plan that worked for you may help someone else. Export it as a template: your steps without your numbers.',
+    'tip.share.btn': 'Export plan',
 
     'walk.title': 'Getting started',
     'walk.count': '{done} of {total}',

@@ -4,7 +4,8 @@ import { setDb } from '../state';
 import { I18N } from '../../i18n/index';
 import { emptyTips, type Tips } from './tip-history';
 import type { Tip, TipHit, TipInput } from './tip-facts';
-import { CATALOGUE, allowed, choose, closeTip, showsHint, snooze, tipOfDay, type TipBlocks } from './tip-choice';
+import { GUIDE } from '../../i18n/guide';
+import { CATALOGUE, allowed, askTip, choose, closeTip, keepSince, showsHint, snooze, tipOfDay, type TipBlocks } from './tip-choice';
 
 const TODAY = '2026-11-19';
 beforeEach(() => {
@@ -151,5 +152,77 @@ describe('catalogue', () => {
       const missing = CATALOGUE.flatMap(t => [`tip.${t.id}.text`, ...(t.action ? [`tip.${t.id}.btn`] : [])]).filter(k => !s[k]);
       expect(missing, l).toEqual([]);
     }
+  });
+  test('classes C and D follow A and B', () => {
+    expect(CATALOGUE.map(t => t.cls).join('')).toMatch(/^A+B+C+D+$/);
+  });
+  test('every "Why this helps" opens an article that exists', () => {
+    const known = new Set(GUIDE.en.map(a => a.id as string));
+    expect(CATALOGUE.filter(t => t.guide && !known.has(t.guide)).map(t => t.id)).toEqual([]);
+  });
+});
+
+describe('since', () => {
+  const goalAt = (id: string, current: string, status: 'active' | 'paused' = 'active') => ({
+    id,
+    title: id,
+    status,
+    createdAt: '2026-11-01',
+    metric: 'x',
+    baseline: '0',
+    target: '100',
+    current,
+  });
+  const dbOf = (...goals: ReturnType<typeof goalAt>[]): Db => ({ ...emptyDb(), goals });
+  test('an active goal under 40 % is noted the first day it is seen so', () => {
+    expect(keepSince(inp({ db: dbOf(goalAt('a', '30'), goalAt('b', '45')) }), tips()).since).toEqual({ 'under40:a': TODAY });
+  });
+  test('an earlier day is kept; nothing new: the same history', () => {
+    const t = tips({ since: { 'under40:a': '2026-11-02' } });
+    expect(keepSince(inp({ db: dbOf(goalAt('a', '30')) }), t)).toBe(t);
+  });
+  test('dropped when the goal is gone or no longer active; other facts are kept', () => {
+    const t = tips({ since: { 'under40:a': '2026-11-02', 'under40:gone': '2026-11-02', other: '2026-11-01' } });
+    expect(keepSince(inp({ db: dbOf(goalAt('a', '30', 'paused')) }), t).since).toEqual({ other: '2026-11-01' });
+  });
+  test('the tip of the day notes it when it chooses, and its conditions read it', () => {
+    let seen: TipInput['since'];
+    const spy = { ...fake('x', 'A'), hits: (i: TipInput) => ((seen = i.since), [{}]) };
+    const r = tipOfDay([spy], inp({ db: dbOf(goalAt('a', '10')) }), tips(), free);
+    expect(r.tips.since).toEqual({ 'under40:a': TODAY });
+    expect(seen).toEqual({ 'under40:a': TODAY });
+  });
+});
+
+describe('asking for a tip', () => {
+  const cat = [fake('a', 'A'), fake('b', 'B'), fake('c', 'C', 0)];
+  test('the next true tip in the usual order, skipping those named', () => {
+    expect(askTip(cat, inp(), tips(), ['a'])?.key).toBe('b');
+    expect(askTip(cat, inp(), tips(), ['a', 'b'])?.key).toBe('c');
+    expect(askTip(cat, inp(), tips(), ['a', 'b', 'c'])).toBeNull();
+  });
+  test('cooldowns, the showings, Not now and once-only do not apply; Don’t show again does', () => {
+    const t = tips({
+      shown: {
+        a: { n: 3, last: TODAY },
+        b: { n: 1, last: TODAY, snoozed: '2026-11-26' },
+        c: { n: 1, last: '2026-01-01', closed: true },
+      },
+    });
+    expect(askTip(cat, inp(), t, [])?.key).toBe('a');
+    expect(askTip(cat, inp(), t, ['a'])?.key).toBe('b');
+    expect(askTip(cat, inp(), t, ['a', 'b'])).toBeNull();
+  });
+  test('tips off and the first days: asking still answers', () => {
+    const db: Db = { ...emptyDb(), goals: [{ id: 'g', title: 'G', status: 'active', createdAt: TODAY }] };
+    expect(askTip(cat, inp({ db }), tips({ off: true }), [])?.key).toBe('a');
+  });
+  test('a tip about several items offers its next item before the next tip', () => {
+    const many = [fake('r', 'A', 14, [{ id: '1' }, { id: '2' }]), fake('z', 'B')];
+    expect(askTip(many, inp(), tips(), ['r:1'])?.key).toBe('r:2');
+  });
+  test('conditions read the noted facts', () => {
+    const half = [{ ...fake('h', 'C', 0), hits: (i: TipInput) => (i.since?.k ? [{}] : []) }];
+    expect(askTip(half, inp(), tips({ since: { k: TODAY } }), [])?.key).toBe('h');
   });
 });
