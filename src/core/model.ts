@@ -95,6 +95,7 @@ export interface Goal extends Item {
   // When the "target reached" offer was made (cleared when the target is no longer reached).
   offeredAt?: ISODate;
   createdAt?: ISODate;
+  statusSince?: ISODate; // the day the status last changed (stamped on save; absent on older items)
 }
 
 // One measurement of a state.
@@ -166,6 +167,7 @@ export interface Activity extends Item {
   droppedItems?: IdSet;
   scale?: Scale; // a routine's graph
   createdAt?: ISODate;
+  statusSince?: ISODate; // the day the status last changed (stamped on save; absent on older items)
 }
 
 export interface Relation extends Item {

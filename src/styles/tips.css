@@ -1,0 +1,68 @@
+/* ---------- Tips: one quiet remark about the plan, on the Overview and on the view it is about ---------- */
+/* Quieter than Getting started: a sunken surface and a thin rule instead of a framed card. */
+.tip {
+  position: relative;
+  margin-bottom: 16px;
+  padding: 10px 40px 10px 14px;
+  background: var(--surface-2);
+  border-left: 3px solid var(--tip);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+.tip-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tip-ink);
+}
+/* The light bulb: a yellow glass in a dark outline, so it reads on light and dark alike. */
+.tip-bulb {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--tip-ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tip-bulb .glass {
+  fill: var(--tip);
+}
+.tip-text {
+  margin: 0;
+  max-width: 68ch;
+  line-height: 1.5;
+}
+.tip-hint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.tip-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 8px;
+}
+.tip-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r-sm, 6px);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tip-close:hover {
+  color: var(--ink);
+  background: var(--sunken);
+}

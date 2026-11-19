@@ -9,6 +9,7 @@ import { modal } from './forms/form';
 import { requestRender } from './render';
 import { ui } from '../store/state';
 import { prefs } from '../store/prefs';
+import { getTips, setTipsOff } from '../store/tips';
 import { renderPlanSwitch } from './plan-switcher';
 import { closeCtxMenu } from './menu';
 import { openTemplates } from './templates-dialog';
@@ -95,6 +96,13 @@ $('#themeSeg').addEventListener('click', e => {
 // Display options shown as switches: how to read each one and what changing it does.
 export const SETTINGS: Record<string, { get: () => boolean | undefined; set: (v: boolean) => void }> = {
   help: { get: () => ui.help, set: v => setHelp(v) },
+  tips: {
+    get: () => !getTips().off,
+    set: v => {
+      setTipsOff(!v);
+      requestRender();
+    },
+  },
   hideDone: { get: () => ui.hideDone, set: v => setToggle('hideDone', v) },
   tlDeps: { get: () => ui.tlDeps, set: v => setToggle('tlDeps', v) },
   planBadges: { get: () => ui.planBadges, set: v => setToggle('planBadges', v) },

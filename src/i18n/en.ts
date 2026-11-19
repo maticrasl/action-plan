@@ -277,6 +277,82 @@ export const en = {
     'demo.own': 'Start my own plan',
     'demo.remove': 'Remove sample',
 
+    'settings.tips': 'Tips',
+    'tip.label': 'Tip',
+    'tip.why': 'Why this helps',
+    'tip.later': 'Not now',
+    'tip.close': "Don't show this again",
+    'tip.settingsHint': 'Tips can be turned off in Settings.',
+    'tip.back.text':
+      'Good to see you. There is no need to catch up on everything: choose one step for today, and move the dates that no longer hold.',
+    'tip.back.btn': 'Open the Timeline',
+    'tip.overdue-pile.text':
+      '{n} steps are past their date. A passed date is an old guess, not a verdict. Take five minutes to move, split or delete them.',
+    'tip.overdue-pile.btn': 'Open the Timeline',
+    'tip.routine-missed.text':
+      '“{name}” has been missed a few times. One tick puts it back on track. If the schedule does not fit your weeks, change the schedule.',
+    'tip.routine-missed.btn': 'Edit the routine',
+    'tip.routine-low.text':
+      '“{name}” was kept about {pct}% of the time. A smaller routine that you keep beats a bigger one that you miss. Try a little less, and raise it when it holds.',
+    'tip.routine-low.btn': 'Edit the routine',
+    'tip.goal-behind.text':
+      '“{name}” is at {pct}% with {days} days to go. Three honest options: make room for it this week, move the date, or lower the target.',
+    'tip.goal-behind.btn': 'Open the goal',
+    'tip.goal-past.text':
+      '“{name}” passed its date at {pct}%. That is {pct}% further than where you began. Give it a new date, or pause it if now is not the time.',
+    'tip.goal-past.btn': 'Open the goal',
+    'tip.stuck-step.text':
+      '“{name}” has been in progress for {n} weeks. A step that will not finish is often several steps in one. Split it, or turn it into a list.',
+    'tip.stuck-step.btn': 'Open the activity',
+    'tip.wrong-way.text':
+      '“{name}” has moved away from the target three times in a row. More effort may not be the answer; the steps may be the wrong ones. Which activity was meant to move it?',
+    'tip.wrong-way.btn': 'Open Graphs',
+    'tip.too-many-goals.text':
+      'You have {n} active goals. Most people move faster on two or three at a time. Pause the ones that can wait; they keep everything and come back with one tap.',
+    'tip.too-many-goals.btn': 'Open Goals',
+    'tip.too-many-routines.text':
+      '{n} routines at once is a lot to keep. Which two matter most right now? Let the others end for the moment and bring them back one at a time.',
+    'tip.too-many-routines.btn': 'Open Activities',
+    'tip.no-steps.text': '“{name}” has no steps yet. What is the smallest thing you could do for it this week?',
+    'tip.no-steps.btn': 'Add an activity',
+    'tip.steps-ran-out.text': 'Every step for “{name}” is done, and the goal is not reached yet. What comes next?',
+    'tip.steps-ran-out.btn': 'Add an activity',
+    'tip.no-dates.text':
+      '{n} steps have no date. A step with a day and a moment gets done far more often than one for “sometime”. Give the next one a day.',
+    'tip.no-dates.btn': 'Open Activities',
+    'tip.only-result.text':
+      '“{name}” is a result. What would you do every week that makes it likely? Add that as a routine.',
+    'tip.only-result.btn': 'Add a routine',
+    'tip.stale-state.text':
+      '“{name}” was last measured {days} days ago. A fresh value shows whether what you are doing is working.',
+    'tip.stale-state.btn': 'Record a value',
+    'tip.no-measure.text':
+      '“{name}” has a target and nothing that measures the way there. Add a current state for it, and the goal moves when you measure.',
+    'tip.no-measure.btn': 'Add a current state',
+    'tip.far-goal.text':
+      '“{name}” is {n} months away. A nearer sub-goal gives you something to reach sooner and shows whether you are on the way.',
+    'tip.far-goal.btn': 'Add sub-goal',
+    'tip.waiting.text':
+      '“{name}” is waiting for “{other}”, which has not started. Start that one, or remove the link if it no longer holds.',
+    'tip.waiting.btn': 'Open “{other}”',
+    'tip.many-doing.text':
+      '{n} activities are in progress. Finishing one will do more for you than starting another. Which is closest to done?',
+    'tip.many-doing.btn': 'Open Activities',
+    'tip.no-vision.text':
+      'What are your goals for? A vision is one sentence about the life they add up to. It is the reason you will look at on the hard days.',
+    'tip.no-vision.btn': 'Add a vision',
+    'tip.goal-unfinished.text':
+      '“{name}” is at {n} of 5. The open part is {part}. A few minutes now make the goal easier to act on.',
+    'tip.goal-unfinished.btn': 'Open the goal',
+    'tip.week.text':
+      'A new week. Five minutes now: what moved last week, and what is the one step that matters most this week?',
+    'tip.week.btn': 'Open the weekly review',
+    'tip.month.text': 'A new month is a good moment to measure. Record fresh values for your current states.',
+    'tip.month.btn': 'Open States',
+    'tip.new-year.text':
+      "A new year is a good moment to begin again. Wishes fade by February; steps with dates do not. Look at your goals and choose this month's one.",
+    'tip.new-year.btn': 'Open Goals',
+
     'walk.title': 'Getting started',
     'walk.count': '{done} of {total}',
     'walk.next': 'Next: {task}',

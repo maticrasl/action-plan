@@ -61,7 +61,7 @@ async function generateAll() {
 async function checkAll() {
   const fails = [];
   const compare = (label, want, got) => {
-    const diff = firstDiff(want, got);
+    const diff = firstDiff(want, withoutNew(want, got));
     if (diff) fails.push(`FAIL ${label}: ${diff}`);
   };
   let checks = 0;
@@ -84,6 +84,16 @@ async function checkAll() {
   fails.forEach(f => console.log(f));
   console.log(`fixtures: ${checks} checks, ${fails.length} failed`);
   return fails.length ? 1 : 0;
+}
+
+// Data a newer version adds beside the old data, which fixtures written before it cannot hold: the
+// tip history (preference `tips` and the sync file's `tips`, docs/specs/2026-11-19-tips.md). Left out
+// of the comparison only when the fixture has none; everything else must still match exactly.
+const NEW_KEYS = [/^actionplan\.(u\.[^.]+\.)?v1\.tips$/, /^tips$/];
+function withoutNew(want, got) {
+  if (!got || typeof got !== 'object' || Array.isArray(got)) return got;
+  const extra = Object.keys(got).filter(k => !(k in want) && NEW_KEYS.some(re => re.test(k)));
+  return extra.length ? Object.fromEntries(Object.entries(got).filter(([k]) => !extra.includes(k))) : got;
 }
 
 // Where two JSON values first differ, as "path: want … got …"; '' when equal. Stored strings that
