@@ -9,7 +9,7 @@ import { deleteItem, undoable } from '../undo';
 import { requestRender } from '../render';
 import { cal, closeCalendar, focusDay, moveCalendar, openCalendar, pickDate } from '../calendar';
 import { pickItem, showPickList, unpickItem } from './picker';
-import { updateProgressFields, updateSmartLive } from './goal';
+import { updateMeasuredBy, updateProgressFields, updateSmartLive } from './goal';
 import { updateStateFields } from './state';
 import { addListRow, placeListRow, updateRepeatFields } from './activity';
 import { fillRelTypes } from './relation';
@@ -71,6 +71,10 @@ $('#modalForm').addEventListener('change', e => {
     return updateStateFields();
   if (['f-repeat', 'f-unit', 'f-on', 'f-startDate'].includes((e.target as HTMLElement).id))
     return updateRepeatFields(e);
+  if ((e.target as HTMLElement).id === 'f-measuredBy') {
+    updateMeasuredBy();
+    return updateSmartLive();
+  }
   if ((e.target as HTMLElement).id !== 'f-progress') return;
   updateProgressFields();
   updateSmartLive();

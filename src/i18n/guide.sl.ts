@@ -118,7 +118,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<p>Obrazec cilja vpraša pet stvari. Shranite ga lahko samo z naslovom in se vrnete pozneje; črke pokažejo, kaj je še odprto. Nekaj poti naprej:</p>
 <ul>
 <li><strong>Natančen</strong> – opišite, kaj boste videli tisti dan, ko bo opravljeno. »Priti v formo« postane »Preteči od doma do jezera in nazaj brez hoje«.</li>
-<li><strong>Merljiv</strong> – če nobeno število ne ustreza, spremenite »Napredek iz« v <strong>»Opravljenih aktivnosti«</strong> (cilj je dosežen, ko so opravljeni njegovi koraki) ali <strong>»Izvajanje rutin«</strong> (cilj je to, kako redno vztrajate). Oboje sta pošteni meri.</li>
+<li><strong>Merljiv</strong> – če ga že merite kot trenutno stanje, izberite to stanje pod <strong>»Meri ga stanje«</strong>: enota in trenutna vrednost mu nato sledita. Če nobeno število ne ustreza, spremenite »Napredek iz« v <strong>»Opravljenih aktivnosti«</strong> (cilj je dosežen, ko so opravljeni njegovi koraki) ali <strong>»Izvajanje rutin«</strong> (cilj je to, kako redno vztrajate). Oboje sta pošteni meri.</li>
 <li><strong>Izvedljiv</strong> – poimenujte tisto, kar vas bo najverjetneje oviralo, in kaj boste naredili, ko pride. »Če sem po službi brez moči, namesto teka deset minut hodim.« Načrt za slab dan je tisto, kar naredi cilj izvedljiv.</li>
 <li><strong>Pomemben</strong> – zakaj je pomemben <em>vam</em>. »Zdravnik je rekel« je začetek; »Želim priti po stopnicah brez ustavljanja« je boljše.</li>
 <li><strong>Časovno določen</strong> – datum je ocena, ne obljuba. Izberite enega in ga premaknite, ko boste vedeli več.</li>
