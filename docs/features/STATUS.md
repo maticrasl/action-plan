@@ -53,6 +53,7 @@ Guide article is then added when the Guide exists.
 - [ ] `03-life-areas`
 - [ ] `01-guided-discovery`
 - [ ] `08-pace-and-forecast`
+  - built 2026-11-20 on `feat/pace-forecast`; tick once the owner has seen it
 - [ ] `07-keep-goals`
 - [ ] `16-is-it-working`
 - [ ] `14-reviews`, session A: weekly
@@ -99,6 +100,6 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   (`core/trash.ts`, `store/trash.ts`, `ui/undo.ts`, `ui/trash-dialog.ts`). Items are deleted without
   asking; plans keep their dialog. Backups stay `version: 1` and hold no trash, so older copies
   restore them. `scripts/fixtures.mjs` accepts only the version change 1 → 2 in `rich.sync.json`.
-- Next `SYNC_VERSION` bump: the journal (00 part 1). Session B of 17 still open. Not built from 17 A:
-  "Show" after restoring a plan (the plan opens anyway).
+- Next `SYNC_VERSION` bump: the journal (00 part 1). 17 B open; 17 A lacks "Show" after a plan restore.
 - 2026-11-20, `feat/replan`: `core/replan.ts`, `ui/replan.ts`; its 14 and 09 buttons wait for those.
+- `feat/pace-forecast` (from `feat/replan`): `core/pace.ts`, `views/graphs/pace.ts`; 07, 09, 14, 15 parts wait.
