@@ -484,7 +484,7 @@ export const guideEn = [
 <li><strong>Ctrl + Enter</strong> saves the form you are in. <strong>Esc</strong> closes it; if you changed something, it asks before discarding it, as Cancel and × do.</li>
 <li>In the Guide, <strong>Esc</strong> goes back to the view you came from.</li>
 <li>On the Map and Timeline: <strong>Enter</strong> edits the selected item, <strong>Delete</strong> removes it, <strong>Esc</strong> deselects.</li>
-<li>After deleting something, the message at the bottom offers <strong>Undo</strong> for a few seconds. Later, Settings › Data › Recently deleted still has it for 30 days.</li>
+<li>After deleting something, the message at the bottom offers <strong>Undo</strong> for a few seconds; <strong>Ctrl + Z</strong> (<strong>⌘ + Z</strong> on a Mac) does the same. Later, Settings › Data › Recently deleted still has it for 30 days.</li>
 <li><strong>Pinch</strong> or <strong>Ctrl + scroll</strong> zooms the Map, the Timeline and graphs. With one finger: tap, then touch again and drag down or up.</li>
 <li>The <strong>Add</strong> button always adds what fits the view you are in.</li>
 <li><strong>Explanations on screen</strong> (on this page and in Settings) adds a short note to each view and ⓘ marks on the controls.</li>

@@ -1,4 +1,4 @@
-/** Undo for the last action: a copy of what it may change, put back from the toast's button; deleting items through it. */
+/** Undo for the last action: a copy of what it may change, put back from the toast's button or Ctrl+Z; deleting items through it. */
 import { db, setDb, visions } from '../core/state';
 import type { Db, ItemKind, PlanList, Vision } from '../core/model';
 import { openPlan, planKey, readPlan, removeEntity, save } from '../store/plans';
@@ -73,6 +73,19 @@ function undo(c: Copy) {
   saveVisions();
   requestRender();
   toast(t('toast.undone'));
+}
+
+// Ctrl+Z (Cmd+Z on a Mac) does what the toast's Undo does. Fields keep their own undo, and nothing
+// happens under an open dialog or when there is nothing to undo (the key is then left alone).
+export function listenUndo() {
+  document.addEventListener('keydown', e => {
+    if (e.key.toLowerCase() !== 'z' || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || !pending) return;
+    if ((e.target as Element).closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    hideToast();
+    undo(pending);
+  });
 }
 
 // Deleting a goal, state, activity or vision: no question first, Undo after.

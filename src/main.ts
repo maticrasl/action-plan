@@ -24,7 +24,7 @@ import { connectSync, initSync, renderSync } from './ui/sync-ui';
 import { setRenderer } from './ui/render';
 import { offerReached } from './ui/reached';
 import { toast } from './ui/toast';
-import { dropUndo } from './ui/undo';
+import { dropUndo, listenUndo } from './ui/undo';
 import { renderInstall } from './ui/install';
 import { renderLangSwitch } from './ui/settings';
 import { renderPlanSwitch } from './ui/plan-switcher';
@@ -72,6 +72,7 @@ listenWalk();
 listenTips();
 listenFeedback();
 listenTrash();
+listenUndo();
 
 setLang(detectLang());
 setDb(emptyDb());

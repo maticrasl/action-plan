@@ -62,6 +62,32 @@ suite(async () => {
     assert(findEntity(a.id), 'context menu: back');
   });
 
+  await step('trash: Ctrl+Z (or Cmd+Z) undoes the last delete; not while typing, not when nothing is offered', () => {
+    fresh('Keys plan');
+    clearTrash();
+    const a = mk('activity', { title: 'Keyed' });
+    save();
+    const ctrlZ = (target, mods = { ctrlKey: true }) => {
+      const ev = new KeyboardEvent('keydown', { key: 'z', bubbles: true, cancelable: true, ...mods });
+      target.dispatchEvent(ev);
+      return ev.defaultPrevented;
+    };
+    deleteItem('activity', a.id);
+    const input = document.createElement('input');
+    document.body.append(input);
+    try {
+      assert(!ctrlZ(input) && !findEntity(a.id), 'typing in a field: the field keeps its own undo');
+    } finally {
+      input.remove();
+    }
+    assert(!ctrlZ(document.body, { ctrlKey: true, shiftKey: true }) && !findEntity(a.id), 'Ctrl+Shift+Z is not undo');
+    assert(ctrlZ(document.body) && findEntity(a.id), 'Ctrl+Z puts it back');
+    eq(toastText(), t('toast.undone'), 'says so');
+    assert(!ctrlZ(document.body) && findEntity(a.id), 'nothing more to undo: the key is left alone');
+    deleteItem('activity', a.id);
+    assert(ctrlZ(document.body, { metaKey: true }) && findEntity(a.id), 'Cmd+Z on a Mac');
+  });
+
   await step('trash: any later save drops the Undo; Restore brings it back from Recently deleted', () => {
     fresh('Later plan');
     clearTrash();
