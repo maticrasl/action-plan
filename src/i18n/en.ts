@@ -364,8 +364,7 @@ export const en = {
     'tip.achieved.text':
       'You reached “{name}”. Before the next one: what made the difference? And is there a small routine worth keeping so the result stays?',
     'tip.achieved.btn': 'Open the goal',
-    'tip.first-month.text':
-      'A month of coming back to your plan. That habit is worth more than any single goal in it.',
+    'tip.first-month.text': 'A month of coming back to your plan. That habit is worth more than any single goal in it.',
     'tip.try-map.text':
       'Your plan has enough in it now for the Map to be worth a look: it shows what serves what, and what serves nothing.',
     'tip.try-map.btn': 'Open the Map',
@@ -390,7 +389,8 @@ export const en = {
     'tip.backup.text':
       'Your plans are in this browser only. Log in with Google or export a copy, so that a cleared browser does not take them with it.',
     'tip.backup.btn': 'Keep a copy',
-    'tip.install.text': 'Action Plan can sit on your home screen and open like any other app, also without a connection.',
+    'tip.install.text':
+      'Action Plan can sit on your home screen and open like any other app, also without a connection.',
     'tip.install.btn': 'Install app',
     'tip.menu.text':
       'Long-press or right-click any card for a menu: show it on the Map, add a step for it, change its status.',
@@ -992,6 +992,9 @@ export const en = {
     'list.add': 'Add item',
     'list.remove': 'Remove item',
     'list.tick': 'Done',
+    'list.showDone': 'Show completed items ({n})',
+    'list.hideDone': 'Hide completed items',
+    'list.make': 'Make it a list',
     'list.hint': 'Press Enter in an item to add the next one. Once every item is ticked, the activity is done.',
     'list.done': '{done}/{total} done',
     'list.count': '{done}/{total}',
@@ -1099,7 +1102,7 @@ export const en = {
     'toast.relAdded': 'Relationship added',
     'toast.relUpdated': 'Relationship updated',
     'toast.relRemoved': 'Relationship removed',
-    'undo': 'Undo',
+    undo: 'Undo',
     'toast.undone': 'Put back',
     'trash.title': 'Recently deleted',
     'trash.lead': 'Kept for 30 days. With Google sync, on all your devices.',
@@ -1113,7 +1116,10 @@ export const en = {
     'trash.items': { one: '{n} item', other: '{n} items' },
     'trash.when': 'deleted {date}',
     'trash.restored': 'Restored “{name}”',
-    'trash.restoredLinks': { one: 'Restored. {n} link could not be put back.', other: 'Restored. {n} links could not be put back.' },
+    'trash.restoredLinks': {
+      one: 'Restored. {n} link could not be put back.',
+      other: 'Restored. {n} links could not be put back.',
+    },
     'trash.planGone': 'Its plan no longer exists. Restore into “{plan}”?',
     'trash.notKept': 'Deleted. It could not be kept in Recently deleted.',
     'trash.tooLarge': 'This plan is too large to keep in Recently deleted. Download a backup first.',
@@ -1143,7 +1149,6 @@ export const en = {
     'toast.mergedDeleted': 'Merged {from} into {to} and deleted {from}',
     'toast.sample': 'Sample plan loaded',
     'toast.template': '“{name}” created from a template',
-
   },
   sample: {
     goals: [

@@ -11,7 +11,7 @@ import { cal, closeCalendar, focusDay, moveCalendar, openCalendar, pickDate } fr
 import { pickItem, showPickList, unpickItem } from './picker';
 import { updateMeasuredBy, updateProgressFields, updateSmartLive } from './goal';
 import { updateStateFields } from './state';
-import { addListRow, placeListRow, updateRepeatFields } from './activity';
+import { addListRow, makeList, placeListRow, updateListDone, updateRepeatFields } from './activity';
 import { fillRelTypes } from './relation';
 import { formChanged, formCtx, modal, openForm, submitForm } from './form';
 
@@ -36,12 +36,26 @@ $('#modalForm').addEventListener('submit', e => {
 });
 $('#modalBody').addEventListener('click', e => {
   if ((e.target as HTMLElement).closest('[data-li-add]')) return addListRow();
+  const toList = (e.target as HTMLElement).closest<HTMLElement>('[data-to-list]');
+  if (toList) return makeList(toList);
+  if ((e.target as HTMLElement).closest('[data-li-done-toggle]')) {
+    $('#listRows').classList.toggle('hide-done');
+    return updateListDone();
+  }
   const del = (e.target as HTMLElement).closest('[data-li-del]');
   if (del) {
     // Focus moves to the next row's remove button, not its text: on a phone that would open the keyboard.
+    // Hidden ticked rows are skipped.
     const row = del.closest('.li-row')!,
-      next = row.nextElementSibling || row.previousElementSibling;
+      shown = (r: Element | null, step: 'nextElementSibling' | 'previousElementSibling') => {
+        while (r && !(r as HTMLElement).offsetParent) r = r[step];
+        return r;
+      },
+      next =
+        shown(row.nextElementSibling, 'nextElementSibling') ||
+        shown(row.previousElementSibling, 'previousElementSibling');
     row.remove();
+    updateListDone();
     if (!next) {
       addListRow(null, false);
       return modal.querySelector<HTMLElement>('[data-li-add]')!.focus();

@@ -39,7 +39,7 @@ export function activityForm(a: New<Activity>) {
   return `
     ${field('title', t('f.activity'), text('title', a.title, t(list ? 'f.listPh' : 'f.activityPh')))}
     ${field('description', t('f.details'), area('description', a.description, t('f.detailsPh')))}
-    ${list ? listEditor(list) : ''}
+    ${list ? listEditor(list) : a.id ? `<div class="field"><button type="button" class="btn ghost" data-to-list>${t('list.make')}</button></div>` : ''}
     <div class="${list ? 'row2' : 'row3'}">
       ${list ? '' : field('status', t('f.status'), select('status', statusLabels(ACTIVITY_STATUS, 'activity.'), a.status || 'todo'))}
       ${field('startDate', t('f.startDate'), date('startDate', isRoutine(a) ? routineStart(a) : a.id ? a.startDate : a.startDate || today()))}
@@ -71,11 +71,34 @@ export const listRow = (
   <input type="checkbox" class="li-check" ${i.done ? 'checked' : ''} aria-label="${esc(t('list.tick'))}">
   <input type="text" class="li-input" enterkeyhint="enter" value="${esc(i.text)}" placeholder="${esc(t('list.itemPh'))}" aria-label="${esc(t('list.item'))}">
   <button type="button" class="icon-btn li-del" data-li-del aria-label="${esc(t('list.remove'))}" title="${esc(t('list.remove'))}">×</button></div>`;
+// Ticked rows are hidden (CSS) until the toggle shows them.
 export function listEditor(list: ListItem[]) {
+  const n = list.filter(i => i.done).length;
   return `<div class="field" data-field="list"><span class="label">${t('list.items')}</span>
-    <div class="li-rows" id="listRows">${(list.length ? doneLast(list) : [undefined]).map(i => listRow(i, list.indexOf(i!))).join('')}</div>
-    <button type="button" class="btn ghost li-add" data-li-add><span aria-hidden="true">+</span> ${t('list.add')}</button>
+    <div class="li-rows hide-done" id="listRows">${(list.length ? doneLast(list) : [undefined]).map(i => listRow(i, list.indexOf(i!))).join('')}</div>
+    <div class="li-foot"><button type="button" class="btn ghost li-add" data-li-add><span aria-hidden="true">+</span> ${t('list.add')}</button>
+    <button type="button" class="chip li-show-done" data-li-done-toggle aria-pressed="false" ${n ? '' : 'hidden'}>${esc(t('list.showDone', { n }))}</button></div>
     <div class="err"></div><div class="hint">${t('list.hint')}</div></div>`;
+}
+// The toggle's count and wording; none while nothing is ticked or the items are ticked per day.
+export function updateListDone() {
+  const rows = $('#listRows'),
+    b = modal.querySelector<HTMLElement>('[data-li-done-toggle]');
+  if (!rows || !b) return;
+  const n = rows.querySelectorAll('.li-check:checked').length,
+    hide = rows.classList.contains('hide-done');
+  b.hidden = !n || rows.classList.contains('no-ticks');
+  b.textContent = hide ? t('list.showDone', { n }) : t('list.hideDone');
+  b.setAttribute('aria-pressed', String(!hide));
+}
+// An activity or routine edited into a list (or list routine): items take the place of its status.
+export function makeList(btn: HTMLElement) {
+  btn.parentElement!.outerHTML = listEditor([]);
+  const status = modal.querySelector('[data-field="status"]');
+  status?.parentElement!.classList.replace('row3', 'row2');
+  status?.remove();
+  updateRepeatFields();
+  $<HTMLElement>('#listRows .li-input').focus();
 }
 // New rows go above the ticked ones; `focus` puts the cursor in the new row.
 export function addListRow(after: Element | null = null, focus = true) {
@@ -109,7 +132,12 @@ export function placeListRow(row: HTMLElement) {
   if (later) later.before(row);
   else if (done || !firstDone) rows.append(row);
   else firstDone.before(row);
-  row.querySelector<HTMLElement>('.li-check')!.focus({ preventScroll: true }); // the form stays where it was
+  updateListDone();
+  // The form stays where it was; a row hidden once ticked leaves the keyboard on the toggle.
+  const check = row.querySelector<HTMLElement>('.li-check')!;
+  (check.offsetParent ? check : modal.querySelector<HTMLElement>('[data-li-done-toggle]')!).focus({
+    preventScroll: true,
+  });
 }
 
 // The first step of a new activity: one done once, a list to tick off, a routine, or a list ticked off each time.
@@ -295,6 +323,7 @@ export function updateRepeatFields(e?: Event) {
   if (status) status.hidden = mode !== 'none';
   // A list routine's items are ticked off each day on its card, not in the form.
   $('#listRows')?.classList.toggle('no-ticks', mode !== 'none');
+  updateListDone();
   modal.querySelector<HTMLElement>('[data-field="dueDate"]')!.hidden = mode !== 'none';
 }
 

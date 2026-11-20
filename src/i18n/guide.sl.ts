@@ -380,9 +380,10 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<p>Aktivnost je korak. Ko jo dodate, izberite njeno vrsto:</p>
 <ul>
 <li><strong>Enkratna aktivnost</strong> – narejena enkrat.</li>
-<li><strong>Seznam</strong> – kontrolni seznam; opravljen, ko je odkljukana vsaka postavka.</li>
+<li><strong>Seznam</strong> – kontrolni seznam; opravljen, ko je odkljukana vsaka postavka. Odkljukane postavke so skrite; <strong>Pokaži opravljene postavke</strong> jih prikaže.</li>
 <li><strong>Rutina</strong> in <strong>Rutinski seznam</strong> – se ponavljata; glejte [[h-routines]].</li>
 </ul>
+<p>Aktivnost lahko pozneje spremenite v seznam: odprite jo in izberite <strong>Naredi seznam</strong>; rutina tako postane rutinski seznam.</p>
 <p>Enkratne aktivnosti in seznami so pod rutinami: najprej tiste v teku, nato za izvedbo, nato opravljene, vsake po roku. Tapnite krog na kartici, da jo premaknete naprej: Za izvedbo, V teku, Opravljeno. Na začetni datum se aktivnost sama premakne v V teku.</p>
 <p>Aktivnost povežite s cilji, h katerim <strong>prispeva</strong>, in stanji, ki jih <strong>izboljšuje</strong>. Lahko je <strong>del</strong> večje aktivnosti (podaktivnost) in je lahko <strong>odvisna od</strong> druge aktivnosti, ki mora biti opravljena prej; do takrat je prikazana kot čakajoča. »Skrij opravljeno in doseženo« skrije dokončane kartice.</p>`,
     action: { do: 'add-activity', label: 'Dodaj aktivnost' },

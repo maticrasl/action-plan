@@ -380,9 +380,10 @@ export const guideEn = [
     body: `<p>An activity is a step. When you add one, choose its kind:</p>
 <ul>
 <li><strong>One-time activity</strong> – done once.</li>
-<li><strong>List</strong> – a checklist; done when every item is ticked.</li>
+<li><strong>List</strong> – a checklist; done when every item is ticked. Ticked items are hidden; <strong>Show completed items</strong> brings them back.</li>
 <li><strong>Routine</strong> and <strong>Routine list</strong> – repeat; see [[h-routines]].</li>
 </ul>
+<p>To turn an activity into a list later, open it and choose <strong>Make it a list</strong>; a routine becomes a routine list.</p>
 <p>One-time activities and lists sit below the routines: in progress first, then to do, then done, each by due date. Tap a card’s circle to move it along: To do, In progress, Done. On its start date an activity moves to In progress by itself.</p>
 <p>Link an activity to the goals it <strong>contributes to</strong> and the states it <strong>improves</strong>. It can be <strong>part of</strong> a larger activity (a sub-activity), and it can <strong>depend on</strong> another activity that must be done first; until then it shows as waiting. “Hide done and achieved” clears finished cards from view.</p>`,
     action: { do: 'add-activity', label: 'Add an activity' },
