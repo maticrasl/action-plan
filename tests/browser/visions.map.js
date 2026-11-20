@@ -105,7 +105,9 @@ suite(async () => {
       prefs.get('hideVisions') === true && $('[data-hide-visions]').getAttribute('aria-pressed') === 'true',
       'remembered',
     );
+    eq($('[data-hide-visions]').textContent, t('map.showVisions'), 'the toggle offers to show them');
     $('[data-hide-visions]').click();
+    eq($('[data-hide-visions]').textContent, t('map.hideVisions'), 'and to hide them again');
     eq($('.map-wrap svg').querySelectorAll('.node.vision').length, 3, 'shown again');
     // One goal picked: only its visions.
     ui.mapGoal = g2.id;

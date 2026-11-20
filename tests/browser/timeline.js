@@ -98,7 +98,10 @@ suite(async () => {
       ui.mapRel = r.id;
       render();
       press('Delete', document.body);
-      assert(db.relations.some(x => x.id === r.id), 'a line not shown is not deleted');
+      assert(
+        db.relations.some(x => x.id === r.id),
+        'a line not shown is not deleted',
+      );
       ui.mapRel = null;
       // Typing or another view: left alone.
       clickEl(bar(a.id));
@@ -192,15 +195,28 @@ suite(async () => {
       const goalBar = $('.tl-bar.goal');
       assert(!/ 2px 2px 0px/.test(css(goalBar).boxShadow), `flat goal bar: ${css(goalBar).boxShadow}`);
       // A bar that starts left of the view keeps its title just right of the labels.
-      const scroller = $('.tl-scroll'),
+      // No scrollbars of its own: the main pane scrolls; toolbar, labels and the date scale stay in view.
+      const main = $('.main'),
         wide = [...$$('.tl-bar')].sort((p, q) => q.offsetWidth - p.offsetWidth)[0],
         label = wide.querySelector('span');
-      scroller.scrollLeft = wide.offsetLeft + wide.offsetWidth / 2;
-      const labelsEdge = $('.tl-corner').getBoundingClientRect().right;
+      assert(css($('.tl-scroll')).overflowX === 'visible' && css(main).overflowX === 'auto', 'main scrolls');
+      main.scrollLeft = wide.offsetLeft + wide.offsetWidth / 2;
+      const pane = main.getBoundingClientRect(),
+        labelsEdge = $('.tl-corner').getBoundingClientRect().right;
+      assert(main.scrollLeft > 0, 'scrolled sideways');
+      assert(
+        Math.abs($('.toolbar').getBoundingClientRect().left - pane.left) < 2,
+        `toolbar stays at the left: ${$('.toolbar').getBoundingClientRect().left} vs ${pane.left}`,
+      );
       assert(
         css(label).position === 'sticky' && Math.abs(label.getBoundingClientRect().left - labelsEdge) < 2,
         `title in view: ${label.getBoundingClientRect().left} vs ${labelsEdge}`,
       );
+      main.scrollTop = main.scrollHeight;
+      const head = $('.tl-head').getBoundingClientRect().top,
+        barBottom = $('.topbar').getBoundingClientRect().bottom;
+      assert(main.scrollTop > 0 && Math.abs(head - Math.max(pane.top, barBottom)) < 2, `date scale on top: ${head}`);
+      main.scrollLeft = main.scrollTop = 0;
       // Menus, dialogs, the calendar and fields: what is behind shows faintly through.
       const alpha = el => +(css(el).backgroundColor.match(/[\d.]+/g)[3] ?? 1);
       openCtxMenu(db.goals[0].id, 10, 10);

@@ -13,9 +13,9 @@ import { findEntity } from '../core/relations';
 export const $ = <E extends Element = HTMLElement>(sel: string, root: ParentNode = document) =>
   root.querySelector(sel) as E;
 export const viewEl = $('#view');
-// What scrolls a map or timeline: the timeline scrolls on its own, the map with the whole main pane.
+// What scrolls a map or timeline: the whole main pane.
 export const scrollBox = (wrap: Element) =>
-  (wrap.classList.contains('map-wrap') ? wrap.closest('.main') || wrap : wrap) as HTMLElement;
+  (wrap.closest('.main') || wrap) as HTMLElement;
 export const esc = (s: unknown) =>
   String(s ?? '').replace(
     /[&<>"']/g,
@@ -57,7 +57,7 @@ export function trail(pct: number, from: string, to: string) {
 }
 
 export function hideDoneToggle() {
-  return `<button class="chip" data-hide-done aria-pressed="${ui.hideDone}">${t('acts.hideDone')}</button>`;
+  return `<button class="chip" data-hide-done aria-pressed="${ui.hideDone}">${t(ui.hideDone ? 'acts.showDone' : 'acts.hideDone')}</button>`;
 }
 
 // "waits for n" tag listing the unfinished items something waits for.
