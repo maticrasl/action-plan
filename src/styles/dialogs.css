@@ -307,3 +307,57 @@
   flex-direction: column;
   gap: 16px;
 }
+
+/* Move late steps: the date with its day word, then the steps, old date and new date in columns. */
+.replan-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.replan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.replan-list li {
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+.replan-list .rep-check {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto 5.5em;
+  gap: 4px 10px;
+}
+.replan-title {
+  overflow-wrap: anywhere;
+}
+.replan-was {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.replan-new {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.replan-goals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+.replan-goals p {
+  margin: 0;
+}
+@media (max-width: 520px) {
+  .replan-list .rep-check {
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+  }
+  .replan-title {
+    grid-column: 2 / 4;
+  }
+  .replan-was {
+    grid-column: 2;
+  }
+}

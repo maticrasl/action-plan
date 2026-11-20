@@ -210,6 +210,23 @@
     </footer>
   </dialog>
 
+  <dialog id="replan" class="modal replan" aria-labelledby="replanTitle">
+    <form method="dialog" id="replanForm" novalidate>
+      <header class="modal-head">
+        <h2 id="replanTitle" data-i18n="replan.title">Move late steps</h2>
+        <button type="button" class="icon-btn" data-replan-close data-i18n-aria="btn.close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="modal-body" id="replanBody"></div>
+      <footer class="modal-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-replan-close data-i18n="btn.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="replanBtn"></button>
+      </footer>
+    </form>
+  </dialog>
+
   <dialog id="planMerge" class="modal plan-share" aria-labelledby="planMergeTitle">
     <form method="dialog" novalidate>
       <header class="modal-head">

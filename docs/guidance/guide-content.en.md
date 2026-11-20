@@ -257,13 +257,14 @@ start, not as a return to the old schedule.
 
 1. Do **not** tick or fix everything. Open the Overview and choose **one** step for today.
 2. Move the dates. Open the Timeline and drag late bars to where they can really happen now.
-   A date in the past is only an old guess.
+   A date in the past is only an old guess. “Move late steps” on the Overview moves them all at
+   once and keeps their order.
 3. Pause what you will not work on this month.
 4. For routines, tick today. That is all it takes to be on track again.
 5. Ask what made you stop. Illness and busy weeks pass by themselves. If the plan was too heavy
    or the goal stopped mattering, change the plan, not yourself.
 
-Action: Open the Overview
+Action: Move late steps…
 Related: `routine-slips`, `behind`, `let-go`, `review`
 
 ### `behind` · I'm behind and the deadline is close
@@ -276,6 +277,7 @@ You have three honest options, and all three are planning, not failing:
 - **More time now.** Is there something you can drop this week to make room? Decide what, not
   only “I'll try harder”.
 - **Move the date.** If the deadline was your own guess, guess again with what you know now.
+  “Move late steps” on the Overview moves them all at once and keeps their order.
 - **Shrink the target.** 8 km on the day is not 10, and it is a great deal more than where you
   started.
 
@@ -285,7 +287,7 @@ for the result? Do those, and delete the others without guilt.
 For next time: when you set a date, ask how long similar things took you before, and use that,
 not how long it ought to take.
 
-Action: Open the Timeline
+Action: Move late steps…
 Related: `no-progress`, `pressure`
 
 ### `no-progress` · I do the work, but the number doesn't move
@@ -539,7 +541,8 @@ overdue time, and routines with set days show each day as done, missed or to com
 
 Tap a bar to select it, then drag the bar to move its dates or one end to change only that
 date (on a touch screen, long-press first). ▾ beside a goal folds its rows away. Pinch or
-Ctrl + scroll changes the scale.
+Ctrl + scroll changes the scale. The toolbar’s “Move late steps…” re-dates
+every overdue bar in one go.
 
 Action: Open the Timeline
 

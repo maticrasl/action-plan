@@ -124,6 +124,23 @@ export const en = {
     'tl.dragHintOpen':
       'Drag the bar to move its start date; it has no deadline yet. On a touch screen, long-press first.',
     'tl.datesMoved': '“{name}”: {dates}',
+    'replan.btn': 'Move late steps…',
+    'replan.title': 'Move late steps',
+    'replan.lead': 'A passed date is an old guess. Choose where the first one goes; the others keep their distance.',
+    'replan.to': 'First step moves to',
+    'replan.was': 'was {date}',
+    'replan.later': 'Also move the steps that come after them',
+    'replan.laterCount': { one: '{n} step, by {days}', other: '{n} steps, by {days}' },
+    'replan.days': { one: '{n} day', other: '{n} days' },
+    'replan.pastGoal': {
+      one: '{n} step will end after “{goal}” ({date}).',
+      other: '{n} steps will end after “{goal}” ({date}).',
+    },
+    'replan.moveGoal': 'Move the goal’s deadline too',
+    'replan.do': { one: 'Move {n} step', other: 'Move {n} steps' },
+    'replan.done': { one: '{n} step moved', other: '{n} steps moved' },
+    'replan.none': 'No step is past its date.',
+    'err.replanPast': 'Choose today or a later day.',
     'f.category': 'Category',
     'f.categoryPh': 'e.g. Health',
     'cat.suggestions': 'Health, Finance, Career, Learning, Relationships, Travel, Home',
@@ -312,10 +329,10 @@ export const en = {
     'tip.all': 'Tips and tricks',
     'tip.back.text':
       'Good to see you. There is no need to catch up on everything: choose one step for today, and move the dates that no longer hold.',
-    'tip.back.btn': 'Open the Timeline',
+    'tip.back.btn': 'Move late steps…',
     'tip.overdue-pile.text':
       '{n} steps are past their date. A passed date is an old guess, not a verdict. Take five minutes to move, split or delete them.',
-    'tip.overdue-pile.btn': 'Open the Timeline',
+    'tip.overdue-pile.btn': 'Move late steps…',
     'tip.routine-missed.text':
       '“{name}” has been missed a few times. One tick puts it back on track. If the schedule does not fit your weeks, change the schedule.',
     'tip.routine-missed.btn': 'Edit the routine',
@@ -544,6 +561,7 @@ export const en = {
     'help.tip.routineList':
       'A routine list: tick off today’s items one by one; once all are ticked, today is ticked off on the week strip. Ticking a day on the strip ticks all its items. Tomorrow the list starts afresh.',
     'help.tip.hideDone': 'Hide finished items to focus on what is left.',
+    'help.tip.replan': 'Moves every late step at once, keeping their order.',
     'help.tip.status': 'Colours show each item’s status: not started, in progress, late, waiting or done.',
     'help.tip.grChange':
       'Change from the first to the latest measurement. Green means it moved toward the goal’s target, red means away from it.',

@@ -128,6 +128,40 @@ export const sl: Language = {
     'tl.dragHintOpen':
       'Povlecite vrstico, da premaknete njen začetni datum; roka še nima. Na zaslonu na dotik jo najprej pridržite.',
     'tl.datesMoved': '»{name}«: {dates}',
+    'replan.btn': 'Premakni zamujene korake …',
+    'replan.title': 'Premakni zamujene korake',
+    'replan.lead': 'Pretečen datum je stara ocena. Izberite, kam gre prvi korak; drugi ohranijo svoj razmik.',
+    'replan.to': 'Prvi korak premakni na',
+    'replan.was': 'prej {date}',
+    'replan.later': 'Premakni tudi korake, ki pridejo za njimi',
+    'replan.laterCount': {
+      one: '{n} korak, za {days}',
+      two: '{n} koraka, za {days}',
+      few: '{n} koraki, za {days}',
+      other: '{n} korakov, za {days}',
+    },
+    'replan.days': { one: '{n} dan', two: '{n} dneva', few: '{n} dni', other: '{n} dni' },
+    'replan.pastGoal': {
+      one: '{n} korak se bo končal po roku cilja »{goal}« ({date}).',
+      two: '{n} koraka se bosta končala po roku cilja »{goal}« ({date}).',
+      few: '{n} koraki se bodo končali po roku cilja »{goal}« ({date}).',
+      other: '{n} korakov se bo končalo po roku cilja »{goal}« ({date}).',
+    },
+    'replan.moveGoal': 'Premakni tudi rok cilja',
+    'replan.do': {
+      one: 'Premakni {n} korak',
+      two: 'Premakni {n} koraka',
+      few: 'Premakni {n} korake',
+      other: 'Premakni {n} korakov',
+    },
+    'replan.done': {
+      one: '{n} korak premaknjen',
+      two: '{n} koraka premaknjena',
+      few: '{n} koraki premaknjeni',
+      other: '{n} korakov premaknjenih',
+    },
+    'replan.none': 'Noben korak ni čez rok.',
+    'err.replanPast': 'Izberite današnji ali poznejši dan.',
     'f.category': 'Kategorija',
     'f.categoryPh': 'npr. Zdravje',
     'cat.suggestions': 'Zdravje, Finance, Kariera, Učenje, Odnosi, Potovanja, Dom',
@@ -197,7 +231,8 @@ export const sl: Language = {
     'plan.health.late': 'Nekaj je zamujeno',
     'settings.navCollapsed': 'Strnjena stranska vrstica',
     'settings.data': 'Podatki',
-    'settings.dataHint': 'Vaši načrti so shranjeni v tem brskalniku, ob vklopljeni sinhronizaciji pa tudi v vašem Google Drive.',
+    'settings.dataHint':
+      'Vaši načrti so shranjeni v tem brskalniku, ob vklopljeni sinhronizaciji pa tudi v vašem Google Drive.',
     'settings.onScreen': 'Na zaslonu',
     'settings.listsSidebar': 'Seznami in stranska vrstica',
     'settings.tipsHint': 'Največ en na dan, na Pregledu.',
@@ -329,10 +364,10 @@ export const sl: Language = {
     'tip.all': 'Nasveti in triki',
     'tip.back.text':
       'Lepo, da ste spet tu. Ni treba nadoknaditi vsega: izberite en korak za danes in premaknite datume, ki ne držijo več.',
-    'tip.back.btn': 'Odpri Časovnico',
+    'tip.back.btn': 'Premakni zamujene korake …',
     'tip.overdue-pile.text':
       '{n} korakov je čez rok. Pretečen datum je stara ocena, ne sodba. Vzemite si pet minut in jih premaknite, razdelite ali izbrišite.',
-    'tip.overdue-pile.btn': 'Odpri Časovnico',
+    'tip.overdue-pile.btn': 'Premakni zamujene korake …',
     'tip.routine-missed.text':
       '»{name}« je bila nekajkrat izpuščena. Ena kljukica jo vrne na pot. Če urnik ne ustreza vašim tednom, spremenite urnik.',
     'tip.routine-missed.btn': 'Uredi rutino',
@@ -562,6 +597,7 @@ export const sl: Language = {
     'help.tip.routineList':
       'Rutinski seznam: današnje postavke odkljukajte eno za drugo; ko so odkljukane vse, se na tedenskem traku odkljuka današnji dan. Kljukica pri dnevu na traku odkljuka vse njegove postavke. Jutri se seznam začne znova.',
     'help.tip.hideDone': 'Skrijte opravljeno, da se osredotočite na preostalo.',
+    'help.tip.replan': 'Premakne vse zamujene korake hkrati in ohrani njihov vrstni red.',
     'help.tip.status': 'Barve kažejo status posameznega elementa: ni začeto, v teku, zamuja, čaka ali opravljeno.',
     'help.tip.grChange':
       'Sprememba od prve do zadnje meritve. Zelena pomeni premik proti ciljni vrednosti, rdeča premik stran od nje.',

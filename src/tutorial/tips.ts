@@ -1,6 +1,15 @@
 /** Tips: the tip of the day as a card on the Overview and on the view it is about, its buttons, and tips asked for. */
 import { t, type TextKey } from '../i18n/index';
-import { CATALOGUE, askTip, closeTip, recheck, showsHint, snooze, tipOfDay, type Chosen } from '../core/guidance/tip-choice';
+import {
+  CATALOGUE,
+  askTip,
+  closeTip,
+  recheck,
+  showsHint,
+  snooze,
+  tipOfDay,
+  type Chosen,
+} from '../core/guidance/tip-choice';
 import type { TipAction, TipInput } from '../core/guidance/tip-facts';
 import { WALK_VIEWS, walkView } from '../core/guidance/walk';
 import { today } from '../core/dates';
@@ -20,6 +29,8 @@ import { openSettings } from '../ui/settings';
 import { openExport, planExp } from '../ui/plan-io';
 import { installHintKey, installPrompt, isInstalled } from '../ui/install';
 import { openTemplates } from '../ui/templates-dialog';
+import { openReplan } from '../ui/replan';
+import { lateSteps } from '../core/replan';
 import { requestRender } from '../ui/render';
 import { openGuide } from '../views/guide';
 import { walkInput } from './walkthrough';
@@ -57,6 +68,8 @@ const goTo = (view: ViewName) => () => setView(view);
 
 export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
   timeline: goTo('timeline'),
+  // The back tip can show with nothing late: then the Timeline, as before.
+  replan: () => (lateSteps(db, today()).length ? openReplan() : setView('timeline')),
   goals: goTo('goals'),
   activities: goTo('activities'),
   states: goTo('states'),

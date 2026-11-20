@@ -35,7 +35,7 @@ export function openCalendar(field: HTMLElement) {
   drawCalendar();
   // Keep the calendar inside the form: open it to the left when the field is near the right edge.
   const el = field.querySelector('.cal')!,
-    form = $('#modalForm').getBoundingClientRect();
+    form = field.closest('form, dialog')!.getBoundingClientRect();
   if (el.getBoundingClientRect().right > form.right - 8) el.classList.add('right');
   focusDay();
   el.scrollIntoView({ block: 'nearest' });
@@ -98,3 +98,64 @@ export function pickDate(iso: ISODate) {
 document.addEventListener('pointerdown', e => {
   if (cal && !cal.field.contains(e.target as Node)) closeCalendar();
 });
+
+// Date fields: slashes are added while typing digits.
+export function dateSlashes(ev: Event) {
+  const e = ev as InputEvent,
+    box = e.target as HTMLInputElement;
+  if (
+    !box.matches('[data-date]') ||
+    e.inputType !== 'insertText' ||
+    !/^\d$/.test(e.data!) ||
+    box.selectionStart !== box.value.length
+  )
+    return;
+  if (/^\d{2}$|^\d{1,2}\/\d{2}$/.test(box.value)) box.value += '/';
+}
+
+// Clicks in a form with date fields: the calendar button, a day, a month step.
+export function calendarClick(e: Event) {
+  const open = (e.target as HTMLElement).closest('[data-cal-open]');
+  if (open)
+    return cal?.field === open.closest('.date-field')
+      ? closeCalendar()
+      : openCalendar(open.closest<HTMLElement>('.date-field')!);
+  if (!cal) return;
+  const day = (e.target as HTMLElement).closest<HTMLElement>('[data-cal-day], [data-cal-pick]');
+  if (day) return pickDate((day.dataset.calDay ?? day.dataset.calPick)!);
+  const move = (e.target as HTMLElement).closest<HTMLElement>('[data-cal-move]');
+  if (move) {
+    const n = Number(move.dataset.calMove);
+    const d = Number(cal.focus.slice(8));
+    // Same day in the other month, or its last day.
+    const last = new Date(Date.UTC(cal.y, cal.m + n + 1, 0)).getUTCDate();
+    moveCalendar(isoOf(cal.y, cal.m + n, Math.min(d, last)));
+    cal.field.querySelector<HTMLElement>(`[data-cal-move="${n}"]`)!.focus();
+  }
+}
+
+// Keys in the open calendar: Escape closes it, arrows and Page Up/Down move the day.
+export function calendarKey(e: KeyboardEvent) {
+  if (!cal || !cal.field.querySelector('.cal')!.contains(e.target as Node)) return;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    return closeCalendar(true);
+  }
+  if (!(e.target as HTMLElement).matches('[data-cal-day]')) return;
+  const [y, m, d] = cal.focus.split('-').map(Number);
+  const to = (
+    {
+      ArrowLeft: [y, m - 1, d - 1],
+      ArrowRight: [y, m - 1, d + 1],
+      ArrowUp: [y, m - 1, d - 7],
+      ArrowDown: [y, m - 1, d + 7],
+      PageUp: [y, m - 2, Math.min(d, new Date(Date.UTC(y, m - 1, 0)).getUTCDate())],
+      PageDown: [y, m, Math.min(d, new Date(Date.UTC(y, m + 1, 0)).getUTCDate())],
+    } as Record<string, [number, number, number]>
+  )[e.key];
+  if (!to) return;
+  e.preventDefault();
+  moveCalendar(isoOf(...to));
+  focusDay();
+}

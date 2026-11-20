@@ -195,12 +195,12 @@ export const guideEn = [
 <p>It helps to know what usually happens here: after a break, the list of late things looks like a bill, so we avoid looking, and the break gets longer. The way out is to treat today as a new start, not as a return to the old schedule.</p>
 <ol>
 <li>Do <strong>not</strong> tick or fix everything. Open the Overview and choose <strong>one</strong> step for today.</li>
-<li>Move the dates. Open the Timeline and drag late bars to where they can really happen now. A date in the past is only an old guess.</li>
+<li>Move the dates. Open the Timeline and drag late bars to where they can really happen now. A date in the past is only an old guess. “Move late steps” on the Overview moves them all at once and keeps their order.</li>
 <li>Pause what you will not work on this month.</li>
 <li>For routines, tick today. That is all it takes to be on track again.</li>
 <li>Ask what made you stop. Illness and busy weeks pass by themselves. If the plan was too heavy or the goal stopped mattering, change the plan, not yourself.</li>
 </ol>`,
-    action: { do: 'view-dashboard', label: 'Open the Overview' },
+    action: { do: 'replan', label: 'Move late steps…' },
     related: ['routine-slips', 'behind', 'let-go', 'review'],
   },
   {
@@ -211,12 +211,12 @@ export const guideEn = [
 <p>You have three honest options, and all three are planning, not failing:</p>
 <ul>
 <li><strong>More time now.</strong> Is there something you can drop this week to make room? Decide what, not only “I’ll try harder”.</li>
-<li><strong>Move the date.</strong> If the deadline was your own guess, guess again with what you know now.</li>
+<li><strong>Move the date.</strong> If the deadline was your own guess, guess again with what you know now. “Move late steps” on the Overview moves them all at once and keeps their order.</li>
 <li><strong>Shrink the target.</strong> 8 km on the day is not 10, and it is a great deal more than where you started.</li>
 </ul>
 <p>When the deadline is fixed from outside (an exam, a race), cut scope: which steps matter most for the result? Do those, and delete the others without guilt.</p>
 <p>For next time: when you set a date, ask how long similar things took you before, and use that, not how long it ought to take.</p>`,
-    action: { do: 'view-timeline', label: 'Open the Timeline' },
+    action: { do: 'replan', label: 'Move late steps…' },
     related: ['no-progress', 'pressure'],
   },
   {
@@ -426,7 +426,7 @@ export const guideEn = [
     group: 'how',
     title: 'Timeline',
     body: `<p>The Timeline shows goals and activities by date; an item needs a start or due date to appear. Activities sit under the goals they contribute to. Red stretches are overdue time, a bar’s colour is its status, and routines with set days show each day as done, missed or to come.</p>
-<p>Tap a bar to select it, then drag the bar to move its dates or one end to change only that date (on a touch screen, long-press first). ▾ beside a goal folds its rows away; Collapse all, top left, folds every goal, and the menu on a goal (right-click or long-press) offers both. Pinch or Ctrl + scroll changes the scale.</p>`,
+<p>Tap a bar to select it, then drag the bar to move its dates or one end to change only that date (on a touch screen, long-press first). ▾ beside a goal folds its rows away; Collapse all, top left, folds every goal, and the menu on a goal (right-click or long-press) offers both. Pinch or Ctrl + scroll changes the scale. The toolbar’s “Move late steps…” re-dates every overdue bar in one go.</p>`,
     action: { do: 'view-timeline', label: 'Open the Timeline' },
   },
   {

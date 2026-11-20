@@ -48,7 +48,8 @@ export function missedInARow(a: Routine, today: ISODate): number {
   return n;
 }
 
-const overdueSteps = (db: Db, today: ISODate) => steps(db).filter(a => a.status !== 'done' && a.dueDate && a.dueDate < today);
+const overdueSteps = (db: Db, today: ISODate) =>
+  steps(db).filter(a => a.status !== 'done' && a.dueDate && a.dueDate < today);
 
 export const TIPS_A: Tip[] = [
   {
@@ -57,7 +58,7 @@ export const TIPS_A: Tip[] = [
     view: 'dashboard',
     cooldown: L.COOLDOWN_A,
     guide: 'fell-off',
-    action: 'timeline',
+    action: 'replan',
     hits: ({ db, today }) => {
       const last = lastActivity(db, today);
       return activeGoals(db).length && last && daysFrom(last, today) >= L.BACK_DAYS ? [{}] : [];
@@ -69,7 +70,7 @@ export const TIPS_A: Tip[] = [
     view: 'activities',
     cooldown: L.COOLDOWN_A,
     guide: 'behind',
-    action: 'timeline',
+    action: 'replan',
     hits: ({ db, today }) => {
       const n = overdueSteps(db, today).length;
       return n >= L.OVERDUE_PILE ? [{ vars: { n } }] : [];

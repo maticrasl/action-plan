@@ -195,12 +195,12 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <p>Pomaga vedeti, kaj se tu navadno zgodi: po premoru je seznam zamujenega videti kot račun, zato ga ne pogledamo, premor pa se podaljša. Izhod je, da današnji dan vzamete kot nov začetek, ne kot vrnitev k staremu urniku.</p>
 <ol>
 <li><strong>Ne</strong> kljukajte in ne popravljajte vsega. Odprite Pregled in izberite <strong>en</strong> korak za danes.</li>
-<li>Premaknite datume. Odprite Časovnico in zamujene trakove povlecite tja, kjer se zdaj res lahko zgodijo. Datum v preteklosti je le stara ocena.</li>
+<li>Premaknite datume. Odprite Časovnico in zamujene trakove povlecite tja, kjer se zdaj res lahko zgodijo. Datum v preteklosti je le stara ocena. »Premakni zamujene korake« na Pregledu jih premakne vse hkrati in ohrani njihov vrstni red.</li>
 <li>Zaustavite, česar ta mesec ne boste delali.</li>
 <li>Pri rutinah odkljukajte današnji dan. To je vse, kar je treba, da ste spet na poti.</li>
 <li>Vprašajte se, zakaj ste nehali. Bolezen in naporni tedni minejo sami. Če je bil načrt pretežak ali cilj ni bil več pomemben, spremenite načrt, ne sebe.</li>
 </ol>`,
-    action: { do: 'view-dashboard', label: 'Odpri Pregled' },
+    action: { do: 'replan', label: 'Premakni zamujene korake …' },
     related: ['routine-slips', 'behind', 'let-go', 'review'],
   },
   {
@@ -211,12 +211,12 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <p>Imate tri poštene možnosti in vse tri so načrtovanje, ne neuspeh:</p>
 <ul>
 <li><strong>Več časa zdaj.</strong> Ali lahko ta teden kaj opustite, da naredite prostor? Odločite se, kaj, ne le »potruditi se moram bolj«.</li>
-<li><strong>Premaknite datum.</strong> Če je bil rok vaša ocena, ga ocenite znova s tem, kar veste zdaj.</li>
+<li><strong>Premaknite datum.</strong> Če je bil rok vaša ocena, ga ocenite znova s tem, kar veste zdaj. »Premakni zamujene korake« na Pregledu jih premakne vse hkrati in ohrani njihov vrstni red.</li>
 <li><strong>Zmanjšajte cilj.</strong> 8 km na dan D ni 10, je pa veliko več kot tam, kjer ste začeli.</li>
 </ul>
 <p>Ko je rok določen od zunaj (izpit, tekma), zmanjšajte obseg: kateri koraki so za rezultat najpomembnejši? Naredite te, druge pa brez slabe vesti izbrišite.</p>
 <p>Za naslednjič: ko določate datum, se vprašajte, koliko časa so vam podobne stvari vzele prej, in uporabite to, ne tega, koliko bi morale trajati.</p>`,
-    action: { do: 'view-timeline', label: 'Odpri Časovnico' },
+    action: { do: 'replan', label: 'Premakni zamujene korake …' },
     related: ['no-progress', 'pressure'],
   },
   {
@@ -426,7 +426,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     group: 'how',
     title: 'Časovnica',
     body: `<p>Časovnica kaže cilje in aktivnosti po datumih; element potrebuje začetni datum ali rok, da se pojavi. Aktivnosti so pod cilji, h katerim prispevajo. Rdeči odseki so zamujeni čas, barva traku je njegovo stanje, rutine z določenimi dnevi pa vsak dan kažejo kot opravljen, zamujen ali prihajajoč.</p>
-<p>Tapnite trak, da ga izberete, nato ga povlecite, da premaknete njegove datume, ali povlecite en konec, da spremenite le ta datum (na zaslonu na dotik ga najprej pridržite). ▾ ob cilju strne njegove vrstice; Strni vse zgoraj levo strne vse cilje, meni na cilju (desni klik ali pridržanje) pa ponudi oboje. Dva prsta ali Ctrl + kolešček spremenita merilo.</p>`,
+<p>Tapnite trak, da ga izberete, nato ga povlecite, da premaknete njegove datume, ali povlecite en konec, da spremenite le ta datum (na zaslonu na dotik ga najprej pridržite). ▾ ob cilju strne njegove vrstice; Strni vse zgoraj levo strne vse cilje, meni na cilju (desni klik ali pridržanje) pa ponudi oboje. Dva prsta ali Ctrl + kolešček spremenita merilo. Gumb »Premakni zamujene korake …« v orodni vrstici z enim dejanjem prestavi vse zamujene trakove.</p>`,
     action: { do: 'view-timeline', label: 'Odpri Časovnico' },
   },
   {
