@@ -395,6 +395,7 @@ export const guideEn = [
     body: `<p>A routine is an activity that repeats. Under “Repeats” choose a number of times per week or month, specific days, or “Custom…” for every few days, weeks, months or years, a day of the month, or a weekday such as the second Friday. “Ends” sets a last day or a number of times.</p>
 <p>Tick a routine on its <strong>week strip</strong>, in Activities or on the Overview. Days outlined in blue are due; grey hatched days were missed; today is ringed. The arrows beside the strip go to earlier weeks, so you can tick what you forgot. The green tag is your streak.</p>
 <p>A routine is late only until you tick it again. With <strong>“A missed day can be made up on another day”</strong> switched on, a tick on any other day stands in for a missed one.</p>
+<p>In Activities the most urgent routines come first: late ones, then those due today, then the rest by the next day they are due. Routines already done for this period, and those not running, come last.</p>
 <p>A <strong>routine list</strong> is a checklist that starts afresh each time, such as a morning routine; ticking its last item ticks the day.</p>
 <p>When a routine improves a state that adds up, ticking it asks “how much?” and adds the amount to the state in the same step.</p>`,
     action: { do: 'add-routine', label: 'Add a routine' },
@@ -480,7 +481,8 @@ export const guideEn = [
     title: 'Shortcuts and gestures',
     body: `<ul>
 <li><strong>Long-press or right-click</strong> almost anything for a menu of what you can do with it.</li>
-<li><strong>Ctrl + Enter</strong> saves the form you are in. <strong>Esc</strong> closes it.</li>
+<li><strong>Ctrl + Enter</strong> saves the form you are in. <strong>Esc</strong> closes it; if you changed something, it asks before discarding it, as Cancel and × do.</li>
+<li>In the Guide, <strong>Esc</strong> goes back to the view you came from.</li>
 <li>On the Map and Timeline: <strong>Enter</strong> edits the selected item, <strong>Delete</strong> removes it, <strong>Esc</strong> deselects.</li>
 <li><strong>Pinch</strong> or <strong>Ctrl + scroll</strong> zooms the Map, the Timeline and graphs. With one finger: tap, then touch again and drag down or up.</li>
 <li>The <strong>Add</strong> button always adds what fits the view you are in.</li>
