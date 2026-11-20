@@ -56,6 +56,7 @@ Guide article is then added when the Guide exists.
   - built 2026-11-20 on `feat/pace-forecast`; tick once the owner has seen it
 - [ ] `07-keep-goals`
 - [ ] `16-is-it-working`
+  - built 2026-11-20 on `feat/is-it-working`; tick once the owner has seen it
 - [ ] `14-reviews`, session A: weekly
 - [ ] `14-reviews`, session B: monthly
 - [ ] `14-reviews`, session C: yearly
@@ -101,5 +102,5 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   asking; plans keep their dialog. Backups stay `version: 1` and hold no trash, so older copies
   restore them. `scripts/fixtures.mjs` accepts only the version change 1 → 2 in `rich.sync.json`.
 - Next `SYNC_VERSION` bump: the journal (00 part 1). 17 B open; 17 A lacks "Show" after a plan restore.
-- 2026-11-20, `feat/replan`: `core/replan.ts`, `ui/replan.ts`; its 14 and 09 buttons wait for those.
-- `feat/pace-forecast` (from `feat/replan`): `core/pace.ts`, `views/graphs/pace.ts`; 07, 09, 14, 15 parts wait.
+- Chain `feat/replan` → `feat/pace-forecast` → `feat/is-it-working`: `core/replan.ts`, `core/pace.ts`,
+  `core/working.ts`; their 07, 09, 14, 15 parts (16: review line, keep goals) wait for those.
