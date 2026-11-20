@@ -230,6 +230,18 @@ export const sl: Language = {
     'backup.newer':
       'Ta varnostna kopija je iz novejše različice Akcijskega načrta. Posodobite aplikacijo in poskusite znova.',
     'settings.helpTitle': 'Pomoč',
+    'settings.version': 'Različica',
+    'fb.bug': 'Prijavi težavo',
+    'fb.idea': 'Predlagaj funkcijo',
+    'fb.heading': 'Povejte nam',
+    'fb.bugText':
+      'S tem se odpre stran aplikacije Action Plan na GitHubu, kjer se zbirajo težave. Za pisanje tam potrebujete brezplačen račun GitHub, in kar napišete, je javno. Ne prilepite ničesar iz svojih načrtov, kar želite obdržati zase.',
+    'fb.ideaText':
+      'S tem se odpre stran aplikacije Action Plan na GitHubu, kjer se zbirajo zamisli. Za pisanje tam potrebujete brezplačen račun GitHub, in kar napišete, je javno.',
+    'fb.details': 'Ti podatki pomagajo najti vzrok in bodo izpolnjeni namesto vas:',
+    'fb.open': 'Odpri GitHub',
+    'fb.copy': 'Kopiraj podatke',
+    'fb.copied': 'Kopirano',
     'install.title': 'Aplikacija',
     'install.btn': 'Namesti aplikacijo',
     'install.hint':

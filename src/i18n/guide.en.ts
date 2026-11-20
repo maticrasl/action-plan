@@ -490,6 +490,16 @@ export const guideEn = [
 </ul>`,
   },
 
+  {
+    id: 'feedback',
+    group: 'how',
+    title: 'Report a problem, suggest a feature',
+    body: `<p>Both are in Settings, under Help, and at the end of this page. They open the app’s page on GitHub; you need a free GitHub account to write there. What you write is public, so leave out anything from your plans that is private.</p>
+<p>The people who make Action Plan cannot see your plans, so describe what you did and what happened. With a problem, the app fills in its version, your browser and window size, the language, and whether sync is on; you see that line before anything opens, and “Copy details” copies it if you would rather send it another way.</p>`,
+    action: { do: 'settings', label: 'Open Settings' },
+    related: ['p-where'],
+  },
+
   /* ---------- Your data and privacy ---------- */
   {
     id: 'p-where',
@@ -497,7 +507,7 @@ export const guideEn = [
     title: 'Where my plans are kept',
     body: `<p>Your plans are kept in this browser, on this device. Action Plan has no server of its own: nothing you write is sent to the people who make the app, and they cannot see, read or restore your plans.</p>
 <p>If you log in with Google, a copy is also kept in your own Google Drive, in a hidden app folder. See [[p-google]].</p>
-<p>The app does not use advertising or tracking, and nothing about how you use it leaves your device.</p>
+<p>The app does not use advertising or tracking, and nothing about how you use it leaves your device. When you report a problem, the app fills in its version, your browser and window size, the language, and whether sync is on. Nothing from your plans.</p>
 <p>When the app loads, its own files (the typeface among them) come from the site that hosts it. When you open Settings, it also loads Google’s sign-in script from Google, so that logging in works in one step. In both cases the company sees that your device asked for a file, as with any web page. It does not receive anything from your plans.</p>`,
     related: ['p-google', 'p-backup', 'p-device'],
   },

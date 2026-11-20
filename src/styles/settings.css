@@ -650,3 +650,34 @@
     max-height: 92vh;
   }
 }
+
+/* Version at the foot of Settings (a click copies it), and the dialog before a report leaves the app. */
+.set-version {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 12px;
+}
+.set-version button {
+  background: none;
+  border: 0;
+  padding: 4px 8px;
+  color: var(--ink-2);
+  font: inherit;
+  cursor: pointer;
+}
+.feedback .modal-body p {
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+.feedback .fb-details {
+  display: block;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.feedback .modal-foot {
+  flex-wrap: wrap;
+}

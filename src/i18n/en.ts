@@ -214,6 +214,18 @@ export const en = {
     'backup.isPlan': 'This is one plan. Use Import plan.',
     'backup.newer': 'This backup comes from a newer version of Action Plan. Update the app and try again.',
     'settings.helpTitle': 'Help',
+    'settings.version': 'Version',
+    'fb.bug': 'Report a problem',
+    'fb.idea': 'Suggest a feature',
+    'fb.heading': 'Tell us',
+    'fb.bugText':
+      'This opens Action Plan’s page on GitHub, where problems are collected. You need a free GitHub account to write there, and what you write is public. Do not paste anything from your plans that you want to keep private.',
+    'fb.ideaText':
+      'This opens Action Plan’s page on GitHub, where ideas are collected. You need a free GitHub account to write there, and what you write is public.',
+    'fb.details': 'These details help find the cause and will be filled in for you:',
+    'fb.open': 'Open GitHub',
+    'fb.copy': 'Copy details',
+    'fb.copied': 'Copied',
     'install.title': 'App',
     'install.btn': 'Install app',
     'install.hint':

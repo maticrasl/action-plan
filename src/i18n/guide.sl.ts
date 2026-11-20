@@ -490,6 +490,16 @@ export const guideSl: readonly Article<ArticleId>[] = [
 </ul>`,
   },
 
+  {
+    id: 'feedback',
+    group: 'how',
+    title: 'Prijavite težavo, predlagajte funkcijo',
+    body: `<p>Oboje je v Nastavitvah, pod Pomoč, in na koncu te strani. Odpre se stran aplikacije na GitHubu; za pisanje tam potrebujete brezplačen račun GitHub. Kar napišete, je javno, zato izpustite vse iz svojih načrtov, kar je zasebno.</p>
+<p>Ljudje, ki izdelujejo Action Plan, vaših načrtov ne vidijo, zato opišite, kaj ste naredili in kaj se je zgodilo. Pri težavi aplikacija izpolni svojo različico, vaš brskalnik in velikost okna, jezik ter ali je sinhronizacija vklopljena; to vrstico vidite, preden se karkoli odpre, s »Kopiraj podatke« pa jo kopirate, če jo raje pošljete drugače.</p>`,
+    action: { do: 'settings', label: 'Odpri Nastavitve' },
+    related: ['p-where'],
+  },
+
   /* ---------- Vaši podatki in zasebnost ---------- */
   {
     id: 'p-where',
@@ -497,7 +507,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Kje so shranjeni moji načrti',
     body: `<p>Vaši načrti so shranjeni v tem brskalniku, na tej napravi. Akcijski načrt nima svojega strežnika: nič, kar napišete, ni poslano tistim, ki aplikacijo izdelujejo, in vaših načrtov ne morejo videti, brati ali obnoviti.</p>
 <p>Če se prijavite z Googlom, je kopija shranjena tudi v vašem Google Drivu, v skriti mapi aplikacije. Glejte [[p-google]].</p>
-<p>Aplikacija ne uporablja oglasov ali sledenja in nič o tem, kako jo uporabljate, ne zapusti vaše naprave.</p>
+<p>Aplikacija ne uporablja oglasov ali sledenja in nič o tem, kako jo uporabljate, ne zapusti vaše naprave. Ko prijavite težavo, aplikacija izpolni svojo različico, vaš brskalnik in velikost okna, jezik ter ali je sinhronizacija vklopljena. Nič iz vaših načrtov.</p>
 <p>Ko se aplikacija naloži, njene datoteke (med njimi pisava) pridejo s strani, ki jo gosti. Ko odprete Nastavitve, z Googla naloži še Googlov skript za prijavo, da prijava deluje v enem koraku. V obeh primerih podjetje vidi, da je vaša naprava zahtevala datoteko, kot pri vsaki spletni strani. Iz vaših načrtov ne dobi ničesar.</p>`,
     related: ['p-google', 'p-backup', 'p-device'],
   },

@@ -32,10 +32,12 @@
   color: var(--ink-2);
 }
 
-.guide-group {
+.guide-group,
+.guide-fb {
   margin-top: 36px;
 }
-.guide-group h2 {
+.guide-group h2,
+.guide-fb h2 {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -46,7 +48,8 @@
   color: var(--ink);
 }
 /* The blaze: a red ring round a white dot, painted on trees along Slovenian paths. */
-.guide-group h2::before {
+.guide-group h2::before,
+.guide-fb h2::before {
   content: '';
   flex: none;
   width: 15px;
@@ -241,7 +244,8 @@
 }
 
 @media (max-width: 720px) {
-  .guide-group {
+  .guide-group,
+  .guide-fb {
     margin-top: 28px;
   }
   .guide-tools .guide-search {

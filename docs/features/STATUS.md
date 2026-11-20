@@ -109,3 +109,7 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   is its own button. What was decided: `docs/specs/2026-11-19-tips.md`, "Session B". Not ticked
   until the owner has seen it.
 - Privacy texts were checked against the code (2026-11-19).
+- `feedback-link` built 2026-11-20 on branch `fix/guide-and-feature`, at the owner's request (a
+  feature useful for release), assuming decision 10 (GitHub Issues). The details line is in English
+  in both languages (it is read on GitHub), so no `fb.env.*` keys. Before ticking: the label
+  `idea` exists on the repository, and each link opens its form filled in, by hand, after the deploy.
