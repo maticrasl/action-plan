@@ -97,9 +97,8 @@ dlg.addEventListener('click', e => {
   const b = el.closest<HTMLElement>('[data-emoji]');
   if (!b) return;
   pick = b.dataset.emoji!;
-  $('#planEmojis')
-    .querySelectorAll('[data-emoji]')
-    .forEach(x => x.setAttribute('aria-checked', String(x === b)));
+  $('#planEmojis').querySelector('[aria-checked="true"]')?.setAttribute('aria-checked', 'false');
+  b.setAttribute('aria-checked', 'true');
   update();
 });
 $('#planNameForm').addEventListener('submit', e => {
