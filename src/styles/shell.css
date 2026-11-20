@@ -130,6 +130,11 @@
   max-height: 260px;
   overflow-y: auto;
 }
+/* Measuring ~1900 emoji glyphs the first time takes over a second: only those in view are laid out. */
+.emoji-grid.all .emoji-pick {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40px;
+}
 .emoji-pick {
   height: 40px;
   border: 0;
