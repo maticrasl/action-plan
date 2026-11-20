@@ -104,13 +104,12 @@ export const SETTINGS: Record<string, { get: () => boolean | undefined; set: (v:
     },
   },
   hideDone: { get: () => ui.hideDone, set: v => setToggle('hideDone', v) },
-  tlDeps: { get: () => ui.tlDeps, set: v => setToggle('tlDeps', v) },
   planBadges: { get: () => ui.planBadges, set: v => setToggle('planBadges', v) },
   navCollapsed: { get: () => ui.navCollapsed, set: v => setNavCollapsed(v) },
 };
 
-// A remembered on/off display option (hideDone, tlDeps, planBadges).
-export function setToggle(key: 'hideDone' | 'hideVisions' | 'tlDeps' | 'planBadges', on: boolean) {
+// A remembered on/off display option (hideDone, hideVisions, planBadges).
+export function setToggle(key: 'hideDone' | 'hideVisions' | 'planBadges', on: boolean) {
   ui[key] = on;
   prefs.set(key, on);
   requestRender();

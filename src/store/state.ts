@@ -29,7 +29,6 @@ export interface Ui {
   nextAll: boolean; // the overview's "Show all": also the activities in progress that are not due
   tlPx: number; // the timeline's pixels per day
   mapScale: number;
-  tlDeps: boolean;
   planBadges: boolean;
   search: string;
   mapSelected: string | null;
@@ -58,7 +57,6 @@ export const freshUi = (): Ui => ({
   nextAll: false,
   tlPx: 8,
   mapScale: 1,
-  tlDeps: true,
   planBadges: true,
   search: '',
   mapSelected: null,

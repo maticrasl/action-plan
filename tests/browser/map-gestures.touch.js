@@ -110,8 +110,7 @@ suite(async () => {
     );
     closeCtxMenu();
 
-    // Timeline dependency arrows have the same menu.
-    rel(b, a, 'depends');
+    // In the timeline, a long-press on the labels' corner folds all; on a goal, it folds that goal.
     a.startDate = d(-3);
     a.dueDate = d(3);
     b.startDate = d(4);
@@ -119,18 +118,15 @@ suite(async () => {
     g.startDate = d(-5);
     g.deadline = d(30);
     save();
-    ui.tlDeps = true;
     setView('timeline');
-    const dep = $('.tl-deps [data-rel-edit]');
-    await longPress(dep);
-    assert(!ctxMenu.hidden && items().length === 3, 'timeline arrow: menu');
-    eq(
-      ctxMenu.querySelector('.ctx-head strong').title,
-      relText(db.relations.find(x => x.type === 'depends')),
-      'a line menu heading shows the whole text on hover',
-    );
-    tapMenu('rel-remove');
-    assert(!db.relations.some(x => x.type === 'depends'), 'timeline arrow removed');
+    await longPress($('.tl-corner'));
+    eq(items(), [t('tl.collapseAll')], 'the corner offers Collapse all only');
+    tapMenu('fold-all:collapse');
+    assert(ctxMenu.hidden && $('[data-tl-fold-all="expand"]'), 'all folded');
+    await longPress($(`[data-tl-node="${g.id}"] .tl-label`));
+    assert(items().includes(t('ctx.expand')) && items().includes(t('tl.expandAll')), 'a folded goal offers Expand and Expand all');
+    tapMenu('fold');
+    assert($(`[data-tl-node="${b.id}"]`) && $('[data-tl-fold-all="collapse"]'), 'the goal unfolded');
     deletePlan(plans.current);
     return items().join(', ');
   });

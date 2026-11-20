@@ -15,7 +15,7 @@ import { byActivities } from '../../core/progress';
 import { isRoutine, periodUnit } from '../../core/routines/schedule';
 import { TL } from '../timeline/render';
 import { ui } from '../../store/state';
-import { categoryChips, goalSelect, scopeFor, searchBox } from '../filters';
+import { categorySelect, goalSelect, scopeFor, searchBox } from '../filters';
 import { periodGraphCard, routineGraphCard, totalGraphCard } from './sums';
 import type { Goal, ISODate, State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
@@ -361,8 +361,8 @@ export function renderGraphs() {
   Object.keys(grCharts).forEach(k => delete grCharts[k]);
   grDrawW = width;
   const cards = [...withData, ...kept].map(item => graphFor(item, width));
-  return `${categoryChips()}
-    <div class="toolbar">${goalSelect('graphs', ui.graphGoal)}${searchBox()}</div>
+  return `
+    <div class="toolbar">${categorySelect()}${goalSelect('graphs', ui.graphGoal)}${searchBox()}</div>
     ${cards.length ? `<div class="gr-list">${cards.join('')}</div>` : `<div class="empty">${t('gr.none')}</div>`}
     ${without.length ? `<p class="meta gr-without">${t('gr.without')} ${without.map(s => linkTag(s.id)).join(' ')}</p>` : ''}`;
 }

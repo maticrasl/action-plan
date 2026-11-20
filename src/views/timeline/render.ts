@@ -1,7 +1,7 @@
-/** The timeline view: a Gantt chart of goals and activities (rows.ts orders them), and its dependency lines. */
-import { emptyState, esc, hideDoneToggle, neighbourhood, statusLegend } from '../../ui/dom';
+/** The timeline view: a Gantt chart of goals and activities (rows.ts orders them). */
+import { emptyState, esc, hideDoneToggle, neighbourhood } from '../../ui/dom';
 import { locale, t } from '../../i18n/index';
-import { categoryChips, goalSelect, scopeFor } from '../filters';
+import { categorySelect, goalSelect, scopeFor } from '../filters';
 import { ui } from '../../store/state';
 import { isDueDay, isFlexible, isRoutine, routineStart } from '../../core/routines/schedule';
 import { fmtRel, fmtSpan, today } from '../../core/dates';
@@ -11,20 +11,11 @@ import { findEntity, relLabel } from '../../core/relations';
 import { db } from '../../core/state';
 import { activityState, goalProgress, goalState } from '../../core/progress';
 import { REL_TYPES } from '../../core/model';
-import { arrowMarker, lineGlow, mapLineColour, mapRelSelection, mapSelection, relText } from '../map/render';
-import { MAP } from '../map/layout';
+import { mapLineColour, mapSelection } from '../map/render';
 import type { Activity, Goal, RelSpec, RelType } from '../../core/model';
 import type { Entity } from '../../core/relations';
 import type { TextKey } from '../../i18n/index';
 import { type Dated, timelineRows, tlAllFolded, tlCollapsed } from './rows';
-
-// Where an item's bar sits in one of its rows, for the dependency arrows.
-interface BarSpot {
-  start: number;
-  end: number;
-  y: number;
-  goal?: string;
-}
 
 // The ▸/▾ button that folds a goal (or the 'rest' group) in the timeline.
 export const foldBtn = (
@@ -79,7 +70,6 @@ export function tlRoutineDays(a: Goal | Activity, from: number, to: number, x: (
 export function renderTimeline() {
   if (!db.goals.length && !db.activities.length) return emptyState(t('tl.emptyTitle'), t('tl.emptyText'), 'goal');
   const rows = timelineRows(scopeFor(ui.timelineGoal), tlCollapsed());
-  const { ROW } = TL;
   const px = ui.tlPx;
   const todayN = dayNum(today());
 
@@ -126,23 +116,12 @@ export function renderTimeline() {
     }
   }
 
-  // A bar or (with dependencies shown) a dependency arrow can be selected, as in the map.
-  const relSel =
-    (ui.tlDeps &&
-      db.relations.find(
-        r =>
-          r.id === ui.mapRel &&
-          r.type === 'depends' &&
-          rows.some(x => x.item?.id === r.from) &&
-          rows.some(x => x.item?.id === r.to),
-      )) ||
-    null;
-  const sel = !relSel && ui.mapSelected && rows.some(r => r.item?.id === ui.mapSelected) ? ui.mapSelected : null;
-  const near = relSel ? new Set([relSel.from, relSel.to]) : neighbourhood(sel, db.relations);
+  // A bar can be selected, as in the map.
+  const sel = ui.mapSelected && rows.some(r => r.item?.id === ui.mapSelected) ? ui.mapSelected : null;
+  const near = neighbourhood(sel, db.relations);
   // Dates only for the item whose bar was clicked, while it stays selected.
   if (ui.tlDates !== sel) ui.tlDates = null;
 
-  const geo: Record<string, BarSpot[]> = {};
   const body = rows
     .map((r, i) => {
       if (r.kind === 'group')
@@ -167,10 +146,6 @@ export function renderTimeline() {
         const tip = `${item.title}: ${dateText} (${t(('nodeState.' + st) as TextKey)})`;
         // The selected item's bar can be dragged to new dates (see "Moving dates in the timeline").
         const drag = item.id === ui.tlDates ? ` tl-drag" data-tl-drag="${item.id}` : '';
-        // Every row of an item, so an activity listed under several goals gets its arrows on each copy.
-        const spot =
-          (s && e) || open ? { start: left, end: left + width } : { start: left + px / 2 - 7, end: left + px / 2 + 7 };
-        (geo[item.id] ||= []).push({ ...spot, y: i * ROW + ROW / 2, goal: r.goal });
         if ((!s || !e) && !open) {
           const cx = left + px / 2;
           bar = `${lateHtml}<i class="tl-milestone glass ${kind} st-${st}${drag}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
@@ -190,7 +165,7 @@ export function renderTimeline() {
         }
       }
       if (s || e) bar += tlRoutineDays(item, from, to, x, px);
-      const dim = (sel || relSel) && !near.has(item.id) ? 'dim' : '';
+      const dim = sel && !near.has(item.id) ? 'dim' : '';
       const also = r.also ? t('tl.alsoUnder', { goals: r.also.join(', ') }) : '';
       const fold = r.fold ? foldBtn(item.id, item.title, r.collapsed!) : '';
       return `<div class="tl-row ${kind} ${dim}${item.id === sel ? ' selected' : ''}" data-tl-node="${item.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc([item.title, dateText, also].filter(Boolean).join(', '))}">
@@ -200,90 +175,29 @@ export function renderTimeline() {
     })
     .join('');
 
-  // Copies of the two ends that an arrow joins: each copy of either end gets one, to the other
-  // end's copy under the same goal, or else to its nearest copy.
-  const copyPairs = (froms: BarSpot[], tos: BarSpot[]) => {
-    const match = (c: BarSpot, list: BarSpot[]) =>
-      list.find(o => o.goal === c.goal) || list.reduce((a, b) => (Math.abs(b.y - c.y) < Math.abs(a.y - c.y) ? b : a));
-    const pairs = [
-      ...froms.map((d): [BarSpot, BarSpot] => [match(d, tos), d]),
-      ...tos.map((p): [BarSpot, BarSpot] => [p, match(p, froms)]),
-    ];
-    return pairs.filter(([p, d], i) => pairs.findIndex(([q, e]) => q === p && e === d) === i);
-  };
-  // Finish-to-start arrows: from the end of a prerequisite to the start of what depends on it, in straight runs with
-  // square corners, drawn like the map's lines: each ends with a straight stretch (LEAD) and stops inside its arrowhead (TIP).
-  const { LEAD, TIP } = MAP,
-    depLine: RelSpec = REL_TYPES.depends;
-  const deps = !ui.tlDeps
-    ? ''
-    : db.relations
-        .filter(r => r.type === 'depends' && geo[r.from] && geo[r.to])
-        .flatMap(r =>
-          copyPairs(geo[r.from], geo[r.to]).map(([p, d]) => {
-            const x1 = p.end,
-              y1 = p.y,
-              x2 = d.start,
-              y2 = d.y;
-            const path =
-              x2 - LEAD >= x1 + 6
-                ? `M${x1},${y1} H${x2 - LEAD} V${y2} H${x2 - TIP}`
-                : `M${x1},${y1} h8 V${y2 + (y2 > y1 ? -ROW / 2 : ROW / 2)} H${x2 - LEAD} V${y2} H${x2 - TIP}`;
-            const dim = (sel && !(r.from === sel || r.to === sel)) || (relSel && r.id !== relSel.id) ? ' dim' : '';
-            // A wide invisible twin makes the thin arrow easy to hit.
-            return `<g class="tl-dep-g${dim}${r.id === relSel?.id ? ' sel' : ''}" data-rel-edit="${r.id}" tabindex="0" role="button" aria-pressed="${r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: relText(r) }))}">
-      <path class="tl-dep" d="${path}" style="stroke:${mapLineColour(depLine.color)};stroke-width:${depLine.width || 1.1}" stroke-dasharray="4 3" marker-end="url(#tl-arrow)"></path><path class="tl-dep-hit" d="${path}"></path><title>${esc(relText(r))}</title></g>`;
-          }),
-        )
-        .join('');
-
-  const zoom = Object.entries(TL.ZOOM)
-    .map(
-      ([z, p]) =>
-        `<button class="chip ${Math.abs(px - p) < 0.01 ? 'active' : ''}" data-tl-zoom="${z}">${t(('tl.zoom.' + z) as TextKey)}</button>`,
-    )
-    .join('');
+  const selItem = sel ? findEntity(sel)! : null;
   return `
-    ${categoryChips()}
     <div class="toolbar">
+      ${categorySelect()}
       ${goalSelect('timeline', ui.timelineGoal)}
       ${hideDoneToggle()}
-      <button class="chip" data-tl-deps aria-pressed="${ui.tlDeps}">${t('tl.deps')}</button>
-      ${tlAllFolded() ? `<button class="chip" data-tl-fold-all="expand">${t('tl.expandAll')}</button>` : `<button class="chip" data-tl-fold-all="collapse">${t('tl.collapseAll')}</button>`}
-      <div class="chips" role="group" aria-label="${esc(t('tl.zoom'))}">${zoom}</div>
     </div>
-    <div class="map-legend tl-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}<span><i class="swatch tl-overdue-swatch"></i>${esc(t('tl.overdueLegend'))}</span></div>
-    ${rows.some(r => isRoutine(r.item) && !isFlexible(r.item)) ? `<div class="map-legend tl-legend"><span class="ctl-label">${t('tl.days')}</span>${['done', 'missed', 'due'].map(k => `<span><i class="swatch tl-day ${k}"></i>${esc(t(('tl.day.' + k) as TextKey))}</span>`).join('')}</div>` : ''}
-    <div class="map-legend tl-legend"><span class="ctl-label">${t('tl.links')}</span>${[
-      'contributes',
-      'subactivity',
-      'subgoal',
-      ...(ui.tlDeps || rows.some(r => r.rel === 'depends') ? ['depends'] : []),
-    ]
-      .map(
-        k =>
-          `<span><i class="line-key${(REL_TYPES as Record<string, RelSpec>)[k].dash ? ' dash' : ''}" style="--rel:${mapLineColour((REL_TYPES as Record<string, RelSpec>)[k].color)}"></i>${esc(relLabel(k))}</span>`,
-      )
-      .join('')}</div>
     ${
       rows.length
         ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + 145)}" data-from="${from}" data-to="${to}">
       <div class="tl-inner" style="--tl-w:${W}px">
         <div class="tl-head">
-          <div class="tl-corner"></div>
+          <div class="tl-corner">${tlAllFolded() ? `<button class="chip" data-tl-fold-all="expand">${t('tl.expandAll')}</button>` : `<button class="chip" data-tl-fold-all="collapse">${t('tl.collapseAll')}</button>`}</div>
           <div class="tl-scale"><div class="tl-months">${months.join('')}</div><div class="tl-ticks">${ticks.join('')}</div>
             <span class="tl-today-flag" style="left:${x(todayN) + px / 2}px">${t('tl.today')}</span></div>
         </div>
         <div class="tl-body">
           <div class="tl-grid">${lines.join('')}<i class="tl-today" style="left:${x(todayN) + px / 2}px;width:${Math.max(px, 3)}px"></i></div>
-          <svg class="tl-deps" width="${W}" height="${rows.length * ROW}">
-            <defs>${arrowMarker('tl-arrow', depLine.color, 'auto')}${lineGlow(W, rows.length * ROW)}</defs>${deps}
-          </svg>
           ${body}
         </div>
       </div>
     </div>`
         : `<div class="empty">${t('tl.noneShown')}</div>`
     }
-    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) + (geo[sel] ? `<p class="meta" style="margin-top:8px">${t(sel !== ui.tlDates ? 'tl.datesHint' : dragHint(findEntity(sel)!))}</p>` : '') : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
+    ${selItem ? mapSelection(sel!) + ((selItem.item as Dated).startDate || endOf(selItem.kind, selItem.item as Dated) ? `<p class="meta" style="margin-top:8px">${t(sel !== ui.tlDates ? 'tl.datesHint' : dragHint(selItem))}</p>` : '') : `<p class="meta" style="margin-top:10px">${t('tl.hint')}</p>`}`;
 }

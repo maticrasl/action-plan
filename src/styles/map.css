@@ -71,23 +71,6 @@
   border-color: transparent;
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--tint) 45%, transparent);
 }
-.map-legend i.swatch.tl-day {
-  position: static;
-  width: 14px;
-  height: 4px;
-  border: 0;
-  border-radius: 1px;
-}
-.map-legend i.swatch.tl-day.done {
-  background: var(--ok);
-}
-.map-legend i.swatch.tl-day.missed {
-  background: var(--bad);
-}
-.map-legend i.swatch.tl-day.due {
-  background: var(--goal);
-}
-
 .map-wrap {
   background: var(--surface);
   border: 1px solid var(--line);

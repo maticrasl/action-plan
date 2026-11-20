@@ -7,7 +7,7 @@ import { requestRender as render } from '../../ui/render';
 import { emptyState, esc, fitText, hideDoneToggle, itemCount, neighbourhood, statusLegend } from '../../ui/dom';
 import { db, visions } from '../../core/state';
 import { t, tp } from '../../i18n/index';
-import { categoryChips, goalSelect, scopeFor } from '../filters';
+import { categorySelect, goalSelect, scopeFor } from '../filters';
 import { activityState, blockers, goalProgress, goalState, isComplete } from '../../core/progress';
 import {
   contributingIds,
@@ -260,8 +260,7 @@ export function renderMap() {
     `<button type="button" class="icon-btn" data-map-zoom="${dir}" aria-label="${esc(t(('map.zoom.' + dir) as TextKey))}" title="${esc(t(('map.zoom.' + dir) as TextKey))}">${label}</button>`;
 
   return `
-    ${categoryChips()}
-    <div class="toolbar">${goalSelect('map', ui.mapGoal)}${hideDoneToggle()}${visions.list.length ? hideVisionsToggle() : ''}</div>
+    <div class="toolbar">${categorySelect()}${goalSelect('map', ui.mapGoal)}${hideDoneToggle()}${visions.list.length ? hideVisionsToggle() : ''}</div>
     <div class="map-controls">
       <div class="chips" role="group" aria-label="${esc(t('map.toggles'))}"><span class="ctl-label">${t('map.show')}</span>${toggles}</div>
       <div class="map-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}

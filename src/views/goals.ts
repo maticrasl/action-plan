@@ -4,7 +4,7 @@ import { byDeadline, emptyState, matchesSearch } from '../ui/dom';
 import { t } from '../i18n/index';
 import { statusLabels } from '../ui/text';
 import { GOAL_STATUS } from '../core/model';
-import { categoryChips, inCategory, searchBox } from './filters';
+import { categorySelect, inCategory, searchBox } from './filters';
 import { ui } from '../store/state';
 import { goalCard } from '../ui/goal-card';
 
@@ -17,8 +17,8 @@ export function renderGoals() {
     .filter(matchesSearch)
     .sort(byDeadline);
   return `
-    ${categoryChips()}
     <div class="toolbar">
+      ${categorySelect()}
       <div class="chips">${Object.entries(filters)
         .map(
           ([k, v]) =>

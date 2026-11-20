@@ -201,10 +201,6 @@ suite(async () => {
     zoomTimeline(1e-6, tx);
     const tmin = ui.tlPx;
     assert(tmax === TL.MAX && tmin === TL.MIN, 'timeline zoom clamped');
-    $('[data-tl-zoom="quarter"]').click();
-    assert(ui.tlPx === TL.ZOOM.quarter);
-    $('[data-tl-zoom="month"]').click();
-    assert(ui.tlPx === TL.ZOOM.month && prefs.get('tlPx') === TL.ZOOM.month);
     return `map ${min}–${max}, wheel=${wheel.toFixed(3)}, timeline ${tmin}–${tmax}`;
   });
   await step('touch: after a long-press, the first tap on a menu item works (no click ends the press)', async () => {
@@ -399,18 +395,15 @@ suite(async () => {
     const out = [];
     for (const v of ['map', 'timeline']) {
       setView(v);
-      if (v === 'timeline') {
-        ui.tlDeps = true;
-        render();
-      }
       const els = [...viewEl.querySelectorAll('[data-rel-edit], [data-map-node], [data-tl-node]')];
-      assert(
-        els.some(el => el.matches('[data-rel-edit]')),
-        `${v}: has lines`,
-      );
       const shown = els.filter(el => clear(el) !== 'rgba(0, 0, 0, 0)');
       assert(!shown.length, `${v}: ${shown.length} with a highlight, e.g. ${shown[0] && clear(shown[0])}`);
       const line = viewEl.querySelector('[data-rel-edit]');
+      if (v === 'timeline') {
+        assert(!line, 'timeline: no lines to tap');
+        out.push(`${v}: ${els.length}`);
+        continue;
+      }
       line.focus();
       const cs = getComputedStyle(line);
       assert(

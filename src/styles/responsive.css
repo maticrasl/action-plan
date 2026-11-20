@@ -151,9 +151,11 @@
   .search {
     max-width: none;
   }
+  /* The category and goal pickers share one row, however long their options. */
   .toolbar select {
-    max-width: 100%;
-    flex: 1;
+    max-width: 100% !important;
+    flex: 1 1 40%;
+    min-width: 0;
   }
   .row {
     flex-wrap: wrap;

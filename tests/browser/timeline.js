@@ -41,12 +41,10 @@ suite(async () => {
     rel(b, a, 'depends');
     rel(c, b, 'depends');
     save();
-    ui.tlDeps = true;
     setView('timeline');
     return { g, a, b, c };
   };
   const bar = id => $(`[data-tl-node="${id}"]`);
-  const dep = id => $(`.tl-deps [data-rel-edit="${id}"]`);
   await step('timeline: double-click or Enter on the selected bar edits it; Esc deselects', () => {
     const { g, a } = tlFixture();
     clickEl(bar(a.id), 1);
@@ -77,7 +75,7 @@ suite(async () => {
     assert(!$('.tl-row.dim'), 'nothing dimmed');
     return 'ok';
   });
-  await step('timeline: Delete on a bar deletes it; dependency arrows select, open and delete like map lines', () => {
+  await step('timeline: Delete on a bar deletes it; no dependency arrows to select', () => {
     const { g, a, b, c } = tlFixture();
     const realConfirm = window.confirm;
     let question = '';
@@ -94,54 +92,13 @@ suite(async () => {
         'deletes it and its links without asking',
       );
       eq($('#toast').firstChild.textContent, t('toast.deleted.activity'), 'says so');
-      // Dependency arrows: clickable, with a wide hit area, and reachable with Tab.
+      // No dependency arrows are drawn, so a line picked on the map is not deleted here.
+      assert(!$('.tl-deps, [data-rel-edit]'), 'no arrows');
       const r = db.relations.find(x => x.type === 'depends' && x.from === b.id);
-      assert(dep(r.id), 'the arrow is a target');
-      eq(getComputedStyle(dep(r.id).querySelector('.tl-dep-hit')).pointerEvents, 'stroke', 'its hit area takes clicks');
-      eq(dep(r.id).getAttribute('tabindex'), '0', 'focusable');
-      clickEl(dep(r.id));
-      eq([ui.mapRel, ui.mapSelected], [r.id, null], 'a click selects it');
-      assert(dep(r.id).classList.contains('sel'), 'drawn as selected');
-      assert(
-        !bar(a.id).classList.contains('dim') &&
-          !bar(b.id).classList.contains('dim') &&
-          bar(g.id).classList.contains('dim'),
-        'its two bars lit, the rest dimmed',
-      );
-      assert(
-        $('.map-rel-selection') && $('.map-rel-selection').textContent.includes('Build'),
-        'the selection row names it',
-      );
-      clickEl(dep(r.id), 2);
-      assert(modal.open && formCtx.kind === 'relation' && formCtx.id === r.id, 'a second click opens it');
-      modal.close();
-      press('Escape', document.body);
-      eq(ui.mapRel, null, 'Esc deselects it');
-      clickEl(dep(r.id));
-      press('Delete', document.body);
-      assert(
-        !db.relations.some(x => x.id === r.id) && findEntity(a.id) && findEntity(b.id),
-        'Delete removes the dependency, not the bars',
-      );
-      eq($('#toast').firstChild.textContent, t('toast.relRemoved'), 'says so');
-      eq(
-        readPlan(plans.current).relations.some(x => x.id === r.id),
-        false,
-        'saved',
-      );
-      // With dependencies hidden there is nothing to select or delete there.
-      rel(b, a, 'depends');
-      save();
-      const r2 = db.relations.find(x => x.type === 'depends');
-      ui.mapRel = r2.id;
-      ui.tlDeps = false;
+      ui.mapRel = r.id;
       render();
       press('Delete', document.body);
-      assert(
-        db.relations.some(x => x.id === r2.id),
-        'a hidden arrow is not deleted',
-      );
-      ui.tlDeps = true;
+      assert(db.relations.some(x => x.id === r.id), 'a line not shown is not deleted');
       ui.mapRel = null;
       // Typing or another view: left alone.
       clickEl(bar(a.id));
@@ -204,7 +161,7 @@ suite(async () => {
       weeks.length === Math.floor((ends - dayNum(d(-14))) / 7) + 1 && weeks.slice(0, 2).join() === 'missed,missed',
       `without an end: every week to the timeline's end (${weeks.length})`,
     );
-    // Narrow days merge into a band; the legend names the colours.
+    // Narrow days merge into a band.
     ui.tlPx = TL.MIN;
     render();
     const w = marks(a.id).map(m => m.style.width);
@@ -212,83 +169,37 @@ suite(async () => {
       w.every(x => x === `${TL.MIN}px`),
       `merged: ${w[0]}`,
     );
-    eq(
-      [...$$('.tl-legend .swatch.tl-day')].map(s => s.classList[2]),
-      ['done', 'missed', 'due'],
-      'legend',
-    );
-    a.repeat = { times: 3, per: 'week' };
-    open.repeat = { times: 1, per: 'week' };
-    save();
-    render();
-    assert(!$('.tl-legend .tl-day'), 'no legend without routines on set days');
+    assert(!$('.tl-legend'), 'no legend');
     ui.tlPx = TL.ZOOM.month;
     return weeks.length + ' weeks';
   });
   await step(
-    'timeline lines are drawn like on the map, with square corners; menus, dialogs and fields are clear glass',
+    'timeline: no arrows, rounded tree lines, flat bars, titles kept in view; menus, dialogs and fields are clear glass',
     () => {
       loadSample();
-      ui.tlDeps = true;
       setView('timeline');
-      const css = el => getComputedStyle(el),
-        dep = REL_TYPES.depends;
-      const lines = [...document.querySelectorAll('.tl-deps .tl-dep')];
-      assert(lines.length > 3, `${lines.length} dependency arrows`);
-      // The map's muted colour, width and finer dash; only straight runs, each ending with a straight stretch into the head.
-      assert(
-        lines.every(
-          l =>
-            l.style.stroke === mapLineColour(dep.color) &&
-            parseFloat(l.style.strokeWidth) === (dep.width || 1.1) &&
-            l.getAttribute('stroke-dasharray') === '4 3',
-        ),
-        'map line style',
-      );
-      const runs = lines.map(l => l.getAttribute('d'));
-      assert(
-        runs.every(d => /^M[\d.-]+,[\d.-]+( (h|H|V)[\d.-]+)+$/.test(d)),
-        'only horizontal and vertical runs',
-      );
-      const tail = d => {
-        const v = d.match(/V([\d.-]+) H([\d.-]+)$/),
-          h = d.match(/H([\d.-]+) V[\d.-]+ H[\d.-]+$/);
-        return +v[2] - +h[1];
-      };
-      assert(
-        runs.every(d => Math.abs(tail(d) - (MAP.LEAD - MAP.TIP)) < 0.01),
-        `each ends with a straight stretch: ${runs.map(tail)}`,
-      );
-      // The map's arrowhead, one size whatever the line width, its tip TIP beyond the line's end.
-      const head = $('#tl-arrow'),
-        mapHead = 'M1,1.5 L10,5 L1,8.5 L3,5 z';
-      assert(
-        head.getAttribute('markerUnits') === 'userSpaceOnUse' &&
-          +head.getAttribute('refX') === 10 - MAP.TIP &&
-          head.querySelector('path').getAttribute('d') === mapHead,
-        'map arrowhead',
-      );
-      // Tree lines in the labels: the map's colours and widths, square corners.
+      const css = el => getComputedStyle(el);
+      assert(!$('.tl-deps, .tl-dep, [data-tl-deps]'), 'no dependency arrows or their button');
+      // Tree lines in the labels: the map's colours and widths, rounded corners.
       const elbow = $('.tl-elbow');
       assert(
         elbow.style.getPropertyValue('--rel').includes('color-mix') &&
-          css(elbow).borderBottomLeftRadius === '0px' &&
+          css(elbow).borderBottomLeftRadius === '8px' &&
           parseFloat(css(elbow).borderLeftWidth) <= 1.6,
-        'thin muted elbows with square corners',
+        `thin muted elbows with rounded corners: ${css(elbow).borderBottomLeftRadius}`,
       );
+      // Bars are flat, goals too: a thin edge, no slab.
+      const goalBar = $('.tl-bar.goal');
+      assert(!/ 2px 2px 0px/.test(css(goalBar).boxShadow), `flat goal bar: ${css(goalBar).boxShadow}`);
+      // A bar that starts left of the view keeps its title just right of the labels.
+      const scroller = $('.tl-scroll'),
+        wide = [...$$('.tl-bar')].sort((p, q) => q.offsetWidth - p.offsetWidth)[0],
+        label = wide.querySelector('span');
+      scroller.scrollLeft = wide.offsetLeft + wide.offsetWidth / 2;
+      const labelsEdge = $('.tl-corner').getBoundingClientRect().right;
       assert(
-        [...document.querySelectorAll('.tl-legend .line-key')].every(k =>
-          k.style.getPropertyValue('--rel').includes('color-mix'),
-        ),
-        'line keys in the map colours',
-      );
-      // A selected arrow glows, like a selected map line.
-      ui.mapRel = null;
-      const g = $('.tl-deps [data-rel-edit]');
-      g.classList.add('sel');
-      assert(
-        css(g.querySelector('.tl-dep')).filter.includes('line-glow') && $('.tl-deps #line-glow'),
-        'a selected arrow glows',
+        css(label).position === 'sticky' && Math.abs(label.getBoundingClientRect().left - labelsEdge) < 2,
+        `title in view: ${label.getBoundingClientRect().left} vs ${labelsEdge}`,
       );
       // Menus, dialogs, the calendar and fields: what is behind shows faintly through.
       const alpha = el => +(css(el).backgroundColor.match(/[\d.]+/g)[3] ?? 1);

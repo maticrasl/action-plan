@@ -15,11 +15,6 @@
   font-variant-numeric: tabular-nums;
   background: color-mix(in srgb, currentColor 13%, transparent);
 }
-.chip[data-tl-deps][aria-pressed='true'] {
-  background: var(--surface-2);
-  color: var(--ink);
-  border-color: var(--ink-3);
-}
 .tag.cat {
   border: 0;
   cursor: pointer;
@@ -35,13 +30,6 @@
 }
 .tag.cat:hover {
   color: var(--goal);
-}
-.tl-legend {
-  margin: 0 0 12px;
-}
-.tl-overdue-swatch {
-  background: repeating-linear-gradient(135deg, var(--bad) 0 2px, transparent 2px 5px) !important;
-  border-color: var(--bad) !important;
 }
 
 .tl-scroll {
@@ -79,6 +67,9 @@
   z-index: 5;
   background: var(--surface);
   border-right: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
 }
 .tl-scale {
   position: relative;
@@ -167,41 +158,6 @@
     inset 1px 0 var(--today-edge),
     inset -1px 0 var(--today-edge);
 }
-.tl-deps {
-  position: absolute;
-  top: 0;
-  left: var(--label-w);
-  pointer-events: none;
-  z-index: 2;
-  overflow: visible;
-}
-/* Colour, width and dash come from the relationship, as on the map; corners stay square. */
-.tl-dep {
-  fill: none;
-  stroke-linecap: round;
-}
-.tl-dep-g {
-  cursor: pointer;
-  outline: none;
-}
-.tl-dep-g.dim {
-  opacity: 0.15;
-}
-.tl-dep-hit {
-  fill: none;
-  stroke: transparent;
-  stroke-width: 12;
-  pointer-events: stroke;
-}
-.tl-dep-g:hover .tl-dep,
-.tl-dep-g:focus-visible .tl-dep {
-  stroke-width: 2.2 !important;
-}
-.tl-dep-g.sel .tl-dep {
-  stroke-width: 2.8 !important;
-  filter: url(#line-glow);
-}
-
 .tl-row {
   display: flex;
   height: var(--row);
@@ -335,13 +291,16 @@
   top: 9px;
   height: 22px;
   border-radius: 6px;
-  overflow: hidden;
+  /* clip, not hidden: its title can stay sticky against the scrolling view. */
+  overflow: clip;
   display: flex;
   align-items: center;
   z-index: 1;
 }
+/* While the bar runs off the left edge, its title stays in view, just right of the labels. */
 .tl-bar span {
-  position: relative;
+  position: sticky;
+  left: var(--label-w);
   padding: 0 8px;
   font-size: 12.5px;
   font-weight: 400;
@@ -353,21 +312,16 @@
   top: 7px;
   height: 26px;
 }
-/* Bars are thin glass: activities 2px, goals 3px. */
-.tl-bar.glass {
-  --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side);
-}
-.tl-bar.glass.goal {
-  --slab: 1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side);
+/* Bars are flat glass, goals too: a thin edge in their side colour instead of a slab. */
+.tl-bar.glass,
+.tl-milestone.glass {
+  --slab: 0 0 0 1px var(--side);
+  --depth: 0px;
 }
 /* A goal without a deadline yet runs to today and fades out: it has no end. */
 .tl-bar.tl-open {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
-}
-/* Turned 45°, a milestone's side runs straight down. */
-.tl-milestone.glass {
-  --slab: 1.5px 0 0 var(--side), 2.5px 0 0 var(--side);
 }
 .tl-progress {
   position: absolute;
