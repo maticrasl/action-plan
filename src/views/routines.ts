@@ -56,8 +56,9 @@ export function tickListItem(id: string, itemId: string, iso: ISODate = today())
     toast(waits.length ? t('acts.notDone', { name: waits[0].title }) : t('list.complete', { name: a.title }));
   save();
   render();
-  // The card is drawn anew (perhaps in another column): keep the keyboard on the item.
-  justTicked($(`[data-li-tick="${id}"][data-li="${itemId}"]`))?.focus();
+  // The card is drawn anew (perhaps in another column): keep the keyboard on the item, without
+  // scrolling to where it moved (the bottom of a long list).
+  justTicked($(`[data-li-tick="${id}"][data-li="${itemId}"]`))?.focus({ preventScroll: true });
 }
 
 export function tickRoutineItem(a: Routine & WithList, itemId: string, iso: ISODate) {
@@ -75,7 +76,7 @@ export function tickRoutineItem(a: Routine & WithList, itemId: string, iso: ISOD
     save();
     render();
   }
-  justTicked(item())?.focus();
+  justTicked(item())?.focus({ preventScroll: true });
 }
 // A ticked item's box pops once; the class is only added here, so a later render does not replay it.
 export const justTicked = (el: HTMLElement | null) => {

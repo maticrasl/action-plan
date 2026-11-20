@@ -236,6 +236,23 @@ suite(async () => {
       ['a', 'b', 'c', 'd'],
       'the stored order is unchanged by ticks',
     );
+    // A long list: the ticked item moves far down, but the screen stays where it was (no jump to it).
+    a.list.push(...Array.from({ length: 80 }, (_, n) => ({ id: 'x' + n, text: 'X' + n, done: false })));
+    save();
+    render();
+    tick('c').scrollIntoView({ block: 'start' });
+    const at = tick('b').getBoundingClientRect().top;
+    tick('c').click();
+    eq(document.activeElement, tick('c'), 'long list: focus follows the item');
+    assert(
+      tick('c').getBoundingClientRect().top - tick('b').getBoundingClientRect().top > innerHeight,
+      'long list: the ticked item went more than a screen down',
+    );
+    eq(tick('b').getBoundingClientRect().top, at, 'long list: the screen does not move to the ticked item');
+    tick('c').click();
+    a.list.splice(4);
+    save();
+    render();
     // In the form: the ticked rows are last; ticking one there moves it down, unticking moves it back up.
     openForm('activity', a.id);
     const rows = () => [...$('#listRows').children].map(r => r.dataset.liRow);

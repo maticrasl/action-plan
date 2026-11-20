@@ -124,14 +124,22 @@ document.addEventListener('pointerdown', e => {
   if (!ctxMenu.contains(e.target as Node)) closeCtxMenu();
 });
 addEventListener('resize', () => closeCtxMenu());
-// Scrolling closes the menu, but not a scroll that arrives right after it opened: browsers deliver
-// scroll events on the next frame, so one from just before (a redraw putting the map's scroll back,
-// as a line's menu does when it selects the line, or the end of a swipe) can land after it.
-// Scrolling the menu itself (taller than a phone held sideways) keeps it open.
+// Scrolling closes the menu, but only a scroll that starts after it opened. One still running (a swipe
+// gliding on, or a touchpad pushing past the end) leaves it open however long it lasts; so does one that
+// starts right after it opened: browsers deliver scroll events on the next frame, so one from just before
+// (a redraw putting the map's scroll back, as a line's menu does when it selects the line) can land after it.
+// Scroll events less than 200 ms apart are one scroll. Scrolling the menu itself (taller than a phone
+// held sideways) keeps it open.
+let scrollAt = -Infinity,
+  scrollFrom = -Infinity;
 document.addEventListener(
   'scroll',
   e => {
-    if (e.target !== ctxMenu && performance.now() - ctxOpenedAt > 400) closeCtxMenu();
+    if (e.target === ctxMenu) return;
+    const now = performance.now();
+    if (now - scrollAt > 200) scrollFrom = now;
+    scrollAt = now;
+    if (scrollFrom - ctxOpenedAt > 400) closeCtxMenu();
   },
   true,
 );
