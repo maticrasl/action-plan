@@ -12,7 +12,7 @@ import { ctxMenu } from '../ui/menu';
 import { prefs } from '../store/prefs';
 import { toggleFold } from '../store/map-fold';
 import type { FoldKind } from '../core/map-fold';
-import { shiftRoutineWeek, tickListItem, toggleCheckin } from './routines';
+import { shiftRoutineWeek, tickListItem, toggleCheckin, toggleListFold } from './routines';
 import { findEntity } from '../core/relations';
 import { loadSample } from '../ui/sample';
 import { openTemplates } from '../ui/templates-dialog';
@@ -57,7 +57,7 @@ $('#addBtn').addEventListener('click', e => {
 
 viewEl.addEventListener('click', e => {
   const el = (e.target as HTMLElement).closest<HTMLElement>(
-    '[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]',
+    '[data-li-fold],[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]',
   );
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !(e.target as HTMLElement).closest('[data-map-zoom]')) {
@@ -78,6 +78,7 @@ viewEl.addEventListener('click', e => {
     return;
   }
   e.stopPropagation();
+  if (el.dataset.liFold) return toggleListFold(el.dataset.liFold);
   if (el.dataset.tlFold) return toggleTlFold(el.dataset.tlFold);
   if (el.dataset.tlFoldAll) return foldAllTl(el.dataset.tlFoldAll === 'collapse');
   if (el.dataset.relOpen) return openForm('relation', el.dataset.relOpen);

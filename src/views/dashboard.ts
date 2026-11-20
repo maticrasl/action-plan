@@ -7,7 +7,7 @@ import { isRoutine, type Routine } from '../core/routines/schedule';
 import { daysUntil, today } from '../core/dates';
 import { routineToday } from '../core/routines/keeping';
 import { ui } from '../store/state';
-import { routineRow } from './routines';
+import { listFold, listOpen, listTicks, routineRow } from './routines';
 import { goalCard } from '../ui/goal-card';
 import { relsFrom } from '../core/relations';
 import { isList, listDone } from '../core/routines/checkins';
@@ -86,12 +86,14 @@ export function activityRow(a: Activity) {
     .map(r => linkTag(r.to))
     .join('');
   const blocked = blockers(a).length;
-  return `<div class="row glass st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
+  const open = isList(a) && a.list.length > 0 && listOpen(a.id);
+  return `<div class="row glass st-${activityState(a)}${open ? ' open' : ''}" data-open="${a.id}" data-ctx-item="${a.id}">
     ${statusCheck(a)}
     <span class="grow ${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</span>
-    ${isList(a) && a.list.length ? `<span class="tag">${t('list.count', { done: listDone(a), total: a.list.length })}</span>` : ''}
+    ${isList(a) && a.list.length ? listFold(a.id, listDone(a), a.list.length) : ''}
     ${blocked ? `<span class="tag bad" title="${esc(tp('blocked.title', blocked))}">${t('blocked')}</span>` : ''}
     <span class="links">${goals}</span>
     ${deadlineTag(a.dueDate, a.status === 'done')}
+    ${open && isList(a) ? `<div class="row-items">${listTicks(a)}</div>` : ''}
   </div>`;
 }

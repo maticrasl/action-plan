@@ -139,7 +139,7 @@ export function updateMeasuredBy(fill = true) {
   if (s) {
     unit.value = s.unit || '';
     const v = stateValue(s);
-    if (isNum(v)) current.value = numInput(v);
+    if (isNum(v)) current.value = String(numInput(v));
     if (fill && !metric.value.trim()) metric.value = s.title;
   }
   current.closest('.field')!.querySelector('.hint')!.textContent = s

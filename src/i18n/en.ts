@@ -187,7 +187,7 @@ export const en = {
     'settings.appearance': 'Appearance',
     'settings.theme': 'Theme',
     'settings.display': 'Display',
-    'settings.planBadges': 'Status badges in the plan menu',
+    'settings.planBadges': 'Status dots in the plan list',
     'plan.health.ok': 'Nothing overdue or due today',
     'plan.health.today': 'Something is due today',
     'plan.health.late': 'Something is overdue',
@@ -532,6 +532,8 @@ export const en = {
     'help.tip.addAmount':
       'This state adds up: the tag shows the total (and this period’s sum, as chosen on its graph). Tap + to add an amount – a run, a deposit – with its date; several a day are fine.',
     'plan.label': 'Action plan',
+    'plan.showAll': 'Show all ({n})',
+    'plan.showFewer': 'Show fewer',
     'plan.defaultName': 'My plan',
     'plan.sampleName': 'Sample plan',
     'plan.new': 'New plan',

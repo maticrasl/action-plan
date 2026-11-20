@@ -192,7 +192,7 @@ export const sl: Language = {
     'settings.appearance': 'Videz',
     'settings.theme': 'Tema',
     'settings.display': 'Prikaz',
-    'settings.planBadges': 'Značke stanja v meniju načrtov',
+    'settings.planBadges': 'Pike stanja na seznamu načrtov',
     'plan.health.ok': 'Nič ni zamujeno ali za danes',
     'plan.health.today': 'Nekaj je treba opraviti danes',
     'plan.health.late': 'Nekaj je zamujeno',
@@ -549,6 +549,8 @@ export const sl: Language = {
     'help.tip.addAmount':
       'To stanje se sešteva: oznaka kaže skupno vsoto (in vsoto tega obdobja, kot je izbrano na grafu). Tapnite +, da dodate količino – tek, polog – z datumom; lahko jih je več na dan.',
     'plan.label': 'Akcijski načrt',
+    'plan.showAll': 'Pokaži vse ({n})',
+    'plan.showFewer': 'Pokaži manj',
     'plan.defaultName': 'Moj načrt',
     'plan.sampleName': 'Vzorčni načrt',
     'plan.new': 'Nov načrt',

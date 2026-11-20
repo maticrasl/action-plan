@@ -1,5 +1,15 @@
 /** The plan switcher: the plans with their health, and new, rename, merge, export, import, delete. */
-import { createPlan, nameTaken, openPlan, planKey, readPlan, save, uniqueName, withPlan } from '../store/plans';
+import {
+  createPlan,
+  nameTaken,
+  openPlan,
+  planKey,
+  planOpened,
+  readPlan,
+  save,
+  uniqueName,
+  withPlan,
+} from '../store/plans';
 import { t, type TextKey } from '../i18n/index';
 import { db } from '../core/state';
 import { today } from '../core/dates';
@@ -57,7 +67,6 @@ export function planHealth(data: Db): Health {
     return health;
   });
 }
-export const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
 
 // Other plans change only through sync or the plan menu: their health is kept until the stored
 // copy or the day changes, so a render reads them from storage without parsing them again.
@@ -74,24 +83,40 @@ export function storedPlanHealth(id: string) {
   return storedHealth.get(id)!.health;
 }
 
-// The plan menus show each plan's badge before its name (unless switched off in Settings).
+// The plan list shows each plan's dot before its name (unless switched off in Settings).
 export function updatePlanBadges() {
-  const health = ui.planBadges
-    ? Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? planHealth(db) : storedPlanHealth(p.id)]))
-    : {};
-  document.querySelectorAll<HTMLOptionElement>('[data-plan-select] option').forEach(o => {
-    const plan = plans.list.find(p => p.id === o.value),
-      h = health[o.value];
-    if (!plan) return;
-    o.textContent = h ? `${HEALTH_BADGE[h]} ${plan.name}` : plan.name;
-    o.title = h ? t(('plan.health.' + h) as TextKey) : '';
+  if (!ui.planBadges) return document.querySelectorAll<HTMLElement>('.plan-dot').forEach(dot => (dot.hidden = true));
+  const open = planHealth(db);
+  document.querySelectorAll<HTMLElement>('.plan-dot').forEach(dot => {
+    const id = dot.closest<HTMLElement>('[data-plan-open]')!.dataset.planOpen!;
+    const h = id === plans.current ? open : storedPlanHealth(id);
+    dot.hidden = false;
+    dot.dataset.health = h;
+    dot.title = t(('plan.health.' + h) as TextKey);
   });
 }
+
+// The list shows the three plans opened last; the rest fold away (for this visit).
+const SHOWN = 3;
+let allPlans = false;
 
 export function renderPlanSwitch() {
   const options = plans.list
     .map(p => `<option value="${p.id}" ${p.id === plans.current ? 'selected' : ''}>${esc(p.name)}</option>`)
     .join('');
+  const opened = planOpened();
+  const sorted = [...plans.list].sort((a, b) => (opened[b.id] || 0) - (opened[a.id] || 0));
+  const rows = sorted
+    .filter((p, i) => allPlans || i < SHOWN || p.id === plans.current)
+    .map(
+      p =>
+        `<li><button type="button" class="plan-row" data-plan-open="${p.id}" aria-current="${p.id === plans.current}"><span class="plan-dot"></span><span class="plan-row-name">${esc(p.name)}</span></button></li>`,
+    )
+    .join('');
+  const more =
+    sorted.length > SHOWN
+      ? `<button type="button" class="plan-more" data-plan-more aria-expanded="${allPlans}">${esc(t(allPlans ? 'plan.showFewer' : 'plan.showAll', { n: sorted.length }))}</button>`
+      : '';
   // Merging needs a second plan to merge into.
   const off = (act: string) => act === 'merge' && plans.list.length < 2;
   const label = (act: string) => esc(t((off(act) ? 'plan.mergeOnly' : 'plan.' + act) as TextKey));
@@ -102,7 +127,7 @@ export function renderPlanSwitch() {
     )
     .join('');
   document.querySelectorAll('.plan-switch').forEach(box => {
-    box.innerHTML = `<label class="plan-label">${t('plan.label')}<select data-plan-select>${options}</select></label><div class="plan-actions">${actions}</div>`;
+    box.innerHTML = `<ul class="plan-list" aria-label="${esc(t('plan.label'))}">${rows}</ul>${more}<div class="plan-actions">${actions}</div>`;
   });
   $('#planName').innerHTML = options;
   updatePlanBadges();
@@ -112,6 +137,12 @@ document.addEventListener('change', e => {
   if ((e.target as HTMLSelectElement).matches('[data-plan-select]')) openPlan((e.target as HTMLSelectElement).value);
 });
 document.addEventListener('click', e => {
+  const row = (e.target as HTMLElement).closest<HTMLElement>('[data-plan-open]');
+  if (row && row.dataset.planOpen !== plans.current) return openPlan(row.dataset.planOpen!);
+  if ((e.target as HTMLElement).closest('[data-plan-more]')) {
+    allPlans = !allPlans;
+    return renderPlanSwitch();
+  }
   const act = (e.target as HTMLElement).closest<HTMLElement>('[data-plan]')?.dataset.plan;
   if (!act) return;
   const plan = currentPlan()!;

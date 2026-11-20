@@ -7,6 +7,7 @@
 .nav {
   background: var(--nav-bg);
   color: var(--nav-ink);
+  border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -41,16 +42,6 @@
   align-items: flex-end;
   gap: 4px;
 }
-.plan-label {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12.5px;
-  font-weight: 400;
-  color: var(--ink-2);
-}
 .plan-actions {
   display: flex;
 }
@@ -67,28 +58,13 @@
   height: 18px;
 }
 .nav .plan-switch {
-  padding: 0 6px 18px;
+  padding: 0 0 14px;
   margin-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid color-mix(in srgb, var(--nav-ink) 10%, transparent);
   flex-wrap: wrap;
-}
-.nav .plan-label {
-  color: inherit;
-  opacity: 0.9;
-  flex-basis: 100%;
 }
 .nav .plan-actions {
   margin-left: auto;
-}
-.nav .plan-label select {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--nav-ink);
-  border-color: rgba(255, 255, 255, 0.18);
-  font-weight: 500;
-}
-.nav .plan-label select option {
-  color: var(--ink);
-  background: var(--surface);
 }
 .nav .plan-actions .icon-btn {
   color: var(--nav-ink);
@@ -96,7 +72,85 @@
 }
 .nav .plan-actions .icon-btn:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--nav-ink) 8%, transparent);
+}
+
+/* The plans, opened last on top: a dot for how each is doing, the open one marked like the active view. */
+.plan-list {
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.plan-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.78;
+}
+.plan-row:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--nav-ink) 6%, transparent);
+}
+.plan-row[aria-current='true'] {
+  opacity: 1;
+  font-weight: 600;
+  cursor: default;
+  background: color-mix(in srgb, var(--nav-ink) 8%, transparent);
+}
+.plan-row-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
+}
+.plan-dot[data-health='today'] {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 20%, transparent);
+}
+.plan-dot[data-health='late'] {
+  background: var(--bad);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 18%, transparent);
+}
+.plan-dot[hidden] {
+  display: none;
+}
+.plan-more {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 12px;
+  margin-right: auto;
+  opacity: 0.6;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.plan-more:hover {
+  opacity: 1;
 }
 .title-block {
   min-width: 0;
@@ -182,11 +236,11 @@
 }
 .nav-item:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--nav-ink) 6%, transparent);
 }
 .nav-item.active {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--nav-ink) 10%, transparent);
   box-shadow: inset 3px 0 0 var(--blaze);
 }
 .nav-more,
@@ -199,7 +253,7 @@
   flex-direction: column;
   gap: 2px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid color-mix(in srgb, var(--nav-ink) 10%, transparent);
 }
 
 .main {

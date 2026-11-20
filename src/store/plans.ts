@@ -12,7 +12,7 @@ import {
   takeSnapshot,
 } from '../core/merge';
 import { db, setDb } from '../core/state';
-import { STORAGE_KEY } from './prefs';
+import { STORAGE_KEY, prefs } from './prefs';
 import { uid } from '../core/util';
 import { t } from '../i18n/index';
 import { emit } from './events';
@@ -121,7 +121,13 @@ export function editPlan(id: string, fn: (data: Db) => void): boolean {
   return true;
 }
 
+// The order plans were opened in on this device (a higher number is more recent), for the plan list.
+export const planOpened = () => prefs.get<Record<string, number>>('planOpened', {});
 export function openPlan(id: string) {
+  const opened = planOpened(),
+    // Plans deleted since are dropped.
+    kept = Object.fromEntries(Object.entries(opened).filter(([k]) => plans.list.some(p => p.id === k)));
+  prefs.set('planOpened', { ...kept, [id]: Math.max(0, ...Object.values(opened)) + 1 });
   plans.current = id;
   setDb(readPlan(id));
   takeSnapshot(db);

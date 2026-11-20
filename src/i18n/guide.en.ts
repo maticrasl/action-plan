@@ -447,7 +447,7 @@ export const guideEn = [
     id: 'h-plans',
     group: 'how',
     title: 'Plans, templates and files',
-    body: `<p>A plan is one set of goals, states and activities. Switch plans in the sidebar or, on a phone, by tapping the plan’s name above the title. Settings has the rest: new plan, rename, delete, and <strong>merge</strong> one plan into another.</p>
+    body: `<p>A plan is one set of goals, states and activities. The sidebar lists your plans, the one you opened last on top; tap one to open it. Its dot is green when nothing is due, yellow when something is due today and red when something is overdue. On a phone, tap the plan’s name above the title. Settings has the rest: new plan, rename, delete, and <strong>merge</strong> one plan into another.</p>
 <ul>
 <li><strong>Start from a template</strong> opens a ready-made plan as a new plan, with dates counted from today. Change everything to fit you.</li>
 <li><strong>Load sample plan</strong> opens a filled example to look around in.</li>

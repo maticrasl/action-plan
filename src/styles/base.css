@@ -22,13 +22,13 @@
   --line: #d3dbda;
   --line-strong: #b9c4c3;
 
-  --goal: #1f4e79;
-  --goal-soft: #dce7f2;
-  --state: #6a4fa0;
-  --state-soft: #ece6f6;
-  --activity: #46555a;
-  --contrib: #00a08a;
-  --rel-state: #9c3db8;
+  --goal: #164a8f;
+  --goal-soft: #d4e2f5;
+  --state: #5b36a8;
+  --state-soft: #e5dbf7;
+  --activity: #355660;
+  --contrib: #00917c;
+  --rel-state: #8f2cb0;
   --blaze: #d2232a;
   /* Visions are silver clouds (brighter once a goal serves them); the Purpose is gold. --vglow is the faint wide
      glow round everything working toward a vision; with a Purpose it turns gold. */
@@ -41,18 +41,18 @@
   --vglow-silver: rgb(104 124 146 / 0.5);
   --vglow-gold: rgb(214 158 20 / 0.5);
 
-  --ok: #2e8b57;
-  --warn: #d9a21b;
+  --ok: #1f8a4f;
+  --warn: #e09d0b;
   --bad: #d2232a;
   /* Tips: a lamp yellow, lighter than Purpose's gold; the word "Tip" in a dark amber for contrast. */
   --tip: #f5c732;
   --tip-ink: #7d5a06;
   --grey: #8d9898;
 
-  --fill-done: color-mix(in srgb, var(--ok) 22%, var(--surface));
-  --fill-doing: color-mix(in srgb, var(--warn) 30%, var(--surface));
-  --fill-late: color-mix(in srgb, var(--bad) 20%, var(--surface));
-  --fill-blocked: color-mix(in srgb, var(--grey) 38%, var(--surface));
+  --fill-done: color-mix(in srgb, var(--ok) 30%, var(--surface));
+  --fill-doing: color-mix(in srgb, var(--warn) 38%, var(--surface));
+  --fill-late: color-mix(in srgb, var(--bad) 27%, var(--surface));
+  --fill-blocked: color-mix(in srgb, var(--grey) 46%, var(--surface));
   /* Today on the timeline and the graphs: a column in the red of the Today flag, light enough to read the bars over. */
   --today: color-mix(in srgb, var(--blaze) 11%, transparent);
   --today-edge: color-mix(in srgb, var(--blaze) 35%, transparent);
@@ -60,24 +60,24 @@
      On the map their slab and light are drawn by the map (GLASS in app.js), which reads this base and the item
      and status colours (--goal, --ok, …) as #RRGGBB: keep those six-digit hex in every theme. */
   --glass-base: #ffffff;
-  --glass-tint: 24%;
-  --glass-tint-state: 26%;
+  --glass-tint: 32%;
+  --glass-tint-state: 34%;
   --glass-alpha: 1;
   /* Outside the map, items are the same glass in CSS: their side is milky, a little of their tint, shaded by
      --glass-dim; the light from above leaves --glass-spec on the face, and --glass-rim is its lit top edge. */
-  --glass-side-tint: 48%;
+  --glass-side-tint: 56%;
   --glass-dim: 0%;
   --glass-spec: rgb(255 255 255 / 0.9);
   --glass-rim: rgb(255 255 255 / 0.9);
   /* Grey items (still to do, waiting) take more of their grey, so they don't fade into the page. */
-  --glass-tint-quiet: 32%;
-  --glass-side-quiet: 60%;
+  --glass-tint-quiet: 40%;
+  --glass-side-quiet: 66%;
   /* Menus, dialogs and fields are clear glass: what is behind them shows faintly through. */
   --pane: color-mix(in srgb, var(--surface) 88%, transparent);
   --field: color-mix(in srgb, var(--surface) 62%, transparent);
 
-  --nav-bg: #1e2a2e;
-  --nav-ink: #e9eeed;
+  --nav-bg: var(--surface);
+  --nav-ink: var(--ink);
   --focus: 0 0 0 3px color-mix(in srgb, var(--goal) 35%, transparent);
   --shadow-pop: 0 18px 48px rgba(20, 32, 36, 0.22);
   /* The chosen chip: solid ink by day; by night a lit tint, so it doesn't outshine the page. */
@@ -120,6 +120,10 @@
     --vglow-gold: rgb(236 190 64 / 0.32);
     --ok: #5cc489;
     --warn: #e9bb45;
+    --fill-done: color-mix(in srgb, var(--ok) 22%, var(--surface));
+    --fill-doing: color-mix(in srgb, var(--warn) 30%, var(--surface));
+    --fill-late: color-mix(in srgb, var(--bad) 20%, var(--surface));
+    --fill-blocked: color-mix(in srgb, var(--grey) 38%, var(--surface));
     --bad: #f0565c;
     --tip: #f6cf52;
     --tip-ink: #f6cf52;
@@ -172,6 +176,10 @@
   --vglow-gold: rgb(236 190 64 / 0.32);
   --ok: #5cc489;
   --warn: #e9bb45;
+  --fill-done: color-mix(in srgb, var(--ok) 22%, var(--surface));
+  --fill-doing: color-mix(in srgb, var(--warn) 30%, var(--surface));
+  --fill-late: color-mix(in srgb, var(--bad) 20%, var(--surface));
+  --fill-blocked: color-mix(in srgb, var(--grey) 38%, var(--surface));
   --bad: #f0565c;
   --tip: #f6cf52;
   --tip-ink: #f6cf52;

@@ -269,17 +269,31 @@ export function routineLegend(routines: Routine[]) {
 }
 
 // A routine on the overview: tick today off and see this period at a glance.
+// Lists opened on the Overview, for this visit: a tick renders the page again and they stay open.
+const openLists = new Set<string>();
+export function toggleListFold(id: string) {
+  if (!openLists.delete(id)) openLists.add(id);
+  render();
+}
+export const listOpen = (id: string) => openLists.has(id);
+// A list's count on an Overview row, as the button that opens its items under the row.
+export const listFold = (id: string, done: number, total: number) =>
+  `<button type="button" class="tag li-fold" data-li-fold="${id}" aria-expanded="${listOpen(id)}" aria-label="${esc(t('list.done', { done, total }))}">${t('list.count', { done, total })}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button>`;
+
 export function routineRow(a: Routine) {
   const now = today(),
     on = checkedOn(a, now),
     p = periodProgress(a),
     streak = routineStreak(a);
-  return `<div class="row glass routine-row st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
+  const items = isListRoutine(a) && a.list.length > 0,
+    open = items && listOpen(a.id) && tickable(a, now);
+  return `<div class="row glass routine-row st-${activityState(a)}${open ? ' open' : ''}" data-open="${a.id}" data-ctx-item="${a.id}">
     <button type="button" class="check ${on ? 'done' : ''}" data-checkin="${a.id}" data-date="${now}" aria-pressed="${on}" aria-label="${esc(t('rt.doneToday', { name: a.title }))}" title="${esc(t('rt.doneToday', { name: a.title }))}">${on ? '✓' : ''}</button>
     <span class="grow">${esc(a.title)} <span class="meta">${esc(scheduleText(a))}</span></span>
-    ${isListRoutine(a) && a.list.length && !on ? `<span class="tag">${t('list.count', { done: dayItemsDone(a, now), total: a.list.length })}</span>` : ''}
+    ${items ? listFold(a.id, dayItemsDone(a, now), a.list.length) : ''}
     <span class="tag ${p.met ? 'ok' : ''}">${esc(periodText(a, p))}</span>
     ${streak.n ? `<span class="tag">${esc(streakText(streak))}</span>` : ''}
+    ${open ? `<div class="row-items">${routineItems(a as Routine & WithList, now)}</div>` : ''}
   </div>`;
 }
 
