@@ -4,9 +4,9 @@ import { ui } from '../../store/state';
 import { ctxMenu } from '../../ui/menu';
 import { modal } from '../../ui/forms/form';
 import { requestRender as render } from '../../ui/render';
-import { emptyState, esc, fitText, hideDoneToggle, itemCount, neighbourhood, statusLegend } from '../../ui/dom';
+import { emptyState, esc, fitText, hideDoneToggle, itemCount, neighbourhood } from '../../ui/dom';
 import { db, visions } from '../../core/state';
-import { t, tp } from '../../i18n/index';
+import { t } from '../../i18n/index';
 import { categorySelect, goalSelect, scopeFor } from '../filters';
 import { activityState, blockers, goalProgress, goalState, isComplete } from '../../core/progress';
 import {
@@ -20,13 +20,14 @@ import {
 } from '../../core/visions';
 import { REL_TYPES, VISION_RELS } from '../../core/model';
 import { purposeState, reachedVisions } from '../../store/visions';
-import { findEntity, kindList, relLabel, relSignature } from '../../core/relations';
+import { findEntity, relLabel } from '../../core/relations';
 import { fmtRel } from '../../core/dates';
 import { isRoutine, periodUnit } from '../../core/routines/schedule';
 import { periodProgress, routineStreak } from '../../core/routines/keeping';
 import { periodText, streakText } from '../../ui/text';
 import { fmtNum, isNum } from '../../core/util';
 import { save } from '../../store/plans';
+import { getMapFold } from '../../store/map-fold';
 import { deleteItem, undoable } from '../../ui/undo';
 import { hideVisionsToggle, unlinkVision, visionDefs, visionNode } from './visions';
 import type { Activity, Goal, Kind, RelSpec, RelType, State, Vision, VisionRel } from '../../core/model';
@@ -74,22 +75,21 @@ export function renderMap() {
     items.goal.forEach(g => ownVisions(g).forEach(id => [id, ...visionAncestors(id)].forEach(x => near!.add(x))));
   }
   items.vision = visions.list.filter(v => !near || near.has(v.id));
+  // A folded band keeps its label strip (if it has items) but none of its boxes, nor the lines to them.
+  const fold = getMapFold().kinds.filter(k => items[k].length);
+  fold.forEach(k => (items[k] = []));
   const visible = new Set([...items.vision, ...items.goal, ...items.activity, ...items.state].map(x => x.id));
-  const rels: MapLink[] = db.relations.filter(
-    r => REL_TYPES[r.type] && !ui.mapHidden.has(r.type) && visible.has(r.from) && visible.has(r.to),
+  const rels: MapLink[] = db.relations.filter(r => REL_TYPES[r.type] && visible.has(r.from) && visible.has(r.to));
+  items.goal.forEach(g =>
+    ownVisions(g).forEach(
+      id => visible.has(id) && rels.push({ id: visionRelId(g.id, id), from: g.id, to: id, type: 'serves' }),
+    ),
   );
-  if (!ui.mapHidden.has('serves'))
-    items.goal.forEach(g =>
-      ownVisions(g).forEach(
-        id => visible.has(id) && rels.push({ id: visionRelId(g.id, id), from: g.id, to: id, type: 'serves' }),
-      ),
-    );
-  if (!ui.mapHidden.has('subvision'))
-    items.vision.forEach(v =>
-      visionParents(v).forEach(
-        p => visible.has(p) && rels.push({ id: visionRelId(v.id, p), from: v.id, to: p, type: 'subvision' }),
-      ),
-    );
+  items.vision.forEach(v =>
+    visionParents(v).forEach(
+      p => visible.has(p) && rels.push({ id: visionRelId(v.id, p), from: v.id, to: p, type: 'subvision' }),
+    ),
+  );
   // What works toward a vision glows, and so do the lines between such items.
   const contrib = contributingIds(),
     ps = purposeState(),
@@ -98,8 +98,8 @@ export function renderMap() {
     (contrib.has(r.from) || (visible.has(r.from) && findVision(r.from))) &&
     (contrib.has(r.to) || !!findVision(r.to)) &&
     r.type !== 'depends';
-  const { NW, NH, PAD } = MAP;
-  const { node, layers, bands, chains, W, H } = layoutMap(items, rels);
+  const { NW, NH } = MAP;
+  const { node, layers, bands, chains, W, H } = layoutMap(items, rels, fold);
 
   // Either an item or a relationship line can be selected.
   const relSel = rels.find(r => r.id === ui.mapRel) || null;
@@ -220,10 +220,13 @@ export function renderMap() {
         `<path class="node-vglow" data-halo="${n.id}" d="${face}" transform="translate(${n.x - NW / 2},${layers[n.layer].y})"></path>`,
     )
     .join('');
+  // Each band's label is a button that folds or unfolds it. Buttons, not SVG, so they stay at the screen's left
+  // edge however far the page is scrolled; --map-s (the zoom) keeps them at their band.
   const bandLabels = bands
     .map(b => {
-      const levels = b.last - b.first + 1;
-      return `<text class="col-label ${b.kind}" x="${PAD}" y="${b.top + 22}">${esc(t(('kinds.' + b.kind) as TextKey))}${levels > 1 ? ` (${esc(tp('map.levels', levels))})` : ''}</text>`;
+      const name = t(('kinds.' + b.kind) as TextKey),
+        label = esc(t(b.folded ? 'map.unfold' : 'map.fold', { kind: name }));
+      return `<button type="button" class="col-label ${b.kind}" data-map-fold="${b.kind}" aria-expanded="${!b.folded}" title="${label}" style="top:calc(var(--map-s) * ${b.top + 5}px)"><span class="fold-mark" aria-hidden="true">${b.folded ? '▸' : '▾'}</span>${esc(name)}</button>`;
     })
     .join('');
 
@@ -231,26 +234,11 @@ export function renderMap() {
     .map(([k, d]) => arrowMarker(`arrow-${k}`, d.color))
     .join('');
 
-  const toggles =
-    Object.entries(REL_TYPES as Record<RelType, RelSpec>)
-      .map(([k, d]) => {
-        const count = db.relations.filter(r => r.type === k).length;
-        return `<button class="chip rel-toggle" data-rel-toggle="${k}" aria-pressed="${!ui.mapHidden.has(k as RelType)}" title="${esc(relSignature(k as RelType))}"><i class="${d.dash ? 'dash' : ''}" style="border-color:${mapLineColour(d.color)}"></i>${esc(relLabel(k))}<span class="count">${count}</span></button>`;
-      })
-      .join('') +
-    (visions.list.length
-      ? Object.entries(VISION_RELS)
-          .map(([k, d]) => {
-            const count =
-              k === 'serves'
-                ? db.goals.reduce((n, g) => n + ownVisions(g).length, 0)
-                : visions.list.reduce((n, v) => n + visionParents(v).length, 0);
-            return `<button class="chip rel-toggle" data-rel-toggle="${k}" aria-pressed="${!ui.mapHidden.has(k as VisionRel)}" title="${esc(`${kindList(d.from)} → ${kindList(d.to)}`)}"><i style="border-color:${mapLineColour(d.color)}"></i>${esc(relLabel(k))}<span class="count">${count}</span></button>`;
-          })
-          .join('')
-      : '');
-  const goalNodes = items.goal.length ? items.goal : Object.values(items).flat();
-  const focusX = Math.round((goalNodes.reduce((s, x) => s + node[x.id].x, 0) / goalNodes.length) * ui.mapScale);
+  const shown = Object.values(items).flat();
+  const goalNodes = items.goal.length ? items.goal : shown;
+  const focusX = goalNodes.length
+    ? Math.round((goalNodes.reduce((s, x) => s + node[x.id].x, 0) / goalNodes.length) * ui.mapScale)
+    : 0;
   let relNote = '';
   if (!rels.length)
     relNote = db.relations.length
@@ -260,19 +248,14 @@ export function renderMap() {
     `<button type="button" class="icon-btn" data-map-zoom="${dir}" aria-label="${esc(t(('map.zoom.' + dir) as TextKey))}" title="${esc(t(('map.zoom.' + dir) as TextKey))}">${label}</button>`;
 
   return `
-    <div class="toolbar">${categorySelect()}${goalSelect('map', ui.mapGoal)}${hideDoneToggle()}${visions.list.length ? hideVisionsToggle() : ''}</div>
-    <div class="map-controls">
-      <div class="chips" role="group" aria-label="${esc(t('map.toggles'))}"><span class="ctl-label">${t('map.show')}</span>${toggles}</div>
-      <div class="map-legend"><span class="ctl-label">${t('map.status')}</span>${statusLegend()}
-        <div class="zoom-ctl" role="group" aria-label="${esc(t('map.zoom'))}">${zoomBtn('out', '−')}${zoomBtn('reset', `<span class="zoom-pct">${Math.round(ui.mapScale * 100)} %</span>`)}${zoomBtn('in', '+')}</div>
-      </div>
+    <div class="toolbar map-toolbar">${categorySelect()}${goalSelect('map', ui.mapGoal)}${hideDoneToggle()}${visions.list.length ? hideVisionsToggle() : ''}
+      <div class="zoom-ctl" role="group" aria-label="${esc(t('map.zoom'))}">${zoomBtn('out', '−')}${zoomBtn('reset', `<span class="zoom-pct">${Math.round(ui.mapScale * 100)} %</span>`)}${zoomBtn('in', '+')}</div>
     </div>
-    <div class="map-wrap" data-focus-x="${focusX}"><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
-      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}${visions.list.length ? visionDefs(W, H) : ''}</defs>${bandSvg}${lineGlows ? `<g class="vglow-lines">${lineGlows}</g>` : ''}${halos ? `<g class="vglow-halos">${halos}</g>` : ''}${edges}${bandLabels}${nodes}
+    <div class="map-wrap" data-focus-x="${focusX}" style="--map-s:${ui.mapScale}"><div class="band-labels">${bandLabels}</div><svg viewBox="0 0 ${W} ${H}" width="${W * ui.mapScale}" height="${H * ui.mapScale}" role="img" aria-label="${esc(t('map.aria'))}">
+      <defs>${markers}${glassDefs(slabs)}${glowDefs(W, H)}${visions.list.length ? visionDefs(W, H) : ''}</defs>${bandSvg}${lineGlows ? `<g class="vglow-lines">${lineGlows}</g>` : ''}${halos ? `<g class="vglow-halos">${halos}</g>` : ''}${edges}${nodes}
     </svg></div>
-    ${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}
-    ${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : `<p class="meta" style="margin-top:10px">${t('map.hint')}</p>`}
     ${relNote}
+    <div class="map-bars">${ui.mapLinkFrom && visible.has(ui.mapLinkFrom) ? mapLinkBar(ui.mapLinkFrom) : ''}${relSel ? mapRelSelection(relSel) : sel ? mapSelection(sel) : ''}</div>
   `;
 }
 

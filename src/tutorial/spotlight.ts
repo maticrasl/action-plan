@@ -1,5 +1,5 @@
 /** "Show me": a ring around one control until the next click, scrolled into view. */
-import { $ } from '../ui/dom';
+import { $, scrollBox } from '../ui/dom';
 
 export const SPOT_PAD = 6;
 
@@ -8,9 +8,12 @@ export const isVisible = (el: Element | null | undefined): el is Element =>
 export const firstVisible = (sels?: string[]) =>
   (sels || []).map(s => document.querySelector(s)).find(isVisible) || null;
 
-// The map and timeline scroll on their own; a target inside them (a map box) is only partly on screen.
+// The map (with the main pane) and the timeline scroll on their own; a target inside them is only partly on screen.
 export const SCROLLER = '.map-wrap, .tl-scroll';
-export const scrollerOf = (el: Element) => el.parentElement?.closest(SCROLLER) || null;
+export const scrollerOf = (el: Element) => {
+  const wrap = el.parentElement?.closest(SCROLLER);
+  return wrap ? scrollBox(wrap) : null;
+};
 
 // Scroll so the target's top sits just under the (sticky) top bar; a target inside the map or
 // timeline is first scrolled to the middle of it.

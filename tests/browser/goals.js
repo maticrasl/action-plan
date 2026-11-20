@@ -33,9 +33,6 @@ suite(async () => {
       setView(v), assert($('.toolbar [data-category-select] + [data-goal-select]'), v + ': category beside the goal picker');
     setView('goals');
     setView('map');
-    $('[data-rel-toggle="depends"]').click();
-    assert(ui.mapHidden.has('depends'));
-    $('[data-rel-toggle="depends"]').click();
     $('[data-map-zoom="in"]').click();
     const z = ui.mapScale;
     $('[data-map-zoom="reset"]').click();

@@ -1,6 +1,6 @@
 /** Boot: loading a user's plans, visions and preferences and showing them, and switching users. */
 import { clamp } from './core/util';
-import { REL_TYPES, VISION_RELS, emptyDb, type RelType, type VisionRel } from './core/model';
+import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { saveUsers, userStorage, users } from './store/users';
 import { STORAGE_KEY, prefs } from './store/prefs';
@@ -41,11 +41,6 @@ export function bootUser() {
   load();
   renderPlanSwitch();
   if (VIEWS[prefs.get<ViewName>('view')]) ui.view = prefs.get<ViewName>('view');
-  ui.mapHidden = new Set(
-    ([] as string[])
-      .concat(prefs.get<string | string[]>('mapHidden', []))
-      .filter((k): k is RelType | VisionRel => !!(REL_TYPES[k as RelType] || VISION_RELS[k as VisionRel])),
-  );
   ui.hideDone = prefs.get<unknown>('hideDone', false) === true;
   ui.hideVisions = prefs.get<unknown>('hideVisions', false) === true;
   ui.nextAll = prefs.get<unknown>('nextAll', false) === true;

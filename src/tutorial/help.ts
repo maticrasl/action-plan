@@ -31,7 +31,6 @@ export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] =
   { sel: '[data-hide-done]', key: 'hideDone' },
   { sel: '.gr-delta', key: 'grChange' },
   { sel: '.gr-legend', key: 'grLegend', where: 'beforeend' },
-  { sel: '.map-controls .chips', key: 'mapShow', where: 'beforeend' },
   { sel: '.map-legend', key: 'status', where: 'beforeend' },
 ];
 

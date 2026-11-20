@@ -1,5 +1,5 @@
 /** Zoom and pan for the map, timeline and graphs: wheel, pinch, tap-and-drag, mouse drag, Safari gestures. */
-import { $, viewEl } from '../../ui/dom';
+import { $, scrollBox, viewEl } from '../../ui/dom';
 import { ui } from '../../store/state';
 import { clamp } from '../../core/util';
 import { prefs } from '../../store/prefs';
@@ -35,8 +35,10 @@ export function zoomMap(scale: number, cx: number, cy: number) {
   svg.setAttribute('width', String(width * s));
   svg.setAttribute('height', String(height * s));
   const after = svg.getBoundingClientRect();
-  wrap.scrollLeft += after.left + u * s - cx;
-  wrap.scrollTop += after.top + v * s - cy;
+  wrap.style.setProperty('--map-s', String(s));
+  const box = scrollBox(wrap);
+  box.scrollLeft += after.left + u * s - cx;
+  box.scrollTop += after.top + v * s - cy;
   ui.mapScale = s;
   prefs.set('mapScale', s);
   $('.zoom-pct').textContent = `${Math.round(s * 100)} %`;
@@ -132,6 +134,7 @@ let touchDown: Tap | false | null = null; // where and when the current one-fing
 // Click and drag with the mouse pans the map, the timeline and a zoomed graph (touch screens pan natively).
 let pan: {
   wrap: HTMLElement;
+  box: HTMLElement; // what scrolls
   id: number;
   x: number;
   y: number;
@@ -239,19 +242,18 @@ export function listenZoom() {
       !(e.target as Element).closest('[data-map-node],[data-tl-drag]') &&
       (e.target as Element).closest<HTMLElement>(ZOOM_SEL);
     if (!wrap) return;
-    const r = wrap.getBoundingClientRect();
-    if (
-      e.clientX - r.left - wrap.clientLeft >= wrap.clientWidth ||
-      e.clientY - r.top - wrap.clientTop >= wrap.clientHeight
-    )
+    const box = scrollBox(wrap),
+      r = box.getBoundingClientRect();
+    if (e.clientX - r.left - box.clientLeft >= box.clientWidth || e.clientY - r.top - box.clientTop >= box.clientHeight)
       return; // scrollbar
     pan = {
       wrap,
+      box,
       id: e.pointerId,
       x: e.clientX,
       y: e.clientY,
-      left: wrap.scrollLeft,
-      top: wrap.scrollTop,
+      left: box.scrollLeft,
+      top: box.scrollTop,
       moved: false,
     };
   });
@@ -267,8 +269,8 @@ export function listenZoom() {
       pan.wrap.classList.add('panning');
       getSelection()!.removeAllRanges();
     }
-    pan.wrap.scrollLeft = pan.left - dx;
-    pan.wrap.scrollTop = pan.top - dy;
+    pan.box.scrollLeft = pan.left - dx;
+    pan.box.scrollTop = pan.top - dy;
   });
   (['pointerup', 'pointercancel'] as const).forEach(type =>
     document.addEventListener(type, e => {

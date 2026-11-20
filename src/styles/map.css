@@ -1,39 +1,4 @@
 /* ---------- Map ---------- */
-.map-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.ctl-label {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--ink-2);
-  margin-right: 4px;
-}
-.rel-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--ink);
-}
-.rel-toggle i {
-  width: 16px;
-  border-top: 2.5px solid;
-  display: inline-block;
-}
-.rel-toggle i.dash {
-  border-top-style: dashed;
-}
-.rel-toggle .count {
-  font-size: 11.5px;
-  color: var(--ink-3);
-}
-.rel-toggle[aria-pressed='false'] {
-  opacity: 0.45;
-  text-decoration: line-through;
-  background: transparent;
-}
 .map-legend {
   display: flex;
   flex-wrap: wrap;
@@ -47,43 +12,69 @@
   align-items: center;
   gap: 6px;
 }
-.map-legend i.swatch {
-  width: 18px;
-  height: 13px;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
+/* The map is not a framed box: the whole main pane scrolls it, both ways, beside the sidebar. The
+   toolbar, a note and the selection bar stay on screen (sticky); --topbar-h is set in views/index.ts. */
+.main:has(> #view[data-view='map']) {
+  height: 100vh;
+  height: 100dvh;
+  overflow: auto;
+  container-type: inline-size;
+}
+.main:has(> #view[data-view='map']) > .topbar {
+  left: 0;
+}
+#view[data-view='map'] {
+  --map-pad: 36px;
+  max-width: none;
+  width: max-content;
+  min-width: 100%;
+  overflow: visible;
+  padding-left: 0;
+  padding-right: 0;
+}
+#view[data-view='map'] > :not(.map-wrap) {
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  width: 100cqw;
+  padding-left: var(--map-pad);
+  padding-right: var(--map-pad);
+}
+#view[data-view='map'] > .map-toolbar {
+  top: var(--topbar-h, 0px);
+  z-index: 4;
+  margin-bottom: 8px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+}
+#view[data-view='map'] > .map-bars {
+  bottom: 0;
+  z-index: 4;
+}
+.map-bars:empty {
+  display: none;
+}
+.map-bars > * {
   background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  margin-bottom: 10px;
 }
-.swatch.st-done {
-  background: var(--fill-done) !important;
-}
-.swatch.st-doing {
-  background: var(--fill-doing) !important;
-}
-.swatch.st-late {
-  background: var(--fill-late) !important;
-}
-.swatch.st-blocked {
-  background: var(--fill-blocked) !important;
-}
-#view[data-view='map'] .map-legend i.swatch {
-  background: color-mix(in srgb, var(--tint) var(--glass-tint), var(--glass-base)) !important;
-  border-color: transparent;
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--tint) 45%, transparent);
+@media (max-width: 720px) {
+  #view[data-view='map'] {
+    --map-pad: 16px;
+  }
+  /* Above the tab bar and the add button. */
+  #view[data-view='map'] > .map-bars {
+    bottom: calc(136px + env(safe-area-inset-bottom));
+  }
 }
 .map-wrap {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  overflow: auto;
-  max-height: calc(100vh - 200px);
-  min-height: 280px;
-  -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
 }
 .map-wrap svg {
   display: block;
-  margin: 0 auto;
+  margin: 0;
   font-family: var(--font);
 }
 .zoom-ctl {
@@ -122,24 +113,42 @@
 .band.state {
   fill: color-mix(in srgb, var(--state-soft) 55%, var(--bg));
 }
+/* A band's label folds it. A zero-size strip stuck to the left edge holds the labels, each at its band. */
+.band-labels {
+  position: sticky;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 3;
+}
 .col-label {
-  fill: var(--ink-2);
-  font-size: 13.5px;
-  font-weight: 600;
+  position: absolute;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 3px 9px 3px 7px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  color: var(--ink-2);
+  font: 600 13.5px var(--font);
   letter-spacing: 0.01em;
-  paint-order: stroke;
-  stroke: var(--bg);
-  stroke-width: 5px;
-  stroke-linejoin: round;
-  pointer-events: none;
+  cursor: pointer;
+}
+.col-label:hover {
+  background: color-mix(in srgb, var(--ink) 8%, var(--bg));
 }
 .col-label.goal {
-  fill: var(--goal);
-  stroke: color-mix(in srgb, var(--goal-soft) 55%, var(--bg));
+  color: var(--goal);
 }
 .col-label.state {
-  fill: var(--state);
-  stroke: color-mix(in srgb, var(--state-soft) 55%, var(--bg));
+  color: var(--state);
+}
+.fold-mark {
+  font-size: 15px;
+  line-height: 1;
 }
 .node {
   cursor: pointer;
