@@ -370,7 +370,8 @@ export const guideEn = [
     title: 'Current states',
     body: `<p>A current state is something you measure. Say what the value means and how you take it, so that every measurement is taken the same way. Tap its card to record a new value: one per day; a second value on the same day replaces the first. Decimals work with a dot or a comma.</p>
 <p>A state can <strong>add up</strong> instead (“Adds up: Yes”): kilometres run, money put aside. Then each entry is an amount, several a day are fine, and the card shows the total. A goal measured by such a state chooses how it counts: in total, or per day, week, month or year.</p>
-<p>Link the state to a goal (“Describes the current state of goal(s)”) and the goal’s progress follows it. A wrong value is deleted in Graphs, in the table under the state’s graph, or in the state’s form under the history.</p>`,
+<p>Link the state to a goal (“Describes the current state of goal(s)”) and the goal’s progress follows it. A wrong value is deleted in Graphs, in the table under the state’s graph, or in the state’s form under the history.</p>
+<p>Values you already keep in a spreadsheet can be brought in: in the state’s menu (right-click or long-press its card or graph) or its form, “Import from CSV…” reads a file with a date and a value on each line. “Export as CSV” takes them out again.</p>`,
     action: { do: 'add-state', label: 'Add a current state' },
     related: ['h-graphs', 'no-number'],
   },
@@ -455,7 +456,7 @@ export const guideEn = [
 <ul>
 <li><strong>Start from a template</strong> opens a ready-made plan as a new plan, with dates counted from today. Change everything to fit you.</li>
 <li><strong>Load sample plan</strong> opens a filled example to look around in.</li>
-<li><strong>Export plan</strong> saves a file: a <em>Full copy</em> with your progress, as a backup, or a <em>Template</em> without progress, to share with someone.</li>
+<li><strong>Export plan</strong> saves a file: a <em>Full copy</em> with your progress, as a backup, or a <em>Template</em> without progress, to share with someone; <em>Measurements (CSV)</em> for a spreadsheet.</li>
 <li><strong>Import plan</strong> adds a file as a new plan. It never overwrites one you have.</li>
 </ul>
 <p>The coloured dot by each plan shows green when nothing is due, yellow when something is due today, red when something is overdue.</p>`,

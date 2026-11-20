@@ -195,7 +195,12 @@ const capture = async run => {
     URL.createObjectURL = orig;
     HTMLAnchorElement.prototype.click = click;
   }
-  for (const g of got) g.json = JSON.parse(await g.blob.text());
+  for (const g of got)
+    try {
+      g.json = JSON.parse(await g.blob.text());
+    } catch {
+      // not a JSON file (a CSV)
+    }
   return got;
 };
 const fileOf = (obj, name = 'plan.json') =>

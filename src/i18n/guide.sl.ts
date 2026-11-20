@@ -370,7 +370,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Trenutna stanja',
     body: `<p>Trenutno stanje je nekaj, kar merite. Zapišite, kaj vrednost pomeni in kako jo merite, da je vsaka meritev opravljena enako. Tapnite njegovo kartico, da vpišete novo vrednost: eno na dan; druga vrednost istega dne nadomesti prvo. Decimalke delujejo s piko ali z vejico.</p>
 <p>Stanje se lahko namesto tega <strong>sešteva</strong> (»Se sešteva: Da«): pretečeni kilometri, privarčevan denar. Takrat je vsak vnos količina, več na dan jih je v redu, kartica pa kaže vsoto. Cilj, ki ga meri tako stanje, izbere, kako šteje: skupno ali na dan, teden, mesec ali leto.</p>
-<p>Stanje povežite s ciljem (»Opisuje trenutno stanje ciljev«) in napredek cilja mu sledi. Napačno vrednost izbrišete v Grafih, v tabeli pod grafom stanja, ali v obrazcu stanja pod zgodovino.</p>`,
+<p>Stanje povežite s ciljem (»Opisuje trenutno stanje ciljev«) in napredek cilja mu sledi. Napačno vrednost izbrišete v Grafih, v tabeli pod grafom stanja, ali v obrazcu stanja pod zgodovino.</p>
+<p>Vrednosti, ki jih že vodite v preglednici, lahko prenesete sem: v meniju stanja (desni klik ali pridržanje na kartici ali grafu) ali v njegovem obrazcu »Uvozi iz CSV …« prebere datoteko z datumom in vrednostjo v vsaki vrstici. »Izvozi kot CSV« jih spet prenese ven.</p>`,
     action: { do: 'add-state', label: 'Dodaj trenutno stanje' },
     related: ['h-graphs', 'no-number'],
   },
@@ -455,7 +456,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <ul>
 <li><strong>Začni s predlogo</strong> odpre pripravljen načrt kot nov načrt, z datumi od danes naprej. Spremenite vse, da vam ustreza.</li>
 <li><strong>Naloži vzorčni načrt</strong> odpre izpolnjen primer za ogled.</li>
-<li><strong>Izvozi načrt</strong> shrani datoteko: <em>polno kopijo</em> z vašim napredkom, kot varnostno kopijo, ali <em>predlogo</em> brez napredka, da jo delite z nekom.</li>
+<li><strong>Izvozi načrt</strong> shrani datoteko: <em>polno kopijo</em> z vašim napredkom, kot varnostno kopijo, ali <em>predlogo</em> brez napredka, da jo delite z nekom; <em>meritve (CSV)</em> za preglednico.</li>
 <li><strong>Uvozi načrt</strong> doda datoteko kot nov načrt. Nikoli ne prepiše načrta, ki ga že imate.</li>
 </ul>
 <p>Barvna pika ob vsakem načrtu je zelena, ko ni nič na vrsti, rumena, ko je kaj na vrsti danes, in rdeča, ko je kaj zamujeno.</p>`,

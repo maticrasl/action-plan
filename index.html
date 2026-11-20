@@ -227,6 +227,31 @@
     </form>
   </dialog>
 
+  <dialog id="csvImport" class="modal csv-import" aria-labelledby="csvTitle">
+    <form method="dialog" id="csvForm" novalidate>
+      <header class="modal-head">
+        <h2 id="csvTitle"></h2>
+        <button type="button" class="icon-btn" data-csv-close data-i18n-aria="btn.close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="modal-body">
+        <label class="btn csv-file"><span data-i18n="csv.file">Choose a file</span>
+          <input type="file" id="csvInput" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden></label>
+        <div class="field">
+          <label for="csvPaste" data-i18n="csv.paste">…or paste the rows here</label>
+          <textarea id="csvPaste" rows="3" spellcheck="false"></textarea>
+        </div>
+        <div id="csvPreview" aria-live="polite"></div>
+      </div>
+      <footer class="modal-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-csv-close data-i18n="btn.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="csvDoBtn" disabled></button>
+      </footer>
+    </form>
+  </dialog>
+
   <dialog id="planMerge" class="modal plan-share" aria-labelledby="planMergeTitle">
     <form method="dialog" novalidate>
       <header class="modal-head">
@@ -260,6 +285,8 @@
             <span><strong data-i18n="export.full">Full copy</strong><span class="hint" data-i18n="export.fullHint">Everything, including your progress. Use it as a backup.</span></span></label>
           <label class="export-kind"><input type="radio" name="exportKind" value="template">
             <span><strong data-i18n="export.template">Template</strong><span class="hint" data-i18n="export.templateHint">Goals, activities and links without progress, with dates moved to start this week. Use it to share the plan.</span></span></label>
+          <label class="export-kind"><input type="radio" name="exportKind" value="csv">
+            <span><strong data-i18n="export.csv">Measurements (CSV)</strong><span class="hint" data-i18n="export.csvHint">Every current state’s values, for a spreadsheet.</span></span></label>
         </fieldset>
       </div>
       <footer class="modal-foot">

@@ -361,3 +361,60 @@
     grid-column: 2;
   }
 }
+
+/* Import from CSV: a file or pasted rows, then what was read, the first rows, the counts and the choices. */
+.csv-import .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.csv-file {
+  align-self: flex-start;
+  cursor: pointer;
+}
+#csvPaste {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}
+#csvPreview p {
+  margin: 0 0 8px;
+}
+.csv-rows {
+  overflow-x: auto;
+}
+.csv-rows table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.csv-rows td {
+  padding: 3px 16px 3px 0;
+  white-space: nowrap;
+  border-top: 1px solid var(--line);
+}
+.csv-summary {
+  font-weight: 500;
+}
+.csv-skipped {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  color: var(--ink-3);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.csv-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+.csv-choice legend {
+  padding: 0 0 4px;
+}
+.csv-links {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}

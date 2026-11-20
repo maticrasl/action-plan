@@ -45,6 +45,7 @@ import {
 import { openStateValue } from '../../ui/state-value';
 import { hasGraph } from '../../core/series';
 import { deleteItem } from '../../ui/undo';
+import { exportStateCsv, openCsvImport } from '../../ui/csv-dialog';
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 
@@ -107,6 +108,9 @@ export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption
       '-',
       opt('value', t(isCumulative(item as State) ? 'ctx.addAmount' : 'ctx.addValue')),
       opt('add:activity:improves', t('ctx.addActivityState')),
+      '-',
+      opt('csv-import', t('csv.import')),
+      opt('csv-export', t('csv.export')),
     );
   }
   // "Show in…" opens in place onto the other views, each with its name and icon from the navigation
@@ -300,6 +304,8 @@ export function runCtxAction(act: string, id: string) {
     const at = $(`[data-ctx-item="${id}"], [data-map-node="${id}"]`);
     return openStateValue(id, at?.querySelector(':scope.gr-card > .card-head') || at || viewEl);
   }
+  if (verb === 'csv-import') return openCsvImport(id);
+  if (verb === 'csv-export') return exportStateCsv(id);
   if (verb === 'highlight') {
     ui.mapSelected = id;
     return render();

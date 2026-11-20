@@ -33,7 +33,8 @@ export function stateForm(s: New<State>) {
     </div>
     ${linkSection(checklist('goals', t('f.describesGoals'), 'goal', db.goals, linked, t('f.describesHint')), !!s.id)}
     ${history.length > 1 ? `<div class="field" id="historyList"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtRel(h.date, true)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}
-    ${isCumulative(s as State) && entriesOf(s as State).length ? entryList(s as State) : ''}`;
+    ${isCumulative(s as State) && entriesOf(s as State).length ? entryList(s as State) : ''}
+    ${s.id ? `<div class="field csv-links"><button type="button" class="btn small ghost" data-csv-import="${esc(s.id)}">${esc(t('csv.import'))}</button><button type="button" class="btn small ghost" data-csv-export="${esc(s.id)}">${esc(t('csv.export'))}</button></div>` : ''}`;
 }
 
 // A cumulative state's entries, newest day first; × marks one to delete when the form is saved.
