@@ -158,19 +158,28 @@ export function renderSync() {
     html = `<label class="set-row user-name"><span>${t('user.name')}</span><input type="text" data-user-name maxlength="${NAME_MAX}" autocomplete="nickname" value="${esc(user.name)}" placeholder="${esc(userName(user))}"></label>
       ${user.account!.email ? `<p class="hint">${t('user.signedInAs', { email: esc(user.account!.email) })}</p>` : ''}
       <p class="sync-status" data-status="${syncState.status}"><i aria-hidden="true"></i><span>${esc(syncStatusText())}</span></p>
-      <div class="set-actions">${action('now', t('sync.now'))}${action('connect', t('user.add'))}${action('logout', t('user.logOut'), 'ghost')}${action('remove', t('user.removeMe'), 'ghost', user.id)}</div>
+      <div class="set-actions">${syncState.status === 'update' ? action('reload', t('sync.reload'), 'primary') : action('now', t('sync.now'))}${action('connect', t('user.add'))}${action('logout', t('user.logOut'), 'ghost')}${action('remove', t('user.removeMe'), 'ghost', user.id)}</div>
       <p class="hint">${t('sync.clockHint')}</p>${list}`;
   }
   body.innerHTML = html;
 }
 
+// The sync file is from a newer version: fetch it (the service worker checks first), then reload.
+function reloadToUpdate() {
+  const sw = navigator.serviceWorker?.getRegistration().then(r => r?.update());
+  Promise.resolve(sw)
+    .catch(() => {})
+    .finally(() => location.reload());
+}
+
 export function initSync() {
-  $('#syncBtn').addEventListener('click', () => syncNow(true));
+  $('#syncBtn').addEventListener('click', () => (syncState.status === 'update' ? reloadToUpdate() : syncNow(true)));
   $('#syncSection').addEventListener('click', e => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-sync]');
     const act = el?.dataset.sync;
     if (act === 'connect') logIn();
     if (act === 'now') syncNow(true);
+    if (act === 'reload') reloadToUpdate();
     if (act === 'logout') logOut();
     if (act === 'remove') removeUser(el!.dataset.user!);
     if (act === 'switch') {

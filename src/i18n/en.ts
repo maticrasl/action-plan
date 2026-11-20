@@ -255,6 +255,8 @@ export const en = {
     'sync.status.error': 'Sync failed – click to try again',
     'sync.status.account': 'That was a different Google account – click and choose {email}',
     'sync.status.accountTaken': 'That Google account belongs to another user here – click and choose your own',
+    'sync.status.update': 'Your synced plans were saved by a newer version of Action Plan. Reload to update.',
+    'sync.reload': 'Reload',
     'user.unnamed': 'Signed-in user',
     'user.name': 'Your name',
     'user.askName': 'Which name should this device show for you?',

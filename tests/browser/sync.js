@@ -139,6 +139,21 @@ suite(async () => {
     await syncNow(true);
     eq(removed, ['dup1'], 'duplicates removed');
 
+    // A file written by a newer version: nothing is merged or written, the status asks to reload.
+    const newer = JSON.stringify({ ...file, version: SYNC_VERSION + 1, data: {}, plans: { list: [], deleted: {} } });
+    drive.read = async () => ({ id: 'f', content: parseStore(newer), extra: [] });
+    const plansNow = JSON.stringify(plans.list),
+      writesNow = writes;
+    await syncNow(true);
+    assert(writes === writesNow && syncState.status === 'update', 'newer file: no write, status update');
+    assert(JSON.stringify(plans.list) === plansNow, 'newer file: local plans untouched');
+    renderSync();
+    assert(
+      $('#syncSection [data-sync="reload"]') && !$('#syncSection [data-sync="now"]'),
+      'Reload in place of Sync now',
+    );
+    assert($('#syncBtn').title === t('sync.status.update'), 'button says why');
+
     currentUser().account = null;
     renderSync();
     assert($('#syncBtn').hidden, 'signed out: no cloud button');

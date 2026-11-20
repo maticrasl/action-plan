@@ -272,6 +272,8 @@ export const sl: Language = {
     'sync.status.error': 'Sinhronizacija ni uspela – kliknite za ponovni poskus',
     'sync.status.account': 'To je bil drug Googlov račun – kliknite in izberite {email}',
     'sync.status.accountTaken': 'Ta Googlov račun ima tu drug uporabnik – kliknite in izberite svojega',
+    'sync.status.update': 'Vaše sinhronizirane načrte je shranila novejša različica Action Plana. Za posodobitev znova naložite stran.',
+    'sync.reload': 'Znova naloži',
     'user.unnamed': 'Prijavljen uporabnik',
     'user.name': 'Vaše ime',
     'user.askName': 'Katero ime naj ta naprava prikazuje za vas?',
