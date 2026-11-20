@@ -67,8 +67,14 @@ export function render() {
   viewEl
     .querySelectorAll('[data-gr] .gr-plot')
     .forEach(p => (grScroll[graphOf(p)] = { left: p.scrollLeft, w: p.scrollWidth }));
+  // Cards are measured before their masonry spans, when the page is briefly short and the browser
+  // moves it to the top; read the scroll before the new HTML and put it back once they are tall again.
+  const pageY = scrollY;
   viewEl.innerHTML = v.render();
-  if (ui.view === 'activities') flowCards();
+  if (ui.view === 'activities') {
+    flowCards();
+    scrollTo(scrollX, pageY);
+  }
   // Long charts start at their latest bars.
   viewEl.querySelectorAll('.gr-plot.scroll').forEach(p => {
     const was = grScroll[graphOf(p)];

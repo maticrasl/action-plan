@@ -636,6 +636,37 @@ suite(async () => {
     );
     deletePlan(plans.current);
   });
+  await step('lists: ticking or hiding items keeps the page where it is', () => {
+    fresh('Keep scroll');
+    for (let k = 0; k < 30; k++) mk('activity', { title: 'Filler ' + k, status: 'todo', startDate: d(-1) });
+    const a = mk('activity', {
+      title: 'Pack',
+      status: 'doing',
+      startDate: d(-1),
+      list: [
+        { id: 'a', text: 'A', done: true },
+        { id: 'b', text: 'B', done: false },
+        { id: 'c', text: 'C', done: false },
+      ],
+    });
+    // Cards after it too, so a shorter card never brings the page's end into view.
+    for (let k = 0; k < 30; k++) mk('activity', { title: 'After ' + k, status: 'todo', startDate: d(-1) });
+    save();
+    setView('activities');
+    render();
+    const card = () => $(`.card [data-li-tick="${a.id}"]`).closest('.card');
+    scrollTo(0, scrollY + card().getBoundingClientRect().top - 40);
+    const y = scrollY;
+    assert(y > 200, 'scrolled well down the page');
+    clickEl($(`.card [data-li-tick="${a.id}"][data-li="b"]`));
+    eq(scrollY, y, 'ticking an item keeps the scroll');
+    clickEl($(`.card [data-li-show-done="${a.id}"]`));
+    eq(scrollY, y, 'showing ticked items keeps the scroll');
+    clickEl($('[data-hide-done]'));
+    clickEl($('[data-hide-done]'));
+    eq(scrollY, y, 'hiding done activities and back keeps the scroll');
+    deletePlan(plans.current);
+  });
   await step('lists: an activity or routine turns into a list in its form', () => {
     fresh('To list');
     const a = mk('activity', { title: 'Shop', status: 'doing', startDate: d(-1), dueDate: d(2) });

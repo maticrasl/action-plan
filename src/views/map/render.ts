@@ -267,9 +267,11 @@ export function mapLinkBar(id: string) {
 
 export function mapSelection(id: string) {
   const { kind, item } = findEntity(id)!;
+  // A goal's card shows its Specific text where other items show their description.
+  const desc = 'description' in item ? item.description : (item as Goal).specific;
   return `<div class="row" style="margin-top:12px;cursor:default">
     <span class="tag ${kind}">${t(('kind.' + kind) as TextKey)}</span>
-    <span class="grow"><strong>${esc(item.title)}</strong></span>
+    <span class="grow"><strong>${esc(item.title)}</strong>${desc ? `<span class="meta sel-desc">${esc(desc)}</span>` : ''}</span>
     <button class="btn small" data-open="${id}">${t('btn.edit')}</button>
     <button class="btn small ghost" data-map-clear>${t('btn.deselect')}</button>
   </div>`;

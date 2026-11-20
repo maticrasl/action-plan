@@ -47,7 +47,9 @@ suite(async () => {
   const bar = id => $(`[data-tl-node="${id}"]`);
   await step('timeline: double-click or Enter on the selected bar edits it; Esc deselects', () => {
     const { g, a } = tlFixture();
+    a.description = 'Three runs a week';
     clickEl(bar(a.id), 1);
+    eq($('#view .sel-desc')?.textContent, 'Three runs a week', 'the selection shows its description');
     clickEl(bar(a.id), 2);
     assert(modal.open && formCtx.kind === 'activity' && formCtx.id === a.id, 'double-click opens the activity');
     eq(ui.mapSelected, a.id, 'left selected');
