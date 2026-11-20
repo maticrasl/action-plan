@@ -260,6 +260,19 @@ suite(async () => {
     eq(ui.mapRel, null, 'clicking empty space clears it');
     return 'ok';
   });
+  await step('map: the selection bar shows the item description, when it has one', () => {
+    const { g, a, b } = mapFixture();
+    g.specific = 'Finish under <4h>';
+    a.description = 'Three runs a week';
+    save();
+    clickEl(nodeEl(g.id));
+    eq($('.map-bars .sel-desc')?.textContent, 'Finish under <4h>', "a goal's Specific text, as plain text");
+    clickEl(nodeEl(a.id));
+    eq($('.map-bars .sel-desc')?.textContent, 'Three runs a week', "an activity's description");
+    clickEl(nodeEl(b.id));
+    assert(!$('.map-bars .sel-desc'), 'none without a description');
+    deletePlan(plans.current);
+  });
   await step('map: Delete or Backspace removes the selected line at once', () => {
     const { g, a, b, s } = mapFixture();
     const n0 = db.relations.length,
@@ -493,8 +506,7 @@ suite(async () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
       const words = { en: [/Delete/, /double-click/i, /Enter/], sl: [/Delete/, /dvojnim klik/i, /Enter/] }[code];
-      for (const key of ['help.view.map'])
-        words.forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
+      for (const key of ['help.view.map']) words.forEach(w => assert(w.test(t(key)), `${code} ${key} mentions ${w}`));
       assert(t('map.relLabel', { rel: 'x' }).includes('x'), `${code} line label`);
     }
     changeLanguage('en');
