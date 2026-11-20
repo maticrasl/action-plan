@@ -282,6 +282,20 @@ suite(async () => {
     ctxMenu.style.maxHeight = '';
     $('.map-wrap').dispatchEvent(new Event('scroll'));
     assert(ctxMenu.hidden, 'a scroll later closes it');
+    // A scroll still running when the menu opens (a swipe gliding on) leaves it open however long it
+    // runs; a new scroll after it stopped closes it.
+    const scrollFor = async ms => {
+      for (const end = performance.now() + ms; performance.now() < end; await new Promise(r => setTimeout(r, 50)))
+        $('.map-wrap').dispatchEvent(new Event('scroll'));
+    };
+    await scrollFor(150);
+    node(g2.id).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    assert(!ctxMenu.hidden, 'the menu opens mid-scroll');
+    await scrollFor(700);
+    assert(!ctxMenu.hidden, 'a scroll running on from before leaves the menu open');
+    await new Promise(r => setTimeout(r, 300));
+    $('.map-wrap').dispatchEvent(new Event('scroll'));
+    assert(ctxMenu.hidden, 'a new scroll after it stopped closes it');
     // A short tap still selects as before.
     ui.mapSelected = null;
     render();

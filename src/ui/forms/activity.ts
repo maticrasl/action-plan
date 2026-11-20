@@ -109,7 +109,7 @@ export function placeListRow(row: HTMLElement) {
   if (later) later.before(row);
   else if (done || !firstDone) rows.append(row);
   else firstDone.before(row);
-  row.querySelector<HTMLElement>('.li-check')!.focus();
+  row.querySelector<HTMLElement>('.li-check')!.focus({ preventScroll: true }); // the form stays where it was
 }
 
 // The first step of a new activity: one done once, a list to tick off, a routine, or a list ticked off each time.
