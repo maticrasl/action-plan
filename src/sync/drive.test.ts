@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { mergeStores } from '../core/merge';
 import { emptyDb } from '../core/model';
 import { SYNC_FORMAT, SYNC_VERSION, SyncError, parseStore, toFile } from './drive';
 
@@ -52,4 +53,19 @@ test('a sync file from a newer version is refused with update; this version writ
   expect(parseStore(file(1)).plans.list).toEqual([]);
   expect(toFile(parseStore(file(1))).version).toBe(SYNC_VERSION);
   expect(SYNC_VERSION).toBe(2);
+});
+
+test('trash: read from the file when present, merged, left out when there is none', () => {
+  const base = { format: SYNC_FORMAT, plans: { list: [] } };
+  expect(parseStore(JSON.stringify(base)).trash).toBeUndefined();
+  const at = new Date().toISOString();
+  const e = { id: 'e1', kind: 'plan', title: 'P', plan: 'p', planName: 'P', deletedAt: at, payload: { data: {} } };
+  const st = parseStore(JSON.stringify({ ...base, trash: { items: [e, { bad: 1 }], gone: { e0: at } } }));
+  expect(st.trash).toEqual({ items: [e], gone: { e0: at } });
+  expect(toFile(st)).toHaveProperty('trash.items.0.id', 'e1');
+  expect(toFile({ ...st, trash: undefined })).not.toHaveProperty('trash');
+  const other = parseStore(JSON.stringify({ ...base, trash: { items: [], gone: { e1: at } } }));
+  expect(mergeStores(st, other).trash).toEqual({ items: [], gone: { e0: at, e1: at } });
+  expect(mergeStores(st, parseStore(JSON.stringify(base))).trash!.items).toHaveLength(1);
+  expect(mergeStores(parseStore(JSON.stringify(base)), parseStore(JSON.stringify(base)))).not.toHaveProperty('trash');
 });

@@ -161,7 +161,13 @@ planImp.addEventListener('click', e => {
    Loaded after drive.js and before app.js; uses their helpers only when called.
    ========================================================= */
 
-export const backupFile = () => ({ ...toFile(localStore()), kind: 'backup', exportedAt: new Date().toISOString() });
+// Without Recently deleted, so it stays version 1 and older versions can still restore it.
+export const backupFile = () => ({
+  ...toFile({ ...localStore(), trash: undefined }),
+  version: 1,
+  kind: 'backup',
+  exportedAt: new Date().toISOString(),
+});
 
 export function backupAll() {
   const blob = new Blob([JSON.stringify(backupFile(), null, 2)], { type: 'application/json' });

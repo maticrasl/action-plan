@@ -3,6 +3,7 @@ import {
   PLANS_KEY,
   createPlan,
   deletePlan,
+  editPlan,
   mergePlanInto,
   nameTaken,
   openPlan,
@@ -10,6 +11,7 @@ import {
   readPlan,
   save,
   uniqueName,
+  withPlan,
 } from './plans';
 import { currentPlan, plans, setPlans } from './state';
 import { db } from '../core/state';
@@ -229,5 +231,61 @@ describe('merging one plan into another', () => {
     mergePlanInto(E.id, T.id, true);
     expect(titles(db)).toEqual(titles(before));
     expect(plans.list.some(p => p.id === E.id)).toBe(false);
+  });
+});
+
+describe('working on a plan that is not open', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', memoryStorage());
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-18T10:00:00Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  test('withPlan shows the core another plan and puts the open one back, also when it throws', () => {
+    createPlan('Open');
+    const open = db,
+      other = emptyDb();
+    other.goals.push({ id: 'x', title: 'X', status: 'active' });
+    expect(withPlan(other, () => db.goals.length)).toBe(1);
+    expect(db).toBe(open);
+    expect(() =>
+      withPlan(other, () => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    expect(db).toBe(open);
+  });
+
+  test('editPlan changes and stamps another plan without disturbing the open one', () => {
+    createPlan('Other');
+    const otherId = plans.current!;
+    db.goals.push({ id: 'o1', title: 'Old', status: 'active' });
+    save();
+    createPlan('Open');
+    db.goals.push({ id: 'g1', title: 'Mine', status: 'active' });
+    save();
+    vi.setSystemTime(new Date('2026-11-18T11:00:00Z'));
+    expect(
+      editPlan(otherId, d => {
+        d.goals.push({ id: 'o2', title: 'New', status: 'active' });
+        d.goals.splice(0, 1);
+      }),
+    ).toBe(true);
+    const stored = readPlan(otherId);
+    expect(stored.goals.map(g => [g.id, g.updatedAt])).toEqual([['o2', '2026-11-18T11:00:00.000Z']]);
+    expect(stored.deleted).toHaveProperty('o1');
+    // The open plan's change tracking is intact: an edit there is still seen, nothing else is.
+    db.goals[0].title = 'Mine, changed';
+    save();
+    expect(db.goals[0].updatedAt).toBe('2026-11-18T11:00:00.000Z');
+    expect(db.deleted).toEqual({});
+    expect(editPlan('nope', () => {})).toBe(false);
+    let seen = '';
+    editPlan(plans.current!, d => (seen = d.goals[0].id));
+    expect(seen).toBe('g1');
   });
 });
