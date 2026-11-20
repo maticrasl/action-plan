@@ -21,32 +21,102 @@ suite(async () => {
     assert(db.goals.length === 12 && db.activities.length === 25 && db.states.length === 7);
     return `${db.relations.length} relations`;
   });
-  await step('plans: new, rename, switch, delete', () => {
+  await step('plans: new and rename ask a name and an emoji; switch, delete', async () => {
     const n0 = plans.list.length;
-    $('[data-plan="new"]').click();
-    assert(plans.list.length === n0 + 1 && currentPlan().name === 'Prompted plan');
-    window.prompt = () => 'Renamed plan';
-    $('[data-plan="rename"]').click();
-    assert(currentPlan().name === 'Renamed plan');
-    // Names are unique: a taken one is asked again, with the reason.
-    const asked = [];
-    const answers = ['renamed plan ', 'Other name'];
-    window.prompt = msg => {
-      asked.push(msg);
-      return answers.shift();
+    const dlg = $('#planNameDlg'),
+      saveBtn = $('#planNameSave');
+    const typeName = v => {
+      $('#planNameInput').value = v;
+      $('#planNameInput').dispatchEvent(new Event('input', { bubbles: true }));
     };
+    const pickEmoji = e => $(`#planEmojis [data-emoji="${e}"]`).click();
+    const picks = () => [...document.querySelectorAll('#planEmojis [data-emoji]')];
+    const old = plans.list.find(p => !p.demo);
+    assert(!('emoji' in old), 'a plan from before has no emoji');
+    eq($(`.nav [data-plan-open="${old.id}"] .plan-emoji`).textContent, '🙁', 'and shows the sad face');
+    eq(dlg.getClientRects().length, 0, 'the dialog takes no room while closed');
     $('[data-plan="new"]').click();
-    assert(plans.list.length === n0 + 2 && currentPlan().name === 'Other name', 'taken name rejected');
-    assert(asked[1].startsWith(t('plan.nameTaken', { name: 'renamed plan' })), 'says why: ' + asked[1]);
-    window.prompt = (() => {
-      const a = ['Renamed plan', null];
-      return () => a.shift();
-    })();
+    assert(dlg.open && saveBtn.disabled, 'new: the dialog opens, Save off without an emoji');
+    eq($('#planNameTitle').textContent, t('plan.newPrompt'), 'titled');
+    eq(picks().length, 40, 'common emojis first');
+    typeName('Fit plan');
+    assert(saveBtn.disabled, 'still off: no emoji');
+    pickEmoji('🏃');
+    assert(!saveBtn.disabled && $('#planEmojis [aria-checked="true"]').dataset.emoji === '🏃', 'picked');
+    typeName('  ');
+    assert(saveBtn.disabled, 'off again without a name');
+    typeName('Fit plan');
+    saveBtn.click();
+    assert(!dlg.open && plans.list.length === n0 + 1, 'saved');
+    eq([currentPlan().name, currentPlan().emoji], ['Fit plan', '🏃'], 'with its emoji');
+    eq($(`.nav [data-plan-open="${plans.current}"] .plan-emoji`).textContent, '🏃', 'shown in the list');
+    assert($('#planName').selectedOptions[0].textContent.startsWith('🏃 '), 'and in the phone menu');
+    // Rename: the emoji is kept unless changed; any emoji from the full list can be chosen.
     $('[data-plan="rename"]').click();
-    assert(currentPlan().name === 'Other name', 'rename to a taken name refused (then cancelled)');
-    window.prompt = () => 'OTHER NAME';
+    assert(!saveBtn.disabled && $('#planEmojis [aria-checked="true"]').dataset.emoji === '🏃', 'rename keeps it');
+    const until = async ok => {
+      for (let i = 0; i < 150 && !ok(); i++) await new Promise(r => setTimeout(r, 20));
+      return ok();
+    };
+    const find = q => {
+      $('#planEmojiSearch').value = q;
+      $('#planEmojiSearch').dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    $('#planEmojiMore').click();
+    assert(await until(() => picks().length > 1500), 'all emojis load');
+    const groups = [...document.querySelectorAll('#planEmojis .emoji-group')];
+    assert($('#planEmojiMore').hidden && groups.length === 8, 'by group: ' + groups.length);
+    eq(groups[0].textContent, t('emoji.group.smileys'), 'groups are named');
+    // Search by name or keyword, every word counted.
+    find('red heart');
+    assert(await until(() => picks().length && picks().length < 20), 'search narrows the list');
+    assert(
+      picks().some(b => b.dataset.emoji === '❤️'),
+      'finds ❤️',
+    );
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    $('#planEmojiSearch').dispatchEvent(enter);
+    assert(enter.defaultPrevented && dlg.open, 'Enter in the search does not save');
+    find('qqzzxx');
+    assert(await until(() => !picks().length), 'no match: empty');
+    eq($('#planEmojiNone').textContent, t('plan.emojiNone', { q: 'qqzzxx' }), 'and says so');
+    find('');
+    assert(await until(() => picks().length > 1500 && !$('#planEmojiNone').textContent), 'cleared: all again');
+    find('owl');
+    assert(await until(() => picks().some(b => b.dataset.emoji === '🦉')), 'owl found');
+    pickEmoji('🦉');
+    typeName('Renamed plan');
+    saveBtn.click();
+    eq([currentPlan().name, currentPlan().emoji], ['Renamed plan', '🦉'], 'renamed, new emoji');
+    assert(currentPlan().updatedAt, 'stamped for sync');
     $('[data-plan="rename"]').click();
-    assert(currentPlan().name === 'OTHER NAME', 'a plan keeps its own name (case change allowed)');
+    eq(picks()[0].dataset.emoji, '🦉', 'a rare emoji stays in view');
+    $('[data-plan-name-close]').click();
+    assert(!dlg.open && currentPlan().name === 'Renamed plan', 'cancel changes nothing');
+    // Names are unique: a taken one is refused with the reason, and the dialog stays.
+    $('[data-plan="new"]').click();
+    typeName('renamed plan ');
+    pickEmoji('🎯');
+    saveBtn.click();
+    assert(dlg.open && plans.list.length === n0 + 1, 'taken name refused');
+    eq($('#planNameErr').textContent, t('plan.nameTaken', { name: 'renamed plan' }), 'says why');
+    typeName('Other name');
+    assert(!$('#planNameErr').textContent, 'the reason clears on typing');
+    saveBtn.click();
+    assert(plans.list.length === n0 + 2 && currentPlan().name === 'Other name', 'then saved');
+    $('[data-plan="rename"]').click();
+    typeName('OTHER NAME');
+    saveBtn.click();
+    eq(currentPlan().name, 'OTHER NAME', 'a plan keeps its own name (case change allowed)');
+    // A collapsed sidebar keeps the plans, as dot and emoji.
+    $('.nav-toggle').click();
+    const row = $(`.nav [data-plan-open="${plans.current}"]`);
+    const seen = el => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+    assert(seen(row) && seen(row.querySelector('.plan-emoji')), 'collapsed: plans still shown');
+    assert(row.querySelector('.plan-row-name').getBoundingClientRect().width <= 1, 'without their names');
+    assert(!seen($('.nav .plan-actions')), 'and without the actions');
+    eq(row.title, 'OTHER NAME', 'the name is its tooltip');
+    $('.nav-toggle').click();
     deletePlan(plans.current);
     window.prompt = () => 'Prompted plan';
     clickEl($(`.nav [data-plan-open="${plans.list[0].id}"]`));
@@ -237,10 +307,7 @@ suite(async () => {
       pick.options.length === plans.list.length && pick.value === plans.current,
       'lists every plan, current selected',
     );
-    assert(
-      pick.selectedOptions[0].textContent === 'Second plan',
-      'shows the current plan name, no emoji',
-    );
+    assert(pick.selectedOptions[0].textContent === '🙁 Second plan', 'shows the current plan, emoji first');
     pick.value = first;
     pick.dispatchEvent(new Event('change', { bubbles: true }));
     assert(plans.current === first && $('#planName').value === first, 'switches the plan');
@@ -392,7 +459,8 @@ suite(async () => {
     createPlan('Badges 2');
     const dot = () => $(`.nav [data-plan-open="${busy}"] .plan-dot`);
     const other = () =>
-      (!dot().hidden ? DOT[dot().dataset.health] + ' ' : '') + $(`.nav [data-plan-open="${busy}"]`).textContent;
+      (!dot().hidden ? DOT[dot().dataset.health] + ' ' : '') +
+      $(`.nav [data-plan-open="${busy}"] .plan-row-name`).textContent;
     eq(other(), '🟢 Badges', 'other plan, read from storage');
     assert(dot().title === t('plan.health.ok'), 'with a tooltip');
     // On by default; the setting hides them and is remembered.
@@ -413,7 +481,8 @@ suite(async () => {
   await step('plan list: most recently opened first; more than three fold', () => {
     const keep = plans.current;
     const ids = ['P1', 'P2', 'P3', 'P4'].map(n => (createPlan(n), plans.current));
-    const rows = () => [...document.querySelectorAll('.nav .plan-row')].map(b => b.textContent);
+    const rows = () =>
+      [...document.querySelectorAll('.nav .plan-row')].map(b => b.querySelector('.plan-row-name').textContent);
     renderPlanSwitch();
     eq(rows().slice(0, 3), ['P4', 'P3', 'P2'], 'the last opened on top');
     eq(rows().length, 3, 'three shown');
@@ -424,7 +493,7 @@ suite(async () => {
     assert($('.nav [data-plan-more]').getAttribute('aria-expanded') === 'true', 'the toggle says expanded');
     clickEl($(`.nav [data-plan-open="${ids[0]}"]`));
     eq(rows()[0], 'P1', 'opening one moves it to the top');
-    eq($('.nav .plan-row[aria-current="true"]').textContent, 'P1', 'the open plan is marked');
+    eq($('.nav .plan-row[aria-current="true"] .plan-row-name').textContent, 'P1', 'the open plan is marked');
     assert(!$('.nav .plan-switch').textContent.includes(t('plan.label')), 'no Action plan label in the sidebar');
     clickEl($('.nav [data-plan-more]'));
     ids.forEach(deletePlan);

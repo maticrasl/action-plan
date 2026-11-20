@@ -163,12 +163,12 @@ suite(async () => {
     );
     removeEntity('activity', check.id);
 
-    // Board: routines above the columns, ticking days on the week strip.
+    // Routines above the one-time activities, ticking days on the week strip.
     setView('activities');
     assert($('.routines') && $('.routines').querySelectorAll('.card.routine').length === 2, 'routines strip');
     assert(
-      !$('.board').querySelector(`[data-open="${run.id}"]`) && $('.board').querySelector(`[data-open="${oneOff.id}"]`),
-      'columns hold one-offs only',
+      !$('.acts').querySelector(`[data-open="${run.id}"]`) && $('.acts').querySelector(`[data-open="${oneOff.id}"]`),
+      'activities section holds one-offs only',
     );
     const day = d => $(`.card.routine[data-open="${run.id}"] [data-checkin][data-date="${d}"]`);
     assert(day(now) && !day(now).disabled, 'today can be ticked');

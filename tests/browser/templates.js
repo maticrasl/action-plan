@@ -315,7 +315,7 @@ suite(async () => {
         !tplDialog.open && plans.list.length === before + 1 && plans.current !== from,
         'a new plan, the empty one kept',
       );
-      eq(currentPlan().name, 'Run 5 km', 'named after the template');
+      eq([currentPlan().name, currentPlan().emoji], ['Run 5 km', '🏃'], 'named after the template, with its emoji');
       eq(db.activities.length, 8, 'activities');
       assert($('#toast').textContent.includes('Run 5 km'), 'toast');
       const made = plans.current;

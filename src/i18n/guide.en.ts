@@ -244,7 +244,7 @@ export const guideEn = [
 <li><strong>Too much is active.</strong> Pause goals until what remains looks doable in a normal week.</li>
 <li><strong>The dates are wishes.</strong> Late marks pile up when every date was the best case. Move them, and add spare time when you set new ones.</li>
 <li><strong>The goals are someone else’s.</strong> A goal you set because you ought to weighs more than one you want. Read the “Why does it matter?” answer on each goal. If it does not sound like you, see [[let-go]].</li>
-<li><strong>You only see what is missing.</strong> Before looking at what is next, look at what is done: the Done column, the ticked days, the graph since the first measurement.</li>
+<li><strong>You only see what is missing.</strong> Before looking at what is next, look at what is done: the activities marked done, the ticked days, the graph since the first measurement.</li>
 </ul>
 <p>Being hard on yourself does not make you work better. People who meet a slip with some kindness get back to it sooner than those who meet it with blame.</p>
 <p>Some things need more than a plan. If you feel low or anxious most days, or if tracking food, weight or exercise starts to rule your day, please talk to a doctor or a therapist, and set the tracking aside for now.</p>`,
@@ -383,7 +383,7 @@ export const guideEn = [
 <li><strong>List</strong> – a checklist; done when every item is ticked.</li>
 <li><strong>Routine</strong> and <strong>Routine list</strong> – repeat; see [[h-routines]].</li>
 </ul>
-<p>One-time activities and lists sit on the board: To do, In progress, Done. Drag a card, or tap its circle to move it along. On its start date an activity moves to In progress by itself.</p>
+<p>One-time activities and lists sit below the routines: in progress first, then to do, then done, each by due date. Tap a card’s circle to move it along: To do, In progress, Done. On its start date an activity moves to In progress by itself.</p>
 <p>Link an activity to the goals it <strong>contributes to</strong> and the states it <strong>improves</strong>. It can be <strong>part of</strong> a larger activity (a sub-activity), and it can <strong>depend on</strong> another activity that must be done first; until then it shows as waiting. “Hide done and achieved” clears finished cards from view.</p>`,
     action: { do: 'add-activity', label: 'Add an activity' },
     related: ['first-steps'],
@@ -447,7 +447,7 @@ export const guideEn = [
     id: 'h-plans',
     group: 'how',
     title: 'Plans, templates and files',
-    body: `<p>A plan is one set of goals, states and activities. The sidebar lists your plans, the one you opened last on top; tap one to open it. Its dot is green when nothing is due, yellow when something is due today and red when something is overdue. On a phone, tap the plan’s name above the title. Settings has the rest: new plan, rename, delete, and <strong>merge</strong> one plan into another.</p>
+    body: `<p>A plan is one set of goals, states and activities. The sidebar lists your plans, the one you opened last on top; tap one to open it. Its dot is green when nothing is due, yellow when something is due today and red when something is overdue. Each plan has an emoji before its name: you choose it when you make or rename the plan, from the common ones, all of them by group, or by searching a word such as “run” or “book” (a plan from before shows 🙁 until you do). With the sidebar collapsed, the list keeps each plan’s dot and emoji. On a phone, tap the plan’s name above the title. Settings has the rest: new plan, rename, delete, and <strong>merge</strong> one plan into another.</p>
 <ul>
 <li><strong>Start from a template</strong> opens a ready-made plan as a new plan, with dates counted from today. Change everything to fit you.</li>
 <li><strong>Load sample plan</strong> opens a filled example to look around in.</li>

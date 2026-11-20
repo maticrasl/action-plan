@@ -10,6 +10,7 @@ export const MONEY: Template[] = [
     area: 'money',
     level: 'starter',
     name: ['Starter emergency fund', 'Začetni rezervni sklad'],
+    emoji: '💰',
     about: [
       '€1,000 put aside in four months for surprises such as a car repair or a broken appliance, without touching the main account.',
       '1000 € v štirih mesecih za nepredvidene stroške, kot sta popravilo avta ali pokvarjen aparat, brez poseganja v glavni račun.',
@@ -117,6 +118,7 @@ export const MONEY: Template[] = [
     area: 'money',
     level: 'starter',
     name: ['Spending under control', 'Poraba pod nadzorom'],
+    emoji: '🧾',
     about: [
       'Two months to see where the money goes, set a simple budget and cut €200 a month without feeling deprived.',
       'Dva meseca, da vidite, kam gre denar, postavite preprost proračun in mesečno porabo znižate za 200 €, ne da bi se česa odrekali.',
@@ -227,6 +229,7 @@ export const MONEY: Template[] = [
     area: 'money',
     level: 'starter',
     name: ['Save for a holiday', 'Prihraniti za počitnice'],
+    emoji: '🌴',
     about: [
       '€1,500 in six months for a holiday paid in cash, not on a card.',
       '1500 € v šestih mesecih za počitnice, plačane z gotovino in ne s kartico.',
@@ -320,6 +323,7 @@ export const MONEY: Template[] = [
     area: 'money',
     level: 'ambitious',
     name: ['Financial foundation', 'Trdni finančni temelji'],
+    emoji: '🏦',
     about: [
       'Three years from living paycheck to paycheck to €30,000 net worth: a buffer, no consumer debt, six months of reserves, then investing.',
       'Tri leta od životarjenja od plače do plače do 30.000 € neto premoženja: rezerva, brez potrošniških dolgov, šest mesecev prihrankov, nato vlaganje.',

@@ -295,6 +295,10 @@
   color: var(--surface);
   transition: border-color 0.15s;
 }
+/* A pale card side colour alone left the round box almost invisible: mix in ink. */
+.li-tick .li-box {
+  --wall: color-mix(in srgb, var(--side, var(--ink-3)) 45%, var(--ink-3));
+}
 .li-text {
   min-width: 0;
   overflow-wrap: anywhere;

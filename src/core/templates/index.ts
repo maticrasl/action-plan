@@ -88,6 +88,7 @@ export interface Template {
   area: Area;
   level: 'starter' | 'ambitious';
   name: TplText;
+  emoji: string; // the new plan's emoji (core/emoji.ts)
   about: TplText;
   goals: TplGoal[];
   states: TplState[];

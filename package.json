@@ -20,7 +20,8 @@
     "map": "node scripts/map.mjs",
     "cycles": "node scripts/cycles.mjs",
     "move": "node scripts/move-decls.mjs",
-    "move-steps": "node scripts/move-steps.mjs"
+    "move-steps": "node scripts/move-steps.mjs",
+    "emoji-data": "node scripts/emoji-data.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

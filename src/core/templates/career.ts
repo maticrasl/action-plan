@@ -10,6 +10,7 @@ export const CAREER: Template[] = [
     area: 'career',
     level: 'starter',
     name: ['Job-search toolkit', 'Priprava na iskanje službe'],
+    emoji: '💼',
     about: [
       'Six weeks to a sharp CV and profile, a list of target companies, interview practice and a steady flow of applications.',
       'Šest tednov do dobrega življenjepisa in profila, seznama želenih podjetij, vaje za razgovore in stalnega toka prijav.',
@@ -129,6 +130,7 @@ export const CAREER: Template[] = [
     area: 'career',
     level: 'starter',
     name: ['Ask for a raise', 'Prositi za povišico'],
+    emoji: '💶',
     about: [
       'Seven weeks to a well-prepared salary conversation: your results, market pay, a clear number and a written follow-up.',
       'Sedem tednov do dobro pripravljenega pogovora o plači: vaši dosežki, plače na trgu, jasna številka in pisna potrditev.',
@@ -217,6 +219,7 @@ export const CAREER: Template[] = [
     area: 'career',
     level: 'ambitious',
     name: ['Career switch', 'Menjava kariere'],
+    emoji: '🚀',
     about: [
       'A year to move into a new field (data analytics as the example): research, a learning path, a portfolio, then a focused job hunt.',
       'Leto za prehod na novo področje (za primer podatkovna analitika): raziskava, učna pot, portfelj in nato usmerjeno iskanje službe.',

@@ -10,6 +10,7 @@ export const LEARNING: Template[] = [
     area: 'learning',
     level: 'starter',
     name: ['Finish an online course', 'Končati spletni tečaj'],
+    emoji: '💻',
     about: [
       'Eight weeks from choosing a course to the certificate: one module a week, a final project and the exam.',
       'Osem tednov od izbire tečaja do potrdila: en modul na teden, zaključni projekt in izpit.',
@@ -92,6 +93,7 @@ export const LEARNING: Template[] = [
     area: 'learning',
     level: 'starter',
     name: ['Language basics for a holiday', 'Osnove jezika za počitnice'],
+    emoji: '💬',
     about: [
       'Three months of 15 minutes a day: enough of a new language to greet, order, ask the way and shop.',
       'Trije meseci po 15 minut na dan: dovolj novega jezika za pozdrav, naročanje, spraševanje za pot in nakupe.',
@@ -207,6 +209,7 @@ export const LEARNING: Template[] = [
     area: 'learning',
     level: 'starter',
     name: ['Read 12 books this year', 'Prebrati 12 knjig letos'],
+    emoji: '📚',
     about: [
       'A book a month with 20 minutes of reading before bed, and a short note on each one.',
       'Knjiga na mesec z 20 minutami branja pred spanjem in kratkim zapisom o vsaki.',
@@ -298,6 +301,7 @@ export const LEARNING: Template[] = [
     area: 'learning',
     level: 'ambitious',
     name: ['Driving licence and first car', 'Vozniški izpit in prvi avto'],
+    emoji: '🚗',
     about: [
       'Every step to a category B licence in the right order, then choosing, checking, buying and insuring a first car.',
       'Vsi koraki do vozniškega dovoljenja kategorije B v pravem vrstnem redu, nato izbira, pregled, nakup in zavarovanje prvega avta.',
@@ -561,6 +565,7 @@ export const LEARNING: Template[] = [
     area: 'learning',
     level: 'ambitious',
     name: ['Speak a language at C1', 'Jezik na ravni C1'],
+    emoji: '🌍',
     about: [
       'Two years from beginner to a C1 certificate, level by level: grammar, a large vocabulary, weekly speaking and immersion.',
       'Dve leti od začetnika do potrdila C1, raven za ravnjo: slovnica, bogat besedni zaklad, tedenski pogovori in potopitev v jezik.',
@@ -854,6 +859,7 @@ export const LEARNING: Template[] = [
     area: 'learning',
     level: 'ambitious',
     name: ['Master’s thesis and paper', 'Magistrsko delo in članek'],
+    emoji: '🎓',
     about: [
       'From choosing a topic to defending the thesis and submitting a paper based on it, chapter by chapter, with steady supervisor contact.',
       'Od izbire teme do zagovora magistrskega dela in oddaje članka na njegovi podlagi, poglavje za poglavjem in v rednem stiku z mentorjem.',
@@ -1206,6 +1212,7 @@ export const LEARNING: Template[] = [
     area: 'learning',
     level: 'ambitious',
     name: ['52 books with notes', '52 knjig z zapiski'],
+    emoji: '📖',
     about: [
       'A book a week for a year, with a note on each one, a theme each quarter and an essay that ties each quarter together.',
       'Knjiga na teden vse leto, z zapisom o vsaki, temo za vsako četrtletje in esejem, ki poveže vsako četrtletje.',

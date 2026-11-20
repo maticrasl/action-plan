@@ -58,3 +58,7 @@ test('every template is complete in both languages and every link names an item 
   }
   expect(TEMPLATES.length).toBeGreaterThan(0);
 });
+
+test('every template has its own emoji', () => {
+  expect(new Set(TEMPLATES.map(tpl => tpl.emoji)).size).toBe(TEMPLATES.length);
+});

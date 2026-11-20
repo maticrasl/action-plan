@@ -244,7 +244,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Preveč je aktivnega.</strong> Zaustavljajte cilje, dokler to, kar ostane, ni videti izvedljivo v običajnem tednu.</li>
 <li><strong>Datumi so želje.</strong> Oznake zamude se kopičijo, ko je bil vsak datum najboljši možni primer. Premaknite jih in pri novih dodajte rezervo.</li>
 <li><strong>Cilji so od nekoga drugega.</strong> Cilj, ki ste si ga postavili, ker bi ga morali, je težji od tistega, ki si ga želite. Pri vsakem cilju preberite odgovor na »Zakaj je pomemben?«. Če ne zveni kot vi, preberite [[let-go]].</li>
-<li><strong>Vidite le, kar manjka.</strong> Preden pogledate, kaj je na vrsti, poglejte, kaj je opravljeno: stolpec Opravljeno, odkljukane dneve, graf od prve meritve.</li>
+<li><strong>Vidite le, kar manjka.</strong> Preden pogledate, kaj je na vrsti, poglejte, kaj je opravljeno: opravljene aktivnosti, odkljukane dneve, graf od prve meritve.</li>
 </ul>
 <p>Strogost do sebe ne izboljša dela. Ljudje, ki spodrsljaj sprejmejo z nekaj prijaznosti, se k delu vrnejo prej kot tisti, ki se zanj krivijo.</p>
 <p>Nekatere stvari potrebujejo več kot načrt. Če ste večino dni potrti ali tesnobni ali če štetje hrane, teže ali vadbe začne voditi vaš dan, se pogovorite z zdravnikom ali terapevtom in sledenje za zdaj odložite.</p>`,
@@ -383,7 +383,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Seznam</strong> – kontrolni seznam; opravljen, ko je odkljukana vsaka postavka.</li>
 <li><strong>Rutina</strong> in <strong>Rutinski seznam</strong> – se ponavljata; glejte [[h-routines]].</li>
 </ul>
-<p>Enkratne aktivnosti in seznami so na tabli: Za izvedbo, V teku, Opravljeno. Povlecite kartico ali tapnite njen krog, da jo premaknete naprej. Na začetni datum se aktivnost sama premakne v V teku.</p>
+<p>Enkratne aktivnosti in seznami so pod rutinami: najprej tiste v teku, nato za izvedbo, nato opravljene, vsake po roku. Tapnite krog na kartici, da jo premaknete naprej: Za izvedbo, V teku, Opravljeno. Na začetni datum se aktivnost sama premakne v V teku.</p>
 <p>Aktivnost povežite s cilji, h katerim <strong>prispeva</strong>, in stanji, ki jih <strong>izboljšuje</strong>. Lahko je <strong>del</strong> večje aktivnosti (podaktivnost) in je lahko <strong>odvisna od</strong> druge aktivnosti, ki mora biti opravljena prej; do takrat je prikazana kot čakajoča. »Skrij opravljeno in doseženo« skrije dokončane kartice.</p>`,
     action: { do: 'add-activity', label: 'Dodaj aktivnost' },
     related: ['first-steps'],
@@ -447,7 +447,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-plans',
     group: 'how',
     title: 'Načrti, predloge in datoteke',
-    body: `<p>Načrt je en sklop ciljev, stanj in aktivnosti. Stranska vrstica našteje vaše načrte, nazadnje odprtega na vrhu; tapnite načrt, da ga odprete. Njegova pika je zelena, ko ni nič na vrsti, rumena, ko je treba nekaj opraviti danes, in rdeča, ko je nekaj zamujeno. Na telefonu tapnite ime načrta nad naslovom. V Nastavitvah je ostalo: nov načrt, preimenovanje, brisanje in <strong>združitev</strong> enega načrta v drugega.</p>
+    body: `<p>Načrt je en sklop ciljev, stanj in aktivnosti. Stranska vrstica našteje vaše načrte, nazadnje odprtega na vrhu; tapnite načrt, da ga odprete. Njegova pika je zelena, ko ni nič na vrsti, rumena, ko je treba nekaj opraviti danes, in rdeča, ko je nekaj zamujeno. Vsak načrt ima pred imenom emoji: izberete ga, ko načrt ustvarite ali preimenujete: med pogostimi, med vsemi po skupinah ali z iskanjem besede, kot sta »tek« ali »knjiga« (starejši načrt kaže 🙁, dokler ga ne izberete). Ko je stranska vrstica strnjena, seznam ohrani piko in emoji vsakega načrta. Na telefonu tapnite ime načrta nad naslovom. V Nastavitvah je ostalo: nov načrt, preimenovanje, brisanje in <strong>združitev</strong> enega načrta v drugega.</p>
 <ul>
 <li><strong>Začni s predlogo</strong> odpre pripravljen načrt kot nov načrt, z datumi od danes naprej. Spremenite vse, da vam ustreza.</li>
 <li><strong>Naloži vzorčni načrt</strong> odpre izpolnjen primer za ogled.</li>

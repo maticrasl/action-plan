@@ -10,6 +10,7 @@ export const FAITH: Template[] = [
     area: 'faith',
     level: 'ambitious',
     name: ['Exodus 90', 'Exodus 90'],
+    emoji: '⛪',
     about: [
       'Ninety days of prayer, asceticism and fraternity for men, as the Exodus 90 exercise lays them out: a daily holy hour, cold showers and simple living, fasting on Wednesdays and Fridays, a daily anchor check-in and a weekly fraternity meeting. A week of preparation first; set the dates so day 90 is Easter Sunday.',
       'Devetdeset dni molitve, askeze in bratstva za moške, kot jih predvideva duhovna vaja Exodus 90: vsakodnevna sveta ura, mrzle prhe in preprosto življenje, post ob sredah in petkih, vsakodnevni pogovor s sidrom in tedensko srečanje bratstva. Najprej teden priprave; datume nastavite tako, da bo 90. dan velikonočna nedelja.',

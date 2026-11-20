@@ -4,3 +4,4 @@
 !/src/
 !/tests/
 /tests/fixtures/
+/src/core/emoji-names.*.ts

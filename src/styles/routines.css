@@ -23,6 +23,17 @@
   grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 12px;
 }
+/* Masonry: each card spans 4px rows by its height (views/activities.ts flowCards). */
+.routine-grid.flow {
+  grid-auto-rows: 4px;
+  row-gap: 0;
+}
+.flow > * {
+  align-self: start;
+}
+.acts .routines-title::before {
+  content: '✓';
+}
 /* The title keeps the width it needs, up to 65%; the schedule tag gets the rest and ends in an
    ellipsis when it is still too long (the full text is its tooltip). */
 .rt-sched {

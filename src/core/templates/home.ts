@@ -10,6 +10,7 @@ export const HOME: Template[] = [
     area: 'home',
     level: 'starter',
     name: ['Declutter the home', 'Razčistiti dom'],
+    emoji: '🧹',
     about: [
       'One room per weekend for five weekends, then sell or give away what you sorted out. A daily 15-minute tidy-up keeps it that way.',
       'En prostor na vikend pet vikendov, nato prodajte ali podarite, kar ste izločili. Vsakodnevno 15-minutno pospravljanje ohrani red.',
@@ -85,6 +86,7 @@ export const HOME: Template[] = [
     area: 'home',
     level: 'starter',
     name: ['Move to a rented flat', 'Selitev v najemno stanovanje'],
+    emoji: '📦',
     about: [
       'Six and a half weeks from the search to the new address: viewings, lease, notice, packing, moving day and every change of address.',
       'Šest tednov in pol od iskanja do nove adrese: ogledi, najemna pogodba, odpoved, pakiranje, dan selitve in vse spremembe naslova.',
@@ -221,6 +223,7 @@ export const HOME: Template[] = [
     area: 'home',
     level: 'starter',
     name: ['Plan a weekend trip', 'Načrtovati vikend izlet'],
+    emoji: '🎒',
     about: [
       'A month from idea to departure: dates, a budget, where to stay, how to get there and a loose plan for the days.',
       'Mesec od ideje do odhoda: datumi, proračun, nastanitev, prevoz in ohlapen načrt za dneve.',
@@ -300,6 +303,7 @@ export const HOME: Template[] = [
     area: 'home',
     level: 'ambitious',
     name: ['Buy your first home', 'Nakup prvega doma'],
+    emoji: '🏡',
     about: [
       'Two years from saving the deposit to moving in: financing, viewings, checks before buying, the purchase itself and the move.',
       'Dve leti od varčevanja za polog do vselitve: financiranje, ogledi, preverjanja pred nakupom, sam nakup in selitev.',

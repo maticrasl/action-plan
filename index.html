@@ -147,6 +147,35 @@
     </form>
   </dialog>
 
+  <dialog id="planNameDlg" class="modal plan-name-dlg" aria-labelledby="planNameTitle">
+    <form method="dialog" id="planNameForm" novalidate>
+      <header class="modal-head">
+        <h2 id="planNameTitle"></h2>
+        <button type="button" class="icon-btn" data-plan-name-close data-i18n-aria="btn.close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="modal-body">
+        <div class="field">
+          <label for="planNameInput" data-i18n="plan.nameLabel">Name</label>
+          <input type="text" id="planNameInput" autocomplete="off" aria-describedby="planNameErr">
+          <div class="err" id="planNameErr" role="alert"></div>
+        </div>
+        <div class="field">
+          <label for="planEmojiSearch" id="planEmojiLabel" data-i18n="plan.emojiLabel">Emoji</label>
+          <input type="search" id="planEmojiSearch" autocomplete="off" spellcheck="false">
+          <div class="emoji-grid" id="planEmojis" role="radiogroup" aria-labelledby="planEmojiLabel"></div>
+          <p class="hint" id="planEmojiNone" role="status"></p>
+          <button type="button" class="btn ghost small" id="planEmojiMore" aria-expanded="false" data-i18n="plan.emojiMore">Show all emojis</button>
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-plan-name-close data-i18n="btn.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="planNameSave" data-i18n="btn.save" disabled>Save</button>
+      </footer>
+    </form>
+  </dialog>
   <dialog id="feedback" class="modal feedback" aria-labelledby="feedbackTitle">
     <header class="modal-head">
       <h2 id="feedbackTitle"></h2>

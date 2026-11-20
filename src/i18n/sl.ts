@@ -518,7 +518,7 @@ export const sl: Language = {
     'help.view.graphs':
       'Grafi kažejo, kako se je spreminjalo posamezno trenutno stanje: vse meritve, ciljno vrednost cilja, ki ga meri, in spremembo od prve meritve. Nove vrednosti vpisujte pri stanju, da se črta podaljša – ena na dan, zato nova vrednost za isti dan nadomesti staro. Stanje, ki se sešteva, pokaže vsote po dnevih, tednih, mesecih ali letih (tekoče obdobje je svetlejše) ali skupno vsoto – preklopite nad grafom. Vsaka rutina pokaže odkljukanja po obdobjih glede na to, koliko obdobje zahteva; nad grafom lahko preklopite, da jih prešteje po dnevih, tednih, mesecih ali letih ali skupaj, tako kot pri stanju, ki se sešteva. Današnji dan je svetlo rdeč stolpec. Časovno os grafa raztegnete z razmikom prstov ali s Ctrl + koleščkom (ali s tipkama + in −, ko je graf izbran), po njej pa se premikate z vlečenjem; z enim prstom tapnite, se znova dotaknite in povlecite navzdol, da jo raztegnete, ali navzgor, da jo skrčite. Tabela pod grafom našteje meritve od najnovejše; napačno meritev izbrišete tam. Pridržite graf ali ga kliknite z desno tipko za njegov meni: element uredite, dodate vrednost ali ga prikažete v drugem pogledu.',
     'help.view.activities':
-      'Aktivnosti so koraki, ki jih naredite. Povežite jih s cilji, h katerim prispevajo, in stanji, ki jih izboljšujejo. Nova aktivnost najprej vpraša, katere vrste je: enkraten korak, seznam, rutina ali rutinski seznam. Seznam je kontrolni seznam: postavke odkljukate na kartici (ali v aktivnosti), in ko so odkljukane vse, je opravljena. Aktivnosti, ki se ponavljajo, so rutine: prikazane so nad tablo, odkljukate pa jih vsakič, ko jih opravite. Rutinski seznam je kontrolni seznam, ki se ponavlja: vsakič odkljukate njegove postavke, in ko so odkljukane vse, je dan odkljukan. Pridržite kartico ali jo kliknite z desno tipko za več možnosti, na primer da jo premaknete v V teku ali Opravljeno ali jo izbrano prikažete na časovnici ali zemljevidu.',
+      'Aktivnosti so koraki, ki jih naredite. Povežite jih s cilji, h katerim prispevajo, in stanji, ki jih izboljšujejo. Nova aktivnost najprej vpraša, katere vrste je: enkraten korak, seznam, rutina ali rutinski seznam. Seznam je kontrolni seznam: postavke odkljukate na kartici (ali v aktivnosti), in ko so odkljukane vse, je opravljena. Aktivnosti, ki se ponavljajo, so rutine: prikazane so nad drugimi aktivnostmi, odkljukate pa jih vsakič, ko jih opravite. Rutinski seznam je kontrolni seznam, ki se ponavlja: vsakič odkljukate njegove postavke, in ko so odkljukane vse, je dan odkljukan. Pridržite kartico ali jo kliknite z desno tipko za več možnosti, na primer da jo premaknete v V teku ali Opravljeno ali jo izbrano prikažete na časovnici ali zemljevidu.',
     'help.tip.routines':
       'Rutine so aktivnosti, ki se ponavljajo. Tapnite dan na tedenskem traku, da ga odkljukate (ali kljukico odstranite); ko se z miško postavite nad dan, vidite njegov datum, s puščicama ob traku pa lahko izpolnite tudi pretekle tedne. Modro obrobljeni so dnevi, ko je rutina na vrsti; šrafirani, prečrtani dnevi so bili zamujeni, dnevi s tanko pikčasto obrobo pa niso na vrsti. Današnji dan je obkrožen, oznaka pod trakom pa pove, ali je rutina danes na vrsti. Rutina zamuja le, dokler je spet ne odkljukate – ena kljukica po zamujenih dneh jo vrne na pravo pot. Če je dneve mogoče nadoknaditi (možnost pod Ponavljanje), kljukica na drug dan nadomesti zamujenega, ki je nato zeleno obrobljen; njena oznaka se tedaj konča z ↻ (ko se z miško postavite nad oznako, vidite celoten urnik). Vrstica kaže ta teden, mesec ali leto (ali, kadar v njem ni nič na vrsti, naslednji dan, ko je), zelena oznaka pa vaš niz. Kako se ponavlja – na nekaj dni, tednov, mesecev ali let, in kdaj se konča – nastavite pod Ponavljanje v aktivnosti; mesečna je lahko na določen dan v mesecu, na zadnji dan ali na določen dan v tednu, na primer drugi petek.',
     'help.tip.routineToday':
@@ -539,7 +539,6 @@ export const sl: Language = {
       'Seznam: tapnite postavko, da jo odkljukate (ali kljukico odstranite). Prva kljukica premakne seznam v V teku; ko so odkljukane vse postavke, je opravljen. Postavke dodajate, preimenujete ali odstranite v aktivnosti.',
     'help.tip.routineList':
       'Rutinski seznam: današnje postavke odkljukajte eno za drugo; ko so odkljukane vse, se na tedenskem traku odkljuka današnji dan. Kljukica pri dnevu na traku odkljuka vse njegove postavke. Jutri se seznam začne znova.',
-    'help.tip.board': 'Kartice vlecite med stolpci, da spremenite njihov status.',
     'help.tip.hideDone': 'Skrijte opravljeno, da se osredotočite na preostalo.',
     'help.tip.status': 'Barve kažejo status posameznega elementa: ni začeto, v teku, zamuja, čaka ali opravljeno.',
     'help.tip.grChange':
@@ -554,7 +553,7 @@ export const sl: Language = {
     'plan.defaultName': 'Moj načrt',
     'plan.sampleName': 'Vzorčni načrt',
     'plan.new': 'Nov načrt',
-    'plan.rename': 'Preimenuj načrt',
+    'plan.rename': 'Preimenuj načrt ali zamenjaj emoji',
     'plan.delete': 'Izbriši načrt',
     'plan.merge': 'Združi z drugim načrtom',
     'plan.mergeOnly': 'Za združevanje potrebujete še en načrt',
@@ -603,8 +602,21 @@ export const sl: Language = {
       few: '{n} aktivnosti v teku',
       other: '{n} aktivnosti v teku',
     },
-    'plan.newPrompt': 'Ime novega načrta',
-    'plan.renamePrompt': 'Novo ime načrta',
+    'plan.newPrompt': 'Nov načrt',
+    'plan.nameLabel': 'Ime',
+    'plan.emojiLabel': 'Emoji (prikazan pred imenom)',
+    'plan.emojiMore': 'Pokaži vse emojije',
+    'plan.emojiSearch': 'Iščite emojije, npr. tek, knjiga, srce',
+    'plan.emojiNone': 'Noben emoji se ne ujema z »{q}«.',
+    'emoji.group.smileys': 'Smeški in čustva',
+    'emoji.group.people': 'Ljudje in telo',
+    'emoji.group.animals': 'Živali in narava',
+    'emoji.group.food': 'Hrana in pijača',
+    'emoji.group.travel': 'Potovanja in kraji',
+    'emoji.group.activities': 'Dejavnosti',
+    'emoji.group.objects': 'Predmeti',
+    'emoji.group.symbols': 'Simboli',
+    'plan.renamePrompt': 'Ime in emoji',
     'plan.nameTaken': 'Načrt z imenom »{name}« že obstaja. Izberite drugo ime.',
     'planDel.title': 'Izbrišem ta načrt?',
     'planDel.lead': 'Trajno boste izbrisali načrt »{name}« in vse, kar vsebuje:',
