@@ -293,9 +293,9 @@
           <span data-i18n="settings.appearance">Appearance</span>
           <svg class="set-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>
         </button>
-        <button type="button" class="set-tab" data-set-page="setDisplay">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="5"/><circle cx="16" cy="12" r="2.5"/></svg>
-          <span data-i18n="settings.display">Display</span>
+        <button type="button" class="set-tab" data-set-page="setLang">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.5 5.2 3.5 8.5s-1.1 6.1-3.5 8.5c-2.4-2.4-3.5-5.2-3.5-8.5s1.1-6.1 3.5-8.5z"/></svg>
+          <span data-i18n="nav.language">Language</span>
           <svg class="set-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>
         </button>
         <button type="button" class="set-tab" data-set-page="syncSection">
@@ -318,25 +318,31 @@
           <span data-i18n="install.title">App</span>
           <svg class="set-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>
         </button>
-        <p class="set-version"><button type="button" class="link-btn" id="versionBtn"><span data-i18n="settings.version">Version</span> <span id="appVersion"></span></button></p>
       </nav>
       <div class="modal-body set-pages">
         <section class="set-group" id="setPlan">
           <h3 data-i18n="settings.plan">Plan</h3>
-          <div class="plan-switch"></div>
+          <div id="setPlanBody"></div>
         </section>
         <section class="set-group" id="setLook">
           <h3 data-i18n="settings.appearance">Appearance</h3>
-          <div class="set-row"><span data-i18n="nav.language">Language</span><div class="lang-switch seg" role="group" data-i18n-aria="nav.language" aria-label="Language"></div></div>
-          <div class="set-row"><span data-i18n="settings.theme">Theme</span><div class="seg" id="themeSeg" role="group" data-i18n-aria="settings.theme" aria-label="Theme"></div></div>
+          <h4 class="set-label" data-i18n="settings.theme">Theme</h4>
+          <div class="theme-tiles" id="themeSeg" role="group" data-i18n-aria="settings.theme" aria-label="Theme"></div>
+          <h4 class="set-label" data-i18n="settings.onScreen">On screen</h4>
+          <div class="set-list">
+            <label class="set-item switch"><span class="set-text"><b data-i18n="btn.help">Explanations on screen</b></span><input type="checkbox" data-setting="help"></label>
+            <label class="set-item switch"><span class="set-text"><b data-i18n="settings.tips">Tips</b><small data-i18n="settings.tipsHint">At most one a day, on the Overview.</small></span><input type="checkbox" data-setting="tips"></label>
+          </div>
+          <h4 class="set-label" data-i18n="settings.listsSidebar">Lists and sidebar</h4>
+          <div class="set-list">
+            <label class="set-item switch"><span class="set-text"><b data-i18n="acts.hideDone">Hide done activities</b></span><input type="checkbox" data-setting="hideDone"></label>
+            <label class="set-item switch"><span class="set-text"><b data-i18n="settings.planBadges">Status dots in the plan list</b></span><input type="checkbox" data-setting="planBadges"></label>
+            <label class="set-item switch desktop-only"><span class="set-text"><b data-i18n="settings.navCollapsed">Collapsed sidebar</b></span><input type="checkbox" data-setting="navCollapsed"></label>
+          </div>
         </section>
-        <section class="set-group" id="setDisplay">
-          <h3 data-i18n="settings.display">Display</h3>
-          <label class="set-row switch"><span data-i18n="btn.help">Explanations on screen</span><input type="checkbox" data-setting="help"></label>
-          <label class="set-row switch"><span data-i18n="settings.tips">Tips</span><input type="checkbox" data-setting="tips"></label>
-          <label class="set-row switch"><span data-i18n="acts.hideDone">Hide done activities</span><input type="checkbox" data-setting="hideDone"></label>
-          <label class="set-row switch"><span data-i18n="settings.planBadges">Status badges in the plan menu</span><input type="checkbox" data-setting="planBadges"></label>
-          <label class="set-row switch desktop-only"><span data-i18n="settings.navCollapsed">Collapsed sidebar</span><input type="checkbox" data-setting="navCollapsed"></label>
+        <section class="set-group" id="setLang">
+          <h3 data-i18n="nav.language">Language</h3>
+          <div class="lang-tiles" role="group" data-i18n-aria="nav.language" aria-label="Language"></div>
         </section>
         <section class="set-group" id="syncSection">
           <h3 data-i18n="sync.title">Account and sync</h3>
@@ -344,26 +350,66 @@
         </section>
         <section class="set-group" id="setData">
           <h3 data-i18n="settings.data">Data</h3>
-          <p class="hint" data-i18n="settings.dataHint">Your plans are stored only in this browser. Export a plan to back it up; importing a file always adds it as a new plan.</p>
-          <div class="set-actions">
-            <button type="button" class="btn small" id="exportBtn" data-i18n="btn.export">Export plan</button>
-            <label class="btn small"><span data-i18n="btn.import">Import plan</span><input type="file" id="importInput" accept=".json,application/json" hidden></label>
-            <button type="button" class="btn small" id="templatesBtn" data-i18n="btn.templates">Start from a template</button>
-            <button type="button" class="btn small" id="sampleBtn" data-i18n="btn.sample">Load sample plan</button>
+          <p class="hint set-note" data-i18n="settings.dataHint">Your plans are stored in this browser, and in your Google Drive when sync is on.</p>
+          <h4 class="set-label" data-i18n="settings.thisPlan">This plan</h4>
+          <div class="set-list">
+            <button type="button" class="set-item" id="exportBtn">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/></svg>
+              <span class="set-text"><b data-i18n="btn.export">Export plan</b><small data-i18n="settings.exportHint">A full copy to keep, or a template to share.</small></span>
+            </button>
+            <label class="set-item">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 14v6h14v-6"/></svg>
+              <span class="set-text"><b data-i18n="btn.import">Import plan</b><small data-i18n="settings.importHint">Adds the file as a new plan.</small></span>
+              <input type="file" id="importInput" accept=".json,application/json" hidden>
+            </label>
           </div>
-          <div class="set-actions">
-            <button type="button" class="btn small" id="backupAllBtn" data-i18n="backup.all">Back up everything</button>
-            <label class="btn small"><span data-i18n="backup.restore">Restore from a backup…</span><input type="file" id="backupInput" accept=".json,application/json" hidden></label>
-            <button type="button" class="btn small" id="trashBtn"><span data-i18n="trash.title">Recently deleted</span> <span id="trashCount"></span></button>
+          <h4 class="set-label" data-i18n="settings.startNew">Start a new plan</h4>
+          <div class="set-list">
+            <button type="button" class="set-item" id="templatesBtn">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M16.5 13.5v6M13.5 16.5h6"/></svg>
+              <span class="set-text"><b data-i18n="btn.templates">Start from a template</b><small data-i18n="settings.templatesHint">Goals and steps ready to adjust.</small></span>
+            </button>
+            <button type="button" class="set-item" id="sampleBtn">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5zM9 10h6M9 14h6M9 18h3"/></svg>
+              <span class="set-text"><b data-i18n="btn.sample">Load sample plan</b><small data-i18n="settings.sampleHint">A filled-in plan to look around in.</small></span>
+            </button>
+          </div>
+          <h4 class="set-label" data-i18n="settings.everything">All plans and visions</h4>
+          <div class="set-list">
+            <button type="button" class="set-item" id="backupAllBtn">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 4v5h8V4M8 20v-6h8v6"/></svg>
+              <span class="set-text"><b data-i18n="backup.all">Back up everything</b><small data-i18n="settings.backupHint">All your plans and visions in one file.</small></span>
+            </button>
+            <label class="set-item">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v3.5H8"/></svg>
+              <span class="set-text"><b data-i18n="backup.restore">Restore from a backup…</b><small data-i18n="settings.restoreHint">Adds them as copies and changes nothing you have.</small></span>
+              <input type="file" id="backupInput" accept=".json,application/json" hidden>
+            </label>
+            <button type="button" class="set-item" id="trashBtn">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>
+              <span class="set-text"><b><span data-i18n="trash.title">Recently deleted</span> <span id="trashCount"></span></b><small data-i18n="settings.trashHint">Deleted items and plans stay here for 30 days.</small></span>
+            </button>
           </div>
         </section>
         <section class="set-group" id="setHelpPage">
           <h3 data-i18n="settings.helpTitle">Help</h3>
-          <div class="set-actions"><button type="button" class="btn small" id="guideBtn" data-i18n="guide.open">Open the Guide</button></div>
-          <div class="set-actions" data-fb-rows hidden>
-            <button type="button" class="btn small" data-fb="bug" data-i18n="fb.bug">Report a problem</button>
-            <button type="button" class="btn small" data-fb="idea" data-i18n="fb.idea">Suggest a feature</button>
+          <div class="set-list">
+            <button type="button" class="set-item" id="guideBtn">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5c3-1 5.5-.6 8 1.2 2.5-1.8 5-2.2 8-1.2V19c-3-1-5.5-.6-8 1.2-2.5-1.8-5-2.2-8-1.2zM12 6.7v13.5"/></svg>
+              <span class="set-text"><b data-i18n="guide.open">Open the Guide</b><small data-i18n="settings.guideHint">How the method works and what to do when stuck.</small></span>
+            </button>
           </div>
+          <div class="set-list" data-fb-rows hidden>
+            <button type="button" class="set-item" data-fb="bug">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 21 19.5H3zM12 10v4.5M12 17h.01"/></svg>
+              <span class="set-text"><b data-i18n="fb.bug">Report a problem</b><small data-i18n="settings.bugHint">Something does not work as it should.</small></span>
+            </button>
+            <button type="button" class="set-item" data-fb="idea">
+              <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>
+              <span class="set-text"><b data-i18n="fb.idea">Suggest a feature</b><small data-i18n="settings.ideaHint">Something you would like the app to do.</small></span>
+            </button>
+          </div>
+          <p class="set-version"><button type="button" class="link-btn" id="versionBtn"><span data-i18n="settings.version">Version</span> <span id="appVersion"></span></button></p>
         </section>
         <section class="set-group" id="installSection" hidden>
           <h3 data-i18n="install.title">App</h3>

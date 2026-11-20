@@ -1,5 +1,5 @@
 /** Writes a full-page PNG of one view with the sample plan, for the model or the owner to look at. */
-// usage: npm run shot -- <view> [--phone] [--dark]
+// usage: npm run shot -- <view> [--phone] [--dark] [--page=<settings page id>]
 //   writes shots/<view>[-phone][-dark].png and prints its path. --phone: 390×844 with touch.
 // Uses the test build (its bridge puts loadSample and setView on window) in Playwright's Chromium.
 import { chromium } from '@playwright/test';
@@ -15,7 +15,8 @@ if (!VIEWS.includes(view)) {
   process.exit(2);
 }
 const phone = args.includes('--phone'),
-  dark = args.includes('--dark');
+  dark = args.includes('--dark'),
+  setPage = (args.find(a => a.startsWith('--page=')) || '').slice(7);
 
 const { url, close } = await serveTestBuild();
 const browser = await chromium.launch();
@@ -32,15 +33,20 @@ try {
   });
   await page.goto(url + 'index.html');
   await page.waitForFunction(() => typeof window.loadSample === 'function');
-  await page.evaluate(v => {
-    window.loadSample();
-    if (v === 'settings') document.querySelector('#settingsBtn').click(); // a dialog over the Overview
-    else window.setView(v);
-  }, view);
+  await page.evaluate(
+    ([v, p]) => {
+      window.loadSample();
+      if (v === 'settings') {
+        document.querySelector('#settingsBtn').click(); // a dialog over the Overview
+        if (p) document.querySelector(`[data-set-page="${p}"]`).click();
+      } else window.setView(v);
+    },
+    [view, setPage],
+  );
   await page.waitForTimeout(500); // the map and timeline settle their scroll after drawing
   const dir = join(ROOT, 'shots');
   mkdirSync(dir, { recursive: true });
-  const out = join(dir, `${view}${phone ? '-phone' : ''}${dark ? '-dark' : ''}.png`);
+  const out = join(dir, `${view}${setPage ? '-' + setPage : ''}${phone ? '-phone' : ''}${dark ? '-dark' : ''}.png`);
   await page.screenshot({ path: out, fullPage: view !== 'settings' }); // a dialog: the window is enough
   console.log(out);
 } finally {

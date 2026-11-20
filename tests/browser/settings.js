@@ -335,28 +335,55 @@ suite(async () => {
     $('#settingsBtn').click();
     eq(
       tabs().map(b => b.dataset.setPage),
-      ['setPlan', 'setLook', 'setDisplay', 'syncSection', 'setData', 'setHelpPage'],
+      ['setPlan', 'setLook', 'setLang', 'syncSection', 'setData', 'setHelpPage'],
       'a tab per area; App only while it can be installed',
     );
-    eq(pageShown().map(s => s.id), ['setPlan'], 'Plan first, alone');
+    eq(
+      pageShown().map(s => s.id),
+      ['setPlan'],
+      'Plan first, alone',
+    );
     eq(settings.querySelector('[aria-current="page"]').dataset.setPage, 'setPlan', 'its tab marked');
-    clickEl(settings.querySelector('[data-set-page="setDisplay"]'));
-    eq(pageShown().map(s => s.id), ['setDisplay'], 'a tab shows its page');
+    clickEl(settings.querySelector('[data-set-page="setLook"]'));
+    eq(
+      pageShown().map(s => s.id),
+      ['setLook'],
+      'a tab shows its page',
+    );
     assert(settings.querySelector('[data-setting="tips"]').offsetParent, 'its switches can be used');
     assert(settings.open, 'Settings stays open');
     settings.close();
     $('#settingsBtn').click();
-    eq(pageShown().map(s => s.id), ['setDisplay'], 'opens again on the last page');
+    eq(
+      pageShown().map(s => s.id),
+      ['setLook'],
+      'opens again on the last page',
+    );
     settings.close();
     openSettings('syncSection');
-    eq(pageShown().map(s => s.id), ['syncSection'], 'opening at an area shows its page');
+    eq(
+      pageShown().map(s => s.id),
+      ['syncSection'],
+      'opening at an area shows its page',
+    );
     settings.close();
     openSettings('installSection');
-    eq(pageShown().map(s => s.id), ['setPlan'], 'a hidden page falls back to Plan');
+    eq(
+      pageShown().map(s => s.id),
+      ['setPlan'],
+      'a hidden page falls back to Plan',
+    );
     settings.close();
     // A phone: the list of areas first; a tap opens one page, the back arrow returns to the list.
     const frame = document.createElement('iframe');
-    Object.assign(frame.style, { width: '390px', height: '700px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    Object.assign(frame.style, {
+      width: '390px',
+      height: '700px',
+      position: 'fixed',
+      left: '-9999px',
+      top: '0',
+      border: '0',
+    });
     frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body>${settings.outerHTML}</body>`;
     await new Promise(res => {
       frame.onload = res;
@@ -372,5 +399,53 @@ suite(async () => {
     assert(!vis('.set-nav') && vis('.set-pages') && vis('.set-back'), 'phone: a page with the back arrow');
     assert(doc.documentElement.scrollWidth <= 390, 'phone: no sideways scroll');
     frame.remove();
+  });
+  await step('settings: Plan shows the open plan and every plan; language and theme as tiles', async () => {
+    openSettings('setPlan');
+    const body = $('#setPlanBody');
+    const open = plans.list.find(p => p.id === plans.current);
+    eq(body.querySelector('.plan-hero b').textContent, open.name, 'the open plan on top');
+    eq(body.querySelectorAll('.plan-item').length, plans.list.length, 'a row per plan');
+    eq(body.querySelector('.plan-item[aria-current="true"]').dataset.planOpen, plans.current, 'the open one marked');
+    eq(
+      body.querySelector('[data-plan="merge"]').disabled,
+      plans.list.length < 2,
+      'Merge only with another plan to merge into',
+    );
+    for (const a of ['rename', 'export', 'delete', 'new', 'import'])
+      assert(body.querySelector(`[data-plan="${a}"]`), `${a} is there`);
+    // Another plan opened from the list: the page follows, Settings stays open.
+    const other = plans.list.find(p => p.id !== plans.current);
+    if (other) {
+      const was = plans.current;
+      clickEl(body.querySelector(`[data-plan-open="${other.id}"]`));
+      eq(plans.current, other.id, 'a row opens its plan');
+      eq($('#setPlanBody .plan-hero b').textContent, other.name, 'the page shows it');
+      assert(settings.open, 'Settings stays open');
+      clickEl($(`#setPlanBody [data-plan-open="${was}"]`));
+    }
+    openSettings('setLang');
+    const tile = code => $(`.lang-tiles [data-lang="${code}"]`);
+    eq(tile('sl').textContent, 'SLSlovenščina', 'each language in its own name');
+    clickEl(tile('sl'));
+    eq(tile('sl').getAttribute('aria-pressed'), 'true', 'the chosen one pressed');
+    eq(
+      $('[data-set-page="setLang"] span').textContent,
+      I18N.sl.strings['nav.language'],
+      'the page in the new language',
+    );
+    clickEl(tile('en'));
+    openSettings('setLook');
+    eq(
+      $('#themeSeg [data-theme-set="system"]').querySelectorAll('.theme-mini').length,
+      2,
+      'System shows light and dark',
+    );
+    clickEl($('#themeSeg [data-theme-set="dark"]'));
+    eq(document.documentElement.dataset.theme, 'dark', 'a tile sets its theme');
+    eq($('#themeSeg [aria-pressed="true"]').dataset.themeSet, 'dark', 'and is marked');
+    clickEl($('#themeSeg [data-theme-set="system"]'));
+    assert(!document.documentElement.dataset.theme, 'System follows the device');
+    settings.close();
   });
 });

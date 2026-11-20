@@ -415,8 +415,8 @@ suite(async () => {
       // Slovenian wording.
       changeLanguage('sl');
       assert(
-        $('#backupAllBtn').textContent === I18N.sl.strings['backup.all'] &&
-          input.previousElementSibling.textContent === I18N.sl.strings['backup.restore'],
+        $('#backupAllBtn b').textContent === I18N.sl.strings['backup.all'] &&
+          input.closest('label').querySelector('b').textContent === I18N.sl.strings['backup.restore'],
         'buttons in Slovenian',
       );
       assert(

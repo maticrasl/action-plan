@@ -18,15 +18,14 @@ import { loadSample } from './sample';
 
 /* ---------- Language & theme (in Settings) ---------- */
 
+// Each language in its own name, so a person who cannot read the current one still finds theirs.
 export function renderLangSwitch() {
-  document.querySelectorAll('.lang-switch').forEach(box => {
-    box.innerHTML = Object.entries(I18N)
-      .map(
-        ([code, l]) =>
-          `<button type="button" data-lang="${code}" lang="${code}" title="${esc(l.name)}" aria-pressed="${code === lang}">${code.toUpperCase()}</button>`,
-      )
-      .join('');
-  });
+  $('.lang-tiles').innerHTML = Object.entries(I18N)
+    .map(
+      ([code, l]) =>
+        `<button type="button" class="lang-tile" data-lang="${code}" lang="${code}" aria-pressed="${code === lang}"><b aria-hidden="true">${code.toUpperCase()}</b><span>${esc(l.name)}</span></button>`,
+    )
+    .join('');
 }
 
 export function changeLanguage(code: Lang) {
@@ -76,10 +75,12 @@ export const redrawForTheme = () => {
 darkScheme.addEventListener('change', () => {
   if (theme === 'system') redrawForTheme();
 });
+// Each theme as a small picture of the app in it; System shows both, split as the device may switch.
+const mini = (k: string) => `<span class="theme-mini" data-mini="${k}"><i></i><i></i><i></i></span>`;
 export function renderThemeSetting() {
   $('#themeSeg').innerHTML = THEMES.map(
     k =>
-      `<button type="button" data-theme-set="${k}" aria-pressed="${k === theme}">${THEME_ICONS[k]}<span>${t(('theme.' + k) as TextKey)}</span></button>`,
+      `<button type="button" class="theme-tile" data-theme-set="${k}" aria-pressed="${k === theme}"><span class="theme-pic" aria-hidden="true">${k === 'system' ? mini('light') + mini('dark') : mini(k)}</span><span class="theme-name">${THEME_ICONS[k]}${t(('theme.' + k) as TextKey)}</span></button>`,
   ).join('');
 }
 $('#themeSeg').addEventListener('click', e => {

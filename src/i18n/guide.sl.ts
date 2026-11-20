@@ -63,7 +63,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li>Ctrl + Enter shrani obrazec, v katerem ste.</li>
 <li>Načrt, ki je pomagal vam, lahko izvozite kot predlogo: vaše korake brez vaših številk.</li>
 </ul>
-<p>Nasveti se na Pregledu pojavijo vsake toliko. Izklopite jih v Nastavitvah › Prikaz. Ko ste odprti za kakšnega, ga prosite tukaj.</p>`,
+<p>Nasveti se na Pregledu pojavijo vsake toliko. Izklopite jih v Nastavitvah › Videz. Ko ste odprti za kakšnega, ga prosite tukaj.</p>`,
     action: { do: 'ask-tip', label: 'Pokaži mi nasvet' },
     related: ['method'],
   },
