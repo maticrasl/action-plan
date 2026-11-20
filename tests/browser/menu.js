@@ -252,9 +252,7 @@ suite(async () => {
       'fine, muted lines',
     );
     assert(
-      [...document.querySelectorAll('.map-wrap .col-label')].every(
-        l => l.compareDocumentPosition($('.map-wrap .edge-g')) & Node.DOCUMENT_POSITION_PRECEDING,
-      ),
+      [...document.querySelectorAll('.map-wrap .col-label')].every(l => l.closest('.band-labels')),
       'band labels drawn over the lines',
     );
     assert(!$(`[data-map-node="${a.id}"]`).classList.contains('dim'), 'neighbours not dimmed');

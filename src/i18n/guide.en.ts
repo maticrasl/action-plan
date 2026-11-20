@@ -417,7 +417,7 @@ export const guideEn = [
     title: 'Map',
     body: `<p>The Map draws every item and link: visions and goals at the top, activities in the middle, current states at the bottom. Tap a box or a line to select it and light up what it connects to. Double-click or press Enter to edit, Delete to remove.</p>
 <p><strong>To link two items</strong> with a mouse, drag from one box onto the other. On a touch screen, long-press a box, choose “Link to…” and tap the other box. The app offers only the relationships that fit those two.</p>
-<p>The chips above the Map hide kinds of links. Drag the background to move, pinch or Ctrl + scroll to zoom. Right-click an empty spot to add something there.</p>`,
+<p>Tap a band’s name (Visions, Goals, Activities, Current states) to fold it away; tap again to open it. Your folds are kept on every device. Drag the background to move, pinch or Ctrl + scroll to zoom. Right-click an empty spot to add something there.</p>`,
     action: { do: 'view-map', label: 'Open the Map' },
   },
   {

@@ -1,5 +1,5 @@
 /** What is open now: the plan list, the version counter and what the views show. */
-import type { GoalStatus, ISODate, PlanList, RelType, VisionRel } from '../core/model';
+import type { GoalStatus, ISODate, PlanList } from '../core/model';
 
 // The views, by the names in the navigation, views/index.ts's VIEWS and the stored `view` preference.
 export type ViewName =
@@ -23,7 +23,6 @@ export interface Ui {
   mapGoal: string;
   timelineGoal: string;
   graphGoal: string;
-  mapHidden: Set<RelType | VisionRel>; // kinds of lines the map does not draw
   hideDone: boolean;
   hideVisions: boolean;
   nextAll: boolean; // the overview's "Show all": also the activities in progress that are not due
@@ -51,7 +50,6 @@ export const freshUi = (): Ui => ({
   mapGoal: '',
   timelineGoal: '',
   graphGoal: '',
-  mapHidden: new Set(),
   hideDone: false,
   hideVisions: false,
   nextAll: false,

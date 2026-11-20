@@ -85,3 +85,21 @@ describe('map layout', () => {
     expect(x).toEqual({ v1: 201, v2: 486, g1: 106, g2: 486, g3: 296, a12: 249, a23: 439 });
   });
 });
+
+test('a folded band is a bare label strip, in its place among the others', () => {
+  const { bands, node } = layoutMap({ goal: [], activity: ids('a1') }, [], ['goal']);
+  expect(bands.map(b => [b.kind, !!b.folded])).toEqual([
+    ['goal', true],
+    ['activity', false],
+  ]);
+  expect(bands[0].bottom - bands[0].top).toBeLessThan(50);
+  expect(bands[1].top).toBeGreaterThan(bands[0].bottom);
+  expect(Object.keys(node)).toEqual(['a1']);
+});
+
+test('every band folded: nothing placed, no error', () => {
+  const { bands, node, W } = layoutMap({ goal: [], state: [] }, [], ['goal', 'state']);
+  expect(bands).toHaveLength(2);
+  expect(node).toEqual({});
+  expect(W).toBeGreaterThan(0);
+});

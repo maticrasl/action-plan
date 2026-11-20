@@ -1,6 +1,6 @@
 /** The views' click, input and change listeners on #view and the Add button, in one dispatcher each. */
 import { db } from '../core/state';
-import { ACTIVITY_STATUS, type RelType, type VisionRel } from '../core/model';
+import { ACTIVITY_STATUS } from '../core/model';
 import { blockers } from '../core/progress';
 import { toast } from '../ui/toast';
 import { t } from '../i18n/index';
@@ -10,6 +10,8 @@ import { ui, type Ui } from '../store/state';
 import { openForm, type FormKind } from '../ui/forms/form';
 import { ctxMenu } from '../ui/menu';
 import { prefs } from '../store/prefs';
+import { toggleFold } from '../store/map-fold';
+import type { FoldKind } from '../core/map-fold';
 import { shiftRoutineWeek, tickListItem, toggleCheckin } from './routines';
 import { findEntity } from '../core/relations';
 import { loadSample } from '../ui/sample';
@@ -55,7 +57,7 @@ $('#addBtn').addEventListener('click', e => {
 
 viewEl.addEventListener('click', e => {
   const el = (e.target as HTMLElement).closest<HTMLElement>(
-    '[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-rel-toggle],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]',
+    '[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]',
   );
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !(e.target as HTMLElement).closest('[data-map-zoom]')) {
@@ -155,11 +157,8 @@ viewEl.addEventListener('click', e => {
     ui.mapSelected = ui.mapRel = null;
     return render();
   }
-  if (el.dataset.relToggle) {
-    const type = el.dataset.relToggle as RelType | VisionRel;
-    if (ui.mapHidden.has(type)) ui.mapHidden.delete(type);
-    else ui.mapHidden.add(type);
-    prefs.set('mapHidden', [...ui.mapHidden]);
+  if (el.dataset.mapFold) {
+    toggleFold(el.dataset.mapFold as FoldKind);
     return render();
   }
   if (el.hasAttribute('data-hide-done')) return setToggle('hideDone', !ui.hideDone);

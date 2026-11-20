@@ -69,3 +69,16 @@ test('trash: read from the file when present, merged, left out when there is non
   expect(mergeStores(st, parseStore(JSON.stringify(base))).trash!.items).toHaveLength(1);
   expect(mergeStores(parseStore(JSON.stringify(base)), parseStore(JSON.stringify(base)))).not.toHaveProperty('trash');
 });
+
+test('mapFold: read from the file when present, later change wins, left out when there is none', () => {
+  const base = { format: SYNC_FORMAT, plans: { list: [] } };
+  expect(parseStore(JSON.stringify(base)).mapFold).toBeUndefined();
+  const st = parseStore(JSON.stringify({ ...base, mapFold: { kinds: ['goal', 'bad'], at: '2026-11-20T10:00:00Z' } }));
+  expect(st.mapFold).toEqual({ kinds: ['goal'], at: '2026-11-20T10:00:00Z' });
+  expect(toFile(st)).toHaveProperty('mapFold.kinds', ['goal']);
+  expect(toFile({ ...st, mapFold: undefined })).not.toHaveProperty('mapFold');
+  const other = parseStore(JSON.stringify({ ...base, mapFold: { kinds: [], at: '2026-11-20T11:00:00Z' } }));
+  expect(mergeStores(st, other).mapFold!.kinds).toEqual([]);
+  expect(mergeStores(st, parseStore(JSON.stringify(base))).mapFold!.kinds).toEqual(['goal']);
+  expect(mergeStores(parseStore(JSON.stringify(base)), parseStore(JSON.stringify(base)))).not.toHaveProperty('mapFold');
+});

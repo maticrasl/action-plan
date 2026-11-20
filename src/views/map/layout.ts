@@ -79,6 +79,7 @@ export interface Band {
   last: number;
   top: number;
   bottom: number;
+  folded?: boolean; // only its label strip is drawn
 }
 // A line: between neighbours in one layer (same, a and b), or down through the layers (chain, pts and line).
 // d is its SVG path.
@@ -99,7 +100,8 @@ interface Port {
   other: MapNode;
 }
 
-export function layoutMap(items: MapItems, rels: MapLink[]) {
+// folded: kinds drawn as a bare label strip (their items are left out of `items`).
+export function layoutMap(items: MapItems, rels: MapLink[], folded: ItemKind[] = []) {
   const { NW, NH, HG, DG, DW, VG, PAD, HEAD, BAND_GAP, LEAD, TIP, VISION_LINE } = MAP;
   const kindOf: Record<string, string> = {};
   Object.entries(items).forEach(([k, list]) => list.forEach(x => (kindOf[x.id] = k)));
@@ -139,6 +141,8 @@ export function layoutMap(items: MapItems, rels: MapLink[]) {
     bands: Band[] = [],
     node: Record<string, MapNode> = {};
   (['vision', 'goal', 'activity', 'state'] as const).forEach(kind => {
+    if (folded.includes(kind))
+      return bands.push({ kind, first: layers.length, last: layers.length - 1, folded: true } as Band);
     if (!items[kind]?.length) return;
     const base = layers.length;
     const levelOf = kind === 'goal' ? heightOf : depthOf;
@@ -342,10 +346,12 @@ export function layoutMap(items: MapItems, rels: MapLink[]) {
   // Close empty vertical strips (e.g. between unrelated clusters) that placement leaves behind.
   const spans = all.map((n): Point => [n.x - n.w / 2, n.x + n.w / 2]).sort((a, b) => a[0] - b[0]);
   const cuts: Point[] = [];
-  spans.reduce((reach, [l, r]) => {
-    if (l - reach > HG * 2) cuts.push([reach + HG * 2, l]);
-    return Math.max(reach, r);
-  }, spans[0][1]);
+  // With every band folded there is nothing to place.
+  if (spans.length)
+    spans.reduce((reach, [l, r]) => {
+      if (l - reach > HG * 2) cuts.push([reach + HG * 2, l]);
+      return Math.max(reach, r);
+    }, spans[0][1]);
   all.forEach(n => (n.x -= cuts.filter(([, end]) => n.x >= end).reduce((s, [start, end]) => s + end - start, 0)));
   const minX = Math.min(...all.map(n => n.x - n.w / 2));
   all.forEach(n => (n.x += PAD - minX));
@@ -360,7 +366,7 @@ export function layoutMap(items: MapItems, rels: MapLink[]) {
       layers[l].y = y;
       y += NH + (l < b.last ? VG : 0);
     }
-    b.bottom = y + 14;
+    b.bottom = b.folded ? y : y + 14;
     y = b.bottom + BAND_GAP;
   });
   const H = y - BAND_GAP + PAD;

@@ -6,6 +6,7 @@ import { normalize, safeId } from '../core/normalize';
 import { normalizeVisions } from '../core/visions';
 import { readTips } from '../core/guidance/tip-history';
 import { normalizeTrash } from '../core/trash';
+import { readMapFold } from '../core/map-fold';
 import type { IdSet, ISOTime, Plan, User } from '../core/model';
 
 // The part of Google's sign-in script (loaded at run time by loadGis) this uses.
@@ -259,6 +260,7 @@ type RawFile = {
   visions?: unknown;
   tips?: unknown;
   trash?: unknown;
+  mapFold?: unknown;
 } | null;
 
 export function parseStore(text: string): FullStore {
@@ -278,6 +280,7 @@ export function parseStore(text: string): FullStore {
     visions: normalizeVisions(raw.visions),
     ...(raw.tips !== undefined && { tips: readTips(raw.tips) }),
     ...(raw.trash !== undefined && { trash: normalizeTrash(raw.trash) }),
+    ...(raw.mapFold !== undefined && { mapFold: readMapFold(raw.mapFold) }),
   };
 }
 
@@ -289,5 +292,6 @@ export const toFile = (store: Store) => ({
   visions: store.visions,
   ...(store.tips && { tips: store.tips }),
   ...(store.trash && { trash: store.trash }),
+  ...(store.mapFold && { mapFold: store.mapFold }),
 });
 export type SyncFile = ReturnType<typeof toFile>;

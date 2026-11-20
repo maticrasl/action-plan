@@ -180,8 +180,7 @@
   fill: color-mix(in srgb, var(--vision) 7%, var(--bg));
 }
 .col-label.vision {
-  fill: color-mix(in srgb, var(--vision-ink) 60%, var(--ink));
-  stroke: color-mix(in srgb, var(--vision) 7%, var(--bg));
+  color: color-mix(in srgb, var(--vision-ink) 60%, var(--ink));
 }
 .node.vision {
   --vc: var(--vision);

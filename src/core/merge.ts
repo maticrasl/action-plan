@@ -2,6 +2,7 @@
 import { isCumulative, refreshTotal } from './cumulative';
 import { followList } from './routines/checkins';
 import { mergeTrash, type Trash } from './trash';
+import { mergeMapFold, type MapFold } from './map-fold';
 import {
   ACYCLIC,
   PARENT_REL,
@@ -39,9 +40,10 @@ export interface Store {
   visions?: VisionList;
   tips?: Tips; // tip history; absent from files that never had any
   trash?: Trash; // Recently deleted; absent from files that never had any
+  mapFold?: MapFold; // folded Map bands; absent from files that never had any
 }
 // A store with every part read (the tips stay optional, so files without them keep their shape).
-export type FullStore = Required<Omit<Store, 'tips' | 'trash'>> & Pick<Store, 'tips' | 'trash'>;
+export type FullStore = Required<Omit<Store, 'tips' | 'trash' | 'mapFold'>> & Pick<Store, 'tips' | 'trash' | 'mapFold'>;
 // Method syntax keeps the parameters bivariant, so mergeState (states only) fits.
 type MergeItem = { merge(x: SyncItem, y: SyncItem): SyncItem }['merge'];
 
@@ -342,5 +344,6 @@ export function mergeStores(a: Store, b: Store): FullStore {
     visions: mergeVisions(a.visions, b.visions),
     ...((a.tips || b.tips) && { tips: mergeTips(a.tips, b.tips) }),
     ...((a.trash || b.trash) && { trash: mergeTrash(a.trash, b.trash) }),
+    ...((a.mapFold || b.mapFold) && { mapFold: mergeMapFold(a.mapFold, b.mapFold) }),
   };
 }

@@ -4,7 +4,7 @@ import { smartCheck } from '../core/progress';
 import { t, type TextKey } from '../i18n/index';
 import { daysUntil, fmtDate, fmtRel } from '../core/dates';
 import { ui } from '../store/state';
-import { NODE_STATES, type Activity, type Goal, type ISODate, type Item, type Relation } from '../core/model';
+import { type Activity, type Goal, type ISODate, type Item, type Relation } from '../core/model';
 import { findEntity } from '../core/relations';
 
 /* ---------- Utilities ---------- */
@@ -13,6 +13,9 @@ import { findEntity } from '../core/relations';
 export const $ = <E extends Element = HTMLElement>(sel: string, root: ParentNode = document) =>
   root.querySelector(sel) as E;
 export const viewEl = $('#view');
+// What scrolls a map or timeline: the timeline scrolls on its own, the map with the whole main pane.
+export const scrollBox = (wrap: Element) =>
+  (wrap.classList.contains('map-wrap') ? wrap.closest('.main') || wrap : wrap) as HTMLElement;
 export const esc = (s: unknown) =>
   String(s ?? '').replace(
     /[&<>"']/g,
@@ -60,12 +63,6 @@ export function hideDoneToggle() {
 // "waits for n" tag listing the unfinished items something waits for.
 export function waitsForTag(waits: { title: string }[]) {
   return `<span class="tag bad" title="${esc(waits.map(w => w.title).join(', '))}">${t('acts.waitsFor', { n: waits.length })}</span>`;
-}
-
-export function statusLegend() {
-  return NODE_STATES.map(
-    s => `<span><i class="swatch st-${s}"></i>${esc(t(('nodeState.' + s) as TextKey))}</span>`,
-  ).join('');
 }
 
 // The selected item and everything directly linked to it.

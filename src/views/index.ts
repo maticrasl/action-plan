@@ -10,7 +10,7 @@ import { save } from '../store/plans';
 import { ui, type ViewName } from '../store/state';
 import { categories } from '../core/categories';
 import { t, type TextKey } from '../i18n/index';
-import { $, viewEl } from '../ui/dom';
+import { $, scrollBox, viewEl } from '../ui/dom';
 import { closeCtxMenu } from '../ui/menu';
 import { closeAmountPop } from '../ui/amount-popover';
 import { updatePlanBadges } from '../ui/plan-switcher';
@@ -56,7 +56,8 @@ export function render() {
   $('#helpBtn').setAttribute('aria-pressed', String(ui.view === 'guide'));
   closeCtxMenu();
   closeAmountPop();
-  const old = ui.mapRefocus ? null : $('.map-wrap, .tl-scroll');
+  const oldWrap = ui.mapRefocus ? null : $('.map-wrap, .tl-scroll'),
+    old = oldWrap && scrollBox(oldWrap);
   const prevScroll = old && { left: old.scrollLeft, top: old.scrollTop };
   ui.mapRefocus = false;
   viewEl.dataset.view = ui.view;
@@ -75,9 +76,16 @@ export function render() {
   });
   // Keep the map / timeline where the user left it; on first show, centre on the goals / today.
   const wrap = $('.map-wrap, .tl-scroll');
+  // The map's toolbar sticks just under the top bar, where that bar sticks too.
+  // shortcut: measured per draw, not on resize; a resize that wraps the top bar shows until the next draw.
+  const bar = $('.topbar');
+  viewEl.style.setProperty('--topbar-h', getComputedStyle(bar).position === 'sticky' ? `${bar.offsetHeight}px` : '0px');
   if (wrap) {
-    wrap.scrollLeft = prevScroll ? prevScroll.left : Number(wrap.dataset.focusX) - wrap.clientWidth / 2;
-    if (prevScroll) wrap.scrollTop = prevScroll.top;
+    const box = scrollBox(wrap),
+      // focusX is measured from the wrap's left; the main pane starts further left.
+      at = box === wrap ? 0 : wrap.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft;
+    box.scrollLeft = prevScroll ? prevScroll.left : at + Number(wrap.dataset.focusX) - box.clientWidth / 2;
+    if (prevScroll) box.scrollTop = prevScroll.top;
   }
   markVisions();
   rendered.forEach(fn => fn());

@@ -43,17 +43,66 @@ suite(async () => {
     modal.close();
     return `menu=${btns.length} items`;
   });
+
+  await step('bands fold (remembered, synced); no Show/Status rows; the page scrolls the map', () => {
+    fresh('Fold');
+    const goals = Array.from({ length: 15 }, () => mk('goal'));
+    rel(goals[1], goals[0], 'subgoal');
+    const a = mk('activity');
+    save();
+    setView('map');
+    assert(!/level|raven|ravni/.test($('.map-wrap svg').textContent), 'no "(n levels)"');
+    assert(!$('[data-rel-toggle]') && !$('.map-legend') && !$('.map-wrap + p.meta'), 'no Show, Status or hint');
+    const fold = k => $(`[data-map-fold="${k}"]`);
+    fold('activity').click();
+    assert(!$(`[data-map-node="${a.id}"]`) && fold('activity').getAttribute('aria-expanded') === 'false', 'folded');
+    assert($(`[data-map-node="${goals[0].id}"]`) && $('[data-rel-edit]'), 'other bands and their lines stay');
+    eq(getMapFold().kinds, ['activity'], 'remembered');
+    eq(localStore().mapFold.kinds, ['activity'], 'and in the sync file');
+    render();
+    assert(!$(`[data-map-node="${a.id}"]`), 'still folded after a redraw');
+    applyStore({ ...localStore(), mapFold: { kinds: [], at: '2999-01-01T00:00:00.000Z' } });
+    render();
+    assert($(`[data-map-node="${a.id}"]`), 'a later synced change unfolds it');
+    // Everything folded: only the label strips, no error.
+    fold('goal').click();
+    fold('activity').click();
+    assert(!$('[data-map-node]') && $$('[data-map-fold]').length === 2, 'all folded');
+    saveMapFold({ kinds: [], at: new Date().toISOString() });
+    render();
+    // No scrollbars of its own: the main pane scrolls, the sidebar and toolbar stay in view.
+    const main = $('.main'),
+      wrap = $('.map-wrap');
+    assert(
+      getComputedStyle(wrap).overflowX === 'visible' && getComputedStyle(main).overflowX === 'auto',
+      'main scrolls',
+    );
+    assert(main.scrollWidth > main.clientWidth, `wider than the pane: ${main.scrollWidth} > ${main.clientWidth}`);
+    main.scrollLeft = 400;
+    const nav = $('.nav').getBoundingClientRect(),
+      bar = $('.map-toolbar').getBoundingClientRect(),
+      pane = main.getBoundingClientRect();
+    assert(nav.left === 0 && nav.width > 0, 'sidebar in place');
+    assert(Math.abs(bar.left - pane.left) < 2, `toolbar stays at the left: ${bar.left} vs ${pane.left}`);
+    const label = fold('goal').getBoundingClientRect();
+    assert(label.left > pane.left && label.left < pane.left + 40, `band labels stay at the left: ${label.left}`);
+    $(`[data-map-node="${goals[0].id}"]`).dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    assert(getComputedStyle($('.map-bars')).position === 'sticky' && $('.map-bars [data-map-clear]'), 'selection bar');
+    ui.mapSelected = null;
+    main.scrollLeft = 0;
+    render();
+  });
   await step('map and timeline hints are short; the details are in the help', () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
-      for (const k of ['map.hint', 'tl.hint']) assert(t(k).length <= 150, `${code} ${k} is ${t(k).length} characters`);
+      for (const k of ['tl.hint']) assert(t(k).length <= 150, `${code} ${k} is ${t(k).length} characters`);
       for (const k of ['help.view.map', 'help.view.timeline'])
         [/Delete/, /Enter/, /Esc/, /Ctrl/].forEach(w => assert(w.test(t(k)), `${code} ${k} mentions ${w}`));
       assert(/collapse|strn/i.test(t('help.view.timeline')), `${code}: folding in the timeline help`);
     }
     changeLanguage('en');
     setView('map');
-    return `${t('map.hint')} | ${t('tl.hint')}`;
+    return t('tl.hint');
   });
   await step(
     'map and timeline: + asks whether to add a goal, an activity or a current state (on the map also a vision)',
@@ -95,7 +144,10 @@ suite(async () => {
       // From the keyboard: the first item focused; Escape returns to the button.
       btn.focus();
       btn.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
-      assert(document.activeElement === ctxMenu.querySelector('[data-ctx="new:vision"]'), 'keyboard: first item focused');
+      assert(
+        document.activeElement === ctxMenu.querySelector('[data-ctx="new:vision"]'),
+        'keyboard: first item focused',
+      );
       ctxMenu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       assert(ctxMenu.hidden && document.activeElement === btn, 'Escape returns to the button');
       // A box's menu afterwards is still the item's own.
@@ -199,9 +251,11 @@ suite(async () => {
         `${code}: bands ${MAP.BAND_GAP} px apart`,
       );
       // Each band's label sits below the boxes of the band above, inside its own band.
-      const labels = [...document.querySelectorAll('.map-wrap .col-label')].map(l => l.getBBox());
+      const top = $('.map-wrap svg').getBoundingClientRect().top;
+      const labels = [...document.querySelectorAll('.map-wrap .col-label')].map(l => l.getBoundingClientRect());
       assert(
-        labels.every((l, i) => l.y >= bands[i][0] && l.y + l.height <= bands[i][0] + MAP.HEAD),
+        labels.length === bands.length &&
+          labels.every((l, i) => l.top - top >= bands[i][0] && l.bottom - top <= bands[i][0] + MAP.HEAD),
         `${code}: labels in their band's head`,
       );
       // The light on the face: its reflection and its shading, defined once, used by every box, over its glass.

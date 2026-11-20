@@ -508,7 +508,7 @@ export const en = {
     'help.view.timeline':
       'The timeline shows when everything happens. Items need a start or due date to appear here. Coloured lines on the left show how activities hang off goals and parent activities; an activity that serves several goals is listed under each (marked ↻). Collapse a goal with ▾ beside it, or use Collapse all for one line per goal; the same button then reads Expand all. Select a bar or a dependency arrow with a tap: press Enter (or double-click) to edit it, Delete to remove it, Esc to deselect; long-press or right-click for more options. Tapping the bar itself (not the rest of its row) lets you change its dates: drag the bar to move them, or one of its ends to change only that date (on a touch screen, long-press it first; Esc puts it back). A routine that falls on set days marks each of them along its bar: green when done, red when missed, blue still to come. Today is the light red column. Drag elsewhere to move around; pinch or Ctrl + scroll to stretch the time axis. With one finger: tap, then touch again and drag down to stretch it, up to shrink it.',
     'help.view.map':
-      'The map shows every relationship between goals, activities and current states. Use the toggles to show only some link types. Tap a box or a line to select it: double-click it or press Enter to edit it, press Delete to remove it (a box asks first), and Esc to deselect; long-press or right-click for more options. To link two items, drag from one box onto another (on a touch screen: long-press a box, choose “Link to…”, then tap the other box). Drag the background to move around; pinch or Ctrl + scroll to zoom. With one finger: tap, then touch again and drag down to zoom in, up to zoom out.',
+      'The map shows every relationship between goals, activities and current states. Tap a band’s name to fold it away or open it again. Tap a box or a line to select it: double-click it or press Enter to edit it, press Delete to remove it (a box asks first), and Esc to deselect; long-press or right-click for more options. To link two items, drag from one box onto another (on a touch screen: long-press a box, choose “Link to…”, then tap the other box). Drag the background to move around; pinch or Ctrl + scroll to zoom. With one finger: tap, then touch again and drag down to zoom in, up to zoom out.',
     'help.tip.summary': 'Average progress across goals that are active (not achieved or paused).',
     'help.tip.categories': 'Filter by goal category. Set a category when editing a goal.',
     'help.tip.smart': 'Lit letters are the SMART criteria this goal already meets. Edit the goal to complete the rest.',
@@ -523,7 +523,6 @@ export const en = {
       'A routine list: tick off today’s items one by one; once all are ticked, today is ticked off on the week strip. Ticking a day on the strip ticks all its items. Tomorrow the list starts afresh.',
     'help.tip.board': 'Drag cards between columns to change their status.',
     'help.tip.hideDone': 'Hide finished items to focus on what is left.',
-    'help.tip.mapShow': 'Choose which kinds of relationships are drawn on the map.',
     'help.tip.status': 'Colours show each item’s status: not started, in progress, late, waiting or done.',
     'help.tip.grChange':
       'Change from the first to the latest measurement. Green means it moved toward the goal’s target, red means away from it.',
@@ -906,12 +905,12 @@ export const en = {
     'map.rt.year': '{done}/{target} this year',
     'map.rt.streak': '{n}× in a row',
     'map.aria': 'Relationship map',
-    'map.hint':
-      'Tap a box or line to select it, double-tap to edit, long-press for more. Drag between boxes to link them.',
     'map.zoom': 'Zoom',
     'map.zoom.in': 'Zoom in',
     'map.zoom.out': 'Zoom out',
     'map.zoom.reset': 'Reset zoom to 100 %',
+    'map.fold': 'Collapse {kind}',
+    'map.unfold': 'Expand {kind}',
     'ctx.label': 'Options for “{name}”',
     'ctx.highlight': 'Highlight connections',
     'ctx.focus': 'Show only this goal',
@@ -932,11 +931,7 @@ export const en = {
     'map.relLabel': 'Relationship: {rel}. Enter to edit, Delete to remove',
     'map.relEmptyTitle': 'No relationships yet',
     'map.relEmptyText': 'Link activities to goals, current states to goals, and activities to each other.',
-    'map.show': 'Show:',
-    'map.status': 'Status:',
-    'map.toggles': 'Relationship types',
     'map.noneShown': 'No relationships match the current filters.',
-    'map.levels': { one: '{n} level', other: '{n} levels' },
 
     'f.none': '— none —',
     'pick.none': 'Nothing chosen yet – search below to add items.',

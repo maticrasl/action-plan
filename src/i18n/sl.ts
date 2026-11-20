@@ -525,7 +525,7 @@ export const sl: Language = {
     'help.view.timeline':
       'Časovnica kaže, kdaj se kaj zgodi. Elementi se tu prikažejo, če imajo datum začetka ali rok. Barvne črte na levi kažejo, kako so aktivnosti povezane s cilji in nadrejenimi aktivnostmi; aktivnost, ki prispeva k več ciljem, je navedena pod vsakim (oznaka ↻). Cilj strnete s ▾ ob njem, s Strni vse pa dobite po eno vrstico za vsak cilj; isti gumb se nato glasi Razširi vse. Vrstico ali puščico odvisnosti izberete s tapom: s tipko Enter (ali dvojnim klikom) jo uredite, s tipko Delete odstranite, z Esc pa izbiro prekličete; za več možnosti jo pridržite ali kliknite z desno tipko. Ko tapnete vrstico na časovni osi (ne preostanka vrste), lahko spremenite njene datume: povlecite jo, da jih premaknete, ali povlecite enega od njenih koncev, da spremenite le ta datum (na zaslonu na dotik jo najprej pridržite; Esc jo vrne nazaj). Rutina, ki poteka na določene dni, ima vsak tak dan označen ob svoji vrstici: zeleno, če je opravljen, rdeče, če je izpuščen, in modro, če je še pred vami. Današnji dan je svetlo rdeč stolpec. Z vlečenjem drugje se premikate, časovno os raztegnete z razmikom prstov ali s Ctrl + koleščkom. Z enim prstom: tapnite, se znova dotaknite in povlecite navzdol, da jo raztegnete, ali navzgor, da jo skrčite.',
     'help.view.map':
-      'Zemljevid prikazuje vse povezave med cilji, aktivnostmi in trenutnimi stanji. S stikali prikažete le nekatere vrste povezav. Tapnite polje ali črto, da jo izberete: z dvojnim klikom ali tipko Enter jo uredite, s tipko Delete odstranite (pri polju vas aplikacija najprej vpraša), z Esc pa izbiro prekličete; za več možnosti jo pridržite ali kliknite z desno tipko. Dva elementa povežete tako, da povlečete od enega polja do drugega (na zaslonu na dotik: pridržite polje, izberite »Poveži z …« in tapnite drugo polje). Z vlečenjem ozadja se premikate, za povečavo razmaknite prsta ali uporabite Ctrl + kolešček. Z enim prstom: tapnite, se znova dotaknite in povlecite navzdol za povečavo ali navzgor za pomanjšavo.',
+      'Zemljevid prikazuje vse povezave med cilji, aktivnostmi in trenutnimi stanji. Tapnite ime pasu, da ga strnete ali spet razširite. Tapnite polje ali črto, da jo izberete: z dvojnim klikom ali tipko Enter jo uredite, s tipko Delete odstranite (pri polju vas aplikacija najprej vpraša), z Esc pa izbiro prekličete; za več možnosti jo pridržite ali kliknite z desno tipko. Dva elementa povežete tako, da povlečete od enega polja do drugega (na zaslonu na dotik: pridržite polje, izberite »Poveži z …« in tapnite drugo polje). Z vlečenjem ozadja se premikate, za povečavo razmaknite prsta ali uporabite Ctrl + kolešček. Z enim prstom: tapnite, se znova dotaknite in povlecite navzdol za povečavo ali navzgor za pomanjšavo.',
     'help.tip.summary': 'Povprečni napredek ciljev, ki so aktivni (niso doseženi ali zaustavljeni).',
     'help.tip.categories': 'Filtrirajte po kategoriji cilja. Kategorijo nastavite pri urejanju cilja.',
     'help.tip.smart': 'Osvetljene črke so merila SMART, ki jih cilj že izpolnjuje. Uredite cilj, da dopolnite ostala.',
@@ -540,7 +540,6 @@ export const sl: Language = {
       'Rutinski seznam: današnje postavke odkljukajte eno za drugo; ko so odkljukane vse, se na tedenskem traku odkljuka današnji dan. Kljukica pri dnevu na traku odkljuka vse njegove postavke. Jutri se seznam začne znova.',
     'help.tip.board': 'Kartice vlecite med stolpci, da spremenite njihov status.',
     'help.tip.hideDone': 'Skrijte opravljeno, da se osredotočite na preostalo.',
-    'help.tip.mapShow': 'Izberite, katere vrste povezav so narisane na zemljevidu.',
     'help.tip.status': 'Barve kažejo status posameznega elementa: ni začeto, v teku, zamuja, čaka ali opravljeno.',
     'help.tip.grChange':
       'Sprememba od prve do zadnje meritve. Zelena pomeni premik proti ciljni vrednosti, rdeča premik stran od nje.',
@@ -1011,12 +1010,12 @@ export const sl: Language = {
     'map.rt.year': '{done}/{target} to leto',
     'map.rt.streak': '{n}× zapored',
     'map.aria': 'Zemljevid povezav',
-    'map.hint':
-      'Tapnite polje ali črto, da jo izberete, dvakrat tapnite za urejanje, pridržite za več možnosti. Polji povežete z vlečenjem.',
     'map.zoom': 'Povečava',
     'map.zoom.in': 'Povečaj',
     'map.zoom.out': 'Pomanjšaj',
     'map.zoom.reset': 'Ponastavi povečavo na 100 %',
+    'map.fold': 'Strni: {kind}',
+    'map.unfold': 'Razširi: {kind}',
     'ctx.label': 'Možnosti za »{name}«',
     'ctx.highlight': 'Poudari povezave',
     'ctx.focus': 'Prikaži samo ta cilj',
@@ -1037,11 +1036,7 @@ export const sl: Language = {
     'map.relLabel': 'Povezava: {rel}. Enter za urejanje, Delete za odstranitev',
     'map.relEmptyTitle': 'Še ni povezav',
     'map.relEmptyText': 'Povežite aktivnosti s cilji, trenutna stanja s cilji in aktivnosti med seboj.',
-    'map.show': 'Prikaži:',
-    'map.status': 'Stanje:',
-    'map.toggles': 'Vrste povezav',
     'map.noneShown': 'Nobena povezava ne ustreza izbranim filtrom.',
-    'map.levels': { one: '{n} raven', two: '{n} ravni', few: '{n} ravni', other: '{n} ravni' },
 
     'f.none': '— brez —',
     'pick.none': 'Nič še ni izbrano – elemente poiščite in dodajte spodaj.',

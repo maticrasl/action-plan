@@ -86,17 +86,14 @@ suite(async () => {
         svg.querySelector(`.vglow-lines [data-line-glow="${visionRelId(g.id, B.id)}"]`),
       'and the lines between them',
     );
-    // Toggles for the two link types.
-    $('[data-rel-toggle="serves"]').click();
+    // Folding the goals hides the goal → vision lines, not the vision → vision ones.
+    $('[data-map-fold="goal"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
     assert(
       !$(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`) && $(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`),
-      'goal → vision lines hidden',
+      'goal → vision lines hidden with the goals',
     );
-    $('[data-rel-toggle="serves"]').click();
-    $('[data-rel-toggle="subvision"]').click();
-    assert(!$(`[data-rel-edit="${visionRelId(B.id, A.id)}"]`), 'vision → vision lines hidden');
-    $('[data-rel-toggle="subvision"]').click();
-    eq($('[data-rel-toggle="serves"] .count').textContent, '1', 'counted');
+    $('[data-map-fold="goal"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert($(`[data-rel-edit="${visionRelId(g.id, B.id)}"]`), 'and back');
     // Hide unrelated visions.
     $('[data-hide-visions]').click();
     eq(
@@ -200,7 +197,7 @@ suite(async () => {
     assert($('.map-wrap svg .node.vision') && !$('#view > .empty'), 'visions alone are drawn');
     clearVisions();
     render();
-    assert(!$('[data-hide-visions]') && !$('[data-rel-toggle="serves"]'), 'no visions: no vision chips');
+    assert(!$('[data-hide-visions]') && !$('[data-map-fold="vision"]'), 'no visions: no vision toggle or band');
     deletePlan(plans.current);
     deletePlan(plans.list.find(p => p.name === 'Vision map').id);
   });

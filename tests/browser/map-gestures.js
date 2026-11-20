@@ -130,7 +130,7 @@ suite(async () => {
     );
     modal.close();
     startMapLink(g2.id);
-    $('.map-legend').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    $('.map-toolbar').dispatchEvent(new MouseEvent('click', { bubbles: true }));
     assert(!ui.mapLinkFrom && !$('.link-bar') && !modal.open, 'tapping elsewhere cancels');
     startMapLink(g2.id);
     $('[data-map-link-cancel]').click();
