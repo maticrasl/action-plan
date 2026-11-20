@@ -163,6 +163,24 @@
     </footer>
   </dialog>
 
+  <dialog id="trash" class="modal plan-share trash" aria-labelledby="trashTitle">
+    <header class="modal-head">
+      <h2 id="trashTitle" data-i18n="trash.title">Recently deleted</h2>
+      <button type="button" class="icon-btn" data-trash-close data-i18n-aria="btn.close" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="hint" data-i18n="trash.lead">Kept for 30 days. With Google sync, on all your devices.</p>
+      <div id="trashBody"></div>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn small ghost" id="trashEmpty" data-i18n="trash.emptyBtn">Empty</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-trash-close data-i18n="btn.close">Close</button>
+    </footer>
+  </dialog>
+
   <dialog id="planMerge" class="modal plan-share" aria-labelledby="planMergeTitle">
     <form method="dialog" novalidate>
       <header class="modal-head">
@@ -266,6 +284,7 @@
         <div class="set-actions">
           <button type="button" class="btn small" id="backupAllBtn" data-i18n="backup.all">Back up everything</button>
           <label class="btn small"><span data-i18n="backup.restore">Restore from a backup…</span><input type="file" id="backupInput" accept=".json,application/json" hidden></label>
+          <button type="button" class="btn small" id="trashBtn"><span data-i18n="trash.title">Recently deleted</span> <span id="trashCount"></span></button>
         </div>
       </section>
       <section class="set-group">

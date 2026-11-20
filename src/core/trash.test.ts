@@ -4,8 +4,8 @@ import { db, setDb, setVisions, visions } from './state';
 import {
   GONE_DAYS,
   TRASH_DAYS,
-  addEntry,
-  forget,
+  addToTrash,
+  forgetEntries,
   itemEntry,
   mergeTrash,
   normalizeTrash,
@@ -92,13 +92,13 @@ test('cap: oldest go first; one entry over the cap is refused', () => {
     ['b', daysAgo(2)],
     ['c', daysAgo(1)],
   ])
-    t = addEntry(t!, big(id, at), 1000);
+    t = addToTrash(t!, big(id, at), 1000);
   expect(t!.items.map(e => e.id)).toEqual(['c', 'b']);
-  expect(addEntry(empty(), { ...entry('z'), title: 'y'.repeat(1100) }, 1000)).toBeNull();
+  expect(addToTrash(empty(), { ...entry('z'), title: 'y'.repeat(1100) }, 1000)).toBeNull();
 });
 
-test('forget removes entries and remembers them as gone', () => {
-  const t = forget({ items: [entry('a'), entry('b')], gone: {} }, ['a'], 'T');
+test('forgetEntries removes entries and remembers them as gone', () => {
+  const t = forgetEntries({ items: [entry('a'), entry('b')], gone: {} }, ['a'], 'T');
   expect(t.items.map(e => e.id)).toEqual(['b']);
   expect(t.gone).toEqual({ a: 'T' });
 });

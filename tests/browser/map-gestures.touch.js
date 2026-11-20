@@ -98,7 +98,7 @@ suite(async () => {
     const id = r().id;
     tapMenu('rel-remove');
     assert(ctxMenu.hidden && !db.relations.some(x => x.id === id), 'Remove removes it');
-    eq($('#toast').textContent, t('toast.relRemoved'), 'says so');
+    eq($('#toast').firstChild.textContent, t('toast.relRemoved'), 'says so');
     assert(findEntity(a.id) && findEntity(g.id) && db.relations.length === 1, 'the items and the other line stay');
 
     // Boxes keep their own menu.

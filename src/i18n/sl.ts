@@ -642,7 +642,6 @@ export const sl: Language = {
     },
     'planDel.relations': { one: '{n} povezava', two: '{n} povezavi', few: '{n} povezave', other: '{n} povezav' },
     'planDel.empty': 'Načrt je prazen.',
-    'planDel.noUndo': 'Tega ni mogoče razveljaviti. Izbrisan načrt ne gre v koš in ga ni mogoče obnoviti.',
     'planDel.local':
       'Načrt je shranjen le v tem brskalniku, zato od njega ne bo ostala nobena kopija, razen če ste ga izvozili.',
     'planDel.synced':
@@ -1205,7 +1204,31 @@ export const sl: Language = {
     'toast.relAdded': 'Povezava dodana',
     'toast.relUpdated': 'Povezava posodobljena',
     'toast.relRemoved': 'Povezava odstranjena',
-    'confirm.deleteRel': 'Odstranim to povezavo?',
+    'undo': 'Razveljavi',
+    'toast.undone': 'Vrnjeno',
+    'trash.title': 'Nedavno izbrisano',
+    'trash.lead': 'Hrani se 30 dni. Z Googlovo sinhronizacijo na vseh vaših napravah.',
+    'trash.none': 'V zadnjem času niste ničesar izbrisali.',
+    'trash.restore': 'Obnovi',
+    'trash.forever': 'Izbriši za vedno',
+    'trash.emptyBtn': 'Izprazni',
+    'trash.confirmEmpty': 'Vse to izbrišem za vedno?',
+    'trash.confirmForever': '»{name}« izbrišem za vedno?',
+    'trash.plan': 'načrt',
+    'trash.items': { one: '{n} element', two: '{n} elementa', few: '{n} elementi', other: '{n} elementov' },
+    'trash.when': 'izbrisano {date}',
+    'trash.restored': 'Obnovljeno: »{name}«',
+    'trash.restoredLinks': {
+      one: 'Obnovljeno. {n} povezave ni bilo mogoče vrniti.',
+      two: 'Obnovljeno. {n} povezav ni bilo mogoče vrniti.',
+      few: 'Obnovljeno. {n} povezav ni bilo mogoče vrniti.',
+      other: 'Obnovljeno. {n} povezav ni bilo mogoče vrniti.',
+    },
+    'trash.planGone': 'Njegovega načrta ni več. Ga obnovim v »{plan}«?',
+    'trash.notKept': 'Izbrisano. V Nedavno izbrisano ga ni bilo mogoče shraniti.',
+    'trash.tooLarge': 'Ta načrt je prevelik za Nedavno izbrisano. Najprej prenesite varnostno kopijo.',
+    'trash.show': 'Pokaži',
+    'planDel.restorable': 'Obnovite ga lahko v Nastavitve › Nedavno izbrisano v 30 dneh.',
     'confirm.discard': 'Zavržem spremembe?',
     'confirm.deleteMeasurement': 'Izbrišem meritev {value} z dne {date}?',
     'toast.goalCreated': 'Cilj SMART ustvarjen',
@@ -1233,7 +1256,6 @@ export const sl: Language = {
     'toast.sample': 'Vzorčni načrt naložen',
     'toast.template': 'Načrt »{name}« ustvarjen iz predloge',
 
-    'confirm.delete': 'Izbrišem »{name}« skupaj z vsemi povezavami?',
   },
   sample: {
     goals: [

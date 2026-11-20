@@ -18,6 +18,8 @@ import { t } from '../i18n/index';
 import { emit } from './events';
 import { deleteVision, loadVisions } from './visions';
 import { collection } from '../core/relations';
+import { itemEntry, visionEntry } from '../core/trash';
+import { trashAdd } from './trash';
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.
@@ -208,10 +210,13 @@ export function mergePlanInto(fromId: string, toId: string, remove = false) {
   emit('plansChanged');
 }
 
-export function removeEntity(kind: ItemKind, id: string) {
+// Removes an item and keeps it in Recently deleted; says whether it could be kept there.
+export function removeEntity(kind: ItemKind, id: string): 'ok' | 'large' | 'full' {
+  const kept = trashAdd(kind === 'vision' ? visionEntry(id) : itemEntry(kind, id, plans.current!, currentPlan()?.name || ''));
   if (kind === 'vision') {
     if (ui.mapSelected === id) ui.mapSelected = null;
-    return deleteVision(id);
+    deleteVision(id);
+    return kept;
   }
   const list = collection(kind);
   list.splice(
@@ -220,4 +225,5 @@ export function removeEntity(kind: ItemKind, id: string) {
   );
   db.relations = db.relations.filter(r => r.from !== id && r.to !== id);
   if (ui.mapSelected === id) ui.mapSelected = null;
+  return kept;
 }

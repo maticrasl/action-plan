@@ -1,5 +1,5 @@
 /** Recently deleted as stored (preference `trash`, per user, synced): read, add, remove for good. */
-import { addEntry, forget, normalizeTrash, pruneTrash, type Trash, type TrashEntry } from '../core/trash';
+import { addToTrash, forgetEntries, normalizeTrash, pruneTrash, type Trash, type TrashEntry } from '../core/trash';
 import { STORAGE_KEY } from './prefs';
 import { userStorage } from './users';
 
@@ -32,9 +32,9 @@ export function saveTrash(t: Trash): boolean {
 // 'large': the entry alone is over the cap; 'full': storage refused it. The deletion goes ahead either way.
 export function trashAdd(entry: TrashEntry | null): 'ok' | 'large' | 'full' {
   if (!entry) return 'ok';
-  const next = addEntry(getTrash(), entry);
+  const next = addToTrash(getTrash(), entry);
   if (!next) return 'large';
   return saveTrash(next) ? 'ok' : 'full';
 }
 
-export const trashForget = (ids: string[]) => ids.length && saveTrash(forget(getTrash(), ids));
+export const trashForget = (ids: string[]) => ids.length && saveTrash(forgetEntries(getTrash(), ids));

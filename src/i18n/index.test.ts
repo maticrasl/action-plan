@@ -87,7 +87,7 @@ test('English and Slovenian have the same keys, and samples of the same size', (
 
 describe('t, lookup and fill', () => {
   test('placeholders are filled; unknown ones stay as they are', () => {
-    expect(t('confirm.delete', { name: 'Run' })).toBe('Delete “Run” and its relationships?');
+    expect(t('trash.restored', { name: 'Run' })).toBe('Restored “Run”');
     expect(fill('{a} and {b}', { a: 1 })).toBe('1 and {b}');
     expect(fill('{a}')).toBe('{a}');
   });

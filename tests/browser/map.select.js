@@ -280,7 +280,7 @@ suite(async () => {
       eq(db.relations, keep, 'the others untouched');
       assert(findEntity(a.id) && findEntity(g.id), 'its items stay');
       eq(readPlan(plans.current).relations.length, n0 - 1, 'saved');
-      eq($('#toast').textContent, t('toast.relRemoved'), 'says so');
+      eq($('#toast').firstChild.textContent, t('toast.relRemoved'), 'says so');
       eq(ui.mapRel, null, 'selection cleared');
       assert(!edge(r.id), 'no longer drawn');
       // Backspace (the delete key on a Mac) works the same; so does a focused, unselected line.
@@ -297,7 +297,7 @@ suite(async () => {
     }
     return `${n0} → 0`;
   });
-  await step('map: Delete on a selected item asks first, then deletes it with its links', () => {
+  await step('map: Delete on a selected item deletes it with its links at once; Undo puts it back', () => {
     const { g, a, b, s } = mapFixture();
     const realConfirm = window.confirm;
     let question = '';
@@ -309,14 +309,15 @@ suite(async () => {
         return false;
       };
       assert(press('Delete', document.body), 'Delete is handled');
-      eq(question, t('confirm.delete', { name: 'Train' }), 'the delete question names it');
-      assert(findEntity(a.id) && relOf(a, g), 'cancel keeps it and its links');
-      eq(ui.mapSelected, a.id, 'still selected after cancel');
-      window.confirm = q => {
-        question = q;
-        return true;
-      };
-      press('Backspace', document.body);
+      eq(question, '', 'no question');
+      assert(!findEntity(a.id) && !relOf(a, g), 'deleted with its links');
+      assert(getTrash().items[0]?.title === 'Train', 'kept in Recently deleted');
+      $('#toast .toast-action').click();
+      assert(findEntity(a.id) && relOf(a, g), 'Undo puts it back with its links');
+      assert(!getTrash().items.some(e => e.title === 'Train'), 'and takes it out of Recently deleted');
+      eq($('#toast').textContent, t('toast.undone'), 'says so');
+      nodeEl(a.id).focus();
+      press('Backspace', nodeEl(a.id));
       assert(!findEntity(a.id) && !relOf(a, g), 'confirm deletes it and its links');
       assert(findEntity(g.id) && relOf(b, g), 'everything else stays');
       eq(
@@ -324,18 +325,19 @@ suite(async () => {
         [b.id],
         'saved',
       );
-      eq($('#toast').textContent, t('toast.deleted.activity'), 'says so');
+      eq($('#toast').firstChild.textContent, t('toast.deleted.activity'), 'says so');
+      eq($('#toast .toast-action').textContent, t('undo'), 'with Undo');
       eq(ui.mapSelected, null, 'selection cleared');
       // A focused item works without clicking it first; each kind gets its own message.
       question = '';
       nodeEl(s.id).focus();
       press('Delete', nodeEl(s.id));
-      assert(question.includes('Distance') && !findEntity(s.id), 'focused state deleted');
-      eq($('#toast').textContent, t('toast.deleted.state'), 'state message');
+      assert(!findEntity(s.id), 'focused state deleted');
+      eq($('#toast').firstChild.textContent, t('toast.deleted.state'), 'state message');
       clickEl(nodeEl(g.id));
       press('Delete', document.body);
       assert(!findEntity(g.id), 'goal deleted');
-      eq($('#toast').textContent, t('toast.deleted.goal'), 'goal message');
+      eq($('#toast').firstChild.textContent, t('toast.deleted.goal'), 'goal message');
     } finally {
       window.confirm = realConfirm;
     }

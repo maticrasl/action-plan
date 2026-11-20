@@ -681,3 +681,31 @@
 .feedback .modal-foot {
   flex-wrap: wrap;
 }
+
+/* Recently deleted */
+.trash-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.trash-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.trash-what {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.trash-what small {
+  display: block;
+  color: var(--ink-2);
+}
+.trash-acts {
+  display: flex;
+  gap: 6px;
+}

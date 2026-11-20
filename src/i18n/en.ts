@@ -595,7 +595,6 @@ export const en = {
     'planDel.activities': { one: '{n} activity', other: '{n} activities' },
     'planDel.relations': { one: '{n} relationship', other: '{n} relationships' },
     'planDel.empty': 'The plan is empty.',
-    'planDel.noUndo': 'This can’t be undone. There is no recycle bin and no undo for a deleted plan.',
     'planDel.local':
       'The plan is stored only in this browser, so no copy of it will remain unless you have exported one.',
     'planDel.synced':
@@ -1099,7 +1098,26 @@ export const en = {
     'toast.relAdded': 'Relationship added',
     'toast.relUpdated': 'Relationship updated',
     'toast.relRemoved': 'Relationship removed',
-    'confirm.deleteRel': 'Remove this relationship?',
+    'undo': 'Undo',
+    'toast.undone': 'Put back',
+    'trash.title': 'Recently deleted',
+    'trash.lead': 'Kept for 30 days. With Google sync, on all your devices.',
+    'trash.none': 'Nothing was deleted lately.',
+    'trash.restore': 'Restore',
+    'trash.forever': 'Delete for good',
+    'trash.emptyBtn': 'Empty',
+    'trash.confirmEmpty': 'Delete all of these for good?',
+    'trash.confirmForever': 'Delete “{name}” for good?',
+    'trash.plan': 'plan',
+    'trash.items': { one: '{n} item', other: '{n} items' },
+    'trash.when': 'deleted {date}',
+    'trash.restored': 'Restored “{name}”',
+    'trash.restoredLinks': { one: 'Restored. {n} link could not be put back.', other: 'Restored. {n} links could not be put back.' },
+    'trash.planGone': 'Its plan no longer exists. Restore into “{plan}”?',
+    'trash.notKept': 'Deleted. It could not be kept in Recently deleted.',
+    'trash.tooLarge': 'This plan is too large to keep in Recently deleted. Download a backup first.',
+    'trash.show': 'Show',
+    'planDel.restorable': 'You can restore it from Settings › Recently deleted for 30 days.',
     'confirm.discard': 'Discard your changes?',
     'confirm.deleteMeasurement': 'Delete the measurement {value} of {date}?',
     'toast.goalCreated': 'SMART goal created',
@@ -1125,7 +1143,6 @@ export const en = {
     'toast.sample': 'Sample plan loaded',
     'toast.template': '“{name}” created from a template',
 
-    'confirm.delete': 'Delete “{name}” and its relationships?',
   },
   sample: {
     goals: [

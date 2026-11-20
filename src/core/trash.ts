@@ -82,7 +82,7 @@ export function mergeTrash(a: Trash | undefined, b: Trash | undefined, now = Dat
 }
 
 // Adds an entry (newest first) and drops the oldest past the cap; null when the entry alone is too large.
-export function addEntry(t: Trash, entry: TrashEntry, max = TRASH_MAX): Trash | null {
+export function addToTrash(t: Trash, entry: TrashEntry, max = TRASH_MAX): Trash | null {
   if (JSON.stringify(entry).length > max) return null;
   const items = [entry, ...t.items];
   while (JSON.stringify({ items, gone: t.gone }).length > max) items.pop();
@@ -90,7 +90,7 @@ export function addEntry(t: Trash, entry: TrashEntry, max = TRASH_MAX): Trash | 
 }
 
 // Removes entries on every device: they are remembered as gone.
-export function forget(t: Trash, ids: string[], now = new Date().toISOString()): Trash {
+export function forgetEntries(t: Trash, ids: string[], now = new Date().toISOString()): Trash {
   const drop = new Set(ids);
   const gone = { ...t.gone };
   ids.forEach(id => (gone[id] = now));

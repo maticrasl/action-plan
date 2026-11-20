@@ -484,6 +484,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Ctrl + Enter</strong> shrani obrazec, v katerem ste. <strong>Esc</strong> ga zapre; če ste kaj spremenili, vas pred zavrženjem vpraša, tako kot Prekliči in ×.</li>
 <li>V Vodniku vas <strong>Esc</strong> vrne v pogled, iz katerega ste prišli.</li>
 <li>Na Zemljevidu in Časovnici: <strong>Enter</strong> uredi izbrani element, <strong>Delete</strong> ga odstrani, <strong>Esc</strong> prekliče izbiro.</li>
+<li>Ko kaj izbrišete, sporočilo na dnu nekaj sekund ponuja <strong>Razveljavi</strong>. Pozneje je izbrisano še 30 dni v Nastavitve › Podatki › Nedavno izbrisano.</li>
 <li><strong>Dva prsta</strong> ali <strong>Ctrl + kolešček</strong> povečata Zemljevid, Časovnico in grafe. Z enim prstom: tapnite, nato se znova dotaknite in povlecite navzdol ali navzgor.</li>
 <li>Gumb <strong>Dodaj</strong> vedno doda, kar ustreza pogledu, v katerem ste.</li>
 <li><strong>Razlage na zaslonu</strong> (na tej strani in v Nastavitvah) vsakemu pogledu dodajo kratko opombo, kontrolnikom pa oznake ⓘ.</li>
@@ -516,7 +517,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     group: 'data',
     title: 'Kaj naredi prijava z Googlom',
     body: `<p>Prijava da Akcijskemu načrtu eno dovoljenje: da svoje podatke hrani v skriti mapi vašega Google Driva. Aplikacija ne vidi vaših drugih datotek, pošte ali stikov, druge aplikacije pa ne vidijo te mape. Vaš e-poštni naslov in ime sta prebrana ob prijavi, da je na tej napravi vidno, kdo je prijavljen.</p>
-<p>Načrte v tej mapi hrani Google pod vašim računom in po Googlovih pogojih. Akcijski načrt jih ne šifrira dodatno, poleg tega, kar Google naredi za vse datoteke v Drivu.</p>
+<p>Načrte v tej mapi in to, kar ste izbrisali v zadnjih 30 dneh (Nedavno izbrisano), hrani Google pod vašim računom in po Googlovih pogojih. Akcijski načrt jih ne šifrira dodatno, poleg tega, kar Google naredi za vse datoteke v Drivu.</p>
 <p>Da prenehate: odjavite se v Nastavitve › Račun in sinhronizacija. Da odstranite kopijo v Drivu: odprite nastavitve Google Driva, »Upravljanje aplikacij«, poiščite Akcijski načrt in izberite »Izbriši skrite podatke aplikacije«. Dovoljenje lahko prekličete v svojem Google računu pod »Aplikacije in storitve drugih ponudnikov«.</p>`,
     related: ['p-where', 'h-sync'],
   },
@@ -538,9 +539,9 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <p>Za varnost naredite eno od tega:</p>
 <ul>
 <li><strong>Prijavite se z Googlom</strong>, da je kopija v vašem Drivu in na vaših drugih napravah.</li>
-<li>Vsake toliko <strong>izvozite polno kopijo</strong> vsakega načrta in datoteko shranite drugam.</li>
+<li>Vsake toliko <strong>izvozite polno kopijo</strong> vsakega načrta ali v Nastavitve › Podatki uporabite <strong>Varnostna kopija vsega</strong> za vse načrte in vizije v eni datoteki, in datoteko shranite drugam.</li>
 </ul>
-<p>Izbrisanega načrta ni mogoče vrniti; koša ni. Ko je sinhronizacija vklopljena, izbris načrta ta načrt izbriše tudi na vaših drugih napravah. Okno za brisanje ponudi, da najprej prenesete varnostno kopijo.</p>`,
+<p>Izbrisan element ali načrt ostane 30 dni v Nastavitve › Podatki › Nedavno izbrisano; s sinhronizacijo tudi na vaših drugih napravah. Potem ga ni več. Ko je sinhronizacija vklopljena, izbris načrta ta načrt izbriše tudi na vaših drugih napravah. Okno za brisanje ponudi, da najprej prenesete varnostno kopijo.</p>`,
     action: { do: 'export', label: 'Izvozi načrt' },
     related: ['h-plans', 'h-sync'],
   },
@@ -551,6 +552,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<ul>
 <li><strong>En načrt:</strong> Nastavitve › Načrt › Izbriši načrt.</li>
 <li><strong>Vaše načrte na tej napravi:</strong> ko ste prijavljeni, Nastavitve › Račun in sinhronizacija › »Odstrani s te naprave«.</li>
+<li><strong>Nedavno izbrisano:</strong> Nastavitve › Podatki › Nedavno izbrisano › Izprazni. »Odstrani s te naprave« ga odstrani tudi tu.</li>
 <li><strong>Vse na tej napravi,</strong> za vse uporabnike: v nastavitvah brskalnika izbrišite podatke te strani.</li>
 <li><strong>Kopijo v Google Drivu:</strong> glejte [[p-google]].</li>
 </ul>

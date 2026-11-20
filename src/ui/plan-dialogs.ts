@@ -7,6 +7,9 @@ import { t, tp, type PluralKey } from '../i18n/index';
 import { syncConnected } from '../sync/sync';
 import { deletePlan, mergePlanInto, readPlan } from '../store/plans';
 import { toast } from './toast';
+import { undoable } from './undo';
+import { trashAdd } from '../store/trash';
+import { TRASH_MAX, planEntry } from '../core/trash';
 import { exportJson } from './plan-io';
 import type { Db, Plan } from '../core/model';
 
@@ -17,20 +20,22 @@ export const planDel = $<HTMLDialogElement>('#planDelete');
 export function openPlanDelete(plan: Plan) {
   closeCtxMenu();
   planDel.dataset.id = plan.id;
-  const contents = planContents(db);
+  const data = plan.id === plans.current ? db : readPlan(plan.id);
+  const contents = planContents(data);
   const last = plans.list.length === 1;
+  const tooLarge = JSON.stringify(planEntry(plan.id, plan.name, data)).length > TRASH_MAX;
   $('#planDeleteBody').innerHTML = `
     <div class="del-warn" role="alert">
       <p>${t('planDel.lead', { name: `<span class="del-name">${esc(plan.name)}</span>` })}</p>
       ${contents ? `<ul>${contents}</ul>` : `<p>${t('planDel.empty')}</p>`}
     </div>
     <ul class="del-points">
-      <li class="strong">${t('planDel.noUndo')}</li>
+      <li class="strong">${t(tooLarge ? 'trash.tooLarge' : 'planDel.restorable')}</li>
       <li>${t(syncConnected() ? 'planDel.synced' : 'planDel.local')}</li>
       <li>${t(last ? 'planDel.last' : 'planDel.others')}</li>
     </ul>
     <div class="del-actions">
-      <button type="button" class="btn small" data-plan-backup>${t('planDel.backup')}</button>
+      <button type="button" class="btn small${tooLarge ? ' primary' : ''}" data-plan-backup>${t('planDel.backup')}</button>
       ${contents && !last ? `<button type="button" class="btn small" data-plan-merge-instead>${t('planDel.merge')}</button>` : ''}
     </div>
     <div class="field">
@@ -58,8 +63,13 @@ $('#planDeleteForm').addEventListener('submit', e => {
   e.preventDefault();
   if (!planDelNameOk()) return;
   planDel.close();
-  deletePlan(planDel.dataset.id!);
-  toast(t('toast.planDeleted'));
+  const id = planDel.dataset.id!,
+    name = plans.list.find(p => p.id === id)!.name;
+  undoable(() => {
+    const kept = trashAdd(planEntry(id, name, id === plans.current ? db : readPlan(id)));
+    deletePlan(id);
+    return kept === 'ok' ? t('toast.planDeleted') : t('trash.notKept');
+  }, id);
 });
 
 /* ---------- Merging a plan into another (also offered instead of deleting it) ---------- */
