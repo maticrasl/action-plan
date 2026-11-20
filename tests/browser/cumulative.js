@@ -116,7 +116,7 @@ suite(async () => {
     rel(empty, g0, 'measures');
     openForm('goal', g0.id);
     assert(
-      $('#f-period') && $('[data-field="period"] .hint').textContent.includes('New km'),
+      !$('[data-field="period"]').hidden && $('[data-field="period"] .hint').textContent.includes('New km'),
       'Counts before the first amount',
     );
     modal.close();
@@ -154,13 +154,13 @@ suite(async () => {
     recordMeasurement(old, addDays(now, -20), '3');
     rel(old, g, 'measures');
     openForm('goal', g.id);
-    assert($('#f-period') && measuringState(g) === km, 'the newer state adds up: Counts shown');
+    assert(!$('[data-field="period"]').hidden && measuringState(g) === km, 'the newer state adds up: Counts shown');
     modal.close();
     // Switched to plain: the period stays on the goal but is not used, and Counts is not shown.
     convertState(km, false);
     save();
     openForm('goal', g.id);
-    assert(!$('#f-period'), 'no Counts for a plain state');
+    assert($('[data-field="period"]').hidden, 'no Counts for a plain state');
     $('#f-target').value = '31';
     submitForm();
     assert(g.period === 'week' && goalCurrent(g) === Number(stateValue(km)), `kept, unused: ${goalCurrent(g)}`);

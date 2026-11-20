@@ -49,13 +49,9 @@ suite(async () => {
     assert(currentPlan().name === 'OTHER NAME', 'a plan keeps its own name (case change allowed)');
     deletePlan(plans.current);
     window.prompt = () => 'Prompted plan';
-    const sel = $('[data-plan-select]');
-    sel.value = plans.list[0].id;
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-    assert(plans.current === plans.list[0].id);
-    sel.value = plans.list[n0].id;
-    $('[data-plan-select]').value = plans.list[n0].id;
-    $('[data-plan-select]').dispatchEvent(new Event('change', { bubbles: true }));
+    clickEl($(`.nav [data-plan-open="${plans.list[0].id}"]`));
+    assert(plans.current === plans.list[0].id, 'a row in the list opens its plan');
+    openPlan(plans.list[n0].id);
     $('[data-plan="delete"]').click();
     $('#planDeleteName').value = currentPlan().name;
     $('#planDeleteName').dispatchEvent(new Event('input', { bubbles: true }));
@@ -242,8 +238,8 @@ suite(async () => {
       'lists every plan, current selected',
     );
     assert(
-      pick.selectedOptions[0].textContent === `${HEALTH_BADGE.ok} Second plan`,
-      'shows the current plan name, after its status badge',
+      pick.selectedOptions[0].textContent === 'Second plan',
+      'shows the current plan name, no emoji',
     );
     pick.value = first;
     pick.dispatchEvent(new Event('change', { bubbles: true }));
@@ -346,12 +342,13 @@ suite(async () => {
   });
   await step('plan menu badges: green, yellow when something is due today, red when overdue; optional', () => {
     fresh('Badges');
+    const DOT = { ok: '🟢', today: '🟡', late: '🔴' };
     const badge = () => {
       render();
       return [
         ...new Set(
-          [...document.querySelectorAll(`[data-plan-select] option[value="${plans.current}"]`)].map(
-            o => o.textContent.split(' ')[0],
+          [...document.querySelectorAll(`[data-plan-open="${plans.current}"] .plan-dot`)].map(
+            o => DOT[o.dataset.health],
           ),
         ),
       ];
@@ -393,9 +390,11 @@ suite(async () => {
     save();
     const busy = plans.current;
     createPlan('Badges 2');
-    const other = () => $(`#planName option[value="${busy}"]`).textContent;
+    const dot = () => $(`.nav [data-plan-open="${busy}"] .plan-dot`);
+    const other = () =>
+      (!dot().hidden ? DOT[dot().dataset.health] + ' ' : '') + $(`.nav [data-plan-open="${busy}"]`).textContent;
     eq(other(), '🟢 Badges', 'other plan, read from storage');
-    assert($(`#planName option[value="${busy}"]`).title === t('plan.health.ok'), 'with a tooltip');
+    assert(dot().title === t('plan.health.ok'), 'with a tooltip');
     // On by default; the setting hides them and is remembered.
     eq(SETTINGS.planBadges.get(), true, 'on by default');
     const box = settings.querySelector('[data-setting="planBadges"]');
@@ -410,5 +409,27 @@ suite(async () => {
     deletePlan(plans.current);
     deletePlan(busy);
     return name;
+  });
+  await step('plan list: most recently opened first; more than three fold', () => {
+    const keep = plans.current;
+    const ids = ['P1', 'P2', 'P3', 'P4'].map(n => (createPlan(n), plans.current));
+    const rows = () => [...document.querySelectorAll('.nav .plan-row')].map(b => b.textContent);
+    renderPlanSwitch();
+    eq(rows().slice(0, 3), ['P4', 'P3', 'P2'], 'the last opened on top');
+    eq(rows().length, 3, 'three shown');
+    const more = $('.nav [data-plan-more]');
+    assert(more && more.getAttribute('aria-expanded') === 'false', 'a toggle for the rest');
+    clickEl(more);
+    assert(rows().length === plans.list.length && rows().includes('P1'), 'all plans after expanding');
+    assert($('.nav [data-plan-more]').getAttribute('aria-expanded') === 'true', 'the toggle says expanded');
+    clickEl($(`.nav [data-plan-open="${ids[0]}"]`));
+    eq(rows()[0], 'P1', 'opening one moves it to the top');
+    eq($('.nav .plan-row[aria-current="true"]').textContent, 'P1', 'the open plan is marked');
+    assert(!$('.nav .plan-switch').textContent.includes(t('plan.label')), 'no Action plan label in the sidebar');
+    clickEl($('.nav [data-plan-more]'));
+    ids.forEach(deletePlan);
+    renderPlanSwitch();
+    assert(!!$('.nav [data-plan-more]') === plans.list.length > 3, 'a toggle only with more than three plans');
+    openPlan(keep);
   });
 });

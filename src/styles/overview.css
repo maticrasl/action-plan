@@ -147,3 +147,38 @@
 .empty .btn {
   margin-top: 16px;
 }
+/* A list on an Overview row: its count opens the items under the row. */
+.li-fold {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+.li-fold svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.15s;
+}
+.li-fold[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.row.open {
+  flex-wrap: wrap;
+}
+.row-items {
+  flex-basis: 100%;
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  .li-fold svg {
+    transition: none;
+  }
+}

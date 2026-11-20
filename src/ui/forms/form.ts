@@ -9,7 +9,7 @@ import { t, tp } from '../../i18n/index';
 import { canParent, ownVisions, setGoalVisions, visionRel } from '../../core/visions';
 import { setCal } from '../calendar';
 import { activityChoice, activityForm, readRepeat, updateRepeatFields } from './activity';
-import { goalForm, updateProgressFields, updateSmartLive } from './goal';
+import { goalForm, updateMeasuredBy, updateProgressFields, updateSmartLive } from './goal';
 import { stateForm, updateStateFields } from './state';
 import { fillRelTypes, relationForm } from './relation';
 import { visionForm } from './vision';
@@ -115,6 +115,7 @@ export function openForm(kind: FormKind, id: string | null = null, links: Links 
   }
   if (kind === 'goal') {
     updateProgressFields();
+    updateMeasuredBy(false);
     updateSmartLive();
   }
   if (kind === 'activity') updateRepeatFields();
@@ -244,7 +245,7 @@ export function submitForm() {
     if (ownMetric(v as unknown as Goal)) delete g.progress;
     else g.progress = v.progress as Goal['progress'];
     // How a state that adds up counts; kept when the field is not shown.
-    if (v.period) g.period = v.period as Scale;
+    if (v.period && !$('#f-period').closest<HTMLElement>('.field')!.hidden) g.period = v.period as Scale;
     // The obstacle and the plan for it: no field at all when empty.
     for (const k of ['obstacle', 'ifThen'] as const) {
       const s = (v[k] || '').trim().slice(0, 500);
@@ -255,6 +256,9 @@ export function submitForm() {
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
     setIncoming(g.id, 'contributes', arr('activities'));
+    // The picker shows one state: another linked one stays unless the goal is unlinked or linked to a new one.
+    if (!v.measuredBy) setIncoming(g.id, 'measures', []);
+    else if (!relsTo(g.id, 'measures').some(r => r.from === v.measuredBy)) setIncoming(g.id, 'measures', [v.measuredBy]);
     setGoalVisions(g, arr('visions'));
     const c = smartCheck(g),
       lit = 'SMART'.split('').filter(l => c[l as 'S']).length;
@@ -283,6 +287,11 @@ export function submitForm() {
     s.history ||= [];
     if (!existing) db.states.push(s);
     setLinks(s.id, 'measures', arr('goals'));
+    // The goals it measures take its unit.
+    relsFrom(s.id, 'measures').forEach(r => {
+      const g = db.goals.find(x => x.id === r.to);
+      if (g) g.unit = s.unit;
+    });
     modal
       .querySelectorAll<HTMLElement>('[data-drop-entry][aria-pressed="true"]')
       .forEach(b => deleteEntry(s, b.dataset.dropEntry!));

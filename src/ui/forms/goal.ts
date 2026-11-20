@@ -3,10 +3,10 @@ import { t, type TextKey } from '../../i18n/index';
 import { db, visions } from '../../core/state';
 import { reaches, relsTo } from '../../core/relations';
 import { measuringState, smartCheck, type SmartField } from '../../core/progress';
-import { PERIODS, goalPeriod, isCumulative, stateTotal } from '../../core/cumulative';
+import { PERIODS, goalPeriod, isCumulative, stateTotal, stateValue } from '../../core/cumulative';
 import { $, esc, smartBadge } from '../dom';
 import { statusLabels, withUnit } from '../text';
-import { fmtNum } from '../../core/util';
+import { fmtNum, isNum, numInput } from '../../core/util';
 import { today } from '../../core/dates';
 import { categorySuggestions } from '../../core/categories';
 import { GOAL_STATUS } from '../../core/model';
@@ -39,15 +39,10 @@ export function goalForm(g: New<Goal>) {
     .filter(x => x.id !== g.id && !(g.id && reaches(x.id, g.id, 'subgoal')))
     .forEach(x => (parents[x.id] = x.title));
   const st = g.id ? measuringState(g as Goal) : null;
-  // A state that adds up but has no amounts yet does not measure anything, but the goal can already
-  // pick how it will count it.
-  const cu = isCumulative(st)
-    ? st
-    : !st && g.id
-      ? relsTo(g.id, 'measures')
-          .map(r => db.states.find(s => s.id === r.from))
-          .find(isCumulative)
-      : null;
+  // The state the picker shows: the one that measures, else the first linked (one that adds up may have no amounts yet).
+  const linked = st || (g.id ? db.states.find(s => relsTo(g.id!, 'measures').some(r => r.from === s.id)) : null);
+  const states: Record<string, string> = { '': t('f.measuredByNone') };
+  db.states.forEach(s => (states[s.id] = s.title));
   return `
     <div class="smart-summary"><span id="smartLive"></span><span id="smartLiveText"></span></div>
     ${smartSection(
@@ -63,11 +58,12 @@ export function goalForm(g: New<Goal>) {
       <p class="hint" id="actsHint">${t('f.progressActsHint')}</p>
       <p class="hint" id="routinesHint">${t('f.progressRoutinesHint')}</p>
       <div id="measureFields">
+      ${field('measuredBy', t('f.measuredBy'), select('measuredBy', states, linked?.id || ''), esc(t('f.measuredByHint')))}
       <div class="row2">
         ${field('metric', t('f.metric'), text('metric', g.metric, t('f.metricPh')))}
         ${field('unit', t('f.unit'), text('unit', g.unit, t('f.unitPh')))}
       </div>
-      ${cu ? field('period', t('cu.counts'), select('period', Object.fromEntries(['total', ...PERIODS].map(k => [k, t(('cu.count.' + k) as TextKey)])), goalPeriod(g as Goal)), esc(t('cu.countsHint', { name: cu.title }))) : ''}
+      ${field('period', t('cu.counts'), select('period', Object.fromEntries(['total', ...PERIODS].map(k => [k, t(('cu.count.' + k) as TextKey)])), goalPeriod(g as Goal)), ' ')}
       <div class="row3">
         ${field(
           'baseline',
@@ -78,7 +74,7 @@ export function goalForm(g: New<Goal>) {
             ? esc(t('cu.baselineHint', { total: withUnit(fmtNum(stateTotal(st)), st.unit || '') }))
             : '',
         )}
-        ${field('current', t('f.current'), num('current', g.current ?? '', ''), st ? esc(t('f.currentFrom', { name: st.title })) : t('f.currentHint'))}
+        ${field('current', t('f.current'), num('current', g.current ?? '', ''), ' ')}
         ${field('target', t('f.target'), num('target', g.target ?? ''))}
       </div>
       </div>`,
@@ -130,6 +126,28 @@ export function updateProgressFields() {
   $('#measureFields').hidden = by !== 'measure';
   $('#actsHint').hidden = by !== 'activities';
   $('#routinesHint').hidden = by !== 'routines';
+}
+
+// A linked state sets the unit and current value (and the metric's name, if it has none); a state that
+// adds up also shows how the goal counts it. `fill` is false when the form opens, so the metric name stays.
+export function updateMeasuredBy(fill = true) {
+  const s = db.states.find(x => x.id === $<HTMLSelectElement>('#f-measuredBy').value);
+  const unit = $<HTMLInputElement>('#f-unit'),
+    current = $<HTMLInputElement>('#f-current'),
+    metric = $<HTMLInputElement>('#f-metric');
+  unit.readOnly = current.readOnly = !!s;
+  if (s) {
+    unit.value = s.unit || '';
+    const v = stateValue(s);
+    if (isNum(v)) current.value = String(numInput(v));
+    if (fill && !metric.value.trim()) metric.value = s.title;
+  }
+  current.closest('.field')!.querySelector('.hint')!.textContent = s
+    ? t('f.currentFrom', { name: s.title })
+    : t('f.currentHint');
+  const period = $('#f-period').closest<HTMLElement>('.field')!;
+  period.hidden = !isCumulative(s);
+  period.querySelector('.hint')!.textContent = s ? t('cu.countsHint', { name: s.title }) : '';
 }
 
 // The letters, the line above them, and under each unfinished field a quiet hint (not an error:

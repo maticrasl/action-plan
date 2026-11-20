@@ -118,7 +118,7 @@ export const guideEn = [
     body: `<p>The goal form asks five things. You can save with only a title and come back; the letters show what is still open. Some ways through:</p>
 <ul>
 <li><strong>Specific</strong> – describe what you would see on the day it is done. “Get fit” becomes “Run from home to the lake and back without walking”.</li>
-<li><strong>Measurable</strong> – if no number fits, change “Progress from” to <strong>“Activities done”</strong> (the goal is done when its steps are done) or <strong>“Routines kept”</strong> (the goal is how steadily you keep at it). Both are honest ways to measure.</li>
+<li><strong>Measurable</strong> – if you already measure it as a current state, pick that state under <strong>“Measured by”</strong>: the unit and current value then follow it. If no number fits, change “Progress from” to <strong>“Activities done”</strong> (the goal is done when its steps are done) or <strong>“Routines kept”</strong> (the goal is how steadily you keep at it). Both are honest ways to measure.</li>
 <li><strong>Achievable</strong> – name the one thing most likely to get in your way, and what you will do when it comes. “If I’m tired after work, I walk for ten minutes instead.” A plan for the bad day is what makes a goal realistic.</li>
 <li><strong>Relevant</strong> – why it matters <em>to you</em>. “My doctor said so” is a start; “I want to climb stairs without stopping” is better.</li>
 <li><strong>Time-bound</strong> – a date is a guess, not a promise. Choose one, and move it when you know more.</li>
@@ -447,7 +447,7 @@ export const guideEn = [
     id: 'h-plans',
     group: 'how',
     title: 'Plans, templates and files',
-    body: `<p>A plan is one set of goals, states and activities. Switch plans in the sidebar or, on a phone, by tapping the plan’s name above the title. Settings has the rest: new plan, rename, delete, and <strong>merge</strong> one plan into another.</p>
+    body: `<p>A plan is one set of goals, states and activities. The sidebar lists your plans, the one you opened last on top; tap one to open it. Its dot is green when nothing is due, yellow when something is due today and red when something is overdue. On a phone, tap the plan’s name above the title. Settings has the rest: new plan, rename, delete, and <strong>merge</strong> one plan into another.</p>
 <ul>
 <li><strong>Start from a template</strong> opens a ready-made plan as a new plan, with dates counted from today. Change everything to fit you.</li>
 <li><strong>Load sample plan</strong> opens a filled example to look around in.</li>
