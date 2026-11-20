@@ -101,5 +101,4 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   restore them. `scripts/fixtures.mjs` accepts only the version change 1 → 2 in `rich.sync.json`.
 - Next `SYNC_VERSION` bump: the journal (00 part 1). Session B of 17 still open. Not built from 17 A:
   "Show" after restoring a plan (the plan opens anyway).
-- 2026-11-20, `feat/replan` (on top of main): `core/replan.ts`, `ui/replan.ts`. Weekly review and Today
-  buttons wait for 14 and 09. Calendar listeners now live in `ui/calendar.ts` for any dialog.
+- 2026-11-20, `feat/replan`: `core/replan.ts`, `ui/replan.ts`; its 14 and 09 buttons wait for those.
