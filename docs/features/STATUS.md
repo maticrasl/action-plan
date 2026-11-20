@@ -61,6 +61,7 @@ Guide article is then added when the Guide exists.
 - [ ] `14-reviews`, session B: monthly
 - [ ] `14-reviews`, session C: yearly
 - [ ] `19-csv`
+  - built 2026-11-20 on `feat/csv`; tick once the owner has seen it
 - [ ] `18-progress-report`
 - [ ] `feedback-link` (any time after the restructure)
 - [ ] `20-mcp-server`, step 0: the trial with the owner
@@ -102,5 +103,5 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   asking; plans keep their dialog. Backups stay `version: 1` and hold no trash, so older copies
   restore them. `scripts/fixtures.mjs` accepts only the version change 1 → 2 in `rich.sync.json`.
 - Next `SYNC_VERSION` bump: the journal (00 part 1). 17 B open; 17 A lacks "Show" after a plan restore.
-- Chain `feat/replan` → `feat/pace-forecast` → `feat/is-it-working`: `core/replan.ts`, `core/pace.ts`,
-  `core/working.ts`; their 07, 09, 14, 15 parts (16: review line, keep goals) wait for those.
+- Chain `feat/replan` → `feat/pace-forecast` → `feat/is-it-working` → `feat/csv` (`core/csv*.ts`);
+  their 07, 09, 14, 15 parts wait for those (19: the note column is written empty, read never).
