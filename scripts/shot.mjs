@@ -7,7 +7,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, serveTestBuild } from './lib/chrome.mjs';
 
-const VIEWS = ['dashboard', 'goals', 'activities', 'states', 'visions', 'map', 'timeline', 'graphs', 'guide'];
+const VIEWS = ['dashboard', 'goals', 'activities', 'states', 'visions', 'map', 'timeline', 'graphs', 'guide', 'settings'];
 const args = process.argv.slice(2);
 const view = args.find(a => !a.startsWith('--'));
 if (!VIEWS.includes(view)) {
@@ -34,13 +34,14 @@ try {
   await page.waitForFunction(() => typeof window.loadSample === 'function');
   await page.evaluate(v => {
     window.loadSample();
-    window.setView(v);
+    if (v === 'settings') document.querySelector('#settingsBtn').click(); // a dialog over the Overview
+    else window.setView(v);
   }, view);
   await page.waitForTimeout(500); // the map and timeline settle their scroll after drawing
   const dir = join(ROOT, 'shots');
   mkdirSync(dir, { recursive: true });
   const out = join(dir, `${view}${phone ? '-phone' : ''}${dark ? '-dark' : ''}.png`);
-  await page.screenshot({ path: out, fullPage: true });
+  await page.screenshot({ path: out, fullPage: view !== 'settings' }); // a dialog: the window is enough
   console.log(out);
 } finally {
   await browser.close();

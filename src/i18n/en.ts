@@ -183,6 +183,7 @@ export const en = {
     'nav.collapse': 'Collapse sidebar',
     'nav.expand': 'Expand sidebar',
     'settings.title': 'Settings',
+    'settings.back': 'All settings',
     'settings.plan': 'Plan',
     'settings.appearance': 'Appearance',
     'settings.theme': 'Theme',

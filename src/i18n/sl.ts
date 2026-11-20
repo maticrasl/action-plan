@@ -187,6 +187,7 @@ export const sl: Language = {
     'nav.collapse': 'Strni stransko vrstico',
     'nav.expand': 'Razširi stransko vrstico',
     'settings.title': 'Nastavitve',
+    'settings.back': 'Vse nastavitve',
     'settings.plan': 'Načrt',
     'settings.appearance': 'Videz',
     'settings.theme': 'Tema',

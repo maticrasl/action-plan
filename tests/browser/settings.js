@@ -23,7 +23,7 @@ suite(async () => {
   await step('install: hidden without a way to install, hint for Firefox', () => {
     const shown = el => getComputedStyle(el).display !== 'none';
     renderInstall();
-    assert(!shown($('#installSection')) && !shown($('#installBtn')), 'Chrome without a prompt shows nothing');
+    assert($('#installSection').hidden && !shown($('#installBtn')), 'Chrome without a prompt shows nothing');
     const ua = Object.getOwnPropertyDescriptor(Navigator.prototype, 'userAgent');
     try {
       Object.defineProperty(navigator, 'userAgent', {
@@ -32,7 +32,7 @@ suite(async () => {
       });
       renderInstall();
       assert(
-        shown($('#installSection')) &&
+        !$('#installSection').hidden &&
           !shown($('#installBtn')) &&
           $('#installHint').textContent === t('install.firefoxHint'),
         'Firefox: a hint, no button',
@@ -328,5 +328,49 @@ suite(async () => {
     );
     frame.remove();
     settings.close();
+  });
+  await step('settings: one page at a time, chosen in the rail; a phone opens each from a list', async () => {
+    const tabs = () => [...settings.querySelectorAll('[data-set-page]')].filter(b => !b.hidden);
+    const pageShown = () => [...settings.querySelectorAll('.set-pages > .set-group')].filter(s => s.offsetParent);
+    $('#settingsBtn').click();
+    eq(
+      tabs().map(b => b.dataset.setPage),
+      ['setPlan', 'setLook', 'setDisplay', 'syncSection', 'setData', 'setHelpPage'],
+      'a tab per area; App only while it can be installed',
+    );
+    eq(pageShown().map(s => s.id), ['setPlan'], 'Plan first, alone');
+    eq(settings.querySelector('[aria-current="page"]').dataset.setPage, 'setPlan', 'its tab marked');
+    clickEl(settings.querySelector('[data-set-page="setDisplay"]'));
+    eq(pageShown().map(s => s.id), ['setDisplay'], 'a tab shows its page');
+    assert(settings.querySelector('[data-setting="tips"]').offsetParent, 'its switches can be used');
+    assert(settings.open, 'Settings stays open');
+    settings.close();
+    $('#settingsBtn').click();
+    eq(pageShown().map(s => s.id), ['setDisplay'], 'opens again on the last page');
+    settings.close();
+    openSettings('syncSection');
+    eq(pageShown().map(s => s.id), ['syncSection'], 'opening at an area shows its page');
+    settings.close();
+    openSettings('installSection');
+    eq(pageShown().map(s => s.id), ['setPlan'], 'a hidden page falls back to Plan');
+    settings.close();
+    // A phone: the list of areas first; a tap opens one page, the back arrow returns to the list.
+    const frame = document.createElement('iframe');
+    Object.assign(frame.style, { width: '390px', height: '700px', position: 'fixed', left: '-9999px', top: '0', border: '0' });
+    frame.srcdoc = `<!doctype html><link rel="stylesheet" href="css/styles.css"><body>${settings.outerHTML}</body>`;
+    await new Promise(res => {
+      frame.onload = res;
+      document.body.append(frame);
+    });
+    const doc = frame.contentDocument,
+      dlg = doc.querySelector('#settings');
+    dlg.removeAttribute('data-in-page');
+    dlg.showModal();
+    const vis = sel => !!doc.querySelector(sel).offsetParent;
+    assert(vis('.set-nav') && !vis('.set-pages') && !vis('.set-back'), 'phone: the list, no page, no back arrow');
+    dlg.setAttribute('data-in-page', '');
+    assert(!vis('.set-nav') && vis('.set-pages') && vis('.set-back'), 'phone: a page with the back arrow');
+    assert(doc.documentElement.scrollWidth <= 390, 'phone: no sideways scroll');
+    frame.remove();
   });
 });

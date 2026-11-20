@@ -1,0 +1,156 @@
+/** Settings as pages: a rail like the app's sidebar beside one page; on a phone a list that opens each page. */
+.settings {
+  width: min(780px, calc(100vw - 32px));
+}
+.settings[open] {
+  /* One height for every page, so switching pages does not make the dialog jump. */
+  height: min(620px, calc(100vh - 48px));
+}
+.set-shell {
+  display: grid;
+  grid-template-columns: 208px 1fr;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+.set-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  border-right: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  overflow-y: auto;
+  --nav-ink: var(--ink);
+}
+/* The sidebar's items, without its phone tab bar. */
+.set-tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14.5px;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.72;
+}
+.set-tab svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.set-tab:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--nav-ink) 6%, transparent);
+}
+.set-tab[aria-current='page'] {
+  opacity: 1;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--nav-ink) 10%, transparent);
+  box-shadow: inset 3px 0 0 var(--blaze);
+}
+.set-tab:focus-visible {
+  box-shadow: var(--focus);
+  outline: none;
+}
+.set-tab > span {
+  flex: 1;
+}
+.set-tab .set-chev,
+.set-back {
+  display: none;
+}
+.set-nav .set-version {
+  margin: auto 0 0;
+  padding-top: 12px;
+  text-align: left;
+}
+.set-pages {
+  overflow-y: auto;
+  padding: 22px 28px 28px;
+}
+.set-pages > .set-group {
+  border-top: 0;
+  padding: 0;
+  gap: 12px;
+}
+.set-pages > .set-group:not(.on) {
+  display: none;
+}
+.set-pages > .set-group > h3 {
+  margin: 0 0 6px;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--ink);
+}
+.set-pages .hint {
+  max-width: 62ch;
+}
+
+@media (max-width: 720px) {
+  .settings {
+    width: 100vw;
+  }
+  .settings[open] {
+    height: 92vh;
+  }
+  .set-shell {
+    grid-template-columns: 1fr;
+  }
+  .set-nav {
+    border-right: 0;
+    background: none;
+    padding: 8px 12px 16px;
+  }
+  .set-tab {
+    padding: 13px 12px;
+    font-size: 16px;
+    opacity: 1;
+  }
+  .set-tab + .set-tab {
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+  }
+  /* In the list no page is chosen yet: the mark of the last one would mislead. */
+  .set-tab[aria-current='page'] {
+    background: none;
+    box-shadow: none;
+    font-weight: 400;
+  }
+  .set-tab .set-chev {
+    display: block;
+    width: 18px;
+    height: 18px;
+    opacity: 0.5;
+  }
+  .set-nav .set-version {
+    text-align: center;
+  }
+  .set-pages {
+    display: none;
+    padding: 16px 16px 24px;
+  }
+  .settings[data-in-page] .set-nav {
+    display: none;
+  }
+  .settings[data-in-page] .set-pages {
+    display: block;
+  }
+  .settings[data-in-page] .set-back {
+    display: inline-flex;
+    margin-right: 4px;
+  }
+}
