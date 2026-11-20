@@ -20,7 +20,7 @@ import { requestRender as render } from '../../ui/render';
 import { openForm } from '../../ui/forms/form';
 import { toggleCheckin } from '../routines';
 import { startMapLink } from './link';
-import { removeEntity, save } from '../../store/plans';
+import { save } from '../../store/plans';
 import { toast } from '../../ui/toast';
 import { pinch } from './zoom';
 import { relText, removeRelation } from './render';
@@ -36,6 +36,7 @@ import { selectsInView } from './keys';
 import { setTlCollapsed, timelineRows, tlCollapsed } from '../timeline/rows';
 import { openStateValue } from '../../ui/state-value';
 import { hasGraph } from '../../core/series';
+import { deleteItem } from '../../ui/undo';
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 
@@ -293,14 +294,11 @@ export function runCtxAction(act: string, id: string) {
         : t('ctx.statusSet', { s: t(`${kind}.${arg}` as TextKey) }),
     );
   }
-  if (verb === 'delete' && confirm(t('confirm.delete', { name: item.title }))) {
-    removeEntity(kind, id);
+  if (verb === 'delete') {
     Object.values(GOAL_FILTERS).forEach(k => {
       if (ui[k] === id) ui[k] = '';
     });
-    save();
-    render();
-    toast(t(('toast.deleted.' + kind) as TextKey));
+    deleteItem(kind, id);
   }
 }
 

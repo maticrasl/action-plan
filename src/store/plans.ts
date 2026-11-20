@@ -3,7 +3,14 @@ import { userStorage } from './users';
 import { normalize } from '../core/normalize';
 import { SYNC_COLLS, emptyDb, type Db, type Item, type ItemKind, type PlanList } from '../core/model';
 import { currentPlan, plans, plansVersion, setPlans, setPlansVersion, ui } from './state';
-import { stampChanges, stampPlanChanges, takePlanSnapshot, takeSnapshot } from '../core/merge';
+import {
+  keepSnapshot,
+  restoreSnapshot,
+  stampChanges,
+  stampPlanChanges,
+  takePlanSnapshot,
+  takeSnapshot,
+} from '../core/merge';
 import { db, setDb } from '../core/state';
 import { STORAGE_KEY } from './prefs';
 import { uid } from '../core/util';
@@ -11,6 +18,8 @@ import { t } from '../i18n/index';
 import { emit } from './events';
 import { deleteVision, loadVisions } from './visions';
 import { collection } from '../core/relations';
+import { itemEntry, visionEntry } from '../core/trash';
+import { trashAdd } from './trash';
 
 /* ---------- Plans ----------
    Each action plan is stored under its own key; an index keeps names and the current plan.
@@ -70,6 +79,46 @@ export function save() {
     emit('storageError');
   }
   emit('saved');
+}
+
+// Runs `fn` with `data` as the plan the core sees, and puts the open plan back, also when it throws.
+// `fn` must be synchronous.
+export function withPlan<T>(data: Db, fn: () => T): T {
+  const keep = db;
+  setDb(data);
+  try {
+    return fn();
+  } finally {
+    setDb(keep);
+  }
+}
+
+// Changes a plan and saves it, open or not; false when there is no such plan. Another plan is
+// stamped against what it held, and the open plan's change tracking is left as it was.
+export function editPlan(id: string, fn: (data: Db) => void): boolean {
+  if (id === plans.current) {
+    fn(db);
+    save();
+    return true;
+  }
+  if (!plans.list.some(p => p.id === id)) return false;
+  const data = readPlan(id),
+    kept = keepSnapshot();
+  try {
+    takeSnapshot(data);
+    withPlan(data, () => fn(data));
+    stampChanges(data);
+  } finally {
+    restoreSnapshot(kept);
+  }
+  setPlansVersion(plansVersion + 1);
+  try {
+    userStorage.setItem(planKey(id), JSON.stringify(data));
+  } catch (e) {
+    emit('storageError');
+  }
+  emit('saved');
+  return true;
 }
 
 export function openPlan(id: string) {
@@ -161,10 +210,13 @@ export function mergePlanInto(fromId: string, toId: string, remove = false) {
   emit('plansChanged');
 }
 
-export function removeEntity(kind: ItemKind, id: string) {
+// Removes an item and keeps it in Recently deleted; says whether it could be kept there.
+export function removeEntity(kind: ItemKind, id: string): 'ok' | 'large' | 'full' {
+  const kept = trashAdd(kind === 'vision' ? visionEntry(id) : itemEntry(kind, id, plans.current!, currentPlan()?.name || ''));
   if (kind === 'vision') {
     if (ui.mapSelected === id) ui.mapSelected = null;
-    return deleteVision(id);
+    deleteVision(id);
+    return kept;
   }
   const list = collection(kind);
   list.splice(
@@ -173,4 +225,5 @@ export function removeEntity(kind: ItemKind, id: string) {
   );
   db.relations = db.relations.filter(r => r.from !== id && r.to !== id);
   if (ui.mapSelected === id) ui.mapSelected = null;
+  return kept;
 }

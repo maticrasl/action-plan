@@ -484,6 +484,7 @@ export const guideEn = [
 <li><strong>Ctrl + Enter</strong> saves the form you are in. <strong>Esc</strong> closes it; if you changed something, it asks before discarding it, as Cancel and × do.</li>
 <li>In the Guide, <strong>Esc</strong> goes back to the view you came from.</li>
 <li>On the Map and Timeline: <strong>Enter</strong> edits the selected item, <strong>Delete</strong> removes it, <strong>Esc</strong> deselects.</li>
+<li>After deleting something, the message at the bottom offers <strong>Undo</strong> for a few seconds; <strong>Ctrl + Z</strong> (<strong>⌘ + Z</strong> on a Mac) does the same. Later, Settings › Data › Recently deleted still has it for 30 days.</li>
 <li><strong>Pinch</strong> or <strong>Ctrl + scroll</strong> zooms the Map, the Timeline and graphs. With one finger: tap, then touch again and drag down or up.</li>
 <li>The <strong>Add</strong> button always adds what fits the view you are in.</li>
 <li><strong>Explanations on screen</strong> (on this page and in Settings) adds a short note to each view and ⓘ marks on the controls.</li>
@@ -516,7 +517,7 @@ export const guideEn = [
     group: 'data',
     title: 'What logging in with Google does',
     body: `<p>Logging in gives Action Plan one permission: to keep its own data in a hidden folder of your Google Drive. The app cannot see your other files, your mail or your contacts, and other apps cannot see this folder. Your email address and name are read when you log in, to show who is logged in on this device.</p>
-<p>The plans in that folder are stored by Google under your account and under Google’s terms. They are not encrypted by Action Plan beyond what Google does for all Drive files.</p>
+<p>The plans in that folder, and what you deleted in the last 30 days (Recently deleted), are stored by Google under your account and under Google’s terms. They are not encrypted by Action Plan beyond what Google does for all Drive files.</p>
 <p>To stop: log out in Settings › Account and sync. To remove the copy in Drive: open your Google Drive settings, “Manage apps”, find Action Plan and choose “Delete hidden app data”. You can withdraw the permission in your Google account under “Third-party apps and services”.</p>`,
     related: ['p-where', 'h-sync'],
   },
@@ -538,9 +539,9 @@ export const guideEn = [
 <p>To be safe, do one of these:</p>
 <ul>
 <li><strong>Log in with Google</strong>, so that a copy is in your Drive and on your other devices.</li>
-<li><strong>Export a full copy</strong> of each plan now and then, and keep the file somewhere else.</li>
+<li><strong>Export a full copy</strong> of each plan now and then, or use <strong>Back up everything</strong> in Settings › Data for all your plans and visions in one file, and keep the file somewhere else.</li>
 </ul>
-<p>A deleted plan cannot be brought back; there is no recycle bin. With sync on, deleting a plan deletes it on your other devices too. The delete dialog offers to download a backup first.</p>`,
+<p>A deleted item or plan stays in Settings › Data › Recently deleted for 30 days; with sync on, on your other devices too. After that it is gone. Deleting a plan with sync on deletes it on your other devices as well. The delete dialog offers to download a backup first.</p>`,
     action: { do: 'export', label: 'Export plan' },
     related: ['h-plans', 'h-sync'],
   },
@@ -551,6 +552,7 @@ export const guideEn = [
     body: `<ul>
 <li><strong>One plan:</strong> Settings › Plan › Delete plan.</li>
 <li><strong>Your plans on this device:</strong> when you are logged in, Settings › Account and sync › “Remove from this device”.</li>
+<li><strong>What you deleted lately:</strong> Settings › Data › Recently deleted › Empty. “Remove from this device” also removes it here.</li>
 <li><strong>Everything on this device,</strong> for every user: clear this site’s data in the browser’s settings.</li>
 <li><strong>The copy in Google Drive:</strong> see [[p-google]].</li>
 </ul>

@@ -38,7 +38,9 @@
   animation: pulse 1s ease-in-out infinite alternate;
 }
 .sync-btn[data-status='paused']::after,
-.sync-status[data-status='paused'] i {
+.sync-status[data-status='paused'] i,
+.sync-btn[data-status='update']::after,
+.sync-status[data-status='update'] i {
   background: var(--warn);
 }
 .sync-btn[data-status='error']::after,
@@ -48,6 +50,7 @@
   background: var(--bad);
 }
 .sync-btn[data-status='paused'],
+.sync-btn[data-status='update'],
 .sync-btn[data-status='error'],
 .sync-btn[data-status='account'] {
   color: var(--ink);

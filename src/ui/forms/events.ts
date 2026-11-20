@@ -1,17 +1,19 @@
 /** The form dialog's listeners, in the order they must run (Ctrl+Enter first, then the link lists and the calendar). */
 import { $ } from '../dom';
 import { isoOf } from '../../core/days';
-import { t, type TextKey } from '../../i18n/index';
+import { t } from '../../i18n/index';
 import { db } from '../../core/state';
 import { findEntity } from '../../core/relations';
-import { removeEntity } from '../../store/plans';
+import { save } from '../../store/plans';
+import { deleteItem, undoable } from '../undo';
+import { requestRender } from '../render';
 import { cal, closeCalendar, focusDay, moveCalendar, openCalendar, pickDate } from '../calendar';
 import { pickItem, showPickList, unpickItem } from './picker';
 import { updateProgressFields, updateSmartLive } from './goal';
 import { updateStateFields } from './state';
 import { addListRow, placeListRow, updateRepeatFields } from './activity';
 import { fillRelTypes } from './relation';
-import { finish, formChanged, formCtx, modal, openForm, submitForm } from './form';
+import { formChanged, formCtx, modal, openForm, submitForm } from './form';
 
 $('#modalForm').addEventListener('keydown', e => {
   // Ctrl+Enter (⌘+Enter on a Mac) saves from any field; the pickers and lists below never see it.
@@ -234,13 +236,13 @@ modal.addEventListener('click', e => {
 });
 $('#deleteBtn').addEventListener('click', () => {
   const { kind, id } = formCtx!;
-  if (kind === 'relation') {
-    if (!confirm(t('confirm.deleteRel'))) return;
-    db.relations = db.relations.filter(r => r.id !== id);
-    return finish(t('toast.relRemoved'));
-  }
-  const item = findEntity(id!)?.item;
-  if (!item || !confirm(t('confirm.delete', { name: item.title }))) return;
-  removeEntity(kind, id!);
-  finish(t(('toast.deleted.' + kind) as TextKey));
+  modal.close();
+  if (kind === 'relation')
+    return undoable(() => {
+      db.relations = db.relations.filter(r => r.id !== id);
+      save();
+      requestRender();
+      return t('toast.relRemoved');
+    });
+  if (findEntity(id!) || kind === 'vision') deleteItem(kind, id!);
 });

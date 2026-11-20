@@ -1,6 +1,7 @@
 /** Change tracking and the per-item merge of plans and visions. */
 import { isCumulative, refreshTotal } from './cumulative';
 import { followList } from './routines/checkins';
+import { mergeTrash, type Trash } from './trash';
 import {
   ACYCLIC,
   PARENT_REL,
@@ -37,9 +38,10 @@ export interface Store {
   data: Record<string, Db>;
   visions?: VisionList;
   tips?: Tips; // tip history; absent from files that never had any
+  trash?: Trash; // Recently deleted; absent from files that never had any
 }
 // A store with every part read (the tips stay optional, so files without them keep their shape).
-export type FullStore = Required<Omit<Store, 'tips'>> & Pick<Store, 'tips'>;
+export type FullStore = Required<Omit<Store, 'tips' | 'trash'>> & Pick<Store, 'tips' | 'trash'>;
 // Method syntax keeps the parameters bivariant, so mergeState (states only) fits.
 type MergeItem = { merge(x: SyncItem, y: SyncItem): SyncItem }['merge'];
 
@@ -72,6 +74,12 @@ export function takeSnapshot(data: Db): void {
   syncSnapshot = new Map(SYNC_COLLS.flatMap(c => data[c].map((x): [string, string] => [x.id, itemContent(x)])));
   statusSnapshot = new Map([...data.goals, ...data.activities].map((x): [string, string] => [x.id, statusKey(x)]));
 }
+// The open plan's tracking, kept aside while another plan is stamped (store/plans.ts editPlan).
+export const keepSnapshot = () => ({ sync: syncSnapshot, status: statusSnapshot });
+export function restoreSnapshot(kept: ReturnType<typeof keepSnapshot>): void {
+  syncSnapshot = kept.sync;
+  statusSnapshot = kept.status;
+}
 const statusKey = (x: Goal | Activity) => `${x.status}|${('autoStarted' in x && x.autoStarted) || ''}`;
 
 // A goal or activity whose status changed, or that is new, has had it since today. An activity the
@@ -82,7 +90,11 @@ function stampStatus(data: Db): void {
     const before = statusSnapshot.get(x.id);
     if (before?.split('|')[0] === x.status) return;
     const autoStart =
-      'autoStarted' in x && x.status === 'doing' && !!x.autoStarted && !!before && !before.endsWith(`|${x.autoStarted}`);
+      'autoStarted' in x &&
+      x.status === 'doing' &&
+      !!x.autoStarted &&
+      !!before &&
+      !before.endsWith(`|${x.autoStarted}`);
     if (autoStart) delete x.statusSince;
     else x.statusSince = day;
   });
@@ -329,5 +341,6 @@ export function mergeStores(a: Store, b: Store): FullStore {
     data,
     visions: mergeVisions(a.visions, b.visions),
     ...((a.tips || b.tips) && { tips: mergeTips(a.tips, b.tips) }),
+    ...((a.trash || b.trash) && { trash: mergeTrash(a.trash, b.trash) }),
   };
 }

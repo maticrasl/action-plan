@@ -5,6 +5,7 @@ import { mergeStores, type FullStore, type Store } from '../core/merge';
 import { normalize, safeId } from '../core/normalize';
 import { normalizeVisions } from '../core/visions';
 import { readTips } from '../core/guidance/tip-history';
+import { normalizeTrash } from '../core/trash';
 import type { IdSet, ISOTime, Plan, User } from '../core/model';
 
 // The part of Google's sign-in script (loaded at run time by loadGis) this uses.
@@ -46,6 +47,8 @@ export interface Remote {
 }
 
 export const SYNC_FILE = 'actionplan-sync.json';
+// Raise in every release that adds a section an older copy would drop (docs/decisions.md).
+export const SYNC_VERSION = 2;
 export const SYNC_FORMAT = 'actionplan-sync';
 export const SYNC_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
@@ -250,10 +253,12 @@ export const drive = {
 // The sync file as read, before it is checked.
 type RawFile = {
   format?: unknown;
+  version?: unknown;
   plans?: { list?: Plan[]; deleted?: IdSet<ISOTime> };
   data?: Record<string, unknown>;
   visions?: unknown;
   tips?: unknown;
+  trash?: unknown;
 } | null;
 
 export function parseStore(text: string): FullStore {
@@ -264,21 +269,25 @@ export function parseStore(text: string): FullStore {
     throw new SyncError('error');
   }
   if (raw?.format !== SYNC_FORMAT || !Array.isArray(raw.plans?.list)) throw new SyncError('error');
+  // A newer copy wrote it: merging could drop what this copy does not know, so nothing is merged.
+  if (typeof raw.version === 'number' && raw.version > SYNC_VERSION) throw new SyncError('update');
   const list = raw.plans.list.filter(p => p && safeId(p.id) && typeof p.name === 'string');
   return {
     plans: { list, deleted: raw.plans.deleted && typeof raw.plans.deleted === 'object' ? raw.plans.deleted : {} },
     data: Object.fromEntries(list.map(p => [p.id, normalize(raw.data?.[p.id])])),
     visions: normalizeVisions(raw.visions),
     ...(raw.tips !== undefined && { tips: readTips(raw.tips) }),
+    ...(raw.trash !== undefined && { trash: normalizeTrash(raw.trash) }),
   };
 }
 
 export const toFile = (store: Store) => ({
   format: SYNC_FORMAT,
-  version: 1,
+  version: SYNC_VERSION,
   plans: store.plans,
   data: store.data,
   visions: store.visions,
   ...(store.tips && { tips: store.tips }),
+  ...(store.trash && { trash: store.trash }),
 });
 export type SyncFile = ReturnType<typeof toFile>;

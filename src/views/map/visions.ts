@@ -63,7 +63,7 @@ export function unlinkVision(r: MapLink) {
   }
   if (ui.mapRel === r.id) ui.mapRel = null;
   render();
-  toast(t('map.visionUnlinked'));
+  return t('map.visionUnlinked');
 }
 
 export const hideVisionsToggle = () =>

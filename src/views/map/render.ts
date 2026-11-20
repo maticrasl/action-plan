@@ -26,8 +26,8 @@ import { isRoutine, periodUnit } from '../../core/routines/schedule';
 import { periodProgress, routineStreak } from '../../core/routines/keeping';
 import { periodText, streakText } from '../../ui/text';
 import { fmtNum, isNum } from '../../core/util';
-import { removeEntity, save } from '../../store/plans';
-import { toast } from '../../ui/toast';
+import { save } from '../../store/plans';
+import { deleteItem, undoable } from '../../ui/undo';
 import { hideVisionsToggle, unlinkVision, visionDefs, visionNode } from './visions';
 import type { Activity, Goal, Kind, RelSpec, RelType, State, Vision, VisionRel } from '../../core/model';
 import type { TextKey } from '../../i18n/index';
@@ -309,22 +309,20 @@ export function mapRelSelection(r: MapLink) {
 
 export function removeRelation(id: string) {
   const vr = visionRel(id);
-  if (vr) return unlinkVision(vr);
-  db.relations = db.relations.filter(r => r.id !== id);
-  if (ui.mapRel === id) ui.mapRel = null;
-  save();
-  render();
-  toast(t('toast.relRemoved'));
+  if (vr) return undoable(() => unlinkVision(vr));
+  undoable(() => {
+    db.relations = db.relations.filter(r => r.id !== id);
+    if (ui.mapRel === id) ui.mapRel = null;
+    save();
+    render();
+    return t('toast.relRemoved');
+  });
 }
 
-// Deleting an item from the map asks first, like the form's Delete button.
+// Deleting an item from the map: at once, with Undo, like the form's Delete button.
 export function askDeleteItem(id: string) {
   const ent = findEntity(id);
-  if (!ent || !confirm(t('confirm.delete', { name: ent.item.title }))) return;
-  removeEntity(ent.kind, id);
-  save();
-  render();
-  toast(t(('toast.deleted.' + ent.kind) as TextKey));
+  if (ent) deleteItem(ent.kind, id);
 }
 
 export function listenFonts() {

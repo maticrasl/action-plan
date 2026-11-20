@@ -72,6 +72,8 @@ How to change them safely:
    code (`scripts/fixtures.mjs`; `--generate` only before anything changes); then make the
    change; `npm run test:fixtures` must pass. Never regenerate an expected output to make it pass.
 5. Any change here is a big task: a short design in `docs/specs/` first.
+6. A new section in the sync file raises `SYNC_VERSION` (`sync/drive.ts`). A copy that reads a
+   higher version merges nothing and writes nothing, and asks to reload (since version 2, 2026-11-20).
 
 ## Tests and speed
 

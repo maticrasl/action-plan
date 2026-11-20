@@ -70,7 +70,7 @@ async function checkAll() {
     const storage = readJson(`${name}.storage.json`);
     const out = await run('roundtrip', storage, { outputs: name === 'rich' });
     compare(`${name} storage`, readJson(name === 'legacy-single' ? 'legacy-single.expected.json' : `${name}.storage.json`), out.storage);
-    if (name === 'rich') for (const [k, file] of Object.entries(OUTPUTS)) { checks++; compare(file, readJson(file), out[k]); }
+    if (name === 'rich') for (const [k, file] of Object.entries(OUTPUTS)) { checks++; const want = readJson(file); compare(file, want, k === 'sync' ? oldVersion(want, out[k]) : out[k]); }
   }
   checks++;
   const restored = await run('restore', fresh('en'), { backup: readJson(OUTPUTS.backup) });
@@ -96,6 +96,10 @@ function withoutNew(want, got) {
   const extra = Object.keys(got).filter(k => !(k in want) && NEW_KEYS.some(re => re.test(k)));
   return extra.length ? Object.fromEntries(Object.entries(got).filter(([k]) => !extra.includes(k))) : got;
 }
+
+// The sync file says version 2 since the sync-file guard (docs/specs/2026-11-20-undo-trash.md); a
+// fixture written at version 1 still matches when that is the only difference.
+const oldVersion = (want, got) => (want?.version === 1 && got?.version === 2 ? { ...got, version: 1 } : got);
 
 // Where two JSON values first differ, as "path: want … got …"; '' when equal. Stored strings that
 // hold JSON are compared as JSON, so the path points inside them.

@@ -7,6 +7,7 @@ import { PLANS_KEY, planKey, readPlan } from '../store/plans';
 import { I18N, t } from '../i18n/index';
 import { mergeStores, takePlanSnapshot, takeSnapshot, type FullStore, type Store } from '../core/merge';
 import { getTips, hasTips, saveTips } from '../store/tips';
+import { getTrash, hasTrash, saveTrash } from '../store/trash';
 import { uid } from '../core/util';
 import { SYNC_COLLS, emptyDb, type Plan } from '../core/model';
 import { emit } from '../store/events';
@@ -42,8 +43,11 @@ export const syncState = { status: 'idle' as string, busy: false, again: false, 
 // Everything on this device, as a detached copy.
 export function localStore(): FullStore {
   const data = Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? db : readPlan(p.id)]));
-  const tips = hasTips() ? getTips() : undefined;
-  return JSON.parse(JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data, visions, tips }));
+  const tips = hasTips() ? getTips() : undefined,
+    trash = hasTrash() ? getTrash() : undefined;
+  return JSON.parse(
+    JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data, visions, tips, trash }),
+  );
 }
 
 // The empty starter plan a new device makes on its first visit would otherwise sync as an extra
@@ -60,6 +64,7 @@ export function dropStarterPlans(store: FullStore): FullStore {
     data: Object.fromEntries(list.map(p => [p.id, store.data[p.id]])),
     visions: store.visions,
     ...(store.tips && { tips: store.tips }),
+    ...(store.trash && { trash: store.trash }),
   };
 }
 
@@ -96,6 +101,8 @@ export function applyStore(store: Store) {
   takePlanSnapshot(plans);
   if (store.visions) applyVisions(store.visions);
   if (store.tips) saveTips(store.tips);
+  // shortcut: a merged list may pass the size cap until the next deletion trims it.
+  if (store.trash) saveTrash(store.trash);
   setPlansVersion(plansVersion + 1);
   setDb(readPlan(plans.current as string));
   takeSnapshot(db);

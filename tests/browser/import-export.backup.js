@@ -307,7 +307,7 @@ suite(async () => {
       refused({ format: 'actionplan-sync', version: 1 }, 'err.import', 'no plan list');
       refused(planFile('full'), 'backup.isPlan', "a single plan's export");
       refused({ name: 'Legacy', goals: [] }, 'backup.isPlan', 'an old plan export without a header');
-      refused({ ...file.json, version: 2 }, 'backup.newer', 'from a newer version');
+      refused({ ...file.json, version: SYNC_VERSION + 1 }, 'backup.newer', 'from a newer version');
 
       // Unsafe ids and markup in a file do not reach the page.
       restoreText(

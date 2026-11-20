@@ -24,6 +24,7 @@ import { connectSync, initSync, renderSync } from './ui/sync-ui';
 import { setRenderer } from './ui/render';
 import { offerReached } from './ui/reached';
 import { toast } from './ui/toast';
+import { dropUndo, listenUndo } from './ui/undo';
 import { renderInstall } from './ui/install';
 import { renderLangSwitch } from './ui/settings';
 import { renderPlanSwitch } from './ui/plan-switcher';
@@ -32,6 +33,7 @@ import { listenTlDrag } from './views/timeline/drag';
 import { listenGraphs } from './views/graphs/points';
 import { listenGuide } from './views/guide';
 import { listenFeedback } from './ui/feedback';
+import { listenTrash } from './ui/trash-dialog';
 
 // Screen parts below the views redraw, switch users and offer the welcome through these.
 setRenderer(render);
@@ -46,12 +48,16 @@ onRendered(decorateDemo);
 connectSync({ enterUser: (id: string) => enterUser(id), offerWelcome: () => offerWelcome() });
 // Storage and sync reach the screen only through these.
 on('saving', () => offerReached());
-on('saved', () => scheduleSync());
+on('saved', () => {
+  dropUndo();
+  scheduleSync();
+});
 on('plansChanged', () => {
   renderPlanSwitch();
   render();
 });
 on('storeReplaced', changed => {
+  if (changed) dropUndo();
   renderPlanSwitch();
   if (changed) render();
 });
@@ -65,6 +71,8 @@ listenGuide();
 listenWalk();
 listenTips();
 listenFeedback();
+listenTrash();
+listenUndo();
 
 setLang(detectLang());
 setDb(emptyDb());

@@ -35,8 +35,11 @@ Guide article is then added when the Guide exists.
 ## The features, in order
 
 - [ ] `00-foundation`
+  - parts 2 (sync-file guard, `SYNC_VERSION = 2`) and 3 (`withPlan`, `editPlan`) built 2026-11-20 on
+    `feat/undo-trash`; part 1 (journal) still open
 - [ ] `13-done-log`
 - [ ] `17-undo-trash-snapshots`, session A: undo and recently deleted
+  - built 2026-11-20 on `feat/undo-trash` (`docs/specs/2026-11-20-undo-trash.md`); tick once the owner has seen it
 - [ ] `17-undo-trash-snapshots`, session B: earlier versions and full backup
   - built 2026-11-16 (`js/backup.js`): Back up everything; Restore from a backup as copies, all
     plans, missing visions. Still open: Merge into my plans, choosing which plans, Earlier versions
@@ -71,7 +74,7 @@ owner may move a line; a line may not come before one it needs.
 |---|---|---|
 | 1 | Journal store | open |
 | 2 | Notes kept on the item | open |
-| 3 | Recently deleted on the device; restore adds copies | open |
+| 3 | Recently deleted on the device; restore adds copies | changed 2026-11-20: Recently deleted **syncs**, until deleted for good, emptied or 30 days old; restore into a plan that is not open happens in the background |
 | 4 | Today is a new view; phone tab bar | open |
 | 5 | Reviews cover all plans; no quarters | open |
 | 6 | Dot on the Review item | open |
@@ -88,28 +91,12 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
-- Plans written 2026-11-15 against commit `5b71e59`; the restructure (phases 1–10) has moved the
-  code since: find files with `npm run map`, not by the paths in the plans.
-- `06-goal-form` built 2026-11-18 (#25), ahead of the order at the owner's request; tick it once the
-  owner has seen it work. Left out: part 5 (dropped by the owner). Its `goal-unfinished` tip waits
-  for Guidance 3.
-- Guidance 2, Getting started, built 2026-11-19 on branch `feat/walkthrough` (one session, as the
-  owner chose); shipped as #28, reviewed by the owner and ticked 2026-11-19. Design and where it differs from the plan:
-  `docs/specs/2026-11-19-walkthrough.md`. The tour is gone; the language picker and the Show me
-  ring stay (`tutorial/welcome.ts`, `tutorial/spotlight.ts`). Guidance decisions 1, 2, 4, 5
-  confirmed 2026-11-19.
-- Guidance 3 (tips), session A built 2026-11-19 on branch `feat/tips`: engine, classes A and B
-  (with `goal-unfinished`), the card, Settings › Display › Tips, tip history synced, `statusSince`
-  on items. Design: `docs/specs/2026-11-19-tips.md`. Not ticked until the owner has seen it and
-  session B is done.
-- Guidance 3, session B built 2026-11-19 on branch `feat/tips-b`: classes C and D, `tips-all` in
-  the Guide, `seen` facts `menu` and `templates`, days and views recorded whenever tips are on,
-  `tips.since` for `halfway`; `seen` stays per device; tips asked for (Another tip on the card,
-  Show me a tip in Tips and tricks). Owner's change: × now means Not now; "Don't show this again"
-  is its own button. What was decided: `docs/specs/2026-11-19-tips.md`, "Session B". Not ticked
-  until the owner has seen it.
-- Privacy texts were checked against the code (2026-11-19).
-- `feedback-link` built 2026-11-20 on branch `fix/guide-and-feature`, at the owner's request (a
-  feature useful for release), assuming decision 10 (GitHub Issues). The details line is in English
-  in both languages (it is read on GitHub), so no `fb.env.*` keys. Before ticking: the label
-  `idea` exists on the repository, and each link opens its form filled in, by hand, after the deploy.
+- Plans were written 2026-11-15 against `5b71e59`; find code with `npm run map`, not the plans' paths.
+- Built and shipped but not ticked until the owner confirms: `06-goal-form` (#25), Guidance 3 tips
+  (#29, #30), `feedback-link` (#32; check the `idea` label and both forms after the deploy).
+- 2026-11-20, branch `feat/undo-trash`: sync-file guard, Undo, synced Recently deleted
+  (`core/trash.ts`, `store/trash.ts`, `ui/undo.ts`, `ui/trash-dialog.ts`). Items are deleted without
+  asking; plans keep their dialog. Backups stay `version: 1` and hold no trash, so older copies
+  restore them. `scripts/fixtures.mjs` accepts only the version change 1 → 2 in `rich.sync.json`.
+- Next `SYNC_VERSION` bump: the journal (00 part 1). Session B of 17 still open.
+- Not built from 17 A: "Show" after restoring a plan (the plan opens anyway).

@@ -77,7 +77,7 @@ suite(async () => {
     assert(!$('.tl-row.dim'), 'nothing dimmed');
     return 'ok';
   });
-  await step('timeline: Delete on a bar asks first; dependency arrows select, open and delete like map lines', () => {
+  await step('timeline: Delete on a bar deletes it; dependency arrows select, open and delete like map lines', () => {
     const { g, a, b, c } = tlFixture();
     const realConfirm = window.confirm;
     let question = '';
@@ -88,15 +88,12 @@ suite(async () => {
         question = q;
         return false;
       };
-      press('Delete', document.body);
-      assert(question === t('confirm.delete', { name: 'Paint' }) && findEntity(c.id), 'asks; cancel keeps it');
-      window.confirm = () => true;
       press('Backspace', document.body);
       assert(
-        !findEntity(c.id) && !db.relations.some(r => r.from === c.id || r.to === c.id),
-        'confirm deletes it and its links',
+        !question && !findEntity(c.id) && !db.relations.some(r => r.from === c.id || r.to === c.id),
+        'deletes it and its links without asking',
       );
-      eq($('#toast').textContent, t('toast.deleted.activity'), 'says so');
+      eq($('#toast').firstChild.textContent, t('toast.deleted.activity'), 'says so');
       // Dependency arrows: clickable, with a wide hit area, and reachable with Tab.
       const r = db.relations.find(x => x.type === 'depends' && x.from === b.id);
       assert(dep(r.id), 'the arrow is a target');
@@ -126,7 +123,7 @@ suite(async () => {
         !db.relations.some(x => x.id === r.id) && findEntity(a.id) && findEntity(b.id),
         'Delete removes the dependency, not the bars',
       );
-      eq($('#toast').textContent, t('toast.relRemoved'), 'says so');
+      eq($('#toast').firstChild.textContent, t('toast.relRemoved'), 'says so');
       eq(
         readPlan(plans.current).relations.some(x => x.id === r.id),
         false,

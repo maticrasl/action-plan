@@ -1,7 +1,7 @@
 /** The plan switcher: the plans with their health, and new, rename, merge, export, import, delete. */
-import { createPlan, nameTaken, openPlan, planKey, readPlan, save, uniqueName } from '../store/plans';
+import { createPlan, nameTaken, openPlan, planKey, readPlan, save, uniqueName, withPlan } from '../store/plans';
 import { t, type TextKey } from '../i18n/index';
-import { db, setDb } from '../core/state';
+import { db } from '../core/state';
 import { today } from '../core/dates';
 import { isRoutine, runsOn } from '../core/routines/schedule';
 import { routineState, routineToday } from '../core/routines/keeping';
@@ -37,9 +37,7 @@ export const PLAN_ICONS = {
 // How a plan is doing.
 export type Health = 'ok' | 'today' | 'late';
 export function planHealth(data: Db): Health {
-  const keep = db;
-  setDb(data);
-  try {
+  return withPlan(data, () => {
     const now = today();
     let health: Health = 'ok';
     const flag = (level: Health) => {
@@ -57,9 +55,7 @@ export function planHealth(data: Db): Health {
       if (routineToday(a) === 'due') flag('today');
     });
     return health;
-  } finally {
-    setDb(keep);
-  }
+  });
 }
 export const HEALTH_BADGE = { ok: '🟢', today: '🟡', late: '🔴' };
 
