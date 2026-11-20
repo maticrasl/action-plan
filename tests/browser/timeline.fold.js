@@ -20,7 +20,6 @@ suite(async () => {
     rel(c, g2, 'contributes');
     rel(c, a, 'depends');
     save();
-    ui.tlDeps = true;
     ui.hideDone = false;
     ui.timelineGoal = '';
     setView('timeline');
@@ -70,37 +69,8 @@ suite(async () => {
       'the tree keeps its shape',
     );
     eq(row('P', g1).also, ['G2'], 'listed under both goals, marked as such');
-    // Each copy gets its own arrows, paired with the copy under the same goal (arrows need dates).
-    [a, b, p, pp].forEach((x, k) => Object.assign(x, { startDate: d(k), dueDate: d(k + 2) }));
-    ui.tlDeps = true;
-    render();
-    setView('timeline');
-    const yOf = (title, goal) => rows.indexOf(row(title, goal)) * TL.ROW + TL.ROW / 2;
-    const arrows = [...document.querySelectorAll(`.tl-deps [data-rel-edit]`)].map(g => [
-      g.dataset.relEdit,
-      ...g
-        .querySelector('.tl-dep')
-        .getAttribute('d')
-        .match(/^M[\d.-]+,([\d.-]+).*?([\d.-]+)\s+H[\d.-]+$/)
-        .slice(1)
-        .map(Number),
-    ]);
-    const has = (from, to, goal) => arrows.some(([, y1, y2]) => y1 === yOf(to, goal) && y2 === yOf(from, goal));
-    assert(
-      ['G1', 'G2'].every((n, k) => {
-        const g = [g1, g2][k];
-        return has(n === 'G1' ? 'A' : 'B', 'P', g) && has('P', 'PP', g);
-      }),
-      'P and PP joined under each goal',
-    );
-    ui.tlDeps = false;
-    render();
     setView('timeline');
     assert($(`[data-tl-node="${p.id}"] .tl-elbow.dash`), 'drawn with a dashed dependency line');
-    assert(
-      [...document.querySelectorAll('.tl-legend span')].some(x => x.textContent === relLabel('depends')),
-      'the legend names it',
-    );
     // A folded goal hides its prerequisites too, without sending them to the unlinked group.
     eq(rowsText(timelineRows(null, new Set([g1.id, g2.id]))), `G1 G2 [${t('tl.unlinked')}] Waiter`, 'folded');
     return rowsText(rows);
@@ -139,22 +109,6 @@ suite(async () => {
     );
     ui.mapSelected = null;
     render();
-    // The dependency arrow is drawn for every copy: from each copy of A to the one row of C.
-    const rowsNow = [...document.querySelectorAll('.tl-body .tl-row')];
-    const rowY = id =>
-      rowsNow.map((r, i) => (r.dataset.tlNode === id ? i * TL.ROW + TL.ROW / 2 : null)).filter(y => y !== null);
-    const ends = [...document.querySelectorAll('.tl-deps [data-rel-edit] .tl-dep')]
-      .map(p => p.getAttribute('d'))
-      .map(d => [Number(d.match(/^M[\d.-]+,([\d.-]+)/)[1]), Number(d.match(/([\d.-]+)\s+H[\d.-]+$/)[1])]);
-    eq(
-      ends.map(e => e[0]).sort((x, y) => x - y),
-      rowY(a.id),
-      'an arrow starts at each copy of A',
-    );
-    assert(
-      ends.every(e => e[1] === rowY(c.id)[0]),
-      'all end at C',
-    );
     // Editing a copy edits the one activity.
     openForm('activity', a.id);
     $('#f-title').value = 'A renamed';
@@ -208,7 +162,7 @@ suite(async () => {
     deletePlan(plans.current);
   });
   await step('timeline: goals collapse and expand, remembered per plan', () => {
-    const { g1, g1a, g2, g3, a, b } = foldFixture();
+    const { g1, g1a, g2, g3, a, b, c } = foldFixture();
     assert(fold(g1.id) && fold(g2.id) && fold(g1a.id), 'goals with something under them can fold');
     assert(!fold(g3.id), 'a goal with nothing under it has no fold button');
     eq(
@@ -298,18 +252,39 @@ suite(async () => {
     assert(document.activeElement === fold(g2.id), 'focus stays on the button after folding');
     eq(fold(g2.id).getAttribute('aria-expanded'), 'false', 'folded with the button');
     fold(g2.id).click();
-    // Arrows to hidden rows are not drawn: with G2 folded, C is hidden, so neither copy of A has one.
-    fold(g2.id).click();
-    eq(document.querySelectorAll('.tl-deps [data-rel-edit]').length, 0, 'C hidden: its arrow is not drawn');
-    fold(g2.id).click();
-    eq(document.querySelectorAll('.tl-deps [data-rel-edit]').length, 2, 'shown again, once per copy of A');
+    // The menu on a goal (right-click on its label) folds it, and folds all; the group's label offers fold all only.
+    const menuOn = el => el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+    const acts = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
+    const pick = act => ctxMenu.querySelector(`[data-ctx="${act}"]`).click();
+    menuOn($(`[data-tl-node="${g2.id}"] .tl-label`));
+    assert(acts().includes('fold') && acts().includes('fold-all:collapse'), `goal menu: ${acts()}`);
+    eq(ctxMenu.querySelector('[data-ctx="fold"]').textContent, t('ctx.collapse'), 'reads Collapse');
+    pick('fold');
+    assert(ctxMenu.hidden && fold(g2.id).getAttribute('aria-expanded') === 'false', 'Collapse folds the goal');
+    menuOn($(`[data-tl-node="${g2.id}"] .tl-label`));
+    eq(ctxMenu.querySelector('[data-ctx="fold"]').textContent, t('ctx.expand'), 'folded: reads Expand');
+    pick('fold');
+    eq(fold(g2.id).getAttribute('aria-expanded'), 'true', 'Expand unfolds it');
+    menuOn($(`[data-tl-node="${c.id}"] .tl-label`));
+    assert(!acts().includes('fold') && acts().includes('fold-all:collapse'), 'an activity: Collapse all, no Collapse');
+    closeCtxMenu();
+    menuOn($('.tl-group .tl-label'));
+    eq(acts(), ['fold-all:collapse'], 'the group label: Collapse all only');
+    pick('fold-all:collapse');
+    eq(shownRows(), 'G1 G2 G3 [group]', 'all folded from the menu');
+    menuOn($('.tl-corner'));
+    eq(acts(), ['fold-all:expand'], 'the corner: Expand all once all are folded');
+    pick('fold-all:expand');
+    eq(shownRows(), 'G1 A A1 B G1a B G2 A A1 C G3 [group] U', 'expanded from the menu');
+    menuOn($('.tl-today'));
+    assert(ctxMenu.hidden, 'the chart area outside bars opens no menu');
     deletePlan(plans.current);
     return 'ok';
   });
   await step('timeline: fold and “also under” wording in both languages', () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
-      for (const k of ['tl.collapseAll', 'tl.expandAll']) assert(t(k) && t(k) !== k, `${code} ${k}`);
+      for (const k of ['tl.collapseAll', 'tl.expandAll', 'ctx.collapse', 'ctx.expand']) assert(t(k) && t(k) !== k, `${code} ${k}`);
       assert(
         t('tl.collapse', { name: 'X' }).includes('X') &&
           t('tl.expand', { name: 'X' }).includes('X') &&

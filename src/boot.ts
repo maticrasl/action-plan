@@ -49,7 +49,6 @@ export function bootUser() {
   ui.hideDone = prefs.get<unknown>('hideDone', false) === true;
   ui.hideVisions = prefs.get<unknown>('hideVisions', false) === true;
   ui.nextAll = prefs.get<unknown>('nextAll', false) === true;
-  ui.tlDeps = prefs.get<unknown>('tlDeps', true) !== false;
   ui.planBadges = prefs.get<unknown>('planBadges', true) !== false;
   ui.tlPx = clamp(
     Number(prefs.get('tlPx', TL.ZOOM[prefs.get<keyof typeof TL.ZOOM>('tlZoom')] || TL.ZOOM.month)) || TL.ZOOM.month,

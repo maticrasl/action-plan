@@ -3,15 +3,11 @@ suite(async () => {
   loadSample(); // the toolbar and search steps filter the sample plan's goals
   await step('view toolbar toggles and filters', () => {
     setView('timeline');
-    const deps0 = ui.tlDeps;
-    $('[data-tl-deps]').click();
-    assert(ui.tlDeps === !deps0 && prefs.get('tlDeps') === !deps0);
-    $('[data-tl-deps]').click();
+    assert(!$('[data-tl-deps]') && !$('[data-tl-zoom]') && !$('.tl-legend'), 'no dependency, zoom or legend controls');
+    assert($('.tl-corner [data-tl-fold-all]'), 'Collapse all sits in the corner');
     $('[data-hide-done]').click();
     const hd = ui.hideDone;
     $('[data-hide-done]').click();
-    $('[data-tl-zoom="week"]').click();
-    assert(ui.tlPx === TL.ZOOM.week);
     const sel = $('[data-goal-select]');
     sel.value = db.goals[0].id;
     sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -23,10 +19,19 @@ suite(async () => {
     setView('goals');
     $('[data-goal-filter="all"]').click();
     assert(ui.goalFilter === 'all');
-    $('[data-category="Health"]').click();
-    assert(ui.category === 'Health');
+    const cat = $('.toolbar [data-category-select]');
+    assert(cat && !$('.cat-chips'), 'categories are a dropdown in the toolbar');
+    cat.value = 'Health';
+    cat.dispatchEvent(new Event('change', { bubbles: true }));
+    assert(ui.category === 'Health' && prefs.get('category') === 'Health');
+    eq($('[data-category-select]').value, 'Health', 'shown picked after the redraw');
     const n = $('#view').querySelectorAll('.card.goal').length;
-    $('[data-category=""]').click();
+    $('[data-category-select]').value = '';
+    $('[data-category-select]').dispatchEvent(new Event('change', { bubbles: true }));
+    assert(ui.category === '');
+    for (const v of ['activities', 'map', 'timeline', 'graphs'])
+      setView(v), assert($('.toolbar [data-category-select] + [data-goal-select]'), v + ': category beside the goal picker');
+    setView('goals');
     setView('map');
     $('[data-rel-toggle="depends"]').click();
     assert(ui.mapHidden.has('depends'));

@@ -424,8 +424,8 @@ export const guideEn = [
     id: 'h-timeline',
     group: 'how',
     title: 'Timeline',
-    body: `<p>The Timeline shows goals and activities by date; an item needs a start or due date to appear. Activities sit under the goals they contribute to. Arrows are dependencies, red stretches are overdue time, and routines with set days show each day as done, missed or to come.</p>
-<p>Tap a bar to select it, then drag the bar to move its dates or one end to change only that date (on a touch screen, long-press first). ▾ beside a goal folds its rows away. Pinch or Ctrl + scroll changes the scale.</p>`,
+    body: `<p>The Timeline shows goals and activities by date; an item needs a start or due date to appear. Activities sit under the goals they contribute to. Red stretches are overdue time, a bar’s colour is its status, and routines with set days show each day as done, missed or to come.</p>
+<p>Tap a bar to select it, then drag the bar to move its dates or one end to change only that date (on a touch screen, long-press first). ▾ beside a goal folds its rows away; Collapse all, top left, folds every goal, and the menu on a goal (right-click or long-press) offers both. Pinch or Ctrl + scroll changes the scale.</p>`,
     action: { do: 'view-timeline', label: 'Open the Timeline' },
   },
   {

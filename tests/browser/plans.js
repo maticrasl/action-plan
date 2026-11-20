@@ -78,13 +78,15 @@ suite(async () => {
       assert(repairRelations(db).length === all.length, 'merge repair keeps every sample relation');
       const cat = { en: 'House renovation', sl: 'Prenova hiše' }[code];
       setView('goals');
-      $(`[data-category="${cat}"]`).click();
+      const pick = v => {
+        $('[data-category-select]').value = v;
+        $('[data-category-select]').dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      pick(cat);
       const cards = viewEl.querySelectorAll('.card.goal').length;
-      const pressed = () =>
-        [...viewEl.querySelectorAll('.cat-chips .chip[aria-pressed="true"]')].map(c => c.dataset.category);
-      eq(pressed().join('|'), cat, `${cat}: only its chip pressed`);
-      $(`[data-category="${cat}"]`).click();
-      eq(pressed().join('|'), '', `${cat}: tapped again, only "all" pressed`);
+      eq($('[data-category-select]').value, cat, `${cat}: picked`);
+      pick('');
+      eq($('[data-category-select]').value, '', `${cat}: back to all`);
       assert(cards === 2, `${cat}: ${cards} goals`);
     }
     changeLanguage('en');

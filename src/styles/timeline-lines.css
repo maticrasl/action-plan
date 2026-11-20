@@ -11,6 +11,7 @@
   bottom: 50%;
   border-left: var(--w, 1.1px) solid var(--rel);
   border-bottom: var(--w, 1.1px) solid var(--rel);
+  border-bottom-left-radius: 8px;
 }
 .tl-elbow.dash {
   border-left-style: dashed;
@@ -20,13 +21,4 @@
 .tl-label .tl-text {
   position: relative;
   z-index: 2;
-}
-.line-key {
-  width: 20px;
-  height: 0;
-  border-top: 2.5px solid var(--rel);
-  border-radius: 2px;
-}
-.line-key.dash {
-  border-top-style: dashed;
 }

@@ -13,7 +13,7 @@ import {
   waitsForTag,
 } from '../ui/dom';
 import { t, type TextKey } from '../i18n/index';
-import { categoryChips, goalSelect, scopeFor, searchBox } from './filters';
+import { categorySelect, goalSelect, scopeFor, searchBox } from './filters';
 import { ui } from '../store/state';
 import { isRoutine, type Routine } from '../core/routines/schedule';
 import { byUrgency } from '../core/routines/keeping';
@@ -40,8 +40,9 @@ export function renderActivities() {
       return `<div class="col col-${status}" data-status="${status}"><h3>${t(('activity.' + status) as TextKey)}<span>${items.length}</span></h3>${items.map(activityCard).join('')}</div>`;
     })
     .join('');
-  return `${categoryChips()}
+  return `
     <div class="toolbar">
+      ${categorySelect()}
       ${goalSelect('activity', ui.activityGoal)}
       ${hideDoneToggle()}
       ${searchBox()}

@@ -21,7 +21,6 @@ import { linkItems } from './map/link';
 import { zoomMap } from './map/zoom';
 import { nodeId, openAddMenu } from './map/menu';
 import { removeRelation } from './map/render';
-import { TL } from './timeline/render';
 import { removeMeasurement } from './graphs/states';
 import { removeEntry, setGraphScale } from './graphs/sums';
 import { foldAllTl, toggleTlFold } from './timeline/rows';
@@ -122,12 +121,6 @@ viewEl.addEventListener('click', e => {
     prefs.set('category', ui.category);
     return render();
   }
-  if (el.dataset.tlZoom) {
-    ui.tlPx = TL.ZOOM[el.dataset.tlZoom as keyof typeof TL.ZOOM];
-    prefs.set('tlPx', ui.tlPx);
-    ui.mapRefocus = true;
-    return render();
-  }
   if (el.dataset.mapZoom) {
     const wrap = $('.map-wrap'),
       r = wrap.getBoundingClientRect();
@@ -136,7 +129,6 @@ viewEl.addEventListener('click', e => {
     ];
     return zoomMap(scale, r.left + wrap.clientWidth / 2, r.top + wrap.clientHeight / 2);
   }
-  if (el.hasAttribute('data-tl-deps')) return setToggle('tlDeps', !ui.tlDeps);
   const node = nodeId(el);
   if (node) {
     // A second click on the same item soon after opens it. The map is redrawn between the clicks, so the
@@ -189,6 +181,11 @@ viewEl.addEventListener('change', e => {
   if (sel.matches('[data-goal-select]')) {
     ui[GOAL_FILTERS[sel.dataset.goalSelect as GoalFilterTarget]] = sel.value;
     ui.mapRefocus = true;
+    render();
+  }
+  if (sel.matches('[data-category-select]')) {
+    ui.category = sel.value;
+    prefs.set('category', ui.category);
     render();
   }
 });

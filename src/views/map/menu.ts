@@ -33,7 +33,15 @@ import type { MenuOption } from '../../ui/menu';
 import type { FormKind } from '../../ui/forms/form';
 import type { GoalFilterTarget } from '../filters';
 import { selectsInView } from './keys';
-import { setTlCollapsed, timelineRows, tlCollapsed } from '../timeline/rows';
+import {
+  foldAllTl,
+  setTlCollapsed,
+  timelineRows,
+  tlAllFolded,
+  tlCollapsed,
+  tlFoldKeys,
+  toggleTlFold,
+} from '../timeline/rows';
 import { openStateValue } from '../../ui/state-value';
 import { hasGraph } from '../../core/series';
 import { deleteItem } from '../../ui/undo';
@@ -47,6 +55,8 @@ export const MENU_SEL = `${NODE_SEL},[data-ctx-item]`;
 export const nodeId = (el: HTMLElement | SVGElement | null | undefined): string | undefined =>
   el?.dataset.mapNode || el?.dataset.tlNode || el?.dataset.ctxItem;
 export const LONG_PRESS_MS = 500;
+// The timeline's label column outside any item row.
+const TL_LABELS = '.tl-group .tl-label, .tl-corner';
 
 export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption | '-')[] {
   const opt = (act: string, label: string, extra: Partial<MenuOption> = {}): MenuOption => ({ act, label, ...extra });
@@ -113,8 +123,26 @@ export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption
       '-',
       opt('show:' + views[0], t('ctx.showInView', { view: t(('nav.' + views[0]) as TextKey) }), { icon: views[0] }),
     );
+  if (ui.view === 'timeline') options.push('-', ...tlFoldOptions(kind === 'goal' ? item.id : ''));
   options.push(opt('link', t('ctx.link')), '-', opt('delete', t('btn.delete'), { danger: true }));
   return options;
+}
+
+// In the timeline: fold or unfold this goal (when something is under it), and fold or unfold all.
+const tlFoldOptions = (goalId: string): MenuOption[] => [
+  ...(tlFoldKeys().includes(goalId)
+    ? [{ act: 'fold', label: t(tlCollapsed().has(goalId) ? 'ctx.expand' : 'ctx.collapse') }]
+    : []),
+  tlAllFolded()
+    ? { act: 'fold-all:expand', label: t('tl.expandAll') }
+    : { act: 'fold-all:collapse', label: t('tl.collapseAll') },
+];
+
+// The timeline's labels outside any item (a group's, the corner) offer only folding all.
+function openFoldMenu(x: number, y: number) {
+  Object.assign(ctxMenu.dataset, { id: '', rel: '', add: '' });
+  ctxMenu.setAttribute('aria-label', t('tl.collapseAll'));
+  showCtxMenu('', '', '', tlFoldOptions(''), x, y);
 }
 
 // The views each kind of item appears in (graphs: only states with measurements or amounts, and
@@ -260,6 +288,8 @@ export function runRelAction(act: string, relId: string) {
 export function runCtxAction(act: string, id: string) {
   const ent = findEntity(id);
   closeCtxMenu();
+  if (act.startsWith('fold-all:')) return foldAllTl(act === 'fold-all:collapse');
+  if (act === 'fold') return toggleTlFold(id);
   if (!ent) return;
   const { kind, item } = ent;
   const [verb, arg, type] = act.split(':');
@@ -325,6 +355,9 @@ export function listenMenu() {
       if (ui.view === 'map' && (e.target as Element).closest('.map-wrap')) {
         e.preventDefault();
         openAddMenu(e.clientX, e.clientY, false);
+      } else if ((e.target as Element).closest(TL_LABELS)) {
+        e.preventDefault();
+        openFoldMenu(e.clientX, e.clientY);
       }
       return;
     }
@@ -335,13 +368,16 @@ export function listenMenu() {
   viewEl.addEventListener('pointerdown', e => {
     const node = (e.target as Element).closest<HTMLElement>(MENU_SEL),
       line = (e.target as Element).closest<HTMLElement>('[data-rel-edit]');
-    if ((!node && !line) || e.pointerType === 'mouse' || (e.target as Element).closest('[data-tl-drag]')) return;
+    const labels = !node && !line && (e.target as Element).closest(TL_LABELS);
+    if ((!node && !line && !labels) || e.pointerType === 'mouse' || (e.target as Element).closest('[data-tl-drag]'))
+      return;
     // A second finger (a pinch starting) must not leave the first one's wait running.
     if (press) clearTimeout(press.timer);
     const p: Press = { x: e.clientX, y: e.clientY, fired: false };
     p.timer = setTimeout(() => {
       p.fired = true;
-      openMenuAt(line, node, p.x, p.y + 12);
+      if (labels) openFoldMenu(p.x, p.y + 12);
+      else openMenuAt(line, node, p.x, p.y + 12);
     }, LONG_PRESS_MS);
     press = p;
   });

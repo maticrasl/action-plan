@@ -27,12 +27,13 @@ export function scopeFor(goalId: string): Scope | null {
   return scope;
 }
 
-export function categoryChips() {
+// The category picker: all, or one category with its number of goals. Nothing without categories.
+export function categorySelect() {
   const cats = categories();
   if (!cats.length) return '';
-  const chip = (value: string, label: string, count?: number) =>
-    `<button class="chip ${ui.category === value ? 'active' : ''}" data-category="${esc(value)}" aria-pressed="${ui.category === value}">${esc(label)}${count === undefined ? '' : ` <span class="count">${count}</span>`}</button>`;
-  return `<div class="chips cat-chips" role="group" aria-label="${esc(t('f.category'))}">${chip('', t('cat.all'))}${cats.map(c => chip(c, c, db.goals.filter(g => g.category === c).length)).join('')}</div>`;
+  const option = (value: string, label: string) =>
+    `<option value="${esc(value)}" ${ui.category === value ? 'selected' : ''}>${esc(label)}</option>`;
+  return `<select data-category-select style="max-width:220px" aria-label="${esc(t('f.category'))}">${option('', t('cat.all'))}${cats.map(c => option(c, `${c} (${db.goals.filter(g => g.category === c).length})`)).join('')}</select>`;
 }
 
 // The ui field holding each view's goal filter, by the goal picker's data-goal-select value.

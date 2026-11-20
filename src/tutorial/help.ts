@@ -17,7 +17,7 @@ type TipKey = { [K in TextKey]: K extends `help.tip.${infer T}` ? T : never }[Te
 
 export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] = [
   { sel: '.summary-line', key: 'summary', where: 'beforeend' },
-  { sel: '.cat-chips', key: 'categories', where: 'beforeend' },
+  { sel: '[data-category-select]', key: 'categories' },
   { sel: '.card.goal .smart', key: 'smart' },
   { sel: '.trail-ends', key: 'trail', where: 'beforeend' },
   { sel: '.card.state .tag.state:not(.cu-total)', key: 'stateValue' },
@@ -29,8 +29,6 @@ export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] =
   { sel: '.routines-title', key: 'routines', where: 'beforeend' },
   { sel: '.routine-list', key: 'routineToday', where: 'beforebegin' },
   { sel: '[data-hide-done]', key: 'hideDone' },
-  { sel: '[data-tl-deps]', key: 'tlDeps' },
-  { sel: '.tl-legend + .tl-legend', key: 'tlLinks', where: 'beforeend' },
   { sel: '.gr-delta', key: 'grChange' },
   { sel: '.gr-legend', key: 'grLegend', where: 'beforeend' },
   { sel: '.map-controls .chips', key: 'mapShow', where: 'beforeend' },
