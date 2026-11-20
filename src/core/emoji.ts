@@ -1,4 +1,4 @@
-/** Plan emojis: the common ones offered first, every single emoji, and the one shown when a plan has none. */
+/** Plan emojis: the common ones offered first, the one shown when a plan has none, and search by name. */
 
 export const NO_EMOJI = '🙁';
 
@@ -13,19 +13,33 @@ export const COMMON_EMOJIS = [
   '⛪', '🌍', '🚗', '📷', '🎮', '🎉', '⭐', '🔥', '🙂', NO_EMOJI,
 ];
 
-// Every emoji that is one code point and drawn as an emoji by default, in Unicode order (built on first use).
-// shortcut: no flags, skin tones or joined emojis (👨‍👩‍👧); add a data list if users ask for them.
-let all: string[] | null = null;
-export function allEmojis(): string[] {
-  if (all) return all;
-  all = [];
-  for (const [from, to] of [
-    [0x231a, 0x2bff],
-    [0x1f000, 0x1faff],
-  ])
-    for (let c = from; c <= to; c++) {
-      const e = String.fromCodePoint(c);
-      if (/^\p{Emoji_Presentation}$/u.test(e) && !/\p{Emoji_Modifier}/u.test(e)) all.push(e);
-    }
-  return all;
+// One emoji from the generated lists (emoji-names.<lang>.ts); `words` is ready to search:
+// lower case, no accents, every word with a space before it.
+export interface EmojiEntry {
+  e: string;
+  group: string;
+  words: string;
+}
+
+const fold = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ');
+
+export function parseEmojis(data: [group: string, rows: string][]): EmojiEntry[] {
+  return data.flatMap(([group, rows]) =>
+    rows.split('\n').map(row => {
+      const [e, words] = row.split('\t');
+      return { e, group, words: ' ' + fold(words) };
+    }),
+  );
+}
+
+// The emojis whose name or keywords hold a word starting with each word of the query, in list order.
+export function searchEmojis(list: EmojiEntry[], query: string): string[] {
+  const parts = fold(query).split(' ').filter(Boolean);
+  if (!parts.length) return [];
+  return list.filter(x => parts.every(p => x.words.includes(' ' + p))).map(x => x.e);
 }

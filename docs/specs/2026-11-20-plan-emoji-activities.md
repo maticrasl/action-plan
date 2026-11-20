@@ -37,3 +37,12 @@ emoji list), `index.html`, `views/activities.ts`, styles, i18n, Guide articles.
 - page `plans.js`: new/rename via dialog; Save disabled without emoji or name; taken name
   refused; old plan shows 🙁; collapsed list shows emoji.
 - page `activities.js`: no columns; order Doing, To do, Done, due date; masonry order.
+
+## Addendum: every emoji, searchable (same day)
+
+`npm run emoji-data` downloads Unicode emoji 16.0 (`emoji-test.txt`) and CLDR 46 annotations and
+writes `src/core/emoji-names.en.ts` and `.sl.ts` (generated; not formatted). Kept: fully-qualified
+emojis, joined ones included; left out: flags (Windows shows letters), skin tones, components. The
+dialog loads the app language's list on first "Show all" or search (a separate file in the build).
+Search: every query word must start a word of the emoji's name or keywords; case and č/š/ž ignored;
+English names also match in Slovenian. Templates carry an emoji each. Stored data unchanged.

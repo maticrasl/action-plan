@@ -3,6 +3,7 @@
 // Vite hoists these imports to the top of this file, so test-bridge.ts imports main.ts before it:
 // the modules then load in main.ts's order, as in the app.
 export const modules = import.meta.glob<Record<string, unknown>>(
-  ['./**/*.{ts,js}', '!./main.ts', '!./test-*.ts', '!./sw.js', '!./**/*.test.ts'],
+  // The emoji name lists load on demand (ui/plan-name.ts), as in the app; both export EMOJI_NAMES.
+  ['./**/*.{ts,js}', '!./main.ts', '!./test-*.ts', '!./sw.js', '!./**/*.test.ts', '!./core/emoji-names.*.ts'],
   { eager: true },
 );

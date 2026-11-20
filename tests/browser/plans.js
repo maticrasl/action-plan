@@ -21,7 +21,7 @@ suite(async () => {
     assert(db.goals.length === 12 && db.activities.length === 25 && db.states.length === 7);
     return `${db.relations.length} relations`;
   });
-  await step('plans: new and rename ask a name and an emoji; switch, delete', () => {
+  await step('plans: new and rename ask a name and an emoji; switch, delete', async () => {
     const n0 = plans.list.length;
     const dlg = $('#planNameDlg'),
       saveBtn = $('#planNameSave');
@@ -54,8 +54,36 @@ suite(async () => {
     // Rename: the emoji is kept unless changed; any emoji from the full list can be chosen.
     $('[data-plan="rename"]').click();
     assert(!saveBtn.disabled && $('#planEmojis [aria-checked="true"]').dataset.emoji === '🏃', 'rename keeps it');
+    const until = async ok => {
+      for (let i = 0; i < 150 && !ok(); i++) await new Promise(r => setTimeout(r, 20));
+      return ok();
+    };
+    const find = q => {
+      $('#planEmojiSearch').value = q;
+      $('#planEmojiSearch').dispatchEvent(new Event('input', { bubbles: true }));
+    };
     $('#planEmojiMore').click();
-    assert(picks().length > 900 && $('#planEmojiMore').hidden, 'all emojis shown');
+    assert(await until(() => picks().length > 1500), 'all emojis load');
+    const groups = [...document.querySelectorAll('#planEmojis .emoji-group')];
+    assert($('#planEmojiMore').hidden && groups.length === 8, 'by group: ' + groups.length);
+    eq(groups[0].textContent, t('emoji.group.smileys'), 'groups are named');
+    // Search by name or keyword, every word counted.
+    find('red heart');
+    assert(await until(() => picks().length && picks().length < 20), 'search narrows the list');
+    assert(
+      picks().some(b => b.dataset.emoji === '❤️'),
+      'finds ❤️',
+    );
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    $('#planEmojiSearch').dispatchEvent(enter);
+    assert(enter.defaultPrevented && dlg.open, 'Enter in the search does not save');
+    find('qqzzxx');
+    assert(await until(() => !picks().length), 'no match: empty');
+    eq($('#planEmojiNone').textContent, t('plan.emojiNone', { q: 'qqzzxx' }), 'and says so');
+    find('');
+    assert(await until(() => picks().length > 1500 && !$('#planEmojiNone').textContent), 'cleared: all again');
+    find('owl');
+    assert(await until(() => picks().some(b => b.dataset.emoji === '🦉')), 'owl found');
     pickEmoji('🦉');
     typeName('Renamed plan');
     saveBtn.click();
@@ -431,7 +459,8 @@ suite(async () => {
     createPlan('Badges 2');
     const dot = () => $(`.nav [data-plan-open="${busy}"] .plan-dot`);
     const other = () =>
-      (!dot().hidden ? DOT[dot().dataset.health] + ' ' : '') + $(`.nav [data-plan-open="${busy}"] .plan-row-name`).textContent;
+      (!dot().hidden ? DOT[dot().dataset.health] + ' ' : '') +
+      $(`.nav [data-plan-open="${busy}"] .plan-row-name`).textContent;
     eq(other(), '🟢 Badges', 'other plan, read from storage');
     assert(dot().title === t('plan.health.ok'), 'with a tooltip');
     // On by default; the setting hides them and is remembered.
@@ -452,7 +481,8 @@ suite(async () => {
   await step('plan list: most recently opened first; more than three fold', () => {
     const keep = plans.current;
     const ids = ['P1', 'P2', 'P3', 'P4'].map(n => (createPlan(n), plans.current));
-    const rows = () => [...document.querySelectorAll('.nav .plan-row')].map(b => b.querySelector('.plan-row-name').textContent);
+    const rows = () =>
+      [...document.querySelectorAll('.nav .plan-row')].map(b => b.querySelector('.plan-row-name').textContent);
     renderPlanSwitch();
     eq(rows().slice(0, 3), ['P4', 'P3', 'P2'], 'the last opened on top');
     eq(rows().length, 3, 'three shown');

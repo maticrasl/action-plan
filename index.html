@@ -162,8 +162,10 @@
           <div class="err" id="planNameErr" role="alert"></div>
         </div>
         <div class="field">
-          <span class="label" id="planEmojiLabel" data-i18n="plan.emojiLabel">Emoji</span>
+          <label for="planEmojiSearch" id="planEmojiLabel" data-i18n="plan.emojiLabel">Emoji</label>
+          <input type="search" id="planEmojiSearch" autocomplete="off" spellcheck="false">
           <div class="emoji-grid" id="planEmojis" role="radiogroup" aria-labelledby="planEmojiLabel"></div>
+          <p class="hint" id="planEmojiNone" role="status"></p>
           <button type="button" class="btn ghost small" id="planEmojiMore" aria-expanded="false" data-i18n="plan.emojiMore">Show all emojis</button>
         </div>
       </div>
