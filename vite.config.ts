@@ -1,10 +1,23 @@
 /** Vite build: the app into dist/ (with the service worker), and the test pages into dist-test/ (--mode test). */
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
 const root = import.meta.dirname;
+
+// The version Settings shows and problem reports carry: build date and short commit; `dev` otherwise.
+function appVersion(mode: string): string {
+  if (mode !== 'production') return 'dev';
+  let commit = 'local';
+  try {
+    commit = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim();
+  } catch {
+    // not a git checkout: the date alone still tells builds apart
+  }
+  return new Date().toISOString().slice(0, 10).replaceAll('-', '.') + '-' + commit;
+}
 
 // Files under a folder, as paths relative to it with forward slashes.
 const filesIn = (dir: string): string[] =>
@@ -94,6 +107,7 @@ export default defineConfig(({ mode }) => {
   const test = mode === 'test';
   return {
     base: './',
+    define: { __APP_VERSION__: JSON.stringify(appVersion(mode)) },
     // The test pages get no manifest or icons, as when they ran from file://: with a manifest,
     // Chrome offers to install the app and the install tests see a prompt they do not expect.
     publicDir: test ? false : 'public',

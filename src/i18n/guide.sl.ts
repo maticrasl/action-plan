@@ -395,6 +395,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<p>Rutina je aktivnost, ki se ponavlja. Pri »Ponavljanje« izberite število ponovitev na teden ali mesec, določene dni ali »Po meri …« za vsakih nekaj dni, tednov, mesecev ali let, dan v mesecu ali dan v tednu, na primer drugi petek. »Konec« določi zadnji dan ali število ponovitev.</p>
 <p>Rutino odkljukate na njenem <strong>tedenskem traku</strong>, v Aktivnostih ali na Pregledu. Modro obrobljeni dnevi so na vrsti; sivo črtkani so bili zamujeni; današnji dan je obkrožen. Puščici ob traku vodita v prejšnje tedne, da odkljukate, kar ste pozabili. Zelena oznaka je vaš niz.</p>
 <p>Rutina je zamujena le, dokler je spet ne odkljukate. Če je vklopljeno <strong>»Zamujeni dan je mogoče nadoknaditi na drug dan«</strong>, kljukica na kateri drug dan nadomesti zamujenega.</p>
+<p>V Aktivnostih so najnujnejše rutine na vrhu: najprej zamujene, nato tiste, ki so na vrsti danes, nato ostale po dnevu, ko bodo naslednjič na vrsti. Rutine, opravljene za to obdobje, in tiste, ki ne tečejo, so na koncu.</p>
 <p><strong>Rutinski seznam</strong> je kontrolni seznam, ki se vsakič začne znova, na primer jutranja rutina; ko odkljukate njegovo zadnjo postavko, je odkljukan dan.</p>
 <p>Ko rutina izboljšuje stanje, ki se sešteva, vas ob kljukici vpraša »koliko?« in količino v istem koraku prišteje stanju.</p>`,
     action: { do: 'add-routine', label: 'Dodaj rutino' },
@@ -480,12 +481,23 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Bližnjice in kretnje',
     body: `<ul>
 <li><strong>Pridržite ali kliknite z desno tipko</strong> skoraj karkoli za meni s tem, kar lahko s tem naredite.</li>
-<li><strong>Ctrl + Enter</strong> shrani obrazec, v katerem ste. <strong>Esc</strong> ga zapre.</li>
+<li><strong>Ctrl + Enter</strong> shrani obrazec, v katerem ste. <strong>Esc</strong> ga zapre; če ste kaj spremenili, vas pred zavrženjem vpraša, tako kot Prekliči in ×.</li>
+<li>V Vodniku vas <strong>Esc</strong> vrne v pogled, iz katerega ste prišli.</li>
 <li>Na Zemljevidu in Časovnici: <strong>Enter</strong> uredi izbrani element, <strong>Delete</strong> ga odstrani, <strong>Esc</strong> prekliče izbiro.</li>
 <li><strong>Dva prsta</strong> ali <strong>Ctrl + kolešček</strong> povečata Zemljevid, Časovnico in grafe. Z enim prstom: tapnite, nato se znova dotaknite in povlecite navzdol ali navzgor.</li>
 <li>Gumb <strong>Dodaj</strong> vedno doda, kar ustreza pogledu, v katerem ste.</li>
 <li><strong>Razlage na zaslonu</strong> (na tej strani in v Nastavitvah) vsakemu pogledu dodajo kratko opombo, kontrolnikom pa oznake ⓘ.</li>
 </ul>`,
+  },
+
+  {
+    id: 'feedback',
+    group: 'how',
+    title: 'Prijavite težavo, predlagajte funkcijo',
+    body: `<p>Oboje je v Nastavitvah, pod Pomoč, in na koncu te strani. Odpre se stran aplikacije na GitHubu; za pisanje tam potrebujete brezplačen račun GitHub. Kar napišete, je javno, zato izpustite vse iz svojih načrtov, kar je zasebno.</p>
+<p>Ljudje, ki izdelujejo Action Plan, vaših načrtov ne vidijo, zato opišite, kaj ste naredili in kaj se je zgodilo. Pri težavi aplikacija izpolni svojo različico, vaš brskalnik in velikost okna, jezik ter ali je sinhronizacija vklopljena; to vrstico vidite, preden se karkoli odpre, s »Kopiraj podatke« pa jo kopirate, če jo raje pošljete drugače.</p>`,
+    action: { do: 'settings', label: 'Odpri Nastavitve' },
+    related: ['p-where'],
   },
 
   /* ---------- Vaši podatki in zasebnost ---------- */
@@ -495,7 +507,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Kje so shranjeni moji načrti',
     body: `<p>Vaši načrti so shranjeni v tem brskalniku, na tej napravi. Akcijski načrt nima svojega strežnika: nič, kar napišete, ni poslano tistim, ki aplikacijo izdelujejo, in vaših načrtov ne morejo videti, brati ali obnoviti.</p>
 <p>Če se prijavite z Googlom, je kopija shranjena tudi v vašem Google Drivu, v skriti mapi aplikacije. Glejte [[p-google]].</p>
-<p>Aplikacija ne uporablja oglasov ali sledenja in nič o tem, kako jo uporabljate, ne zapusti vaše naprave.</p>
+<p>Aplikacija ne uporablja oglasov ali sledenja in nič o tem, kako jo uporabljate, ne zapusti vaše naprave. Ko prijavite težavo, aplikacija izpolni svojo različico, vaš brskalnik in velikost okna, jezik ter ali je sinhronizacija vklopljena. Nič iz vaših načrtov.</p>
 <p>Ko se aplikacija naloži, njene datoteke (med njimi pisava) pridejo s strani, ki jo gosti. Ko odprete Nastavitve, z Googla naloži še Googlov skript za prijavo, da prijava deluje v enem koraku. V obeh primerih podjetje vidi, da je vaša naprava zahtevala datoteko, kot pri vsaki spletni strani. Iz vaših načrtov ne dobi ničesar.</p>`,
     related: ['p-google', 'p-backup', 'p-device'],
   },

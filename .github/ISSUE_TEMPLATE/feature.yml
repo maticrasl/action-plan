@@ -1,0 +1,23 @@
+name: Suggest a feature
+description: Something you would like Action Plan to do.
+labels: [idea]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. What you write here is public. If someone has already asked for the same, add a 👍 to theirs instead.
+  - type: textarea
+    id: wish
+    attributes:
+      label: What would you like to be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What do you do today instead?
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Filled in by the app.

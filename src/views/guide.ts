@@ -1,5 +1,6 @@
 /** The Guide: how the method works, what to do when stuck, how each feature works, what happens to the data. */
 import { GUIDE, GUIDE_GROUPS, type Article, type GuideAction, type GuideFact } from '../i18n/guide';
+import { feedbackRows } from '../ui/feedback';
 import { lang, t, type TextKey } from '../i18n/index';
 import { liveBody, matchesQuery, plainText, withRefs } from '../core/guidance/search';
 import { today } from '../core/dates';
@@ -135,6 +136,7 @@ export function renderGuide() {
     <div class="guide-walk" data-walk-slot></div>
     <p class="guide-none" role="status"${shown.size ? ' hidden' : ''}>${esc(t('guide.noMatch', { query: guideState.query.trim() }))}</p>
     ${groups}
+    ${feedbackRows()}
   </div>`;
 }
 

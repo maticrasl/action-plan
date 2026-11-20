@@ -147,6 +147,22 @@
     </form>
   </dialog>
 
+  <dialog id="feedback" class="modal feedback" aria-labelledby="feedbackTitle">
+    <header class="modal-head">
+      <h2 id="feedbackTitle"></h2>
+      <button type="button" class="icon-btn" data-fb-close data-i18n-aria="btn.close" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="modal-body" id="feedbackBody"></div>
+    <footer class="modal-foot">
+      <button type="button" class="btn ghost" data-fb-close data-i18n="btn.cancel">Cancel</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn small" id="feedbackCopy" data-i18n="fb.copy">Copy details</button>
+      <button type="button" class="btn primary solid" id="feedbackOpen" data-i18n="fb.open">Open GitHub</button>
+    </footer>
+  </dialog>
+
   <dialog id="planMerge" class="modal plan-share" aria-labelledby="planMergeTitle">
     <form method="dialog" novalidate>
       <header class="modal-head">
@@ -255,12 +271,17 @@
       <section class="set-group">
         <h3 data-i18n="settings.helpTitle">Help</h3>
         <div class="set-actions"><button type="button" class="btn small" id="guideBtn" data-i18n="guide.open">Open the Guide</button></div>
+        <div class="set-actions" data-fb-rows hidden>
+          <button type="button" class="btn small" data-fb="bug" data-i18n="fb.bug">Report a problem</button>
+          <button type="button" class="btn small" data-fb="idea" data-i18n="fb.idea">Suggest a feature</button>
+        </div>
       </section>
       <section class="set-group" id="installSection" hidden>
         <h3 data-i18n="install.title">App</h3>
         <p class="hint" id="installHint"></p>
         <div class="set-actions"><button type="button" class="btn small primary" id="installBtn" data-i18n="install.btn" hidden>Install app</button></div>
       </section>
+      <p class="set-version"><button type="button" class="link-btn" id="versionBtn"><span data-i18n="settings.version">Version</span> <span id="appVersion"></span></button></p>
     </div>
   </dialog>
 

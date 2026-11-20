@@ -1,0 +1,40 @@
+name: Report a problem
+description: Something in Action Plan does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. What you write here is public. The people who make Action Plan cannot see your plans, so describe what you did and what happened, without anything private from your plans.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to make it happen again
+      placeholder: "1. Open …\n2. Tap …\n3. …"
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Filled in by the app (Settings shows it at the bottom).
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, screen and settings
+      description: Filled in by the app.
+  - type: checkboxes
+    id: private
+    attributes:
+      label: Privacy
+      options:
+        - label: I have not included anything from my plans that I want to keep private.
+          required: true

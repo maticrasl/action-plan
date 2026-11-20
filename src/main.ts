@@ -31,6 +31,7 @@ import { listenMap } from './views/map/index';
 import { listenTlDrag } from './views/timeline/drag';
 import { listenGraphs } from './views/graphs/points';
 import { listenGuide } from './views/guide';
+import { listenFeedback } from './ui/feedback';
 
 // Screen parts below the views redraw, switch users and offer the welcome through these.
 setRenderer(render);
@@ -63,6 +64,7 @@ listenTlDrag();
 listenGuide();
 listenWalk();
 listenTips();
+listenFeedback();
 
 setLang(detectLang());
 setDb(emptyDb());
