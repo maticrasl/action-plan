@@ -25,6 +25,7 @@ import { nodeId, openAddMenu } from './map/menu';
 import { removeRelation } from './map/render';
 import { removeMeasurement } from './graphs/states';
 import { removeEntry, setGraphScale } from './graphs/sums';
+import { fillWork } from './graphs/working';
 import { foldAllTl, toggleTlFold } from './timeline/rows';
 import { openStateAmount, openStateValue } from '../ui/state-value';
 import { openReplan } from '../ui/replan';
@@ -169,6 +170,12 @@ viewEl.addEventListener('click', e => {
   if (el.hasAttribute('data-hide-visions')) return setToggle('hideVisions', !ui.hideVisions);
 });
 
+// Toggle does not bubble; caught on the way down. Is it working? is worked out only when opened.
+viewEl.addEventListener(
+  'toggle',
+  e => (e.target as Element).matches?.('.gr-work') && fillWork(e.target as HTMLDetailsElement),
+  true,
+);
 viewEl.addEventListener('input', e => {
   if ((e.target as HTMLInputElement).matches('[data-search]')) {
     ui.search = (e.target as HTMLInputElement).value;

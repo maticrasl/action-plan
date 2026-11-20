@@ -228,7 +228,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <ul>
 <li><strong>Je še prezgodaj?</strong> Teža, kondicija, prihranki in veščine se premikajo počasi in neenakomerno. Graf glejte čez šest ali osem tednov, ne od ene meritve do druge. Napoved gleda zadnjih šest tednov, ne zadnje meritve.</li>
 <li><strong>Je mera prava?</strong> Morda ste v boljši formi, tehtnica pa stoji. Dodajte drugo trenutno stanje, ki ujame, kar se spreminja: obseg pasu, tempo, kako gredo stopnice.</li>
-<li><strong>So to pravi koraki?</strong> Biti zaposlen in napredovati sta različni stvari. Katera aktivnost naj bi premaknila to število? Če je bila povezava le upanje, za en mesec preizkusite drug korak.</li>
+<li><strong>So to pravi koraki?</strong> Biti zaposlen in napredovati sta različni stvari. Katera aktivnost naj bi premaknila to število? Če je bila povezava le upanje, za en mesec preizkusite drug korak. Pod grafom stanja »Ali deluje?« primerja tedne, ko ste rutino izvajali, s tedni, ko je niste. Preden kaj pove, potrebuje kak mesec ali dva kljukic in meritev.</li>
 <li><strong>Je odmerek dovolj velik?</strong> Enkrat na teden vas morda drži na mestu; dvakrat vas morda premakne.</li>
 <li><strong>Vprašajte nekoga, ki se spozna.</strong> Zataknjeno število je najboljši trenutek za uro s trenerjem, učiteljem, zdravnikom ali svetovalcem. Prinesite svoj graf.</li>
 </ul>
@@ -436,7 +436,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Grafi',
     body: `<p>Vsako trenutno stanje z meritvami ima graf: vaše vrednosti skozi čas, črtkano črto za ciljno vrednost cilja in spremembo od prve meritve. Stanje, ki se sešteva, kaže vsote po dnevih, tednih, mesecih ali letih ali skupno vsoto; izberete nad grafom. Vsaka rutina ima graf, kako pogosto ste jo izvedli v posameznem obdobju.</p>
 <p>Pri cilju s ciljno vrednostjo in rokom graf nariše tudi tempo: tanko črtkano črto od vašega začetka do ciljne vrednosti. Nad grafom vidite, koliko je odslej treba na teden in kdaj bi prišli do cilja s sedanjim tempom.</p>
-<p>Za odčitek vrednosti se postavite nanjo z miško ali jo tapnite; za povečavo obdobja uporabite dva prsta ali Ctrl + kolešček. Tabela pod grafom našteje meritve; napačno izbrišete tam.</p>`,
+<p>Za odčitek vrednosti se postavite nanjo z miško ali jo tapnite; za povečavo obdobja uporabite dva prsta ali Ctrl + kolešček. Tabela pod grafom našteje meritve; napačno izbrišete tam.</p>
+<p>Pod grafom stanja, ki ga izboljšuje rutina, in pod grafom same rutine »Ali deluje?« primerja, kako se je stanje premikalo v tednih, ko ste rutino izvajali, in v tednih, ko je niste. Pokaže vzorec, ne dokaza.</p>`,
     action: { do: 'view-graphs', label: 'Odpri Grafe' },
   },
   {

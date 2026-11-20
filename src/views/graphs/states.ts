@@ -22,6 +22,7 @@ import type { Routine } from '../../core/routines/schedule';
 import { areaFill } from './plot';
 import { hasGraph, stateSeries } from '../../core/series';
 import { paceFacts, paceGoals, paceMarks } from './pace';
+import { workFold } from './working';
 
 /* ---------- Graphs (measurement history of each current state) ----------
    One line chart per current state: its measurements over time, a target line for every goal it
@@ -251,6 +252,7 @@ export function graphCard(s: State, width: number) {
     <details class="gr-table"><summary>${t('gr.table')}</summary>
       <table><thead><tr><th>${t('gr.col.date')}</th><th>${t('gr.col.value')}</th><th>${t('gr.col.change')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </details>
+    ${workFold(s)}
   </article>`;
 }
 

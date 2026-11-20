@@ -33,6 +33,7 @@ import { openReplan } from '../ui/replan';
 import { lateSteps } from '../core/replan';
 import { requestRender } from '../ui/render';
 import { openGuide } from '../views/guide';
+import { hasWork, openWork } from '../views/graphs/working';
 import { walkInput } from './walkthrough';
 
 // The tip drawn on the last render (its buttons act on it).
@@ -90,6 +91,7 @@ export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
   templates: () => openTemplates(),
   backup: () => (syncConfigured() ? openSettings('syncSection') : openExport()),
   install: () => (installPrompt ? $('#installBtn').click() : openSettings('installSection')),
+  working: c => openWork(target(c)),
   share: () => {
     openExport();
     planExp.querySelector<HTMLInputElement>('input[name="exportKind"][value="template"]')!.checked = true;
@@ -97,7 +99,7 @@ export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
 };
 
 // A tip's text or button with its names and numbers; `part` is a SMART letter, shown by its name.
-function tipSays(c: Chosen, what: 'text' | 'btn'): string {
+function tipSays(c: Chosen, what: 'text' | 'btn' | 'btn2'): string {
   const vars = { ...c.hit.vars };
   if (typeof vars.part === 'string') vars.part = t(`smart.${vars.part}` as TextKey);
   return t(`tip.${c.tip.id}.${what}` as TextKey, vars);
@@ -113,6 +115,12 @@ const closeX = () =>
 const btn = (act: string, label: string, cls: string) =>
   `<button type="button" class="${cls}" data-tip="${act}">${esc(label)}</button>`;
 
+// Is it working? only where the state has a fold to open.
+const showsSecond = (c: Chosen) => {
+  const s = db.states.find(x => x.id === target(c));
+  return c.tip.action2 !== 'working' || (!!s && hasWork(s));
+};
+
 export function tipHtml(c: Chosen, hint: boolean): string {
   return `<section class="tip" data-tip-key="${esc(c.key)}" aria-labelledby="tipLabel">
     ${head()}${closeX()}
@@ -120,6 +128,7 @@ export function tipHtml(c: Chosen, hint: boolean): string {
     ${hint ? `<p class="tip-hint">${esc(t('tip.settingsHint'))}</p>` : ''}
     <div class="tip-acts">
       ${c.tip.action ? btn('do', tipSays(c, 'btn'), 'btn small primary') : ''}
+      ${c.tip.action2 && showsSecond(c) ? btn('do2', tipSays(c, 'btn2'), 'btn small') : ''}
       ${c.tip.guide ? `<button type="button" class="guide-ref" data-guide-open="${c.tip.guide}">${esc(t('tip.why'))}</button>` : ''}
       ${btn('another', t('tip.another'), 'btn small ghost')}
       ${btn('never', t('tip.close'), 'btn small ghost')}
@@ -187,6 +196,7 @@ export function tipAction(act: string, el: HTMLElement) {
     return requestRender();
   }
   if (act === 'do' && c.tip.action) return TIP_DO[c.tip.action](c, el);
+  if (act === 'do2' && c.tip.action2) return TIP_DO[c.tip.action2](c, el);
   if (act === 'later') saveTips(snooze(getTips(), c.key, today()));
   else if (act === 'never') saveTips(closeTip(getTips(), c.key, today()));
   requestRender();

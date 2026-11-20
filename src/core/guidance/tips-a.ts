@@ -163,6 +163,7 @@ export const TIPS_A: Tip[] = [
     cooldown: L.COOLDOWN_A,
     guide: 'no-progress',
     action: 'graphs',
+    action2: 'working',
     hits: ({ db }) => {
       const seen = new Set<string>();
       return activeGoals(db)

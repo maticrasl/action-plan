@@ -59,7 +59,8 @@ export type TipAction =
   | 'templates'
   | 'backup'
   | 'install'
-  | 'share';
+  | 'share'
+  | 'working';
 export interface Tip {
   id: string;
   cls: TipClass;
@@ -67,6 +68,7 @@ export interface Tip {
   cooldown: number; // days before it may come back; 0: once per key
   guide?: string; // the Guide article "Why this helps" opens
   action?: TipAction;
+  action2?: TipAction; // a second button, its text in tip.<id>.btn2
   // Every item it is true for, the best fit first; empty when it is not true.
   hits(inp: TipInput): TipHit[];
 }

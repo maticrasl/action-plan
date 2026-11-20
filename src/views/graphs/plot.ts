@@ -7,6 +7,7 @@ import { t } from '../../i18n/index';
 import { withUnit } from '../../ui/text';
 import { fmtNum } from '../../core/util';
 import { esc } from '../../ui/dom';
+import { workFold } from './working';
 import type { State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
 
@@ -108,5 +109,6 @@ export function grCardHtml(
     ${legend}
     ${plot}
     <details class="gr-table"><summary>${t('gr.table')}</summary>${table}</details>
+    ${workFold(item)}
   </article>`;
 }

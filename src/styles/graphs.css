@@ -226,6 +226,57 @@
 .gr-table td.gr-del .btn {
   padding: 2px 8px;
 }
+/* Is it working?: a block per routine and state, two rows with bars to one scale, a caution line */
+.gr-work {
+  margin-top: 8px;
+}
+.gr-work summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  width: fit-content;
+}
+.gr-work-body {
+  font-size: 13.5px;
+}
+.gr-work-body p {
+  margin: 6px 0;
+}
+.work-pair {
+  margin-top: 10px;
+}
+.work-row {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) 1fr 120px;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 3px 0;
+  font-variant-numeric: tabular-nums;
+}
+.work-label {
+  color: var(--ink-2);
+}
+.work-bar line {
+  stroke: var(--line-strong);
+}
+.work-bar .work-kept {
+  fill: var(--rel-state);
+}
+.work-bar .work-missed {
+  fill: var(--ink-3);
+}
+.work-verdict {
+  font-weight: 600;
+}
+.work-caution {
+  margin-top: 10px;
+}
+@media (max-width: 600px) {
+  /* Phones: the bar under the text */
+  .work-row {
+    grid-template-columns: 1fr;
+  }
+}
 .gr-without {
   margin-top: 16px;
   display: flex;

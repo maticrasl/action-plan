@@ -228,7 +228,7 @@ export const guideEn = [
 <ul>
 <li><strong>Is it too early?</strong> Weight, fitness, savings and skills move slowly and unevenly. Look at the graph over six or eight weeks, not from one measurement to the next. The forecast looks at the last six weeks, not at the last measurement.</li>
 <li><strong>Is the measure right?</strong> Perhaps you are getting fitter while the scale stays still. Add a second current state that catches what is changing: waist, pace, how the stairs feel.</li>
-<li><strong>Are these the right steps?</strong> Being busy and moving forward are different things. Which activity was meant to move this number? If the link was a hope, test another step for a month.</li>
+<li><strong>Are these the right steps?</strong> Being busy and moving forward are different things. Which activity was meant to move this number? If the link was a hope, test another step for a month. Under a state’s graph, “Is it working?” compares the weeks you kept a routine with the weeks you did not. It needs a couple of months of ticks and measurements before it says anything.</li>
 <li><strong>Is the dose enough?</strong> Once a week may hold you where you are; twice may move you.</li>
 <li><strong>Ask someone who knows.</strong> A stuck number is the best moment to spend an hour with a trainer, teacher, doctor or adviser. Bring your graph.</li>
 </ul>
@@ -436,7 +436,8 @@ export const guideEn = [
     title: 'Graphs',
     body: `<p>Each current state with measurements has a graph: your values over time, a dashed line for the goal’s target, and the change since the first measurement. A state that adds up shows sums per day, week, month or year, or the running total; choose above the graph. Each routine has a graph of how often you did it per period.</p>
 <p>For a goal with a target and a deadline, the graph also draws the pace: a thin dashed line from your start to the target. Above it you see how much is needed each week from here, and when you would arrive at the present rate.</p>
-<p>Hover or tap to read a value; pinch or Ctrl + scroll to zoom into a stretch of time. The table under a graph lists the measurements; delete a wrong one there.</p>`,
+<p>Hover or tap to read a value; pinch or Ctrl + scroll to zoom into a stretch of time. The table under a graph lists the measurements; delete a wrong one there.</p>
+<p>Under the graph of a state that a routine improves, and under the routine’s own graph, “Is it working?” compares how the state moved in the weeks you kept the routine and in the weeks you did not. It shows a pattern, not a proof.</p>`,
     action: { do: 'view-graphs', label: 'Open Graphs' },
   },
   {
