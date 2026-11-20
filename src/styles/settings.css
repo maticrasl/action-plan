@@ -406,6 +406,27 @@
   align-self: flex-start;
   margin-top: 8px;
 }
+.li-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.li-foot .li-add {
+  margin-top: 0;
+}
+.li-show-done {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+.li-foot .li-show-done {
+  margin: 0 0 0 auto;
+}
+/* Ticked items are hidden until shown; a list routine has no ticks in its form. */
+.li-rows.hide-done:not(.no-ticks) .li-row:has(.li-check:checked) {
+  display: none;
+}
 .li-rows.no-ticks .li-check {
   display: none;
 }

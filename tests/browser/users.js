@@ -335,7 +335,7 @@ suite(async () => {
     G.pick = 'A';
     await logIn('ana@example.com', byAcct('A'));
     await settle();
-    $('#settingsBtn').click();
+    openSettings('syncSection'); // the name field is on the Account page
     const input = $('#syncSection [data-user-name]');
     assert(
       input.value === 'Ana' &&

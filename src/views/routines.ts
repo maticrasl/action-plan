@@ -58,7 +58,10 @@ export function tickListItem(id: string, itemId: string, iso: ISODate = today())
   render();
   // The card is drawn anew (perhaps in another column): keep the keyboard on the item, without
   // scrolling to where it moved (the bottom of a long list).
-  justTicked($(`[data-li-tick="${id}"][data-li="${itemId}"]`))?.focus({ preventScroll: true });
+  // A ticked item is hidden: the keyboard goes to the toggle that shows it.
+  (justTicked($(`[data-li-tick="${id}"][data-li="${itemId}"]`)) || $(`[data-li-show-done="${id}"]`))?.focus({
+    preventScroll: true,
+  });
 }
 
 export function tickRoutineItem(a: Routine & WithList, itemId: string, iso: ISODate) {
@@ -297,15 +300,27 @@ export function routineRow(a: Routine) {
   </div>`;
 }
 
+// Lists showing their ticked items, for this visit; by default they are hidden.
+const doneShown = new Set<string>();
+export function toggleListDone(id: string) {
+  if (!doneShown.delete(id)) doneShown.add(id);
+  render();
+}
+
 export function listTicks(a: WithList) {
-  const n = listDone(a);
+  const n = listDone(a),
+    show = doneShown.has(a.id);
+  const toggle = n
+    ? `<button type="button" class="chip li-show-done" data-li-show-done="${a.id}" aria-pressed="${show}">${esc(show ? t('list.hideDone') : t('list.showDone', { n }))}</button>`
+    : '';
   return `${a.list.length ? progressBar((n / a.list.length) * 100, t('list.done', { done: n, total: a.list.length })) : ''}
     <div class="li-ticks">${doneLast(a.list)
+      .filter(i => show || !i.done)
       .map(
         i =>
           `<button type="button" class="li-tick${i.done ? ' done' : ''}" role="checkbox" aria-checked="${!!i.done}" data-li-tick="${a.id}" data-li="${i.id}"><span class="li-box" aria-hidden="true">${i.done ? '✓' : ''}</span><span class="li-text">${esc(i.text)}</span></button>`,
       )
-      .join('')}</div>`;
+      .join('')}</div>${toggle}`;
 }
 
 export function openTickAmount(a: Routine, iso: ISODate, anchor: HTMLElement) {

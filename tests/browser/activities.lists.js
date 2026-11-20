@@ -78,6 +78,7 @@ suite(async () => {
       'linked to the goal',
     );
     // On the card: tick one, then the other.
+    toggleListDone(a.id); // ticked items shown, as these checks expect
     render();
     // Items by their place in the list (ticked ones are shown last).
     const tick = i => document.querySelector(`.card.activity [data-li-tick="${a.id}"][data-li="${a.list[i].id}"]`);
@@ -220,6 +221,7 @@ suite(async () => {
     });
     save();
     setView('activities');
+    toggleListDone(a.id); // ticked items shown, as these checks expect
     const shown = () =>
       [...document.querySelectorAll(`.card.activity [data-li-tick="${a.id}"]`)].map(b => b.dataset.li);
     const tick = id => document.querySelector(`[data-li-tick="${a.id}"][data-li="${id}"]`);
@@ -353,6 +355,7 @@ suite(async () => {
     render();
     // The keyboard stays on the item ticked, even as the card moves column.
     const tick = id => document.querySelector(`[data-li-tick="${a.id}"][data-li="${id}"]`);
+    toggleListDone(a.id); // ticked items shown, as these checks expect
     tick('p').focus();
     tick('p').click();
     eq(document.activeElement, tick('p'), 'focus kept on the ticked item');
@@ -404,6 +407,7 @@ suite(async () => {
     modal.close();
     // Removing every row leaves one empty row to type in; Enter in the middle adds right below.
     openForm('activity', a.id);
+    modal.querySelector('[data-li-done-toggle]').click(); // ticked rows shown, as these checks expect
     const rows = () => [...$('#listRows').children];
     // Removing a row moves focus to the next row's remove button – never into its text, which would
     // open the keyboard on a phone.
@@ -523,6 +527,7 @@ suite(async () => {
       ],
     };
     db.activities.push(a);
+    toggleListDone('ph'); // ticked items shown, as these checks expect
     const frame = document.createElement('iframe');
     Object.assign(frame.style, {
       width: '390px',
@@ -564,6 +569,7 @@ suite(async () => {
     const plain = mk('activity', { title: 'Call', status: 'todo', startDate: d(-1), dueDate: d(0) });
     save();
     setView('dashboard');
+    toggleListDone(a.id); // ticked items shown, as these checks expect
     const fold = x => $(`#view [data-li-fold="${x.id}"]`);
     const ticks = x => document.querySelectorAll(`#view [data-li-tick="${x.id}"]`).length;
     assert(fold(a) && fold(r) && !fold(plain), 'a toggle on lists only');
@@ -579,6 +585,88 @@ suite(async () => {
     assert(dayItemsDone(r, today()) === 1, 'a routine item ticked for today');
     clickEl(fold(a));
     assert(!ticks(a) && ticks(r) === 2, 'closes again, the other stays');
+    deletePlan(plans.current);
+  });
+  await step('lists: ticked items hidden on the card and in the form until shown', () => {
+    fresh('Hide ticked');
+    const a = mk('activity', {
+      title: 'Pack',
+      status: 'doing',
+      startDate: d(-1),
+      dueDate: d(2),
+      list: [
+        { id: 'a', text: 'A', done: true },
+        { id: 'b', text: 'B', done: false },
+      ],
+    });
+    const plain = mk('activity', { title: 'Plain', status: 'todo', startDate: d(-1), dueDate: d(2) });
+    save();
+    setView('activities');
+    const shown = () => [...document.querySelectorAll(`.card [data-li-tick="${a.id}"]`)].map(b => b.dataset.li);
+    const toggle = () => $(`.card [data-li-show-done="${a.id}"]`);
+    eq(shown(), ['b'], 'card: the ticked item is hidden');
+    eq(toggle().textContent.trim(), t('list.showDone', { n: 1 }), 'card offers to show it');
+    assert(!$(`.card [data-li-show-done="${plain.id}"]`), 'no toggle on a plain activity');
+    clickEl(toggle());
+    eq(shown(), ['b', 'a'], 'shown after the toggle');
+    assert(!modal.open, 'the toggle does not open the form');
+    clickEl(toggle());
+    eq(shown(), ['b'], 'hidden again');
+    clickEl($(`.card [data-li-tick="${a.id}"][data-li="b"]`));
+    assert(a.status === 'done' && !shown().length && toggle(), 'ticking the last one hides it too');
+    // The form hides ticked rows the same way.
+    a.list[1].done = false;
+    a.status = 'doing';
+    openForm('activity', a.id);
+    const visible = () => [...$('#listRows').children].filter(r => r.offsetParent !== null).map(r => r.dataset.liRow);
+    const formToggle = () => modal.querySelector('[data-li-done-toggle]');
+    eq(visible(), ['b'], 'form: the ticked row is hidden');
+    assert(!formToggle().hidden, 'form offers to show it');
+    clickEl(formToggle());
+    eq(visible(), ['b', 'a'], 'form: shown after the toggle');
+    clickEl(formToggle());
+    $('#listRows [data-li-row="b"] .li-check').click();
+    eq(visible(), [], 'form: a row ticked there hides');
+    eq(formToggle().textContent.trim(), t('list.showDone', { n: 2 }), 'the count follows');
+    submitForm();
+    eq(
+      a.list.map(i => i.done),
+      [true, true],
+      'hidden rows are still saved',
+    );
+    deletePlan(plans.current);
+  });
+  await step('lists: an activity or routine turns into a list in its form', () => {
+    fresh('To list');
+    const a = mk('activity', { title: 'Shop', status: 'doing', startDate: d(-1), dueDate: d(2) });
+    const r = mk('activity', { title: 'Stretch', startDate: d(-3), dueDate: d(9), repeat: { every: 1, unit: 'day' } });
+    save();
+    setView('activities');
+    openForm('activity', a.id);
+    assert(!$('#listRows') && $('#f-status'), 'a plain activity has no items');
+    clickEl(modal.querySelector('[data-to-list]'));
+    assert($('#listRows') && !$('#f-status') && !modal.querySelector('[data-to-list]'), 'items instead of status');
+    eq(document.activeElement, $('#listRows .li-input'), 'the first item is ready to type');
+    submitForm();
+    assert(
+      modal.open && modal.querySelector('[data-field="list"]').classList.contains('invalid'),
+      'still needs an item',
+    );
+    $('#listRows .li-input').value = 'Milk';
+    submitForm();
+    assert(isList(a) && a.list[0].text === 'Milk' && a.status === 'doing', 'saved as a list');
+    openForm('activity', a.id);
+    assert(!modal.querySelector('[data-to-list]'), 'a list is not offered again');
+    modal.close();
+    openForm('activity', r.id);
+    clickEl(modal.querySelector('[data-to-list]'));
+    assert($('#listRows').classList.contains('no-ticks'), 'a routine’s items are ticked per day');
+    $('#listRows .li-input').value = 'Neck';
+    submitForm();
+    assert(isListRoutine(r) && r.list[0].text === 'Neck', 'a routine becomes a list routine');
+    openForm('activity', null);
+    assert(!modal.querySelector('[data-to-list]'), 'not offered while choosing a new activity');
+    modal.close();
     deletePlan(plans.current);
   });
 });

@@ -120,20 +120,51 @@ export function renderSettings() {
     .querySelectorAll<HTMLInputElement>('[data-setting]')
     .forEach(box => (box.checked = SETTINGS[box.dataset.setting!].get() ?? false));
   renderThemeSetting();
+  // The App page is there only while install.ts shows its section.
+  $('[data-set-page="installSection"]').hidden = $('#installSection').hidden;
 }
+
+/* Pages: the rail beside one page at a time; on a phone the rail is a list that opens a page
+   (`data-in-page`) and the back arrow returns to it. The last page opened is shown next time. */
+let page = 'setPlan';
+export function showSettingsPage(id: string, inPage = true) {
+  if ($(`#${id}`).hidden) id = 'setPlan';
+  page = id;
+  settings.querySelectorAll<HTMLElement>('[data-set-page]').forEach(b => {
+    if (b.dataset.setPage === id) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
+  settings.querySelectorAll('.set-pages > .set-group').forEach(s => s.classList.toggle('on', s.id === id));
+  settings.toggleAttribute('data-in-page', inPage);
+  $('.set-pages').scrollTop = 0;
+}
+const phoneList = () => getComputedStyle($('.set-back')).display !== 'none'; // the back arrow shows only there
 
 $('#settingsBtn').addEventListener('click', () => {
   closeCtxMenu();
   renderSettings();
+  showSettingsPage(page, false);
   settings.showModal();
 });
-// Opens Settings as its button does (sync-ui also listens there), scrolled to a section if one is named.
+// Opens Settings as its button does (sync-ui also listens there), on a page if one is named.
 export function openSettings(sectionId = '') {
   $('#settingsBtn').click();
-  if (sectionId) $(`#${sectionId}`).scrollIntoView({ block: 'start' });
+  if (sectionId) showSettingsPage(sectionId);
 }
 settings.addEventListener('click', e => {
-  if (e.target === settings || (e.target as HTMLElement).closest('[data-settings-close]')) settings.close();
+  const el = e.target as HTMLElement;
+  if (e.target === settings || el.closest('[data-settings-close]')) return settings.close();
+  const tab = el.closest<HTMLElement>('[data-set-page]');
+  if (tab) {
+    showSettingsPage(tab.dataset.setPage!);
+    // On a phone the list gave way to the page: the keyboard goes to its back arrow.
+    if (phoneList()) $<HTMLElement>('.set-back').focus();
+    return;
+  }
+  if (el.closest('[data-set-back]')) {
+    settings.removeAttribute('data-in-page');
+    $<HTMLElement>(`[data-set-page="${page}"]`).focus();
+  }
 });
 settings.addEventListener('change', e => {
   const key = (e.target as HTMLInputElement).dataset.setting;

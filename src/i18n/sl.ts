@@ -119,8 +119,7 @@ export const sl: Language = {
     'tl.emptyTitle': 'Časovnica je še prazna',
     'tl.emptyText': 'Dodajte cilje in aktivnosti z začetnimi datumi in roki, pa se bodo prikazali tukaj.',
     'tl.noneShown': 'Izbranim filtrom nič ne ustreza.',
-    'tl.hint':
-      'Tapnite vrstico, da jo izberete, dvakrat tapnite za urejanje, pridržite za več možnosti. ▾ strne cilj.',
+    'tl.hint': 'Tapnite vrstico, da jo izberete, dvakrat tapnite za urejanje, pridržite za več možnosti. ▾ strne cilj.',
     'tl.datesHint': 'Da spremenite datume, tapnite njeno vrstico na časovni osi.',
     'tl.dragHint':
       'Povlecite vrstico, da premaknete njene datume, ali enega od njenih koncev, da spremenite le ta datum. Na zaslonu na dotik jo najprej pridržite.',
@@ -188,6 +187,7 @@ export const sl: Language = {
     'nav.collapse': 'Strni stransko vrstico',
     'nav.expand': 'Razširi stransko vrstico',
     'settings.title': 'Nastavitve',
+    'settings.back': 'Vse nastavitve',
     'settings.plan': 'Načrt',
     'settings.appearance': 'Videz',
     'settings.theme': 'Tema',
@@ -261,7 +261,8 @@ export const sl: Language = {
     'sync.status.error': 'Sinhronizacija ni uspela – kliknite za ponovni poskus',
     'sync.status.account': 'To je bil drug Googlov račun – kliknite in izberite {email}',
     'sync.status.accountTaken': 'Ta Googlov račun ima tu drug uporabnik – kliknite in izberite svojega',
-    'sync.status.update': 'Vaše sinhronizirane načrte je shranila novejša različica Action Plana. Za posodobitev znova naložite stran.',
+    'sync.status.update':
+      'Vaše sinhronizirane načrte je shranila novejša različica Action Plana. Za posodobitev znova naložite stran.',
     'sync.reload': 'Znova naloži',
     'user.unnamed': 'Prijavljen uporabnik',
     'user.name': 'Vaše ime',
@@ -407,7 +408,8 @@ export const sl: Language = {
     'tip.backup.text':
       'Vaši načrti so samo v tem brskalniku. Prijavite se z Googlom ali izvozite kopijo, da jih počiščen brskalnik ne odnese s seboj.',
     'tip.backup.btn': 'Shrani kopijo',
-    'tip.install.text': 'Akcijski načrt je lahko na vašem začetnem zaslonu in se odpre kot vsaka druga aplikacija, tudi brez povezave.',
+    'tip.install.text':
+      'Akcijski načrt je lahko na vašem začetnem zaslonu in se odpre kot vsaka druga aplikacija, tudi brez povezave.',
     'tip.install.btn': 'Namesti aplikacijo',
     'tip.menu.text':
       'Pridržite katerokoli kartico ali jo kliknite z desno tipko za meni: prikažite jo na Zemljevidu, dodajte ji korak, spremenite njeno stanje.',
@@ -1097,6 +1099,9 @@ export const sl: Language = {
     'list.add': 'Dodaj postavko',
     'list.remove': 'Odstrani postavko',
     'list.tick': 'Opravljeno',
+    'list.showDone': 'Pokaži opravljene postavke ({n})',
+    'list.hideDone': 'Skrij opravljene postavke',
+    'list.make': 'Naredi seznam',
     'list.hint':
       'Pritisnite Enter v postavki, da dodate naslednjo. Ko so odkljukane vse postavke, je aktivnost opravljena.',
     'list.done': 'opravljeno {done}/{total}',
@@ -1205,7 +1210,7 @@ export const sl: Language = {
     'toast.relAdded': 'Povezava dodana',
     'toast.relUpdated': 'Povezava posodobljena',
     'toast.relRemoved': 'Povezava odstranjena',
-    'undo': 'Razveljavi',
+    undo: 'Razveljavi',
     'toast.undone': 'Vrnjeno',
     'trash.title': 'Nedavno izbrisano',
     'trash.lead': 'Hrani se 30 dni. Z Googlovo sinhronizacijo na vseh vaših napravah.',
@@ -1256,7 +1261,6 @@ export const sl: Language = {
     'toast.mergedDeleted': 'Načrt {from} združen v {to} in izbrisan',
     'toast.sample': 'Vzorčni načrt naložen',
     'toast.template': 'Načrt »{name}« ustvarjen iz predloge',
-
   },
   sample: {
     goals: [
