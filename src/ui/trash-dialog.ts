@@ -43,8 +43,8 @@ function draw() {
         .map(
           e => `<li data-id="${esc(e.id)}">
         <span class="trash-what"><b>${esc(e.title)}</b><small>${esc(meta(e))}</small></span>
-        <span class="trash-acts"><button type="button" class="btn small" data-trash="restore">${t('trash.restore')}</button>
-        <button type="button" class="btn small ghost" data-trash="forever">${t('trash.forever')}</button></span></li>`,
+        <span class="trash-acts"><button type="button" class="btn small restore" data-trash="restore">${t('trash.restore')}</button>
+        <button type="button" class="btn small danger" data-trash="forever">${t('trash.forever')}</button></span></li>`,
         )
         .join('')}</ul>`
     : `<p class="hint">${t('trash.none')}</p>`;

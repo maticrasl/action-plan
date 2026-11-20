@@ -709,3 +709,11 @@
   display: flex;
   gap: 6px;
 }
+.trash-acts .restore {
+  color: var(--goal);
+  border-color: color-mix(in srgb, var(--goal) 60%, transparent);
+  background: color-mix(in srgb, var(--goal) 14%, var(--surface));
+}
+.trash-acts .restore:hover {
+  background: color-mix(in srgb, var(--goal) 22%, var(--surface));
+}

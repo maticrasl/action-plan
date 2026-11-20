@@ -118,7 +118,7 @@ suite(async () => {
       '2 recorded measurements',
       '1 activity',
       '1 relationship',
-      'can’t be undone',
+      'Recently deleted for 30 days',
       'only in this browser',
       'other plans are not affected',
     ].forEach(x => assert(text.includes(x), 'mentions ' + x));
