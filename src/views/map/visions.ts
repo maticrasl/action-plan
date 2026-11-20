@@ -67,7 +67,7 @@ export function unlinkVision(r: MapLink) {
 }
 
 export const hideVisionsToggle = () =>
-  `<button class="chip" data-hide-visions aria-pressed="${ui.hideVisions}">${t('map.hideVisions')}</button>`;
+  `<button class="chip" data-hide-visions aria-pressed="${ui.hideVisions}">${t(ui.hideVisions ? 'map.showVisions' : 'map.hideVisions')}</button>`;
 
 // A vision is not glass but a cloud: the box's shape in silver with soft, blurred edges (gold for the Purpose,
 // brighter once some goal serves it). Its line under the title counts the goals serving it, directly or through

@@ -227,8 +227,8 @@ suite(async () => {
     // Unselected bars pan as before.
     ui.mapSelected = null;
     render();
-    const scroll = $('.tl-scroll');
-    scroll.setPointerCapture = () => {}; // a synthetic pointer cannot be captured
+    const scroll = $('.main');
+    $('.tl-scroll').setPointerCapture = () => {}; // a synthetic pointer cannot be captured
     scroll.scrollLeft = (scroll.scrollWidth - scroll.clientWidth) / 2;
     const sl = scroll.scrollLeft;
     mouse('pointerdown', row(g.id).querySelector('.tl-bar'), 400);

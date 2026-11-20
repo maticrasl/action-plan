@@ -151,8 +151,9 @@ suite(async () => {
       !$(`[data-map-node="${g1.id}"]`) && $(`[data-map-node="${g1a.id}"]`) && $(`[data-map-node="${a.id}"]`),
       'map: achieved goal hidden, the rest shown',
     );
-    eq($('[data-hide-done]').textContent, t('acts.hideDone'), 'the toggle says so');
+    eq($('[data-hide-done]').textContent, t('acts.showDone'), 'the toggle offers to show them');
     setToggle('hideDone', false);
+    eq($('[data-hide-done]').textContent, t('acts.hideDone'), 'and to hide them again');
     assert($(`[data-map-node="${g1.id}"]`), 'shown again');
     setView('timeline');
     assert(titles().includes('G1') && b.status !== 'done', 'and on the timeline');
@@ -253,7 +254,8 @@ suite(async () => {
     eq(fold(g2.id).getAttribute('aria-expanded'), 'false', 'folded with the button');
     fold(g2.id).click();
     // The menu on a goal (right-click on its label) folds it, and folds all; the group's label offers fold all only.
-    const menuOn = el => el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
+    const menuOn = el =>
+      el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40 }));
     const acts = () => [...ctxMenu.querySelectorAll('[data-ctx]')].map(b => b.dataset.ctx);
     const pick = act => ctxMenu.querySelector(`[data-ctx="${act}"]`).click();
     menuOn($(`[data-tl-node="${g2.id}"] .tl-label`));
@@ -284,7 +286,8 @@ suite(async () => {
   await step('timeline: fold and “also under” wording in both languages', () => {
     for (const code of ['en', 'sl']) {
       changeLanguage(code);
-      for (const k of ['tl.collapseAll', 'tl.expandAll', 'ctx.collapse', 'ctx.expand']) assert(t(k) && t(k) !== k, `${code} ${k}`);
+      for (const k of ['tl.collapseAll', 'tl.expandAll', 'ctx.collapse', 'ctx.expand'])
+        assert(t(k) && t(k) !== k, `${code} ${k}`);
       assert(
         t('tl.collapse', { name: 'X' }).includes('X') &&
           t('tl.expand', { name: 'X' }).includes('X') &&

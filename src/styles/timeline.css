@@ -39,13 +39,35 @@
   --tl-pad: 26px;
   --tl-step: 18px;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  overflow: auto;
-  max-height: calc(100vh - 290px);
-  min-height: 240px;
-  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid var(--line);
   touch-action: pan-x pan-y;
+}
+/* Like the map, the timeline has no scrollbars of its own: the whole main pane scrolls it, beside the
+   sidebar. The toolbar stays at the left, the date scale under the top bar (--topbar-h, views/index.ts). */
+.main:has(> #view[data-view='timeline']) {
+  height: 100vh;
+  height: 100dvh;
+  overflow: auto;
+  container-type: inline-size;
+}
+.main:has(> #view[data-view='timeline']) > .topbar {
+  left: 0;
+}
+#view[data-view='timeline'] {
+  max-width: none;
+  width: max-content;
+  min-width: 100%;
+  overflow: visible;
+  padding-left: 0;
+  padding-right: 0;
+}
+#view[data-view='timeline'] > :not(.tl-scroll) {
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  width: 100cqw;
+  padding-left: 36px;
+  padding-right: 36px;
 }
 .tl-inner {
   width: calc(var(--label-w) + var(--tl-w));
@@ -54,7 +76,7 @@
 .tl-head {
   display: flex;
   position: sticky;
-  top: 0;
+  top: var(--topbar-h, 0px);
   z-index: 4;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
@@ -506,7 +528,10 @@
     --label-w: 150px;
     --tl-pad: 24px;
     --tl-step: 10px;
-    max-height: calc(100vh - 330px);
+  }
+  #view[data-view='timeline'] > :not(.tl-scroll) {
+    padding-left: 16px;
+    padding-right: 16px;
   }
   .tl-dates {
     display: none;

@@ -57,7 +57,7 @@ export function zoomTimeline(factor: number, cx: number) {
   prefs.set('tlPx', p);
   render();
   const a = at();
-  $('.tl-scroll').scrollLeft += a.left + (day - a.from) * p - x;
+  scrollBox($('.tl-scroll')).scrollLeft += a.left + (day - a.from) * p - x;
 }
 
 // Coalesce bursts of wheel / touch events into one zoom per frame.
