@@ -63,7 +63,7 @@ export const guideEn = [
 <li>Ctrl + Enter saves the form you are in.</li>
 <li>A plan that worked for you can be exported as a template: your steps without your numbers.</li>
 </ul>
-<p>Tips appear on the Overview now and then. Settings › Display turns them off. When you are open to one, ask for it here.</p>`,
+<p>Tips appear on the Overview now and then. Settings › Appearance turns them off. When you are open to one, ask for it here.</p>`,
     action: { do: 'ask-tip', label: 'Show me a tip' },
     related: ['method'],
   },

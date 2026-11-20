@@ -1,14 +1,14 @@
 /** Settings as pages: a rail like the app's sidebar beside one page; on a phone a list that opens each page. */
 .settings {
-  width: min(780px, calc(100vw - 32px));
+  width: min(700px, calc(100vw - 32px));
 }
 .settings[open] {
   /* One height for every page, so switching pages does not make the dialog jump. */
-  height: min(620px, calc(100vh - 48px));
+  height: min(560px, calc(100vh - 48px));
 }
 .set-shell {
   display: grid;
-  grid-template-columns: 208px 1fr;
+  grid-template-columns: 184px 1fr;
   flex: 1;
   min-height: 0;
   border-top: 1px solid var(--line);
@@ -17,7 +17,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 12px 10px;
+  padding: 12px 8px;
   border-right: 1px solid var(--line);
   background: color-mix(in srgb, var(--ink) 3%, transparent);
   overflow-y: auto;
@@ -27,20 +27,21 @@
 .set-tab {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
   width: 100%;
-  padding: 9px 12px;
+  padding: 8px 11px;
   border: 0;
   border-radius: var(--r-md);
   background: none;
   color: inherit;
   font: inherit;
-  font-size: 14.5px;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
   opacity: 0.72;
 }
-.set-tab svg {
+.set-tab svg,
+.set-ico {
   width: 20px;
   height: 20px;
   flex: none;
@@ -71,26 +72,21 @@
 .set-back {
   display: none;
 }
-.set-nav .set-version {
-  margin: auto 0 0;
-  padding-top: 12px;
-  text-align: left;
-}
 .set-pages {
   overflow-y: auto;
-  padding: 22px 28px 28px;
+  padding: 20px 24px 24px;
 }
 .set-pages > .set-group {
   border-top: 0;
   padding: 0;
-  gap: 12px;
+  gap: 0;
 }
 .set-pages > .set-group:not(.on) {
   display: none;
 }
 .set-pages > .set-group > h3 {
-  margin: 0 0 6px;
-  font-size: 21px;
+  margin: 0 0 14px;
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.01em;
   text-transform: none;
@@ -98,6 +94,305 @@
 }
 .set-pages .hint {
   max-width: 62ch;
+}
+
+/* A group's name above its list: small, quiet, sentence case. */
+.set-label {
+  margin: 18px 0 6px 2px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.set-group > h3 + .set-label {
+  margin-top: 0;
+}
+.set-note {
+  margin: 0 0 4px;
+}
+
+/* A list of rows in one panel: what each row does on the left, its switch on the right. */
+.set-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.set-list + .set-list {
+  margin-top: 10px;
+}
+.set-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 46px;
+  padding: 9px 14px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.set-item + .set-item {
+  border-top: 1px solid var(--line);
+}
+.set-item:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.set-item:focus-visible,
+.set-item:has(input[type='file']:focus-visible) {
+  outline: none;
+  box-shadow: inset var(--focus);
+}
+.set-item .set-ico {
+  color: var(--ink-2);
+}
+.set-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.set-text b {
+  font-size: 14px;
+  font-weight: 500;
+}
+.set-text small {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+.set-item.switch:hover {
+  background: none;
+}
+
+/* Theme: each as a small picture of the app. */
+.theme-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.theme-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.theme-tile:hover {
+  border-color: var(--line-strong);
+}
+.theme-tile[aria-pressed='true'] {
+  border-color: var(--goal);
+  box-shadow: 0 0 0 1px var(--goal);
+  color: var(--ink);
+  font-weight: 500;
+}
+.theme-tile:focus-visible,
+.lang-tile:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.theme-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.theme-name svg {
+  width: 14px;
+  height: 14px;
+}
+.theme-pic {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+/* The app's own colours in each theme, fixed: the picture shows the theme, not the current one. */
+.theme-mini {
+  --m-bg: #f3f5f4;
+  --m-side: #e6ebea;
+  --m-card: #ffffff;
+  --m-ink: #c3cccb;
+  position: absolute;
+  inset: 0;
+  background: var(--m-bg);
+}
+.theme-mini[data-mini='dark'] {
+  --m-bg: #131a1c;
+  --m-side: #1b2427;
+  --m-card: #233033;
+  --m-ink: #44565b;
+}
+.theme-mini + .theme-mini {
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.theme-mini i {
+  position: absolute;
+  border-radius: 3px;
+  background: var(--m-card);
+}
+.theme-mini i:nth-child(1) {
+  inset: 0 auto 0 0;
+  width: 24%;
+  border-radius: 0;
+  background: var(--m-side);
+  /* the logo dot and three menu lines */
+  background-image:
+    radial-gradient(circle at 30% 16%, #d2232a 0 7%, transparent 8%), linear-gradient(var(--m-ink), var(--m-ink)),
+    linear-gradient(var(--m-ink), var(--m-ink)), linear-gradient(var(--m-ink), var(--m-ink));
+  background-size:
+    100% 100%,
+    56% 5%,
+    44% 5%,
+    50% 5%;
+  background-position:
+    0 0,
+    22% 38%,
+    22% 52%,
+    22% 66%;
+  background-repeat: no-repeat;
+}
+.theme-mini i:nth-child(2) {
+  left: 32%;
+  right: 8%;
+  top: 14%;
+  height: 26%;
+}
+.theme-mini i:nth-child(3) {
+  left: 32%;
+  right: 8%;
+  top: 50%;
+  bottom: 14%;
+  background: linear-gradient(to right, var(--m-card) 47%, transparent 47% 53%, var(--m-card) 53%);
+}
+
+/* Language: each in its own name. */
+.lang-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.lang-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.lang-tile b {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink-3);
+}
+.lang-tile:hover {
+  border-color: var(--line-strong);
+}
+.lang-tile[aria-pressed='true'] {
+  border-color: var(--goal);
+  box-shadow: 0 0 0 1px var(--goal);
+  color: var(--ink);
+  font-weight: 500;
+}
+.lang-tile[aria-pressed='true'] b {
+  color: var(--goal);
+}
+
+/* Plan: the open plan large, its actions under it, then every plan. */
+.plan-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.plan-hero-emoji {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 28px;
+}
+.plan-hero .set-text b {
+  font-size: 17px;
+  font-weight: 600;
+}
+.plan-hero-health::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: var(--ok);
+}
+.plan-hero-health[data-health='today']::before {
+  background: var(--warn);
+}
+.plan-hero-health[data-health='late']::before {
+  background: var(--bad);
+}
+.plan-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+.plan-hero-actions .btn.danger {
+  border-color: color-mix(in srgb, var(--bad) 35%, transparent);
+}
+.plan-hero-actions svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.plan-item .plan-emoji {
+  font-size: 17px;
+}
+.plan-item[aria-current='true'] {
+  cursor: default;
+}
+.plan-item[aria-current='true'] .set-text b {
+  font-weight: 600;
+}
+.plan-open-mark {
+  font-size: 12px;
+  color: var(--goal);
+}
+
+/* Help: the version below its list, a click copies it. */
+#setHelpPage .set-version {
+  margin: 14px 0 0;
+  text-align: left;
 }
 
 @media (max-width: 720px) {
@@ -136,12 +431,23 @@
     height: 18px;
     opacity: 0.5;
   }
-  .set-nav .set-version {
-    text-align: center;
-  }
   .set-pages {
     display: none;
     padding: 16px 16px 24px;
+  }
+  .set-item {
+    min-height: 52px;
+  }
+  .theme-tiles {
+    gap: 8px;
+  }
+  /* Four short actions in one row, each as wide as the next. */
+  .plan-hero-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .plan-hero-actions .btn {
+    padding-inline: 4px;
   }
   .settings[data-in-page] .set-nav {
     display: none;

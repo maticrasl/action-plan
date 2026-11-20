@@ -13,6 +13,7 @@ import { openMerge, openPlanDelete } from './plan-dialogs';
 import { openExport } from './plan-io';
 import { askPlan } from './plan-name';
 import { planEmoji } from '../core/emoji';
+import { renderPlanSettings } from './settings-plan';
 import type { Db, ISODate } from '../core/model';
 
 /* ---------- Plan switcher (sidebar on desktop, menu on mobile) ---------- */
@@ -117,6 +118,7 @@ export function renderPlanSwitch() {
     box.innerHTML = `<ul class="plan-list" aria-label="${esc(t('plan.label'))}">${rows}</ul>${more}<div class="plan-actions">${actions}</div>`;
   });
   $('#planName').innerHTML = options;
+  renderPlanSettings(sorted);
   updatePlanBadges();
 }
 
