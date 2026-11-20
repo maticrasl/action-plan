@@ -85,7 +85,7 @@ export const WALK_DO: Record<TaskId, () => void> = {
   goal: () => openForm('goal'),
   state: () => openForm('state', null, firstGoal() ? { measures: [firstGoal()] } : {}),
   steps: () => openForm('activity', null, firstGoal() ? { contributes: [firstGoal()] } : {}),
-  firstDone: () => showMe('activities', ['#view .board .check']),
+  firstDone: () => showMe('activities', ['#view .acts .check']),
   routine: () => openForm('activity', null, { repeat: 'routine' }),
   tick: () => showMe(ui.view === 'dashboard' && firstVisible(['#view .rt-week']) ? 'dashboard' : 'activities', ['#view .rt-week']),
   measure: () => showMe('states', ['#view .card.state']),

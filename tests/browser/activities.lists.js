@@ -356,7 +356,7 @@ suite(async () => {
     tick('p').focus();
     tick('p').click();
     eq(document.activeElement, tick('p'), 'focus kept on the ticked item');
-    assert(tick('p').closest('.col[data-status="doing"]'), 'card moved to In progress');
+    assert(tick('p').closest('.card').querySelector('.check.doing'), 'card now In progress');
     eq(tick('p').getAttribute('aria-checked'), 'true', 'checked state announced');
     // Help mode explains the items.
     setHelp(true);

@@ -1,7 +1,7 @@
 /** The views: the table of them and render(), which draws the open one and keeps its scroll. */
 import { renderDashboard } from './dashboard';
 import { renderGoals } from './goals';
-import { bindDragDrop, renderActivities } from './activities';
+import { flowCards, renderActivities } from './activities';
 import { renderStates } from './states';
 import { renderVisions } from './visions';
 import { startDueActivities } from '../core/progress';
@@ -68,7 +68,7 @@ export function render() {
     .querySelectorAll('[data-gr] .gr-plot')
     .forEach(p => (grScroll[graphOf(p)] = { left: p.scrollLeft, w: p.scrollWidth }));
   viewEl.innerHTML = v.render();
-  if (ui.view === 'activities') bindDragDrop();
+  if (ui.view === 'activities') flowCards();
   // Long charts start at their latest bars.
   viewEl.querySelectorAll('.gr-plot.scroll').forEach(p => {
     const was = grScroll[graphOf(p)];

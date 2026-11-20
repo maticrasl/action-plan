@@ -181,28 +181,42 @@ suite(async () => {
     }
     changeLanguage('en');
   });
-  await step('activities board: drag and drop between columns', () => {
-    fresh('Board');
-    const a = mk('activity', { title: 'Drag me' });
+  await step('activities: no columns, in progress first, then due date; cards flow by height', () => {
+    fresh('Flow');
+    const mkA = (title, status, dueDate) => mk('activity', { title, status, ...(dueDate ? { dueDate } : {}) });
+    const late = mkA('Late todo', 'todo', addDays(today(), 1));
+    const none = mkA('No date', 'todo');
+    const done = mkA('Done one', 'done', addDays(today(), -5));
+    const doing = mkA('Doing', 'doing', addDays(today(), 9));
+    const first = mkA('Early todo', 'todo', addDays(today(), -1));
+    const tall = mkA('Tall', 'doing', addDays(today(), 10));
+    tall.list = Array.from({ length: 10 }, (_, k) => ({ id: 'i' + k, text: 'Item ' + k }));
+    save();
     setView('activities');
-    const dt = new DataTransfer();
-    $(`[data-drag="${a.id}"]`).dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
-    const col = $('.col[data-status="doing"]');
-    col.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));
-    const hl = col.classList.contains('drop');
-    col.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
-    assert(a.status === 'doing', 'moved to doing');
-    assert($('.col[data-status="doing"]').querySelector(`[data-drag="${a.id}"]`), 'card rendered in its new column');
-    const dt2 = new DataTransfer();
-    $(`[data-drag="${a.id}"]`).dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt2 }));
-    $('.col[data-status="done"]').dispatchEvent(
-      new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt2 }),
+    assert(!$('#view').querySelector('.board, .col, [data-drag], [draggable]'), 'no columns, no drag');
+    const order = () => [...document.querySelectorAll('.acts .card')].map(c => c.dataset.open);
+    eq(
+      order(),
+      [doing, tall, first, late, none, done].map(x => x.id),
+      'doing, todo, done; by due date',
     );
-    assert(
-      a.status === 'done' && JSON.parse(localStorage.getItem(planKey(plans.current))).activities[0].status === 'done',
-      'saved',
-    );
-    return `highlight=${hl}`;
+    eq($('.acts .routines-title span').textContent, '6', 'counted');
+    $(`[data-cycle="${none.id}"]`).click();
+    eq(none.status, 'doing', 'the circle moves it along');
+    eq(order()[2], none.id, 'and it moves up with in progress');
+    ui.hideDone = true;
+    render();
+    assert(!order().includes(done.id), 'hide done hides it');
+    ui.hideDone = false;
+    render();
+    // Masonry: each card spans rows by its own height; the tall card makes its column longer.
+    const box = id => document.querySelector(`.acts [data-open="${id}"]`).getBoundingClientRect();
+    const span = id => document.querySelector(`.acts [data-open="${id}"]`).style.gridRowEnd;
+    assert(span(tall.id) !== span(doing.id), 'heights differ: ' + span(tall.id) + ' / ' + span(doing.id));
+    assert(box(doing.id).height < box(tall.id).height / 2, 'a short card keeps its own height');
+    const tops = order().map(id => box(id).top);
+    assert(tops[0] === tops[1], 'left to right on the first row');
+    return `${getComputedStyle($('.acts .flow')).gridTemplateColumns.split(' ').length} columns`;
   });
   await step('overview: the active next actions first, expandable', () => {
     const before = plans.current;
@@ -266,8 +280,8 @@ suite(async () => {
     );
     eq(past.autoStarted, past.startDate, 'remembers the start date it acted on');
     assert(
-      $(`.col-doing [data-open="${past.id}"]`) && $(`.col-todo [data-open="${soon.id}"]`),
-      'cards sit in their columns',
+      $(`.acts [data-open="${past.id}"] .check.doing`) && $(`.acts [data-open="${soon.id}"] .check:not(.doing)`),
+      'cards show their status',
     );
     eq(
       JSON.parse(localStorage.getItem(planKey(plans.current))).activities.find(a => a.id === now.id).status,
@@ -286,7 +300,7 @@ suite(async () => {
     soon.startDate = d(0);
     document.dispatchEvent(new Event('visibilitychange'));
     eq(soon.status, 'doing', 'coming back to the app starts it');
-    assert($(`.col-doing [data-open="${soon.id}"]`), 'and redraws the board');
+    assert($(`.acts [data-open="${soon.id}"] .check.doing`), 'and redraws the view');
     // Only activities started by hand count as progress (when importing or saving a template).
     eq(progressCounts(db).started, 0, 'started by date is not progress');
     runCtxAction('status:doing', none.id);
@@ -306,7 +320,7 @@ suite(async () => {
     submitForm();
     const fresh1 = db.activities.find(a => a.title === 'Fresh');
     eq([fresh1.startDate, fresh1.status], [today(), 'doing'], 'saved from today, in progress');
-    assert($(`.col-doing [data-open="${fresh1.id}"]`), 'on the board under In progress');
+    assert($(`.acts [data-open="${fresh1.id}"] .check.doing`), 'shown as in progress');
     openForm('activity', none.id);
     eq($('#f-startDate').value, '', 'an existing one without a start date stays empty');
     modal.close();
@@ -323,7 +337,7 @@ suite(async () => {
     });
     save();
     setView('activities');
-    const card = id => $(`.board [data-ctx-item="${id}"], .routines [data-ctx-item="${id}"]`);
+    const card = id => $(`.routines [data-ctx-item="${id}"]`);
     const touch = (type, el, x = 60, y = 60) =>
       el.dispatchEvent(
         new PointerEvent(type, {
@@ -376,7 +390,7 @@ suite(async () => {
       assert(ctxMenu.hidden, 'one tap runs the item');
       eq(a.status, withClick ? 'todo' : 'doing', 'status set from the menu');
     }
-    assert($(`.col-todo [data-ctx-item="${a.id}"]`), 'the card moved column');
+    assert($(`.acts [data-ctx-item="${a.id}"] .check:not(.doing):not(.done)`), 'the card shows it');
     // Routines: tick today off from the menu.
     await longPress(card(r.id));
     assert(
@@ -396,12 +410,6 @@ suite(async () => {
     await wait(LONG_PRESS_MS + 80);
     touch('pointerup', card(a.id), 60, 90);
     assert(ctxMenu.hidden, 'a swipe (scrolling the board) opens no menu');
-    // On a touch screen the card is not picked up by the browser's drag and drop; with a mouse it is.
-    touch('pointerdown', card(a.id));
-    touch('pointerup', card(a.id));
-    assert(card(a.id).draggable === false, 'no native drag on touch');
-    card(a.id).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse', button: 0 }));
-    assert(card(a.id).draggable === true, 'mouse drags');
     // Right-click with a mouse opens the same menu instead of the browser's.
     const rc = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 100, clientY: 100 });
     card(a.id).querySelector('.meta, h3').dispatchEvent(rc);

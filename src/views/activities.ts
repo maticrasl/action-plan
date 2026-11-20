@@ -1,4 +1,4 @@
-/** The activities view: routines above a board of status columns, with drag and drop between them. */
+/** The activities view: routines, then one-time activities, as cards that flow in columns of their own height. */
 import { db } from '../core/state';
 import {
   byDueDate,
@@ -12,34 +12,28 @@ import {
   statusCheck,
   waitsForTag,
 } from '../ui/dom';
-import { t, type TextKey } from '../i18n/index';
+import { t } from '../i18n/index';
 import { categorySelect, goalSelect, scopeFor, searchBox } from './filters';
 import { ui } from '../store/state';
 import { isRoutine, type Routine } from '../core/routines/schedule';
 import { byUrgency } from '../core/routines/keeping';
 import { activityState, blockers, isComplete } from '../core/progress';
-import { ACTIVITY_STATUS, type Activity, type ActivityStatus } from '../core/model';
+import { type Activity, type ActivityStatus } from '../core/model';
 import { listTicks, routineCard, routineLegend } from './routines';
 import { descendants, relsFrom } from '../core/relations';
 import { isList } from '../core/routines/checkins';
-import { save } from '../store/plans';
-import { requestRender as render } from '../ui/render';
 
 export function renderActivities() {
   if (!db.activities.length) return emptyState(t('acts.emptyTitle'), t('acts.emptyText'), 'activity');
   const scope = scopeFor(ui.activityGoal);
-  const all = db.activities.filter(matchesSearch).filter(a => !scope || scope.activity.has(a.id));
-  const list = all.filter(a => !isRoutine(a));
-  const routines = all
-    .filter((a): a is Routine => isRoutine(a) && !(ui.hideDone && isComplete('activity', a)))
-    .sort(byUrgency);
-  const statuses = ACTIVITY_STATUS.filter(s => !(ui.hideDone && s === 'done'));
-  const cols = statuses
-    .map(status => {
-      const items = list.filter(a => a.status === status).sort(byDueDate);
-      return `<div class="col col-${status}" data-status="${status}"><h3>${t(('activity.' + status) as TextKey)}<span>${items.length}</span></h3>${items.map(activityCard).join('')}</div>`;
-    })
-    .join('');
+  const all = db.activities
+    .filter(matchesSearch)
+    .filter(a => !scope || scope.activity.has(a.id))
+    .filter(a => !(ui.hideDone && isComplete('activity', a)));
+  const list = all.filter(a => !isRoutine(a)).sort(byStatus);
+  const routines = all.filter((a): a is Routine => isRoutine(a)).sort(byUrgency);
+  const title = (id: string, text: string, n: number) =>
+    `<h3 class="routines-title" id="${id}">${text}<span>${n}</span></h3>`;
   return `
     <div class="toolbar">
       ${categorySelect()}
@@ -49,13 +43,23 @@ export function renderActivities() {
     </div>
     ${
       routines.length
-        ? `<section class="routines" aria-labelledby="routinesTitle"><h3 class="routines-title" id="routinesTitle">${t('rt.title')}<span>${routines.length}</span></h3>
+        ? `<section class="routines" aria-labelledby="routinesTitle">${title('routinesTitle', t('rt.title'), routines.length)}
       ${routineLegend(routines)}
-      <div class="routine-grid">${routines.map(routineCard).join('')}</div></section>`
+      <div class="routine-grid flow">${routines.map(routineCard).join('')}</div></section>`
         : ''
     }
-    <div class="board" style="--cols:${statuses.length}">${cols}</div>`;
+    ${
+      list.length
+        ? `<section class="routines acts" aria-labelledby="actsTitle">${title('actsTitle', t('nav.activities'), list.length)}
+      <div class="routine-grid flow">${list.map(activityCard).join('')}</div></section>`
+        : ''
+    }`;
 }
+
+// In progress first, then to do, then done; within each, the earliest due date first.
+const STATUS_ORDER: ActivityStatus[] = ['doing', 'todo', 'done'];
+export const byStatus = (a: Activity, b: Activity) =>
+  STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || byDueDate(a, b);
 
 export function activityCard(a: Activity) {
   const goals = relsFrom(a.id, 'contributes')
@@ -67,7 +71,7 @@ export function activityCard(a: Activity) {
     .map(id => db.activities.find(x => x.id === id))
     .filter(Boolean) as Activity[];
   const childrenDone = children.filter(c => c.status === 'done').length;
-  return `<article class="card glass activity st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}" draggable="true" data-drag="${a.id}">
+  return `<article class="card glass activity st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
     <div class="card-head"><h3 class="${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</h3>${statusCheck(a)}</div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
     ${children.length ? progressBar((childrenDone / children.length) * 100, t('acts.subDone', { done: childrenDone, total: children.length })) : ''}
@@ -81,31 +85,18 @@ export function activityCard(a: Activity) {
   </article>`;
 }
 
-export function bindDragDrop() {
-  document.querySelectorAll<HTMLElement>('[data-drag]').forEach(card => {
-    // Cards are dragged with the mouse; on touch screens a long-press opens their menu instead.
-    card.addEventListener('pointerdown', e => {
-      card.draggable = e.pointerType === 'mouse';
-    });
-    card.addEventListener('dragstart', e => {
-      e.dataTransfer!.setData('text/plain', card.dataset.drag!);
-      e.dataTransfer!.effectAllowed = 'move';
-    });
-  });
-  document.querySelectorAll<HTMLElement>('.col[data-status]').forEach(col => {
-    col.addEventListener('dragover', e => {
-      e.preventDefault();
-      col.classList.add('drop');
-    });
-    col.addEventListener('dragleave', () => col.classList.remove('drop'));
-    col.addEventListener('drop', e => {
-      e.preventDefault();
-      const a = db.activities.find(x => x.id === e.dataTransfer!.getData('text/plain'));
-      if (a && a.status !== col.dataset.status) {
-        a.status = col.dataset.status as ActivityStatus;
-        save();
-      }
-      render();
-    });
+// Cards keep their own height: each spans as many small grid rows as it is tall, and the grid
+// places them in reading order into the first free spot (left to right, then down).
+const ROW = 4,
+  GAP = 12;
+const fit = (c: Element) =>
+  ((c as HTMLElement).style.gridRowEnd = `span ${Math.ceil((c.getBoundingClientRect().height + GAP) / ROW)}`);
+const flowObserver =
+  typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(es => es.forEach(e => fit(e.target)));
+export function flowCards() {
+  flowObserver?.disconnect();
+  document.querySelectorAll('.flow > *').forEach(c => {
+    fit(c);
+    flowObserver?.observe(c);
   });
 }

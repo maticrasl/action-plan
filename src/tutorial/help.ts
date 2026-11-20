@@ -25,7 +25,6 @@ export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] =
   { sel: '.check', key: 'check' },
   { sel: '.rt-items-head .label', key: 'routineList', where: 'beforeend' },
   { sel: ':not(.rt-items) > .li-ticks', key: 'list', where: 'beforebegin' },
-  { sel: '.board .col h3', key: 'board', where: 'beforeend' },
   { sel: '.routines-title', key: 'routines', where: 'beforeend' },
   { sel: '.routine-list', key: 'routineToday', where: 'beforebegin' },
   { sel: '[data-hide-done]', key: 'hideDone' },
