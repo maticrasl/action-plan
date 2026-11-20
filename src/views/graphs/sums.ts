@@ -30,6 +30,7 @@ import type { Entry, Goal, ISODate, Period, Scale, State } from '../../core/mode
 import type { Routine, Span } from '../../core/routines/schedule';
 import type { TextKey } from '../../i18n/index';
 import { areaFill, barBox, grCardHtml, grLegend, plotSvg, targetKey } from './plot';
+import { paceFacts, paceGoals, paceMarks, paceTips } from './pace';
 
 /* ---------- Graphs of amounts that add up, and of routines ----------
    A state that adds up per period gets a bar for each period (the one under way lighter), one that
@@ -166,6 +167,7 @@ export function totalGraphCard(s: State | Routine, width: number) {
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date));
   const amount = (n: number) => (rt ? tp('rt.checkins', n) : withUnit(fmtNum(n), unit));
+  const paces = rt ? [] : paceGoals(targets);
   const byDay: Record<ISODate, number> = {};
   entries.forEach(e => (byDay[e.date] = (byDay[e.date] || 0) + Number(e.amount)));
   let sum = 0;
@@ -187,6 +189,7 @@ export function totalGraphCard(s: State | Routine, width: number) {
       'gr-tip-row',
       t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), unit) }),
     ]),
+    ...paceTips(paces, p.day, unit),
   ];
   const plot = plotSvg(
     s.id,
@@ -199,7 +202,7 @@ export function totalGraphCard(s: State | Routine, width: number) {
       to: end + 0.5,
       whole: rt,
       aria: t(rt ? 'cu.routineAria' : 'cu.aria', { name: s.title }),
-      marks: (px, py) => {
+      marks: (px, py, x0, x1) => {
         const path =
           points
             .map((p, i) =>
@@ -209,7 +212,7 @@ export function totalGraphCard(s: State | Routine, width: number) {
             )
             .join('') + `H${px(end).toFixed(1)}`;
         const area = areaFill(s.id, `${path}V${py(0).toFixed(1)}H${px(points[0].day).toFixed(1)}Z`);
-        return `${area}<path class="gr-line" d="${path}"/>${points.map((p, i) => grDot(px(p.day), py(p.value), i === points.length - 1)).join('')}`;
+        return `${area}${paceMarks(paces, points, px, py, x0, x1)}<path class="gr-line" d="${path}"/>${points.map((p, i) => grDot(px(p.day), py(p.value), i === points.length - 1)).join('')}`;
       },
     },
     width,
@@ -217,7 +220,13 @@ export function totalGraphCard(s: State | Routine, width: number) {
   const recent = sumOf(entries.filter(e => e.date > dayStr(todayN - 30) && e.date <= today()));
   const total = rt ? t('cu.inTotal', { value: amount(entries.length) }) : totalText(s);
   const stats = `<strong class="gr-value">${esc(total)}</strong><span class="tag gr-delta ${recent > 0 ? 'ok' : ''}">${esc(withUnit(signed(recent), unit))}</span><span class="meta">${t('cu.last30')}</span>`;
-  const legend = grLegend([['key-measure', t('cu.legend.total')], ...(targets.length ? [targetKey(targets)] : [])]);
+  const legend =
+    paceFacts(paces, unit) +
+    grLegend([
+      ['key-measure', t('cu.legend.total')],
+      ...(targets.length ? [targetKey(targets)] : []),
+      ...(paces.length ? [['key-pace', t('pace.legend')] as TipRow] : []),
+    ]);
   let running = sumOf(entries);
   // A routine's table lists the days it was done, with the count so far.
   const rows = entries

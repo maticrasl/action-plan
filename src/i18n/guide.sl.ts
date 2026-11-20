@@ -207,7 +207,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'behind',
     group: 'stuck',
     title: 'Zaostajam, rok pa je blizu',
-    body: `<p>Najprej: to je običajno. Ljudje skoraj vedno pričakujemo, da bodo stvari trajale manj časa, kot res trajajo, tudi ko vemo, da navadno trajajo dlje.</p>
+    body: `<p>Kartica cilja pravi »Za tempom« in koliko bi bilo odslej treba na teden. To število je pošteno izhodišče za tri možnosti.</p>
+<p>Najprej: to je običajno. Ljudje skoraj vedno pričakujemo, da bodo stvari trajale manj časa, kot res trajajo, tudi ko vemo, da navadno trajajo dlje.</p>
 <p>Imate tri poštene možnosti in vse tri so načrtovanje, ne neuspeh:</p>
 <ul>
 <li><strong>Več časa zdaj.</strong> Ali lahko ta teden kaj opustite, da naredite prostor? Odločite se, kaj, ne le »potruditi se moram bolj«.</li>
@@ -225,7 +226,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Delam, a število se ne premakne',
     body: `<p>Kljukice brez premika so znak, da je treba pogledati načrt, in dobro je, da to vidite.</p>
 <ul>
-<li><strong>Je še prezgodaj?</strong> Teža, kondicija, prihranki in veščine se premikajo počasi in neenakomerno. Graf glejte čez šest ali osem tednov, ne od ene meritve do druge.</li>
+<li><strong>Je še prezgodaj?</strong> Teža, kondicija, prihranki in veščine se premikajo počasi in neenakomerno. Graf glejte čez šest ali osem tednov, ne od ene meritve do druge. Napoved gleda zadnjih šest tednov, ne zadnje meritve.</li>
 <li><strong>Je mera prava?</strong> Morda ste v boljši formi, tehtnica pa stoji. Dodajte drugo trenutno stanje, ki ujame, kar se spreminja: obseg pasu, tempo, kako gredo stopnice.</li>
 <li><strong>So to pravi koraki?</strong> Biti zaposlen in napredovati sta različni stvari. Katera aktivnost naj bi premaknila to število? Če je bila povezava le upanje, za en mesec preizkusite drug korak.</li>
 <li><strong>Je odmerek dovolj velik?</strong> Enkrat na teden vas morda drži na mestu; dvakrat vas morda premakne.</li>
@@ -434,6 +435,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     group: 'how',
     title: 'Grafi',
     body: `<p>Vsako trenutno stanje z meritvami ima graf: vaše vrednosti skozi čas, črtkano črto za ciljno vrednost cilja in spremembo od prve meritve. Stanje, ki se sešteva, kaže vsote po dnevih, tednih, mesecih ali letih ali skupno vsoto; izberete nad grafom. Vsaka rutina ima graf, kako pogosto ste jo izvedli v posameznem obdobju.</p>
+<p>Pri cilju s ciljno vrednostjo in rokom graf nariše tudi tempo: tanko črtkano črto od vašega začetka do ciljne vrednosti. Nad grafom vidite, koliko je odslej treba na teden in kdaj bi prišli do cilja s sedanjim tempom.</p>
 <p>Za odčitek vrednosti se postavite nanjo z miško ali jo tapnite; za povečavo obdobja uporabite dva prsta ali Ctrl + kolešček. Tabela pod grafom našteje meritve; napačno izbrišete tam.</p>`,
     action: { do: 'view-graphs', label: 'Odpri Grafe' },
   },

@@ -35,7 +35,7 @@ interface PlotOpts<P extends GraphPoint> {
   from: number;
   to: number;
   bars?: number;
-  marks: (px: Axis, py: Axis) => string;
+  marks: (px: Axis, py: Axis, x0: number, x1: number) => string;
   tip(p: P): TipRow[];
   aria: string;
   ys?: number[];
@@ -78,7 +78,7 @@ export function plotSvg<P extends GraphPoint>(
     .join('');
   return `<div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(aria)}">
       <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
-        ${grid}${bars ? '' : todayLine}${marks(px, py)}${bars ? todayLine : ''}${targetLines}${xAxis}
+        ${grid}${bars ? '' : todayLine}${marks(px, py, x0, x1)}${bars ? todayLine : ''}${targetLines}${xAxis}
         <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
         <circle class="gr-focus" r="6" hidden/>
       </svg>${W > width ? yAxisPinned(ticks, py) : ''}

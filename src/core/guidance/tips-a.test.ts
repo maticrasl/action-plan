@@ -98,10 +98,32 @@ describe('routine-low', () => {
 });
 
 describe('goal-behind and goal-past', () => {
-  const g = (current: number, deadline: string) => plan({ goals: [metric('g', current, { startDate: '2026-10-20', deadline })] });
+  // Measured by a state, as the goal card's pace tag needs.
+  const g = (current: number, deadline: string, more: Partial<Goal> = {}) =>
+    plan({
+      goals: [metric('g', current, { startDate: '2026-10-20', deadline, ...more })],
+      states: [state('s', [current])],
+      relations: [rel('s', 'measures', 'g')],
+    });
   test('10 days left, 75 % of the time gone: under 45 % is behind', () => {
     expect(hits('goal-behind', g(40, '2026-11-29'))).toEqual([{ id: 'g', vars: { name: 'g', pct: 40, days: 10 } }]);
     expect(hits('goal-behind', g(46, '2026-11-29'))).toHaveLength(0);
+  });
+  test('it follows the pace tag: a gap of exactly 30 points is not over it', () => {
+    expect(hits('goal-behind', g(45, '2026-11-29'))).toHaveLength(0);
+    expect(hits('goal-behind', g(44.9, '2026-11-29'))).toHaveLength(1);
+  });
+  test('no measuring state, or routines kept: no pace, no tip', () => {
+    expect(hits('goal-behind', plan({ goals: [metric('g', 0, { startDate: '2026-10-20', deadline: '2026-11-29' })] }))).toHaveLength(0);
+    expect(hits('goal-behind', g(0, '2026-11-29', { progress: 'routines' }))).toHaveLength(0);
+  });
+  test('activities done: by the share done', () => {
+    const p = plan({
+      goals: [goal('g', { progress: 'activities', startDate: '2026-10-20', deadline: '2026-11-29' })],
+      activities: [act('a', { status: 'done' }), act('b'), act('c'), act('d'), act('e')],
+      relations: ['a', 'b', 'c', 'd', 'e'].map(id => rel(id, 'contributes', 'g')),
+    });
+    expect(hits('goal-behind', p)).toEqual([{ id: 'g', vars: { name: 'g', pct: 20, days: 10 } }]);
   });
   test('15 days left: not yet', () => {
     expect(hits('goal-behind', g(0, '2026-12-04'))).toHaveLength(0);

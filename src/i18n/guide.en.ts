@@ -207,7 +207,8 @@ export const guideEn = [
     id: 'behind',
     group: 'stuck',
     title: 'I’m behind and the deadline is close',
-    body: `<p>First, this is normal. People almost always expect things to take less time than they do, even when they know that they usually take longer.</p>
+    body: `<p>The goal card says “Behind pace” and how much a week would be needed from here. That number is the honest starting point for the three options.</p>
+<p>First, this is normal. People almost always expect things to take less time than they do, even when they know that they usually take longer.</p>
 <p>You have three honest options, and all three are planning, not failing:</p>
 <ul>
 <li><strong>More time now.</strong> Is there something you can drop this week to make room? Decide what, not only “I’ll try harder”.</li>
@@ -225,7 +226,7 @@ export const guideEn = [
     title: 'I do the work, but the number doesn’t move',
     body: `<p>Ticks without movement are a sign to look at the plan, and it is good that you can see it.</p>
 <ul>
-<li><strong>Is it too early?</strong> Weight, fitness, savings and skills move slowly and unevenly. Look at the graph over six or eight weeks, not from one measurement to the next.</li>
+<li><strong>Is it too early?</strong> Weight, fitness, savings and skills move slowly and unevenly. Look at the graph over six or eight weeks, not from one measurement to the next. The forecast looks at the last six weeks, not at the last measurement.</li>
 <li><strong>Is the measure right?</strong> Perhaps you are getting fitter while the scale stays still. Add a second current state that catches what is changing: waist, pace, how the stairs feel.</li>
 <li><strong>Are these the right steps?</strong> Being busy and moving forward are different things. Which activity was meant to move this number? If the link was a hope, test another step for a month.</li>
 <li><strong>Is the dose enough?</strong> Once a week may hold you where you are; twice may move you.</li>
@@ -434,6 +435,7 @@ export const guideEn = [
     group: 'how',
     title: 'Graphs',
     body: `<p>Each current state with measurements has a graph: your values over time, a dashed line for the goal’s target, and the change since the first measurement. A state that adds up shows sums per day, week, month or year, or the running total; choose above the graph. Each routine has a graph of how often you did it per period.</p>
+<p>For a goal with a target and a deadline, the graph also draws the pace: a thin dashed line from your start to the target. Above it you see how much is needed each week from here, and when you would arrive at the present rate.</p>
 <p>Hover or tap to read a value; pinch or Ctrl + scroll to zoom into a stretch of time. The table under a graph lists the measurements; delete a wrong one there.</p>`,
     action: { do: 'view-graphs', label: 'Open Graphs' },
   },

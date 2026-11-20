@@ -1,6 +1,7 @@
 /** Tips, class A: coming back, and things that are slipping (see docs/guidance/03-tips.md). */
 import type { Db, ISODate } from '../model';
 import { goalProgress, hasPercent, ownMetric } from '../progress';
+import { goalPace } from '../pace';
 import { addDays, isDueDay, isFlexible, periodOf, routineStart, runsOn, type Routine } from '../routines/schedule';
 import { consistency, keptDay, periodProgress } from '../routines/keeping';
 import { checkedOn, isList } from '../routines/checkins';
@@ -115,14 +116,13 @@ export const TIPS_A: Tip[] = [
     action: 'editItem',
     hits: ({ db, today }) =>
       activeGoals(db)
-        .filter(g => g.deadline && hasPercent(g))
+        .filter(g => g.deadline)
         .map(g => {
-          const left = daysFrom(today, g.deadline!);
-          const start = g.startDate || g.createdAt;
-          if (left < 0 || left > L.BEHIND_DAYS || !start || start >= g.deadline!) return null;
-          const passed = Math.min(1, Math.max(0, daysFrom(start, today) / daysFrom(start, g.deadline!)));
-          const p = goalProgress(g);
-          return p < passed * 100 - L.BEHIND_POINTS ? { g, left, p } : null;
+          // The same rule as the goal card's "Behind pace" tag, so the two never disagree.
+          const left = daysFrom(today, g.deadline!),
+            pace = goalPace(g, today);
+          if (left > L.BEHIND_DAYS || pace?.status !== 'behind' || pace.gap >= -L.BEHIND_POINTS / 100) return null;
+          return { g, left, p: goalProgress(g) };
         })
         .filter(x => x !== null)
         .sort((x, y) => x.left - y.left)
