@@ -21,6 +21,8 @@ import type { Goal, ISODate, State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
 import { areaFill } from './plot';
 import { hasGraph, stateSeries } from '../../core/series';
+import { paceFacts, paceGoals, paceMarks } from './pace';
+import { workFold } from './working';
 
 /* ---------- Graphs (measurement history of each current state) ----------
    One line chart per current state: its measurements over time, a target line for every goal it
@@ -52,6 +54,7 @@ export interface GraphChart<P extends GraphPoint = GraphPoint> {
   tip?(p: P): TipRow[];
   s?: State;
   change?: Change;
+  paces?: Goal[]; // goals with a pace line, for the tooltip
 }
 export type Change = ReturnType<typeof stateChange>;
 
@@ -132,6 +135,7 @@ export function graphCard(s: State, width: number) {
     .filter((g): g is Goal => !!g && !byActivities(g) && isNum(g.target))
     .map(g => ({ goal: g, value: Number(g.target), end: g.deadline ? dayNum(g.deadline) : null }));
   const change = stateChange(s, points, targets);
+  const paces = paceGoals(targets);
   const unit = s.unit || '';
   const last = points[points.length - 1];
 
@@ -149,7 +153,7 @@ export function graphCard(s: State, width: number) {
     y1 = ticks[ticks.length - 1];
   const px = (d: number) => GR.L + ((d - x0) / (x1 - x0)) * (W - GR.L - GR.R);
   const py = (v: number) => GR.T + (1 - (v - y0) / (y1 - y0)) * (GR.H - GR.T - GR.B);
-  grCharts[s.id] = { s, points, targets, change, px, py, unit, zoom };
+  grCharts[s.id] = { s, points, targets, change, px, py, unit, zoom, paces };
 
   const grid = gridLines(ticks, py, W);
   const todayN = dayNum(today());
@@ -219,6 +223,7 @@ export function graphCard(s: State, width: number) {
     ? `<div class="gr-legend">
       <span><i class="key key-measure"></i>${t('gr.measurements')}</span>
       <span><i class="key key-target"></i>${esc(targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title }))}</span>
+      ${paces.length ? `<span><i class="key key-pace"></i>${t('pace.legend')}</span>` : ''}
     </div>`
     : '';
 
@@ -235,10 +240,10 @@ export function graphCard(s: State, width: number) {
   return `<article class="card glass gr-card" data-gr="${s.id}" data-ctx-item="${s.id}">
     <div class="card-head"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats"><strong class="gr-value">${esc(withUnit(fmtNum(last.value), unit))}</strong>${changeTag(s, change)}</div>
-    ${legend}
+    ${paceFacts(paces, unit)}${legend}
     <div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
       <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
-        ${grid}${todayLine}${area}${targetLines}<path class="gr-line" d="${path}"/>${dots}${targetLabels}${valueLabel}${xAxis}
+        ${grid}${todayLine}${area}${targetLines}${paceMarks(paces, points, px, py, x0, x1)}<path class="gr-line" d="${path}"/>${dots}${targetLabels}${valueLabel}${xAxis}
         <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
         <circle class="gr-focus" r="6" hidden/>
       </svg>${W > width ? yAxisPinned(ticks, py) : ''}
@@ -247,6 +252,7 @@ export function graphCard(s: State, width: number) {
     <details class="gr-table"><summary>${t('gr.table')}</summary>
       <table><thead><tr><th>${t('gr.col.date')}</th><th>${t('gr.col.value')}</th><th>${t('gr.col.change')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rowsHtml}</tbody></table>
     </details>
+    ${workFold(s)}
   </article>`;
 }
 

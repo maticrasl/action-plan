@@ -1,13 +1,12 @@
 /** The form dialog's listeners, in the order they must run (Ctrl+Enter first, then the link lists and the calendar). */
 import { $ } from '../dom';
-import { isoOf } from '../../core/days';
 import { t } from '../../i18n/index';
 import { db } from '../../core/state';
 import { findEntity } from '../../core/relations';
 import { save } from '../../store/plans';
 import { deleteItem, undoable } from '../undo';
 import { requestRender } from '../render';
-import { cal, closeCalendar, focusDay, moveCalendar, openCalendar, pickDate } from '../calendar';
+import { cal, calendarClick, calendarKey, closeCalendar, dateSlashes } from '../calendar';
 import { pickItem, showPickList, unpickItem } from './picker';
 import { updateMeasuredBy, updateProgressFields, updateSmartLive } from './goal';
 import { updateStateFields } from './state';
@@ -175,18 +174,7 @@ $('#modalForm').addEventListener('click', e => {
   unpickItem(picker, x.dataset.unpick!);
   (tags[at + 1] || tags[at - 1] || picker.querySelector<HTMLElement>('.picker-search')!).focus();
 });
-// Date fields: slashes are added while typing digits.
-$('#modalForm').addEventListener('input', e => {
-  const box = e.target as HTMLInputElement;
-  if (
-    !box.matches('[data-date]') ||
-    e.inputType !== 'insertText' ||
-    !/^\d$/.test(e.data!) ||
-    box.selectionStart !== box.value.length
-  )
-    return;
-  if (/^\d{2}$|^\d{1,2}\/\d{2}$/.test(box.value)) box.value += '/';
-});
+$('#modalForm').addEventListener('input', dateSlashes);
 
 $('#modalForm').addEventListener('click', e => {
   // An entry marked for deletion is deleted on saving (and kept on cancelling).
@@ -197,48 +185,9 @@ $('#modalForm').addEventListener('click', e => {
     drop.closest('.entry')!.classList.toggle('dropped', on);
     return;
   }
-  const open = (e.target as HTMLElement).closest('[data-cal-open]');
-  if (open)
-    return cal?.field === open.closest('.date-field')
-      ? closeCalendar()
-      : openCalendar(open.closest<HTMLElement>('.date-field')!);
-  if (!cal) return;
-  const day = (e.target as HTMLElement).closest<HTMLElement>('[data-cal-day], [data-cal-pick]');
-  if (day) return pickDate((day.dataset.calDay ?? day.dataset.calPick)!);
-  const move = (e.target as HTMLElement).closest<HTMLElement>('[data-cal-move]');
-  if (move) {
-    const n = Number(move.dataset.calMove);
-    const d = Number(cal.focus.slice(8));
-    // Same day in the other month, or its last day.
-    const last = new Date(Date.UTC(cal.y, cal.m + n + 1, 0)).getUTCDate();
-    moveCalendar(isoOf(cal.y, cal.m + n, Math.min(d, last)));
-    cal.field.querySelector<HTMLElement>(`[data-cal-move="${n}"]`)!.focus();
-  }
+  calendarClick(e);
 });
-$('#modalForm').addEventListener('keydown', e => {
-  if (!cal || !cal.field.querySelector('.cal')!.contains(e.target as Node)) return;
-  if (e.key === 'Escape') {
-    e.preventDefault();
-    e.stopPropagation();
-    return closeCalendar(true);
-  }
-  if (!(e.target as HTMLElement).matches('[data-cal-day]')) return;
-  const [y, m, d] = cal.focus.split('-').map(Number);
-  const to = (
-    {
-      ArrowLeft: [y, m - 1, d - 1],
-      ArrowRight: [y, m - 1, d + 1],
-      ArrowUp: [y, m - 1, d - 7],
-      ArrowDown: [y, m - 1, d + 7],
-      PageUp: [y, m - 2, Math.min(d, new Date(Date.UTC(y, m - 1, 0)).getUTCDate())],
-      PageDown: [y, m, Math.min(d, new Date(Date.UTC(y, m + 1, 0)).getUTCDate())],
-    } as Record<string, [number, number, number]>
-  )[e.key];
-  if (!to) return;
-  e.preventDefault();
-  moveCalendar(isoOf(...to));
-  focusDay();
-});
+$('#modalForm').addEventListener('keydown', calendarKey);
 // Escape closes the calendar, not the whole form; so does a click anywhere else.
 // Escape on a changed form asks first, as Cancel, × and a click outside do.
 modal.addEventListener('cancel', e => {

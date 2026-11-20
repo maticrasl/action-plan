@@ -9,6 +9,7 @@ import {
   type PlanFileRead,
 } from '../core/normalize';
 import { db, visions } from '../core/state';
+import { planCsv } from '../core/csv';
 import { currentPlan, plans } from '../store/state';
 import { t, tp, type PluralKey, type TextKey } from '../i18n/index';
 import { fmtDate, isoDate, today } from '../core/dates';
@@ -45,13 +46,13 @@ export function planFile(kind: string) {
   };
 }
 
-export const planFileName = (kind: string) => {
-  const name =
-    currentPlan()!
-      .name.replace(/[\\/:*?"<>|]+/g, '')
-      .trim() || t('app.file');
-  return `${name}${kind === 'template' ? '-' + t('export.templateFile') : ''}-${today()}.json`;
-};
+// A name without the characters a file name cannot hold, and today's date.
+export const fileName = (name: string, ext: string, suffix = '') =>
+  `${name.replace(/[\\/:*?"<>|]+/g, '').trim() || t('app.file')}${suffix}-${today()}.${ext}`;
+export const planFileName = (kind: string) =>
+  kind === 'template'
+    ? fileName(currentPlan()!.name, 'json', '-' + t('export.templateFile'))
+    : fileName(currentPlan()!.name, kind === 'csv' ? 'csv' : 'json');
 
 export function download(blob: Blob, name: string) {
   const a = document.createElement('a');
@@ -64,12 +65,13 @@ export function download(blob: Blob, name: string) {
 // Downloads the plan, or hands it to the system share sheet where files can be shared (phones).
 // A cancelled share does nothing; a failed one falls back to a download.
 export async function exportPlan(kind: string, share = false) {
-  const blob = new Blob([JSON.stringify(planFile(kind), null, 2)], { type: 'application/json' });
+  const type = kind === 'csv' ? 'text/csv' : 'application/json';
+  const blob = new Blob([kind === 'csv' ? planCsv(db.states) : JSON.stringify(planFile(kind), null, 2)], { type });
   const name = planFileName(kind);
   if (share) {
     try {
       await navigator.share({
-        files: [new File([blob], name, { type: 'application/json' })],
+        files: [new File([blob], name, { type })],
         title: currentPlan()!.name,
       });
       if (kind === 'full') markSeen({ exported: true });

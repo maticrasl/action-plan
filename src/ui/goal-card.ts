@@ -20,6 +20,25 @@ import { fmtNum, isNum } from '../core/util';
 import { goalPeriod, isCumulative, lastPeriodTotal, stateTotal } from '../core/cumulative';
 import { periodText, withUnit } from './text';
 import type { Goal, Period } from '../core/model';
+import { goalPace } from '../core/pace';
+import { today } from '../core/dates';
+
+const PACE_CLS = { ahead: 'ok', on: '', behind: 'warn' };
+// The pace tag, and when behind what it would take: per week (or day) from here, or steps against time.
+function paceMeta(g: Goal, unit: string) {
+  const p = goalPace(g, today());
+  if (!p) return '';
+  const tag = `<span class="tag pace ${PACE_CLS[p.status]}">${t(`pace.${p.status}`)}</span>`;
+  if (p.status !== 'behind') return tag;
+  const more =
+    p.kind === 'acts'
+      ? t('pace.steps', { done: p.done, total: p.total, pct: Math.round(p.time * 100) })
+      : p.rate &&
+        t(p.rate.per === 'day' ? 'pace.needsShortDay' : 'pace.needsShort', {
+          value: withUnit(fmtNum(p.rate.value), unit),
+        });
+  return tag + (more ? `<span class="pace-needs">${esc(more)}</span>` : '');
+}
 
 export function goalCard(g: Goal) {
   const pct = goalProgress(g);
@@ -54,6 +73,7 @@ export function goalCard(g: Goal) {
       ${g.status !== 'active' ? `<span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${t(('goal.' + g.status) as TextKey)}</span>` : ''}
       ${waits.length ? waitsForTag(waits) : ''}
       ${deadlineTag(g.deadline, g.status === 'achieved')}
+      ${paceMeta(g, st?.unit || g.unit || '')}
       ${measured || (!acts.length && routines.length) ? '' : `<span>${t('goals.activities', { done, total: acts.length })}</span>`}
       ${routines.length ? `<span title="${esc(routines.map(a => `${a.title}: ${periodText(a)}`).join('\n'))}">⟳ ${esc(tp('goals.routines', routines.length))}</span>` : ''}
       ${st ? `<span title="${esc(t('goals.measuredBy'))}">◐ ${esc(st.title)}</span>` : ''}

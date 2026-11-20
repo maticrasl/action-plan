@@ -12,6 +12,7 @@ import { goalCard } from '../ui/goal-card';
 import { relsFrom } from '../core/relations';
 import { isList, listDone } from '../core/routines/checkins';
 import type { Activity } from '../core/model';
+import { replanButton } from '../ui/replan';
 
 export function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
@@ -55,7 +56,7 @@ export function renderDashboard() {
       <p class="summary-line">${headline}</p>
       <ul class="facts">
         <li>${t('dash.factDone', { done: doneActs, total: oneOff.length })}</li>
-        ${overdue ? `<li class="fact-late">${tp('dash.factLate', overdue)}</li>` : ''}
+        ${overdue ? `<li class="fact-late">${tp('dash.factLate', overdue)} ${replanButton()}</li>` : ''}
         ${waiting ? `<li class="fact-waiting">${tp('dash.factWaiting', waiting)}</li>` : ''}
       </ul>
     </section>

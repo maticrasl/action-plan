@@ -1,4 +1,5 @@
 /** The timeline view: a Gantt chart of goals and activities (rows.ts orders them). */
+import { replanButton } from '../../ui/replan';
 import { emptyState, esc, hideDoneToggle, neighbourhood } from '../../ui/dom';
 import { locale, t } from '../../i18n/index';
 import { categorySelect, goalSelect, scopeFor } from '../filters';
@@ -181,6 +182,7 @@ export function renderTimeline() {
       ${categorySelect()}
       ${goalSelect('timeline', ui.timelineGoal)}
       ${hideDoneToggle()}
+      ${replanButton()}
     </div>
     ${
       rows.length

@@ -34,6 +34,8 @@ import { listenGraphs } from './views/graphs/points';
 import { listenGuide } from './views/guide';
 import { listenFeedback } from './ui/feedback';
 import { listenTrash } from './ui/trash-dialog';
+import { listenReplan } from './ui/replan';
+import { listenCsv } from './ui/csv-dialog';
 
 // Screen parts below the views redraw, switch users and offer the welcome through these.
 setRenderer(render);
@@ -72,6 +74,8 @@ listenWalk();
 listenTips();
 listenFeedback();
 listenTrash();
+listenReplan();
+listenCsv();
 listenUndo();
 
 setLang(detectLang());

@@ -41,6 +41,7 @@ export type TipClass = 'A' | 'B' | 'C' | 'D';
 export type TipView = 'dashboard' | 'goals' | 'activities' | 'states' | 'graphs';
 export type TipAction =
   | 'timeline'
+  | 'replan'
   | 'goals'
   | 'activities'
   | 'states'
@@ -58,7 +59,8 @@ export type TipAction =
   | 'templates'
   | 'backup'
   | 'install'
-  | 'share';
+  | 'share'
+  | 'working';
 export interface Tip {
   id: string;
   cls: TipClass;
@@ -66,6 +68,7 @@ export interface Tip {
   cooldown: number; // days before it may come back; 0: once per key
   guide?: string; // the Guide article "Why this helps" opens
   action?: TipAction;
+  action2?: TipAction; // a second button, its text in tip.<id>.btn2
   // Every item it is true for, the best fit first; empty when it is not true.
   hits(inp: TipInput): TipHit[];
 }
@@ -90,7 +93,9 @@ export const activeGoals = (db: Db) => db.goals.filter(g => g.status === 'active
 export const steps = (db: Db) => db.activities.filter(a => !isRoutine(a));
 // Routines that have started and not ended.
 export const runningRoutines = (db: Db, today: ISODate) =>
-  db.activities.filter((a): a is Routine => isRoutine(a) && routineStart(a) <= today && !(a.dueDate && a.dueDate < today));
+  db.activities.filter(
+    (a): a is Routine => isRoutine(a) && routineStart(a) <= today && !(a.dueDate && a.dueDate < today),
+  );
 
 // A goal's age in days; a goal from before `createdAt` existed counts as old.
 export const goalAge = (g: Goal, today: ISODate) => (g.createdAt ? daysFrom(g.createdAt, today) : Infinity);
@@ -98,7 +103,8 @@ export const goalAge = (g: Goal, today: ISODate) => (g.createdAt ? daysFrom(g.cr
 // Since when an item has had its status: `statusSince`, an auto-start's day, then the last change, then creation.
 export function statusSince(x: Goal | Activity): ISODate | undefined {
   if (x.statusSince) return x.statusSince;
-  if ('autoStarted' in x && x.status === 'doing' && x.autoStarted && x.autoStarted === x.startDate) return x.autoStarted;
+  if ('autoStarted' in x && x.status === 'doing' && x.autoStarted && x.autoStarted === x.startDate)
+    return x.autoStarted;
   return dayOf(x.updatedAt) || x.createdAt;
 }
 
@@ -138,5 +144,8 @@ export const measures = (db: Db, g: Goal): State[] =>
 // The day a state was last measured (a state that adds up: its last entry).
 export function lastMeasured(s: State): ISODate | undefined {
   const days = isCumulative(s) ? (s.entries || []).map(e => e.date) : [s.date, ...(s.history || []).map(h => h.date)];
-  return days.filter((d): d is string => !!d).sort().at(-1);
+  return days
+    .filter((d): d is string => !!d)
+    .sort()
+    .at(-1);
 }

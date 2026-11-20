@@ -1,4 +1,5 @@
 /** The Guide: how the method works, what to do when stuck, how each feature works, what happens to the data. */
+import { openReplan } from '../ui/replan';
 import { GUIDE, GUIDE_GROUPS, type Article, type GuideAction, type GuideFact } from '../i18n/guide';
 import { feedbackRows } from '../ui/feedback';
 import { lang, t, type TextKey } from '../i18n/index';
@@ -62,6 +63,7 @@ export const GUIDE_DO: Record<GuideAction, () => void> = {
   'view-states': view('states'),
   'view-map': view('map'),
   'view-timeline': view('timeline'),
+  replan: () => openReplan(),
   'view-graphs': view('graphs'),
   'ask-tip': () => askTip(),
 };

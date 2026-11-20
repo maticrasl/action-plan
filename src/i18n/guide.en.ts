@@ -195,28 +195,29 @@ export const guideEn = [
 <p>It helps to know what usually happens here: after a break, the list of late things looks like a bill, so we avoid looking, and the break gets longer. The way out is to treat today as a new start, not as a return to the old schedule.</p>
 <ol>
 <li>Do <strong>not</strong> tick or fix everything. Open the Overview and choose <strong>one</strong> step for today.</li>
-<li>Move the dates. Open the Timeline and drag late bars to where they can really happen now. A date in the past is only an old guess.</li>
+<li>Move the dates. Open the Timeline and drag late bars to where they can really happen now. A date in the past is only an old guess. “Move late steps” on the Overview moves them all at once and keeps their order.</li>
 <li>Pause what you will not work on this month.</li>
 <li>For routines, tick today. That is all it takes to be on track again.</li>
 <li>Ask what made you stop. Illness and busy weeks pass by themselves. If the plan was too heavy or the goal stopped mattering, change the plan, not yourself.</li>
 </ol>`,
-    action: { do: 'view-dashboard', label: 'Open the Overview' },
+    action: { do: 'replan', label: 'Move late steps…' },
     related: ['routine-slips', 'behind', 'let-go', 'review'],
   },
   {
     id: 'behind',
     group: 'stuck',
     title: 'I’m behind and the deadline is close',
-    body: `<p>First, this is normal. People almost always expect things to take less time than they do, even when they know that they usually take longer.</p>
+    body: `<p>The goal card says “Behind pace” and how much a week would be needed from here. That number is the honest starting point for the three options.</p>
+<p>First, this is normal. People almost always expect things to take less time than they do, even when they know that they usually take longer.</p>
 <p>You have three honest options, and all three are planning, not failing:</p>
 <ul>
 <li><strong>More time now.</strong> Is there something you can drop this week to make room? Decide what, not only “I’ll try harder”.</li>
-<li><strong>Move the date.</strong> If the deadline was your own guess, guess again with what you know now.</li>
+<li><strong>Move the date.</strong> If the deadline was your own guess, guess again with what you know now. “Move late steps” on the Overview moves them all at once and keeps their order.</li>
 <li><strong>Shrink the target.</strong> 8 km on the day is not 10, and it is a great deal more than where you started.</li>
 </ul>
 <p>When the deadline is fixed from outside (an exam, a race), cut scope: which steps matter most for the result? Do those, and delete the others without guilt.</p>
 <p>For next time: when you set a date, ask how long similar things took you before, and use that, not how long it ought to take.</p>`,
-    action: { do: 'view-timeline', label: 'Open the Timeline' },
+    action: { do: 'replan', label: 'Move late steps…' },
     related: ['no-progress', 'pressure'],
   },
   {
@@ -225,9 +226,9 @@ export const guideEn = [
     title: 'I do the work, but the number doesn’t move',
     body: `<p>Ticks without movement are a sign to look at the plan, and it is good that you can see it.</p>
 <ul>
-<li><strong>Is it too early?</strong> Weight, fitness, savings and skills move slowly and unevenly. Look at the graph over six or eight weeks, not from one measurement to the next.</li>
+<li><strong>Is it too early?</strong> Weight, fitness, savings and skills move slowly and unevenly. Look at the graph over six or eight weeks, not from one measurement to the next. The forecast looks at the last six weeks, not at the last measurement.</li>
 <li><strong>Is the measure right?</strong> Perhaps you are getting fitter while the scale stays still. Add a second current state that catches what is changing: waist, pace, how the stairs feel.</li>
-<li><strong>Are these the right steps?</strong> Being busy and moving forward are different things. Which activity was meant to move this number? If the link was a hope, test another step for a month.</li>
+<li><strong>Are these the right steps?</strong> Being busy and moving forward are different things. Which activity was meant to move this number? If the link was a hope, test another step for a month. Under a state’s graph, “Is it working?” compares the weeks you kept a routine with the weeks you did not. It needs a couple of months of ticks and measurements before it says anything.</li>
 <li><strong>Is the dose enough?</strong> Once a week may hold you where you are; twice may move you.</li>
 <li><strong>Ask someone who knows.</strong> A stuck number is the best moment to spend an hour with a trainer, teacher, doctor or adviser. Bring your graph.</li>
 </ul>
@@ -369,7 +370,8 @@ export const guideEn = [
     title: 'Current states',
     body: `<p>A current state is something you measure. Say what the value means and how you take it, so that every measurement is taken the same way. Tap its card to record a new value: one per day; a second value on the same day replaces the first. Decimals work with a dot or a comma.</p>
 <p>A state can <strong>add up</strong> instead (“Adds up: Yes”): kilometres run, money put aside. Then each entry is an amount, several a day are fine, and the card shows the total. A goal measured by such a state chooses how it counts: in total, or per day, week, month or year.</p>
-<p>Link the state to a goal (“Describes the current state of goal(s)”) and the goal’s progress follows it. A wrong value is deleted in Graphs, in the table under the state’s graph, or in the state’s form under the history.</p>`,
+<p>Link the state to a goal (“Describes the current state of goal(s)”) and the goal’s progress follows it. A wrong value is deleted in Graphs, in the table under the state’s graph, or in the state’s form under the history.</p>
+<p>Values you already keep in a spreadsheet can be brought in: in the state’s menu (right-click or long-press its card or graph) or its form, “Import from CSV…” reads a file with a date and a value on each line. “Export as CSV” takes them out again.</p>`,
     action: { do: 'add-state', label: 'Add a current state' },
     related: ['h-graphs', 'no-number'],
   },
@@ -426,7 +428,7 @@ export const guideEn = [
     group: 'how',
     title: 'Timeline',
     body: `<p>The Timeline shows goals and activities by date; an item needs a start or due date to appear. Activities sit under the goals they contribute to. Red stretches are overdue time, a bar’s colour is its status, and routines with set days show each day as done, missed or to come.</p>
-<p>Tap a bar to select it, then drag the bar to move its dates or one end to change only that date (on a touch screen, long-press first). ▾ beside a goal folds its rows away; Collapse all, top left, folds every goal, and the menu on a goal (right-click or long-press) offers both. Pinch or Ctrl + scroll changes the scale.</p>`,
+<p>Tap a bar to select it, then drag the bar to move its dates or one end to change only that date (on a touch screen, long-press first). ▾ beside a goal folds its rows away; Collapse all, top left, folds every goal, and the menu on a goal (right-click or long-press) offers both. Pinch or Ctrl + scroll changes the scale. The toolbar’s “Move late steps…” re-dates every overdue bar in one go.</p>`,
     action: { do: 'view-timeline', label: 'Open the Timeline' },
   },
   {
@@ -434,7 +436,9 @@ export const guideEn = [
     group: 'how',
     title: 'Graphs',
     body: `<p>Each current state with measurements has a graph: your values over time, a dashed line for the goal’s target, and the change since the first measurement. A state that adds up shows sums per day, week, month or year, or the running total; choose above the graph. Each routine has a graph of how often you did it per period.</p>
-<p>Hover or tap to read a value; pinch or Ctrl + scroll to zoom into a stretch of time. The table under a graph lists the measurements; delete a wrong one there.</p>`,
+<p>For a goal with a target and a deadline, the graph also draws the pace: a thin dashed line from your start to the target. Above it you see how much is needed each week from here, and when you would arrive at the present rate.</p>
+<p>Hover or tap to read a value; pinch or Ctrl + scroll to zoom into a stretch of time. The table under a graph lists the measurements; delete a wrong one there.</p>
+<p>Under the graph of a state that a routine improves, and under the routine’s own graph, “Is it working?” compares how the state moved in the weeks you kept the routine and in the weeks you did not. It shows a pattern, not a proof.</p>`,
     action: { do: 'view-graphs', label: 'Open Graphs' },
   },
   {
@@ -452,7 +456,7 @@ export const guideEn = [
 <ul>
 <li><strong>Start from a template</strong> opens a ready-made plan as a new plan, with dates counted from today. Change everything to fit you.</li>
 <li><strong>Load sample plan</strong> opens a filled example to look around in.</li>
-<li><strong>Export plan</strong> saves a file: a <em>Full copy</em> with your progress, as a backup, or a <em>Template</em> without progress, to share with someone.</li>
+<li><strong>Export plan</strong> saves a file: a <em>Full copy</em> with your progress, as a backup, or a <em>Template</em> without progress, to share with someone; <em>Measurements (CSV)</em> for a spreadsheet.</li>
 <li><strong>Import plan</strong> adds a file as a new plan. It never overwrites one you have.</li>
 </ul>
 <p>The coloured dot by each plan shows green when nothing is due, yellow when something is due today, red when something is overdue.</p>`,

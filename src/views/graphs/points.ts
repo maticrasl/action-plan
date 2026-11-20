@@ -9,6 +9,7 @@ import { modal } from '../../ui/forms/form';
 import { requestRender as render } from '../../ui/render';
 import { GR, grCharts, grDrawW, graphFor, signed } from './states';
 import { findEntity } from '../../core/relations';
+import { paceTips } from './pace';
 import type { State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
 
@@ -45,6 +46,7 @@ export function showGraphPoint(plot: HTMLElement, i: number) {
     c.targets.forEach(tg =>
       row('gr-tip-row', t('gr.tipTarget', { goal: tg.goal.title, value: withUnit(fmtNum(tg.value), c.unit) })),
     );
+    paceTips(c.paces || [], p.day, c.unit).forEach(([cls, text]) => row(cls, text));
   }
   tip.hidden = false;
   // The chart's own width: a long one scrolls inside the plot.

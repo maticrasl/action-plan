@@ -25,8 +25,10 @@ import { nodeId, openAddMenu } from './map/menu';
 import { removeRelation } from './map/render';
 import { removeMeasurement } from './graphs/states';
 import { removeEntry, setGraphScale } from './graphs/sums';
+import { fillWork } from './graphs/working';
 import { foldAllTl, toggleTlFold } from './timeline/rows';
 import { openStateAmount, openStateValue } from '../ui/state-value';
+import { openReplan } from '../ui/replan';
 
 export let lastNodeClick: { id: string | null; t: number } = { id: null, t: 0 };
 export function setLastNodeClick(v: typeof lastNodeClick) {
@@ -57,7 +59,7 @@ $('#addBtn').addEventListener('click', e => {
 
 viewEl.addEventListener('click', e => {
   const el = (e.target as HTMLElement).closest<HTMLElement>(
-    '[data-li-fold],[data-li-show-done],[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more]',
+    '[data-li-fold],[data-li-show-done],[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more],[data-replan]',
   );
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !(e.target as HTMLElement).closest('[data-map-zoom]')) {
@@ -84,6 +86,7 @@ viewEl.addEventListener('click', e => {
   if (el.dataset.tlFoldAll) return foldAllTl(el.dataset.tlFoldAll === 'collapse');
   if (el.dataset.relOpen) return openForm('relation', el.dataset.relOpen);
   if (el.dataset.relRemove) return removeRelation(el.dataset.relRemove);
+  if (el.hasAttribute('data-replan')) return openReplan();
   if (el.hasAttribute('data-next-more')) {
     ui.nextAll = !ui.nextAll;
     prefs.set('nextAll', ui.nextAll);
@@ -167,6 +170,12 @@ viewEl.addEventListener('click', e => {
   if (el.hasAttribute('data-hide-visions')) return setToggle('hideVisions', !ui.hideVisions);
 });
 
+// Toggle does not bubble; caught on the way down. Is it working? is worked out only when opened.
+viewEl.addEventListener(
+  'toggle',
+  e => (e.target as Element).matches?.('.gr-work') && fillWork(e.target as HTMLDetailsElement),
+  true,
+);
 viewEl.addEventListener('input', e => {
   if ((e.target as HTMLInputElement).matches('[data-search]')) {
     ui.search = (e.target as HTMLInputElement).value;

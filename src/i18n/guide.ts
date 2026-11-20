@@ -24,6 +24,7 @@ export const GUIDE_ACTIONS = [
   'view-states',
   'view-map',
   'view-timeline',
+  'replan',
   'view-graphs',
   'ask-tip',
 ] as const;

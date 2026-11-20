@@ -22,6 +22,7 @@ import { type Activity, type ActivityStatus } from '../core/model';
 import { listTicks, routineCard, routineLegend } from './routines';
 import { descendants, relsFrom } from '../core/relations';
 import { isList } from '../core/routines/checkins';
+import { replanButton } from '../ui/replan';
 
 export function renderActivities() {
   if (!db.activities.length) return emptyState(t('acts.emptyTitle'), t('acts.emptyText'), 'activity');
@@ -39,6 +40,7 @@ export function renderActivities() {
       ${categorySelect()}
       ${goalSelect('activity', ui.activityGoal)}
       ${hideDoneToggle()}
+      ${replanButton()}
       ${searchBox()}
     </div>
     ${
