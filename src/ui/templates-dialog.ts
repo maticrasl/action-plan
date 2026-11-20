@@ -11,7 +11,7 @@ import { getSeen, markSeen } from '../store/seen';
 
 export function useTemplate(tpl: Template) {
   const name = uniqueName(tplText(tpl.name));
-  createPlan(name, templateData(tpl));
+  createPlan(name, templateData(tpl), false, tpl.emoji);
   toast(t('toast.template', { name }));
 }
 
@@ -40,7 +40,7 @@ export function tplCard(tpl: Template) {
       ? `<p><strong>${label}</strong></p><ul>${items.map(x => `<li>${esc(tplText(x.title))}</li>`).join('')}</ul>`
       : '';
   return `<article class="tpl-card">
-    <div class="tpl-head"><h3>${esc(tplText(tpl.name))}</h3><span class="tag tpl-level ${tpl.level}">${t(('tpl.level.' + tpl.level) as TextKey)}</span></div>
+    <div class="tpl-head"><h3><span aria-hidden="true">${esc(tpl.emoji)}</span> ${esc(tplText(tpl.name))}</h3><span class="tag tpl-level ${tpl.level}">${t(('tpl.level.' + tpl.level) as TextKey)}</span></div>
     <p class="tpl-about">${esc(tplText(tpl.about))}</p>
     <p class="tpl-meta">${[tplSpan(tpl), ...counts].map(x => `<span>${x}</span>`).join('')}</p>
     <details class="tpl-inside"><summary>${t('tpl.inside')}</summary>

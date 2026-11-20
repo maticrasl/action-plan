@@ -10,6 +10,7 @@ export const HEALTH: Template[] = [
     area: 'health',
     level: 'starter',
     name: ['Run 5 km', 'Preteči 5 km'],
+    emoji: '🏃',
     about: [
       'From walking to running 5 km without a break in about ten weeks, three short sessions a week.',
       'Od hoje do 5 km teka brez premora v približno desetih tednih, s tremi kratkimi treningi na teden.',
@@ -150,6 +151,7 @@ export const HEALTH: Template[] = [
     area: 'health',
     level: 'starter',
     name: ['Get stronger at home', 'Okrepiti se doma'],
+    emoji: '💪',
     about: [
       'Eight weeks of short bodyweight workouts, no gym needed: from the first push-up to twenty, and a two-minute plank.',
       'Osem tednov kratkih vaj z lastno težo, brez fitnesa: od prve sklece do dvajsetih in dvominutna deska.',
@@ -312,6 +314,7 @@ export const HEALTH: Template[] = [
     area: 'health',
     level: 'starter',
     name: ['Sleep better', 'Bolje spati'],
+    emoji: '😴',
     about: [
       'Four weeks to steadier, longer sleep: track it, fix the bedroom, and keep three simple evening and morning habits.',
       'Štirje tedni do bolj rednega in daljšega spanca: spremljajte ga, uredite spalnico in ohranite tri preproste večerne in jutranje navade.',
@@ -421,6 +424,7 @@ export const HEALTH: Template[] = [
     area: 'health',
     level: 'ambitious',
     name: ['From couch to marathon', 'Od kavča do maratona'],
+    emoji: '🏅',
     about: [
       'A year from no running to a marathon, through a 5 km run, a 10 km race and a half marathon, with strength work and a full taper.',
       'Leto od nič teka do maratona, prek 5 km, tekme na 10 km in polmaratona, z vajami za moč in pravim zmanjšanjem obremenitve pred tekmo.',

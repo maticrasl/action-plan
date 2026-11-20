@@ -10,6 +10,7 @@ export const WELLBEING: Template[] = [
     area: 'wellbeing',
     level: 'starter',
     name: ['Halve screen time', 'Prepoloviti čas pred zasloni'],
+    emoji: '📵',
     about: [
       'Four weeks from four hours a day on the phone to under two: quieter notifications, a phone-free first hour and a screen-free evening.',
       'Štirje tedni od štirih ur na dan na telefonu do manj kot dveh: manj obvestil, prva ura dneva brez telefona in en večer brez zaslonov.',
@@ -116,6 +117,7 @@ export const WELLBEING: Template[] = [
     area: 'wellbeing',
     level: 'starter',
     name: ['Meditation habit', 'Navada meditacije'],
+    emoji: '🧘',
     about: [
       'A month to make meditation a daily habit: start with five minutes, grow to ten, and notice the difference each week.',
       'Mesec, da meditacija postane vsakodnevna navada: začnite s petimi minutami, podaljšajte na deset in vsak teden opazujte razliko.',
@@ -191,6 +193,7 @@ export const WELLBEING: Template[] = [
     area: 'wellbeing',
     level: 'starter',
     name: ['Learn to cook 10 dishes', 'Naučiti se skuhati 10 jedi'],
+    emoji: '🍳',
     about: [
       'Twelve weeks, one new dish every weekend, ending with a dinner for friends made only from what you learned.',
       'Dvanajst tednov, vsak vikend nova jed, za konec pa večerja za prijatelje samo iz naučenih jedi.',
