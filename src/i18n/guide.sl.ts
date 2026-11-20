@@ -447,7 +447,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-plans',
     group: 'how',
     title: 'Načrti, predloge in datoteke',
-    body: `<p>Načrt je en sklop ciljev, stanj in aktivnosti. Stranska vrstica našteje vaše načrte, nazadnje odprtega na vrhu; tapnite načrt, da ga odprete. Njegova pika je zelena, ko ni nič na vrsti, rumena, ko je treba nekaj opraviti danes, in rdeča, ko je nekaj zamujeno. Na telefonu tapnite ime načrta nad naslovom. V Nastavitvah je ostalo: nov načrt, preimenovanje, brisanje in <strong>združitev</strong> enega načrta v drugega.</p>
+    body: `<p>Načrt je en sklop ciljev, stanj in aktivnosti. Stranska vrstica našteje vaše načrte, nazadnje odprtega na vrhu; tapnite načrt, da ga odprete. Njegova pika je zelena, ko ni nič na vrsti, rumena, ko je treba nekaj opraviti danes, in rdeča, ko je nekaj zamujeno. Vsak načrt ima pred imenom emoji: izberete ga, ko načrt ustvarite ali preimenujete (starejši načrt kaže 🙁, dokler ga ne izberete). Ko je stranska vrstica strnjena, seznam ohrani piko in emoji vsakega načrta. Na telefonu tapnite ime načrta nad naslovom. V Nastavitvah je ostalo: nov načrt, preimenovanje, brisanje in <strong>združitev</strong> enega načrta v drugega.</p>
 <ul>
 <li><strong>Začni s predlogo</strong> odpre pripravljen načrt kot nov načrt, z datumi od danes naprej. Spremenite vse, da vam ustreza.</li>
 <li><strong>Naloži vzorčni načrt</strong> odpre izpolnjen primer za ogled.</li>

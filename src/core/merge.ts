@@ -126,17 +126,18 @@ export function stampChanges(data: Db): void {
 
 /* ---------- Plan list: names and deleted plans are tracked the same way ---------- */
 
-export let planSnapshot = new Map<string, string>(); // plan id → name as last saved
+export let planSnapshot = new Map<string, string>(); // plan id → name and emoji as last saved
+const planLook = (p: Plan) => `${p.name}|${p.emoji ?? ""}`;
 
 export function takePlanSnapshot(index: { list: Plan[] }): void {
-  planSnapshot = new Map(index.list.map(p => [p.id, p.name]));
+  planSnapshot = new Map(index.list.map(p => [p.id, planLook(p)]));
 }
 
 export function stampPlanChanges(index: PlanList): void {
   const now = new Date().toISOString();
   index.deleted ||= {};
   index.list.forEach(p => {
-    if (planSnapshot.get(p.id) !== p.name) p.updatedAt = now;
+    if (planSnapshot.get(p.id) !== planLook(p)) p.updatedAt = now;
     delete index.deleted![p.id];
   });
   const present = new Set(index.list.map(p => p.id));

@@ -358,6 +358,6 @@ export function sampleData(): Omit<Db, 'deleted'> {
 
 // Marked as a demo: a banner says so, and Getting started neither shows nor ticks there.
 export function loadSample() {
-  createPlan(uniqueName(t('plan.sampleName')), sampleData() as Db, true);
+  createPlan(uniqueName(t('plan.sampleName')), sampleData() as Db, true, '🧭');
   toast(t('toast.sample'));
 }

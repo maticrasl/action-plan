@@ -112,6 +112,42 @@
   cursor: default;
   background: color-mix(in srgb, var(--nav-ink) 8%, transparent);
 }
+.plan-emoji {
+  flex: none;
+  width: 1.3em;
+  margin-left: -4px;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1;
+}
+/* The plan name dialog: emojis in a grid; all of them scroll inside it. */
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 4px;
+}
+.emoji-grid.all {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.emoji-pick {
+  height: 40px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  font-size: 22px;
+  cursor: pointer;
+}
+.emoji-pick:hover {
+  background: var(--sunken);
+}
+.emoji-pick[aria-checked='true'] {
+  background: color-mix(in srgb, var(--goal) 16%, transparent);
+  box-shadow: inset 0 0 0 2px var(--goal);
+}
+#planEmojiMore {
+  margin-top: 6px;
+}
 .plan-row-name {
   min-width: 0;
   overflow: hidden;

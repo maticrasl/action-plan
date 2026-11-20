@@ -188,6 +188,7 @@ export interface Db {
 // The plan index (actionplan.plans).
 export interface Plan extends Item {
   name: string;
+  emoji?: string; // shown before the name; none shows core/emoji.ts NO_EMOJI; older versions ignore it
   demo?: true; // the sample plan: not the user's own (no walkthrough ticks there); older versions ignore it
 }
 export interface PlanList {

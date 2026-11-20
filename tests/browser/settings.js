@@ -229,7 +229,7 @@ suite(async () => {
       'goal cards tinted by status',
     );
     setView('activities');
-    const act = $('#view .col .card.activity');
+    const act = $('#view .acts .card.activity');
     assert(side(act) === 0 && css(act).boxShadow.includes('0px 0px 0px 1px'), 'activities flat, a 1 px edge');
     setView('goals');
     assert(side(card('doing')) === 5, 'goals 5 px of glass');
@@ -251,7 +251,7 @@ suite(async () => {
     const theme = document.documentElement.dataset.theme;
     document.documentElement.dataset.theme = 'light';
     render();
-    const todo = $('#view .col .card.activity.st-todo'),
+    const todo = $('#view .acts .card.activity.st-todo'),
       rootCss = css(document.documentElement);
     assert(
       todo &&

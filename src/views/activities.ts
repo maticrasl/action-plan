@@ -89,14 +89,13 @@ export function activityCard(a: Activity) {
 // places them in reading order into the first free spot (left to right, then down).
 const ROW = 4,
   GAP = 12;
-const fit = (c: Element) =>
-  ((c as HTMLElement).style.gridRowEnd = `span ${Math.ceil((c.getBoundingClientRect().height + GAP) / ROW)}`);
-const flowObserver =
-  typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(es => es.forEach(e => fit(e.target)));
+const span = (c: Element, h: number) => ((c as HTMLElement).style.gridRowEnd = `span ${Math.ceil((h + GAP) / ROW)}`);
+let flowObserver: ResizeObserver | null = null;
 export function flowCards() {
   flowObserver?.disconnect();
-  document.querySelectorAll('.flow > *').forEach(c => {
-    fit(c);
-    flowObserver?.observe(c);
-  });
+  flowObserver ??= new ResizeObserver(es => es.forEach(e => span(e.target, e.borderBoxSize[0].blockSize)));
+  const cards = [...document.querySelectorAll('.flow > *')];
+  // All heights first, then all spans: one layout, not one per card.
+  cards.map(c => c.getBoundingClientRect().height).forEach((h, k) => span(cards[k], h));
+  cards.forEach(c => flowObserver!.observe(c));
 }

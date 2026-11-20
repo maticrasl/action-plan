@@ -11,7 +11,7 @@ import {
   takeSnapshot,
   type Store,
 } from './merge';
-import { SYNC_COLLS } from './model';
+import { SYNC_COLLS, type Plan } from './model';
 import { normalize } from './normalize';
 import { addDays } from './routines/schedule';
 import { today } from './dates';
@@ -126,6 +126,17 @@ describe('change tracking', () => {
     stampPlanChanges(idx);
     expect(idx.list[0]).toHaveProperty('updatedAt');
     expect(idx).toHaveProperty('deleted.p2');
+  });
+  test('a new emoji is stamped too; an untouched plan is not', () => {
+    const idx = {
+      current: 'p1',
+      list: [{ id: 'p1', name: 'One' } as Plan, { id: 'p2', name: 'Two', emoji: '🏃' }],
+    };
+    takePlanSnapshot(idx);
+    idx.list[0].emoji = '🎯';
+    stampPlanChanges(idx);
+    expect(idx.list[0]).toHaveProperty('updatedAt');
+    expect(idx.list[1]).not.toHaveProperty('updatedAt');
   });
 });
 
@@ -401,7 +412,9 @@ describe('mergeStores', () => {
     expect(mergeStores(s(), s())).not.toHaveProperty('tips');
     const t = { off: true, shown: { k: { n: 1, last: '2026-11-19' } }, since: {} };
     expect(mergeStores(s(), s(t)).tips).toEqual(t);
-    expect(mergeStores(s(t), s({ off: false, shown: { k: { n: 2, last: '2026-11-01' } }, since: {} })).tips!.shown.k.n).toBe(2);
+    expect(
+      mergeStores(s(t), s({ off: false, shown: { k: { n: 2, last: '2026-11-01' } }, since: {} })).tips!.shown.k.n,
+    ).toBe(2);
   });
 
   test('the newer plan name wins; a plan deleted on one side and untouched on the other stays deleted', () => {

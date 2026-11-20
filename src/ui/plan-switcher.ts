@@ -1,15 +1,5 @@
 /** The plan switcher: the plans with their health, and new, rename, merge, export, import, delete. */
-import {
-  createPlan,
-  nameTaken,
-  openPlan,
-  planKey,
-  planOpened,
-  readPlan,
-  save,
-  uniqueName,
-  withPlan,
-} from '../store/plans';
+import { createPlan, openPlan, planKey, planOpened, readPlan, save, uniqueName, withPlan } from '../store/plans';
 import { t, type TextKey } from '../i18n/index';
 import { db } from '../core/state';
 import { today } from '../core/dates';
@@ -21,15 +11,9 @@ import { $, esc } from './dom';
 import { toast } from './toast';
 import { openMerge, openPlanDelete } from './plan-dialogs';
 import { openExport } from './plan-io';
+import { askPlan } from './plan-name';
+import { planEmoji } from '../core/emoji';
 import type { Db, ISODate } from '../core/model';
-
-// Asks for a plan name until it is free (or the user cancels); `exceptId` is the plan being renamed.
-export function askPlanName(question: string, suggestion: string, exceptId?: string) {
-  let name = prompt(question, suggestion)?.trim();
-  while (name && nameTaken(name, exceptId))
-    name = prompt(`${t('plan.nameTaken', { name })}\n${question}`, name)?.trim();
-  return name;
-}
 
 /* ---------- Plan switcher (sidebar on desktop, menu on mobile) ---------- */
 
@@ -102,7 +86,10 @@ let allPlans = false;
 
 export function renderPlanSwitch() {
   const options = plans.list
-    .map(p => `<option value="${p.id}" ${p.id === plans.current ? 'selected' : ''}>${esc(p.name)}</option>`)
+    .map(
+      p =>
+        `<option value="${p.id}" ${p.id === plans.current ? 'selected' : ''}>${esc(planEmoji(p) + ' ' + p.name)}</option>`,
+    )
     .join('');
   const opened = planOpened();
   const sorted = [...plans.list].sort((a, b) => (opened[b.id] || 0) - (opened[a.id] || 0));
@@ -110,7 +97,7 @@ export function renderPlanSwitch() {
     .filter((p, i) => allPlans || i < SHOWN || p.id === plans.current)
     .map(
       p =>
-        `<li><button type="button" class="plan-row" data-plan-open="${p.id}" aria-current="${p.id === plans.current}"><span class="plan-dot"></span><span class="plan-row-name">${esc(p.name)}</span></button></li>`,
+        `<li><button type="button" class="plan-row" data-plan-open="${p.id}" aria-current="${p.id === plans.current}" title="${esc(p.name)}"><span class="plan-dot"></span><span class="plan-emoji" aria-hidden="true">${esc(planEmoji(p))}</span><span class="plan-row-name">${esc(p.name)}</span></button></li>`,
     )
     .join('');
   const more =
@@ -147,19 +134,18 @@ document.addEventListener('click', e => {
   if (!act) return;
   const plan = currentPlan()!;
   if (act === 'new') {
-    const name = askPlanName(t('plan.newPrompt'), uniqueName(t('plan.defaultName')));
-    if (name) {
-      createPlan(name);
+    askPlan(t('plan.newPrompt'), uniqueName(t('plan.defaultName')), undefined, (name, emoji) => {
+      createPlan(name, undefined, false, emoji);
       toast(t('toast.planCreated'));
-    }
+    });
   } else if (act === 'rename') {
-    const name = askPlanName(t('plan.renamePrompt'), plan.name, plan.id);
-    if (name) {
-      plan.name = name;
+    const rename = (name: string, emoji: string) => {
+      Object.assign(plan, { name, emoji });
       save();
       renderPlanSwitch();
       toast(t('toast.planRenamed'));
-    }
+    };
+    askPlan(t('plan.renamePrompt'), plan.name, plan.emoji, rename, plan.id);
   } else if (act === 'merge') {
     openMerge(plan);
   } else if (act === 'export') {

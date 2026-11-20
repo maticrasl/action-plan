@@ -446,9 +446,9 @@ suite(async () => {
     // Tick boxes are flat: the page's colour inside an outline in the card's edge colour. Done, they fill green.
     setView('activities');
     const css = el => getComputedStyle(el),
-      open = $('#view .col .card .check:not(.done):not(.doing)'),
-      doing = $('#view .col .card .check.doing'),
-      done = $('#view .col .card .check.done');
+      open = $('#view .acts .card .check:not(.done):not(.doing)'),
+      doing = $('#view .acts .card .check.doing'),
+      done = $('#view .acts .card .check.done');
     const bg = css(document.body).backgroundColor,
       sh = css(open).boxShadow,
       ring = sh.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 0px 0px 1.5px inset/),

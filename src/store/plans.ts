@@ -161,9 +161,9 @@ export function uniqueName(name: string) {
 // The open plan is the sample (or another demo): not the user's own.
 export const isDemo = () => currentPlan()?.demo === true;
 
-export function createPlan(name: string, data: Db = emptyDb(), demo = false): void {
+export function createPlan(name: string, data: Db = emptyDb(), demo = false, emoji?: string): void {
   const id = uid();
-  plans.list.push(demo ? { id, name, demo } : { id, name });
+  plans.list.push({ id, name, ...(emoji ? { emoji } : {}), ...(demo ? { demo } : {}) });
   plans.current = id;
   setDb(data);
   takeSnapshot(db); // what a new plan starts with is not an edit
