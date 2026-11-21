@@ -26,6 +26,7 @@ export const GUIDE_ACTIONS = [
   'view-timeline',
   'replan',
   'view-graphs',
+  'view-review',
   'ask-tip',
 ] as const;
 export type GuideAction = (typeof GUIDE_ACTIONS)[number];
@@ -62,4 +63,5 @@ export const VIEW_ARTICLE: Record<string, ArticleId> = {
   map: 'h-map',
   timeline: 'h-timeline',
   graphs: 'h-graphs',
+  review: 'h-review',
 };

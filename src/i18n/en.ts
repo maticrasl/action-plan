@@ -12,6 +12,7 @@ export const en = {
     'nav.goals': 'Goals',
     'nav.states': 'States',
     'nav.graphs': 'Graphs',
+    'nav.review': 'Review',
     'view.guide': 'Guide',
     'guide.search': 'Search the guide…',
     'guide.noMatch': 'Nothing found for “{query}”. Try another word.',
@@ -79,6 +80,7 @@ export const en = {
     'map.visionLinked': 'Linked: “{a}” serves “{b}”',
     'map.visionUnlinked': 'Link removed',
     'view.graphs': 'Measurement graphs',
+    'view.review': 'Review',
     'gr.since': 'since {date}',
     'gr.oneMeasurement': 'Only one measurement so far',
     'gr.measurements': 'Measurements',
@@ -598,6 +600,7 @@ export const en = {
       'Goals are where you want to get. Make each one SMART and link it to the current state that measures it and the activities that move it forward. A goal can also be measured simply by how many of its activities are done. Long-press or right-click a card to show the goal in the timeline or on the map.',
     'help.view.states':
       'Current states are what you measure, such as your longest run or your savings. Describe what the value means and how you measure it, and record a new value whenever it changes to keep a history; Graphs draws it over time. A state can instead add up its amounts – kilometres run, money saved: add one by tapping its card (or +), or by ticking a routine that improves it. Tap a card to record a new value; long-press or right-click it to add a value, edit the state or show it in Graphs or on the map.',
+    'help.view.review': 'What you did. The done log lists every step, tick and value by week; tap one to open it.',
     'help.view.graphs':
       'Graphs show how each current state has changed: every measurement, the target of the goal it measures, and the change since the first measurement. Record new values on the state to extend the line – one per day, so a new value for a day replaces the old one. A state that adds up shows its sums per day, week, month or year (the period under way is lighter), or its running total – switch above the graph. Each routine shows its check-ins per period against what the period asks for; switch above its graph to count them per day, week, month or year, or in total, like a state that adds up. Today is the light red column. Pinch or Ctrl + scroll on a graph to stretch its time axis (or press + and − while it is selected), and drag to move along it; with one finger, tap, then touch again and drag down to stretch it, up to shrink it. The table below each graph lists the measurements, newest first; delete a wrong one there. Long-press or right-click a graph for its menu: edit the item, add a value or show it in another view.',
     'help.view.activities':
@@ -623,6 +626,7 @@ export const en = {
     'help.tip.routineList':
       'A routine list: tick off today’s items one by one; once all are ticked, today is ticked off on the week strip. Ticking a day on the strip ticks all its items. Tomorrow the list starts afresh.',
     'help.tip.hideDone': 'Hide finished items to focus on what is left.',
+    'help.tip.logScope': 'This plan, or all your plans except the sample.',
     'help.tip.replan': 'Moves every late step at once, keeping their order.',
     'help.tip.status': 'Colours show each item’s status: not started, in progress, late, waiting or done.',
     'help.tip.grChange':
@@ -816,6 +820,19 @@ export const en = {
     'log.ticks': { one: '{n} routine day ticked', other: '{n} routine days ticked' },
     'log.values': { one: '{n} value recorded', other: '{n} values recorded' },
     'log.reached': 'Reached “{name}”',
+    'log.title': 'Done log',
+    'log.thisWeek': 'This week',
+    'log.lastWeek': 'Last week',
+    'log.scope.plan': 'This plan',
+    'log.scope.all': 'All plans',
+    'log.filter.all': 'All',
+    'log.filter.steps': 'Steps',
+    'log.filter.routines': 'Routines',
+    'log.filter.values': 'Values',
+    'log.filter.goals': 'Goals',
+    'log.more': 'Show earlier',
+    'log.empty': 'Nothing ticked yet. What you finish will be listed here, week by week.',
+    'log.openedPlan': 'Opened plan “{name}”',
     'dash.factLate': { one: '{n} activity running late', other: '{n} activities running late' },
     'dash.factWaiting': { one: '{n} activity waiting for another', other: '{n} activities waiting for others' },
     'acts.hideDone': 'Hide done and achieved',

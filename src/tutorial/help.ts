@@ -28,6 +28,7 @@ export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] =
   { sel: '.routines-title', key: 'routines', where: 'beforeend' },
   { sel: '.routine-list', key: 'routineToday', where: 'beforebegin' },
   { sel: '[data-hide-done]', key: 'hideDone' },
+  { sel: '[data-log-scope]', key: 'logScope' },
   { sel: '[data-replan]', key: 'replan' },
   { sel: '.gr-delta', key: 'grChange' },
   { sel: '.gr-legend', key: 'grLegend', where: 'beforeend' },

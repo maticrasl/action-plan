@@ -11,6 +11,7 @@ export type ViewName =
   | 'map'
   | 'timeline'
   | 'graphs'
+  | 'review'
   | 'guide';
 
 // Ids are of items, relations or visions; a goal filter of '' means all goals. The last three
