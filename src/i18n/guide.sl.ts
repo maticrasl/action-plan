@@ -540,7 +540,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     group: 'data',
     title: 'Ali lahko izgubim svoje načrte?',
     body: `<p data-only="localOnly"><strong>Vaši načrti so zdaj samo v tem brskalniku.</strong></p>
-<p>Da, če obstajajo le na enem mestu. Načrti, ki so samo v brskalniku, izginejo, ko izbrišete podatke strani v brskalniku, ko odstranite brskalnik ali ko izgubite napravo. Nekateri brskalniki izbrišejo podatke strani, ki jih dolgo niste obiskali; nameščena aplikacija to naredi manj verjetno.</p>
+<p>Da, če obstajajo le na enem mestu. Načrti, ki so samo v brskalniku, izginejo, ko izbrišete podatke strani v brskalniku, ko odstranite brskalnik ali ko izgubite napravo. Nekateri brskalniki izbrišejo podatke strani, ki jih dolgo niste obiskali; nameščena aplikacija to naredi manj verjetno. Aplikacija prosi brskalnik, naj njene podatke obdrži; če vas brskalnik vpraša, ali to dovolite, dovolite.</p>
 <p>Za varnost naredite eno od tega:</p>
 <ul>
 <li><strong>Prijavite se z Googlom</strong>, da je kopija v vašem Drivu in na vaših drugih napravah.</li>
