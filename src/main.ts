@@ -19,6 +19,7 @@ import './views/events';
 import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { on } from './store/events';
+import { keepStorage } from './store/persist';
 import { scheduleSync } from './sync/sync';
 import { connectSync, initSync, renderSync } from './ui/sync-ui';
 import { setRenderer } from './ui/render';
@@ -52,6 +53,7 @@ connectSync({ enterUser: (id: string) => enterUser(id), offerWelcome: () => offe
 on('saving', () => offerReached());
 on('saved', () => {
   dropUndo();
+  keepStorage();
   scheduleSync();
 });
 on('plansChanged', () => {

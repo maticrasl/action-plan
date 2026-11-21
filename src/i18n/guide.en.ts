@@ -540,7 +540,7 @@ export const guideEn = [
     group: 'data',
     title: 'Can I lose my plans?',
     body: `<p data-only="localOnly"><strong>Your plans are in this browser only right now.</strong></p>
-<p>Yes, if they exist in one place only. Plans kept only in the browser are gone when the browser’s site data is cleared, when the browser is removed, or when the device is lost. Some browsers clear data of sites not visited for a long time; installing the app makes that less likely.</p>
+<p>Yes, if they exist in one place only. Plans kept only in the browser are gone when the browser’s site data is cleared, when the browser is removed, or when the device is lost. Some browsers clear data of sites not visited for a long time; installing the app makes that less likely. The app asks the browser to keep its data; if the browser asks you whether to allow that, allow it.</p>
 <p>To be safe, do one of these:</p>
 <ul>
 <li><strong>Log in with Google</strong>, so that a copy is in your Drive and on your other devices.</li>
