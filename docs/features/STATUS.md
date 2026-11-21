@@ -43,8 +43,8 @@ Guide article is then added when the Guide exists.
 - [ ] `17-undo-trash-snapshots`, session B: earlier versions and full backup
   - built 2026-11-16 (`js/backup.js`): Back up everything; Restore from a backup as copies, all
     plans, missing visions. Still open: Merge into my plans, choosing which plans, Earlier versions
-- [ ] `12-replan`
-  - built 2026-11-20 on `feat/replan`; tick once the owner has seen it
+- [x] `12-replan` 2026-11-21
+  - shipped in #44
 - [ ] `15-notes`
 - [ ] `06-goal-form`
 - [ ] `30-what-it-costs`, `25-planned-reward`, `21-future-to-avoid` (three small ones; one session if it fits, else one each)
@@ -52,16 +52,16 @@ Guide article is then added when the Guide exists.
 - [ ] `05-line-of-sight`
 - [ ] `03-life-areas`
 - [ ] `01-guided-discovery`
-- [ ] `08-pace-and-forecast`
-  - built 2026-11-20 on `feat/pace-forecast`; tick once the owner has seen it
+- [x] `08-pace-and-forecast` 2026-11-21
+  - shipped in #44; weighted trend #45
 - [ ] `07-keep-goals`
-- [ ] `16-is-it-working`
-  - built 2026-11-20 on `feat/is-it-working`; tick once the owner has seen it
+- [x] `16-is-it-working` 2026-11-21
+  - shipped in #44
 - [ ] `14-reviews`, session A: weekly
 - [ ] `14-reviews`, session B: monthly
 - [ ] `14-reviews`, session C: yearly
-- [ ] `19-csv`
-  - built 2026-11-20 on `feat/csv`; tick once the owner has seen it
+- [x] `19-csv` 2026-11-21
+  - shipped in #44
 - [ ] `18-progress-report`
 - [ ] `feedback-link` (any time after the restructure)
 - [ ] `20-mcp-server`, step 0: the trial with the owner
