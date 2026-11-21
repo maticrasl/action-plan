@@ -226,7 +226,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Delam, a število se ne premakne',
     body: `<p>Kljukice brez premika so znak, da je treba pogledati načrt, in dobro je, da to vidite.</p>
 <ul>
-<li><strong>Je še prezgodaj?</strong> Teža, kondicija, prihranki in veščine se premikajo počasi in neenakomerno. Graf glejte čez šest ali osem tednov, ne od ene meritve do druge. Napoved gleda zadnjih šest tednov, ne zadnje meritve.</li>
+<li><strong>Je še prezgodaj?</strong> Teža, kondicija, prihranki in veščine se premikajo počasi in neenakomerno. Graf glejte čez šest ali osem tednov, ne od ene meritve do druge. Napoved gleda zadnjih šest tednov, najbolj zadnje dni, ne zadnje meritve.</li>
 <li><strong>Je mera prava?</strong> Morda ste v boljši formi, tehtnica pa stoji. Dodajte drugo trenutno stanje, ki ujame, kar se spreminja: obseg pasu, tempo, kako gredo stopnice.</li>
 <li><strong>So to pravi koraki?</strong> Biti zaposlen in napredovati sta različni stvari. Katera aktivnost naj bi premaknila to število? Če je bila povezava le upanje, za en mesec preizkusite drug korak. Pod grafom stanja »Ali deluje?« primerja tedne, ko ste rutino izvajali, s tedni, ko je niste. Preden kaj pove, potrebuje kak mesec ali dva kljukic in meritev.</li>
 <li><strong>Je odmerek dovolj velik?</strong> Enkrat na teden vas morda drži na mestu; dvakrat vas morda premakne.</li>

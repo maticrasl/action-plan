@@ -49,6 +49,12 @@ in placement, not by post-processing the drawn lines. The same goes for `tests/b
 **Files moved by script, not retyped.** `npm run move` and `npm run move-steps` copy code byte for
 byte. Retyping moved code from memory changes it by accident.
 
+**The pace trend is weighted and starts from its line.** `trend` in `core/pace.ts` fits least
+squares over 42 days with each measurement's weight halving every 14 days of age, and starts from
+the line, not from the latest measurement. Simulated on noisy weight series (2026-11-21), this
+matched plain least squares on a steady rate and gave the smallest forecast error when the rate
+changed; starting from the last point added noise.
+
 ## Stored data
 
 **Storage keys, the sync file and exported files are frozen.** Real users have plans in them, on

@@ -226,7 +226,7 @@ export const guideEn = [
     title: 'I do the work, but the number doesn’t move',
     body: `<p>Ticks without movement are a sign to look at the plan, and it is good that you can see it.</p>
 <ul>
-<li><strong>Is it too early?</strong> Weight, fitness, savings and skills move slowly and unevenly. Look at the graph over six or eight weeks, not from one measurement to the next. The forecast looks at the last six weeks, not at the last measurement.</li>
+<li><strong>Is it too early?</strong> Weight, fitness, savings and skills move slowly and unevenly. Look at the graph over six or eight weeks, not from one measurement to the next. The forecast looks at the last six weeks, the recent ones most, not at the last measurement.</li>
 <li><strong>Is the measure right?</strong> Perhaps you are getting fitter while the scale stays still. Add a second current state that catches what is changing: waist, pace, how the stairs feel.</li>
 <li><strong>Are these the right steps?</strong> Being busy and moving forward are different things. Which activity was meant to move this number? If the link was a hope, test another step for a month. Under a state’s graph, “Is it working?” compares the weeks you kept a routine with the weeks you did not. It needs a couple of months of ticks and measurements before it says anything.</li>
 <li><strong>Is the dose enough?</strong> Once a week may hold you where you are; twice may move you.</li>

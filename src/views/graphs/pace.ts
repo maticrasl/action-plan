@@ -51,14 +51,13 @@ export function paceMarks(goals: Goal[], points: PacePoint[], px: Axis, py: Axis
       return `<line class="gr-pace" x1="${px(a).toFixed(1)}" y1="${py(paceAt(g, a)!).toFixed(1)}" x2="${px(b).toFixed(1)}" y2="${py(paceAt(g, b)!).toFixed(1)}"/>`;
     })
     .join('');
-  const slope = trend(points, today()),
-    last = points.filter(p => p.day <= dayNum(today())).at(-1);
-  if (slope === null || !last) return lines;
+  const tr = trend(points, today());
+  if (!tr) return lines;
   // In pixels, cut where it leaves the plot at the top or bottom.
-  const ax = px(last.day),
-    ay = py(last.value);
+  const ax = px(tr.day),
+    ay = py(tr.value);
   let bx = px(x1),
-    by = py(last.value + slope * (x1 - last.day));
+    by = py(tr.value + tr.slope * (x1 - tr.day));
   const edge = by < GR.T ? GR.T : by > GR.H - GR.B ? GR.H - GR.B : by;
   if (edge !== by) [bx, by] = [ax + ((bx - ax) * (edge - ay)) / (by - ay), edge];
   return `${lines}<line class="gr-trend" x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}"/>`;
