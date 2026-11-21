@@ -27,7 +27,7 @@ first.
 - [x] Restructure finished (phase 10 done; see `docs/restructure/STATUS.md`) 2026-11-18
 - [x] Guidance 1: Guide page (`docs/guidance/01-guide-page.md`) 2026-11-19
 - [x] Guidance 2: Walkthrough (`docs/guidance/02-walkthrough.md`) 2026-11-19
-- [ ] Guidance 3: Tips (`docs/guidance/03-tips.md`)
+- [x] Guidance 3: Tips (`docs/guidance/03-tips.md`) 2026-11-21
 
 `feedback-link` below needs only the restructure. It may be built before the guidance work; its
 Guide article is then added when the Guide exists.
@@ -38,15 +38,16 @@ Guide article is then added when the Guide exists.
   - parts 2 (sync-file guard, `SYNC_VERSION = 2`) and 3 (`withPlan`, `editPlan`) built 2026-11-20 on
     `feat/undo-trash`; part 1 (journal) still open
 - [ ] `13-done-log`
-- [ ] `17-undo-trash-snapshots`, session A: undo and recently deleted
-  - built 2026-11-20 on `feat/undo-trash` (`docs/specs/2026-11-20-undo-trash.md`); tick once the owner has seen it
+- [x] `17-undo-trash-snapshots`, session A: undo and recently deleted 2026-11-21
+  - shipped (`docs/specs/2026-11-20-undo-trash.md`). Known gap: no "Show" after restoring into a
+    plan that is not open
 - [ ] `17-undo-trash-snapshots`, session B: earlier versions and full backup
   - built 2026-11-16 (`js/backup.js`): Back up everything; Restore from a backup as copies, all
     plans, missing visions. Still open: Merge into my plans, choosing which plans, Earlier versions
 - [x] `12-replan` 2026-11-21
   - shipped in #44
 - [ ] `15-notes`
-- [ ] `06-goal-form`
+- [x] `06-goal-form` 2026-11-21
 - [ ] `30-what-it-costs`, `25-planned-reward`, `21-future-to-avoid` (three small ones; one session if it fits, else one each)
 - [ ] `09-today`
 - [ ] `05-line-of-sight`
@@ -76,18 +77,18 @@ owner may move a line; a line may not come before one it needs.
 
 | # | About | Confirmed by the owner |
 |---|---|---|
-| 1 | Journal store | open |
-| 2 | Notes kept on the item | open |
+| 1 | Journal store | yes, 2026-11-21 |
+| 2 | Notes kept on the item | yes, 2026-11-21 |
 | 3 | Recently deleted on the device; restore adds copies | changed 2026-11-20: Recently deleted **syncs**, until deleted for good, emptied or 30 days old; restore into a plan that is not open happens in the background |
-| 4 | Today is a new view; phone tab bar | open |
-| 5 | Reviews cover all plans; no quarters | open |
-| 6 | Dot on the Review item | open |
-| 7 | Life areas as text on a vision | open |
-| 8 | Guidance texts for visions | open |
-| 9 | MCP server talks to the open app | open |
+| 4 | Today is a new view; phone tab bar | yes, 2026-11-21 |
+| 5 | Reviews cover all plans; no quarters | yes, 2026-11-21 |
+| 6 | Dot on the Review item | yes, 2026-11-21 |
+| 7 | Life areas as text on a vision | yes, 2026-11-21 |
+| 8 | Guidance texts for visions | yes, 2026-11-21 |
+| 9 | MCP server talks to the open app | yes, 2026-11-21 |
 | 10 | GitHub Issues for feedback | open |
-| 11 | Sample plan gets dates, a note, a reward | open |
-| 12 | Templates stay without personal fields | open |
+| 11 | Sample plan gets dates, a note, a reward | yes, 2026-11-21 |
+| 12 | Templates stay without personal fields | yes, 2026-11-21 |
 | 13 | Only the glow loses its gold | changed 2026-11-18: the glow **and the blaze at the top left** lose their gold; the Purpose card and tag are always gold |
 | 14 | Letters light by today's rules | yes, 2026-11-18 |
 
@@ -96,8 +97,8 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 ## Notes for the next session
 
 - Plans were written 2026-11-15 against `5b71e59`; find code with `npm run map`, not the plans' paths.
-- Built and shipped but not ticked until the owner confirms: `06-goal-form` (#25), Guidance 3 tips
-  (#29, #30), `feedback-link` (#32; check the `idea` label and both forms after the deploy).
+- Confirmed 2026-11-21: decisions 1, 2, 4 to 9, 11, 12; ticked 06, Guidance 3, 17 A. Still waiting:
+  decision 10 (feedback channel) and the owner's check of `feedback-link` (#32).
 - 2026-11-20, branch `feat/undo-trash`: sync-file guard, Undo, synced Recently deleted
   (`core/trash.ts`, `store/trash.ts`, `ui/undo.ts`, `ui/trash-dialog.ts`). Items are deleted without
   asking; plans keep their dialog. Backups stay `version: 1` and hold no trash, so older copies
