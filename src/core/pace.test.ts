@@ -119,8 +119,47 @@ describe('trend', () => {
           [0, 2],
         ]),
         TODAY,
-      ),
+      )?.slope,
     ).toBeCloseTo(1 / 7);
+  });
+  test('recent measurements weigh more', () => {
+    // Mirror images: flat then rising, rising then flat. Equal weights would give both the same slope.
+    const late = trend(
+      pts([
+        [-28, 0],
+        [-21, 0],
+        [-14, 0],
+        [-7, 7],
+        [0, 14],
+      ]),
+      TODAY,
+    )!.slope;
+    const early = trend(
+      pts([
+        [-28, 0],
+        [-21, 7],
+        [-14, 14],
+        [-7, 14],
+        [0, 14],
+      ]),
+      TODAY,
+    )!.slope;
+    expect(late).toBeGreaterThan(early + 0.05);
+  });
+  test('starts from the fitted line, not from a noisy last measurement', () => {
+    const r = trend(
+      pts([
+        [-28, 0],
+        [-21, 7],
+        [-14, 14],
+        [-7, 21],
+        [0, 34],
+      ]),
+      TODAY,
+    )!;
+    expect(r.day).toBe(T);
+    expect(r.value).toBeGreaterThan(28);
+    expect(r.value).toBeLessThan(34);
   });
   test('the last 42 days when 3 or more fall inside', () => {
     // Old points far off the line would pull it; inside 42 days it climbs 1 a day.
@@ -134,7 +173,7 @@ describe('trend', () => {
           [0, 40],
         ]),
         TODAY,
-      ),
+      )?.slope,
     ).toBeCloseTo(1);
   });
   test('else the last 5 measurements', () => {
@@ -146,7 +185,7 @@ describe('trend', () => {
       [-70, 30],
       [-10, 90],
     ]);
-    expect(trend(list, TODAY)).toBeCloseTo(1);
+    expect(trend(list, TODAY)?.slope).toBeCloseTo(1);
   });
 });
 
@@ -176,6 +215,19 @@ describe('forecast', () => {
   });
   test('lower is better', () => {
     expect(run(-1, { baseline: '100', target: '0' })).toEqual({ day: T + 50, late: 0 });
+  });
+  test('the fitted line already past the target: reached by the latest day', () => {
+    expect(
+      forecast(
+        g(),
+        pts([
+          [-28, 40],
+          [-14, 99],
+          [0, 99],
+        ]),
+        TODAY,
+      ),
+    ).toEqual({ day: T, late: 0 });
   });
   test('too few points or already reached: none', () => {
     expect(forecast(g(), pts([[0, 50]]), TODAY)).toBeNull();
@@ -221,7 +273,14 @@ describe('goals in a plan', () => {
   };
 
   test('a plain state: its measurements', () => {
-    const s: State = { id: 's', title: 's', description: '', value: '40', date: TODAY, history: [{ date: TODAY, value: '40' }] };
+    const s: State = {
+      id: 's',
+      title: 's',
+      description: '',
+      value: '40',
+      date: TODAY,
+      history: [{ date: TODAY, value: '40' }],
+    };
     add(s, g());
     expect(paceSeries(s, g())).toEqual([{ day: T, date: TODAY, value: 40 }]);
     // A single measurement: a status, no forecast.
@@ -251,7 +310,14 @@ describe('goals in a plan', () => {
   test('no measuring state, routines kept, paused or achieved: none', () => {
     db.goals.push(g({ current: '10' }));
     expect(goalPace(db.goals[0], TODAY)).toBeNull();
-    const s: State = { id: 's', title: 's', description: '', value: '10', date: TODAY, history: [{ date: TODAY, value: '10' }] };
+    const s: State = {
+      id: 's',
+      title: 's',
+      description: '',
+      value: '10',
+      date: TODAY,
+      history: [{ date: TODAY, value: '10' }],
+    };
     add(s, g({ id: 'h' }));
     expect(goalPace(db.goals[1], TODAY)).not.toBeNull();
     for (const more of [{ progress: 'routines' }, { status: 'paused' }, { status: 'achieved' }] as Partial<Goal>[]) {
