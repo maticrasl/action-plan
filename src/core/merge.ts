@@ -12,6 +12,7 @@ import {
   type Activity,
   type Db,
   type Goal,
+  type ISODate,
   type ISOTime,
   type IdSet,
   type Plan,
@@ -78,6 +79,8 @@ export const itemContent = (item: { updatedAt?: ISOTime }): string => {
 export function takeSnapshot(data: Db): void {
   syncSnapshot = new Map(SYNC_COLLS.flatMap(c => data[c].map((x): [string, string] => [x.id, itemContent(x)])));
   statusSnapshot = new Map([...data.goals, ...data.activities].map((x): [string, string] => [x.id, statusKey(x)]));
+  // List items ticked, as '<activity>/<item>', so a tick is told apart from an item ticked before.
+  data.activities.forEach(a => a.list?.forEach(i => i.done && statusSnapshot.set(`${a.id}/${i.id}`, 'done')));
 }
 // The open plan's tracking, kept aside while another plan is stamped (store/plans.ts editPlan).
 export const keepSnapshot = () => ({ sync: syncSnapshot, status: statusSnapshot });
@@ -102,6 +105,26 @@ function stampStatus(data: Db): void {
       !before.endsWith(`|${x.autoStarted}`);
     if (autoStart) delete x.statusSince;
     else x.statusSince = day;
+  });
+  stampCompletion(data, day);
+}
+
+// The day a step, list item or goal was finished (feature 13): set when it becomes done or is new and
+// done, unless the form gave one; removed when it is no longer done. Items done before are left alone.
+function stampCompletion(data: Db, day: ISODate): void {
+  const mark = (x: { doneAt?: ISODate }, done: boolean, was: boolean) => {
+    if (!done) delete x.doneAt;
+    else if (!was && !x.doneAt) x.doneAt = day;
+  };
+  const wasStatus = (id: string) => statusSnapshot.get(id)?.split('|')[0];
+  data.goals.forEach(g => {
+    if (g.status !== 'achieved') delete g.achievedAt;
+    else if (wasStatus(g.id) !== 'achieved' && !g.achievedAt) g.achievedAt = day;
+  });
+  data.activities.forEach(a => {
+    if (a.repeat) return; // routines are dated by their check-ins
+    mark(a, a.status === 'done', wasStatus(a.id) === 'done');
+    a.list?.forEach(i => mark(i, !!i.done, statusSnapshot.has(`${a.id}/${i.id}`)));
   });
 }
 

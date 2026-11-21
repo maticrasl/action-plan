@@ -90,6 +90,7 @@ export function sampleData(): Omit<Db, 'deleted'> {
           startDate: d(-90),
           deadline: d(-10),
           status: 'achieved',
+          achievedAt: d(-10),
         },
         {
           id: spanish,
@@ -221,11 +222,11 @@ export function sampleData(): Omit<Db, 'deleted'> {
     ),
     activities: withText(
       [
-        { id: a[0], status: 'done', startDate: d(-30), dueDate: d(-20) }, // running shoes
+        { id: a[0], status: 'done', doneAt: d(-13), startDate: d(-30), dueDate: d(-20) }, // running shoes
         { id: a[1], status: 'doing', startDate: d(-30), dueDate: d(88) }, // training plan
         { id: a[2], status: 'todo', startDate: d(-3), dueDate: d(5) }, // register for the race
         { id: a[3], status: 'todo', startDate: d(21), dueDate: d(28) }, // 10 km test race
-        { id: a[4], status: 'done', startDate: d(-60), dueDate: d(-55) }, // automate savings
+        { id: a[4], status: 'done', doneAt: d(-11), startDate: d(-60), dueDate: d(-55) }, // automate savings
         { id: a[5], status: 'todo', startDate: d(-14), dueDate: d(-1) }, // cancel subscriptions (late)
         {
           id: a[6],
@@ -238,14 +239,14 @@ export function sampleData(): Omit<Db, 'deleted'> {
         { id: a[7], status: 'doing', startDate: d(-30), dueDate: d(26) }, // weeks 1–8
         { id: a[8], status: 'todo', startDate: d(27), dueDate: d(88) }, // weeks 9–16
         { id: a[9], status: 'todo', dueDate: d(75) }, // long run
-        { id: a[10], status: 'done', startDate: d(-14), dueDate: d(-10) }, // review statements
+        { id: a[10], status: 'done', doneAt: d(-9), startDate: d(-14), dueDate: d(-10) }, // review statements
         { id: a[11], status: 'todo', startDate: d(-9), dueDate: d(-1) }, // cancel streaming (late)
         { id: a[12], status: 'doing', startDate: d(-25), dueDate: d(60) }, // cut evening snacks
         { id: a[13], status: 'doing', startDate: d(-15), dueDate: d(10) }, // list items for sale (a list, the first one done)
-        { id: a[14], status: 'done', startDate: d(-90), dueDate: d(-12) }, // finish course modules
+        { id: a[14], status: 'done', doneAt: d(-12), startDate: d(-90), dueDate: d(-12) }, // finish course modules
         { id: a[15], status: 'todo', startDate: d(30), dueDate: d(35) }, // choose a language app
-        { id: a[16], status: 'done', startDate: d(-25), dueDate: d(-15) }, // contractor quotes
-        { id: a[17], status: 'done', startDate: d(-12), dueDate: d(-4) }, // remove old tiles
+        { id: a[16], status: 'done', doneAt: d(-6), startDate: d(-25), dueDate: d(-15) }, // contractor quotes
+        { id: a[17], status: 'done', doneAt: d(-2), startDate: d(-12), dueDate: d(-4) }, // remove old tiles
         { id: a[18], status: 'doing', startDate: d(-3), dueDate: d(30) }, // bathroom works
         { id: a[19], status: 'doing', startDate: d(-3), dueDate: d(8) }, // new plumbing
         { id: a[20], status: 'todo', startDate: d(9), dueDate: d(20) }, // tiling

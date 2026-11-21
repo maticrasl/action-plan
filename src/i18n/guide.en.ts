@@ -445,7 +445,7 @@ export const guideEn = [
     id: 'h-overview',
     group: 'how',
     title: 'Overview',
-    body: `<p>The Overview is the page for most days: how far along your active goals are on average, the activities due by today or overdue (“Show all” adds the others in progress), the routines today still asks for, and your active goals. Tick things here without going anywhere else.</p>`,
+    body: `<p>The Overview is the page for most days: how far along your active goals are on average, the activities due by today or overdue (“Show all” adds the others in progress), the routines today still asks for, and your active goals. Tick things here without going anywhere else. The line “This week” counts what you finished since Monday: steps, routine days, values, and goals reached. A finished step or goal remembers the day; change it in its form under Done on or Achieved on, for example when you record on Monday what you did on Friday.</p>`,
     action: { do: 'view-dashboard', label: 'Open the Overview' },
   },
   {

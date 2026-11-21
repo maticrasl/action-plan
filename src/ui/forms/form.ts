@@ -18,6 +18,7 @@ import { goalErrors, ownMetric, smartCheck } from '../../core/progress';
 import { addEntry, convertState, deleteEntry, entriesOf, isCumulative, recordMeasurement } from '../../core/cumulative';
 import { checkedOn, dayItemsDone, followList, setCheckin, tickable } from '../../core/routines/checkins';
 import { dropRoutineDeps } from '../../core/normalize';
+import { achievedDay, doneDay } from '../../core/done-log';
 import { save } from '../../store/plans';
 import { requestRender } from '../render';
 import type { Activity, Goal, Item, ItemKind, RelType, Relation, Scale, State, Vision } from '../../core/model';
@@ -61,6 +62,16 @@ export let formCtx: { kind: FormKind; id: string | null; choose?: Links; snap?: 
 export function field(name: string, label: string, input: string, hint = '') {
   return `<div class="field" data-field="${name}"><label for="f-${name}">${label}</label>${input}${hint ? `<div class="hint">${hint}</div>` : ''}<div class="err"></div></div>`;
 }
+// Done on / Achieved on (feature 13): shown while the status says finished, filled with that day.
+export const finishedField = (name: 'doneAt' | 'achievedAt', shown: boolean, day: string | undefined) =>
+  field(name, t(name === 'doneAt' ? 'f.doneAt' : 'f.achievedAt'), date(name, day || today())).replace(
+    'class="field"',
+    `class="field"${shown ? '' : ' hidden'}`,
+  );
+// Its day while it is shown, else ''.
+const finishedDay = (v: FormVals, name: 'doneAt' | 'achievedAt') =>
+  modal.querySelector<HTMLElement>(`[data-field="${name}"]`)?.hidden === false ? v[name] || '' : '';
+
 export const text = (name: string, v: string | undefined, ph = '') =>
   `<input type="text" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}">`;
 // A text field rather than type="number", so both a decimal dot and comma work in every browser.
@@ -225,6 +236,9 @@ export function submitForm() {
     // Only answers that contradict each other stop a save; unfinished SMART parts do not.
     const errs = goalErrors(v as unknown as Goal);
     if (Object.keys(errs).length) return showErrors(errs);
+    const reachedOn = finishedDay(v, 'achievedAt'),
+      wasReached = existing ? achievedDay(existing as Goal) : undefined;
+    if (reachedOn > today()) return showErrors({ achievedAt: t('err.doneFuture') });
     const g = Object.assign((existing as Goal) || { id: uid(), createdAt: today() }, {
       title: v.title.trim(),
       specific: v.specific.trim(),
@@ -252,6 +266,8 @@ export function submitForm() {
       if (s) g[k] = s;
       else delete g[k];
     }
+    // A day given in the form; the day it showed already may be an estimate, which is never stored.
+    if (g.status === 'achieved' && reachedOn && reachedOn !== wasReached) g.achievedAt = reachedOn;
     if (!existing) db.goals.push(g);
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
@@ -325,6 +341,9 @@ export function submitForm() {
     if (errors) return showErrors(errors);
     if (!repeat && !dueDate) return showErrors({ dueDate: t('err.dueRequired') });
     if (!repeat && startDate > dueDate) return showErrors({ dueDate: t('err.startAfterDue') });
+    const doneOn = finishedDay(v, 'doneAt'),
+      wasDone = existing ? doneDay(existing as Activity) : undefined;
+    if (!repeat && doneOn > today()) return showErrors({ doneAt: t('err.doneFuture') });
     const a = Object.assign((existing as Activity) || { id: uid(), createdAt: today() }, {
       // A list has no status field: it keeps its own (followList moves it on below).
       title: v.title.trim(),
@@ -344,7 +363,9 @@ export function submitForm() {
         before = new Map(((existing as Activity | undefined)?.list || []).map(i => [i.id, i]));
       a.list = list.map(i => {
         const was = before.get(i.id);
-        return was && was.text === i.text && !!was.done === i.done ? { ...i, at: was.at } : { ...i, at: now };
+        // The day it was ticked stays while it is ticked (feature 13).
+        const day = was?.done && i.done && was.doneAt ? { doneAt: was.doneAt } : {};
+        return was && was.text === i.text && !!was.done === i.done ? { ...i, at: was.at, ...day } : { ...i, at: now, ...day };
       });
       const kept = new Set(a.list.map(i => i.id));
       const removed = [...before.keys()].filter(id => !kept.has(id));
@@ -357,6 +378,7 @@ export function submitForm() {
         });
       if (!repeat) followList(a as WithList);
     }
+    if (!repeat && a.status === 'done' && doneOn && doneOn !== wasDone) a.doneAt = doneOn;
     if (!existing) db.activities.push(a);
     setLinks(a.id, 'subactivity', v.parent ? [v.parent] : []);
     setLinks(a.id, 'contributes', arr('goals'));

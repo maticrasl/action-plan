@@ -96,6 +96,7 @@ export interface Goal extends Item {
   offeredAt?: ISODate;
   createdAt?: ISODate;
   statusSince?: ISODate; // the day the status last changed (stamped on save; absent on older items)
+  achievedAt?: ISODate; // the day it became achieved (feature 13); absent otherwise and on older goals
 }
 
 // One measurement of a state.
@@ -150,6 +151,7 @@ export interface ListItem {
   text: string;
   done?: boolean;
   at?: ISOTime;
+  doneAt?: ISODate; // the day it was ticked; absent when not ticked and on older items
 }
 
 export interface Activity extends Item {
@@ -168,6 +170,7 @@ export interface Activity extends Item {
   scale?: Scale; // a routine's graph
   createdAt?: ISODate;
   statusSince?: ISODate; // the day the status last changed (stamped on save; absent on older items)
+  doneAt?: ISODate; // a one-time step or list: the day it became done; never on routines
 }
 
 export interface Relation extends Item {

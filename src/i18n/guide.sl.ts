@@ -445,7 +445,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-overview',
     group: 'how',
     title: 'Pregled',
-    body: `<p>Pregled je stran za večino dni: koliko ste v povprečju napredovali pri aktivnih ciljih, aktivnosti z rokom do danes ali zamujene (»Prikaži vse« doda še ostale v teku), rutine, ki jih današnji dan še čakajo, in vaši aktivni cilji. Tu kljukate, ne da bi šli kam drugam.</p>`,
+    body: `<p>Pregled je stran za večino dni: koliko ste v povprečju napredovali pri aktivnih ciljih, aktivnosti z rokom do danes ali zamujene (»Prikaži vse« doda še ostale v teku), rutine, ki jih današnji dan še čakajo, in vaši aktivni cilji. Tu kljukate, ne da bi šli kam drugam. Vrstica »Ta teden« prešteje, kaj ste opravili od ponedeljka: korake, dneve rutin, vrednosti in dosežene cilje. Opravljen korak ali dosežen cilj si zapomni dan; spremenite ga v njegovem obrazcu pod Opravljeno dne ali Doseženo dne, na primer ko v ponedeljek zapišete, kar ste naredili v petek.</p>`,
     action: { do: 'view-dashboard', label: 'Odpri Pregled' },
   },
   {
