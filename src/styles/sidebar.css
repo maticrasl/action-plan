@@ -83,7 +83,7 @@
   .nav-item,
   .nav-collapsed .nav-item {
     justify-content: center;
-    padding: 8px 0;
+    padding: 6px 0; /* nine views fit a 360 px high phone */
   }
   .nav-item span {
     position: absolute;

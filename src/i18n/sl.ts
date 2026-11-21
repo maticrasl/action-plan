@@ -12,6 +12,7 @@ export const sl: Language = {
     'nav.goals': 'Cilji',
     'nav.states': 'Stanja',
     'nav.graphs': 'Grafi',
+    'nav.review': 'Pogled nazaj',
     'view.guide': 'Vodnik',
     'guide.search': 'Iščite po vodniku …',
     'guide.noMatch': 'Za »{query}« ni zadetkov. Poskusite z drugo besedo.',
@@ -83,6 +84,7 @@ export const sl: Language = {
     'map.visionLinked': 'Povezano: »{a}« služi »{b}«',
     'map.visionUnlinked': 'Povezava odstranjena',
     'view.graphs': 'Grafi meritev',
+    'view.review': 'Pogled nazaj',
     'gr.since': 'od {date}',
     'gr.oneMeasurement': 'Zaenkrat le ena meritev',
     'gr.measurements': 'Meritve',
@@ -662,6 +664,8 @@ export const sl: Language = {
       'Cilji so tam, kamor želite priti. Vsak naj bo SMART in povezan s trenutnim stanjem, ki ga meri, in z aktivnostmi, ki ga premikajo naprej. Cilj lahko merite tudi preprosto s tem, koliko njegovih aktivnosti je opravljenih. Pridržite kartico ali jo kliknite z desno tipko, da cilj prikažete na časovnici ali zemljevidu.',
     'help.view.states':
       'Trenutna stanja so tisto, kar merite, na primer najdaljši tek ali prihranke. Opišite, kaj vrednost pomeni in kako jo merite, ob vsaki spremembi pa vpišite novo vrednost, da se ohrani zgodovina; Grafi jo prikažejo skozi čas. Stanje lahko količine tudi sešteva – pretečene kilometre, privarčevani denar: količino dodate s tapom na kartico (ali na +) ali s kljukico pri rutini, ki ga izboljšuje. Tapnite kartico, da vpišete novo vrednost; pridržite jo ali jo kliknite z desno tipko, da dodate vrednost, stanje uredite ali ga prikažete v Grafih ali na zemljevidu.',
+    'help.view.review':
+      'Kar ste naredili. Dnevnik opravljenega našteje vsak korak, kljukico in vrednost po tednih; tapnite enega, da ga odprete.',
     'help.view.graphs':
       'Grafi kažejo, kako se je spreminjalo posamezno trenutno stanje: vse meritve, ciljno vrednost cilja, ki ga meri, in spremembo od prve meritve. Nove vrednosti vpisujte pri stanju, da se črta podaljša – ena na dan, zato nova vrednost za isti dan nadomesti staro. Stanje, ki se sešteva, pokaže vsote po dnevih, tednih, mesecih ali letih (tekoče obdobje je svetlejše) ali skupno vsoto – preklopite nad grafom. Vsaka rutina pokaže odkljukanja po obdobjih glede na to, koliko obdobje zahteva; nad grafom lahko preklopite, da jih prešteje po dnevih, tednih, mesecih ali letih ali skupaj, tako kot pri stanju, ki se sešteva. Današnji dan je svetlo rdeč stolpec. Časovno os grafa raztegnete z razmikom prstov ali s Ctrl + koleščkom (ali s tipkama + in −, ko je graf izbran), po njej pa se premikate z vlečenjem; z enim prstom tapnite, se znova dotaknite in povlecite navzdol, da jo raztegnete, ali navzgor, da jo skrčite. Tabela pod grafom našteje meritve od najnovejše; napačno meritev izbrišete tam. Pridržite graf ali ga kliknite z desno tipko za njegov meni: element uredite, dodate vrednost ali ga prikažete v drugem pogledu.',
     'help.view.activities':
@@ -687,6 +691,7 @@ export const sl: Language = {
     'help.tip.routineList':
       'Rutinski seznam: današnje postavke odkljukajte eno za drugo; ko so odkljukane vse, se na tedenskem traku odkljuka današnji dan. Kljukica pri dnevu na traku odkljuka vse njegove postavke. Jutri se seznam začne znova.',
     'help.tip.hideDone': 'Skrijte opravljeno, da se osredotočite na preostalo.',
+    'help.tip.logScope': 'Ta načrt ali vsi vaši načrti razen vzorčnega.',
     'help.tip.replan': 'Premakne vse zamujene korake hkrati in ohrani njihov vrstni red.',
     'help.tip.status': 'Barve kažejo status posameznega elementa: ni začeto, v teku, zamuja, čaka ali opravljeno.',
     'help.tip.grChange':
@@ -933,6 +938,19 @@ export const sl: Language = {
       other: '{n} zapisanih vrednosti',
     },
     'log.reached': 'Doseženo »{name}«',
+    'log.title': 'Dnevnik opravljenega',
+    'log.thisWeek': 'Ta teden',
+    'log.lastWeek': 'Prejšnji teden',
+    'log.scope.plan': 'Ta načrt',
+    'log.scope.all': 'Vsi načrti',
+    'log.filter.all': 'Vse',
+    'log.filter.steps': 'Koraki',
+    'log.filter.routines': 'Rutine',
+    'log.filter.values': 'Vrednosti',
+    'log.filter.goals': 'Cilji',
+    'log.more': 'Pokaži prejšnje',
+    'log.empty': 'Odkljukanega še ni nič. Kar opravite, bo našteto tukaj, po tednih.',
+    'log.openedPlan': 'Odprt načrt »{name}«',
     'dash.factLate': {
       one: 'zamuja {n} aktivnost',
       two: 'zamujata {n} aktivnosti',

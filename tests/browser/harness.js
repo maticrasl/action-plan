@@ -93,7 +93,7 @@ const untickCook = () => (db.activities.find(a => a.repeat?.times === 5).checkin
 
 // Helpers that steps of several files share: the views, copies, amounts, plan files and dialogs,
 // weeks, form fields, visions, clicks and keys, the real Drive.
-const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs'];
+const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs', 'review'];
 
 const clone = x => JSON.parse(JSON.stringify(x));
 

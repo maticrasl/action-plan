@@ -7,9 +7,10 @@ export interface DoneEntry {
   day: ISODate;
   kind: DoneKind;
   plan: string;
-  id: string;
+  id: string; // a list item's is its list's, so tapping it opens the list
   title: string;
   detail?: string; // an item's list title, a value or an amount
+  goals?: string[]; // a step's, item's or routine's: the goals it contributes to
 }
 export interface DoneCounts {
   steps: number;
@@ -35,17 +36,21 @@ export function doneLog(plans: { plan: string; data: Db }[], from: ISODate, to: 
     if (day && day >= from && day <= to) out.push({ day, ...e });
   };
   for (const { plan, data } of plans) {
+    const feeds = new Map<string, string[]>();
+    data.relations.forEach(r => r.type === 'contributes' && feeds.set(r.from, [...(feeds.get(r.from) || []), r.to]));
     data.goals.forEach(g => add(achievedDay(g), { kind: 'goal', plan, id: g.id, title: g.title }));
     data.activities.forEach(a => {
+      const goals = feeds.get(a.id) || [];
       if (a.repeat) {
         Object.entries(a.checkins || {}).forEach(([day, v]) => {
-          if (v === 1) add(day, { kind: 'routine', plan, id: a.id, title: a.title });
+          if (v === 1) add(day, { kind: 'routine', plan, id: a.id, title: a.title, goals });
         });
       } else if (a.list?.length) {
         a.list.forEach(i => {
-          if (i.done) add(i.doneAt || dayOf(i.at), { kind: 'item', plan, id: i.id, title: i.text, detail: a.title });
+          if (i.done)
+            add(i.doneAt || dayOf(i.at), { kind: 'item', plan, id: a.id, title: i.text, detail: a.title, goals });
         });
-      } else add(doneDay(a), { kind: 'step', plan, id: a.id, title: a.title });
+      } else add(doneDay(a), { kind: 'step', plan, id: a.id, title: a.title, goals });
     });
     data.states.forEach(s => {
       if (s.cumulative)

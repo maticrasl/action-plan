@@ -95,7 +95,7 @@ function weekLine(now: string) {
     c.routineDays ? tp('log.ticks', c.routineDays) : '',
     c.values ? tp('log.values', c.values) : '',
   ].filter(Boolean);
-  return parts.length ? `<p class="week-line">${t('log.week', { parts: parts.join(' · ') })}</p>` : '';
+  return parts.length ? `<button class="week-line" data-log="view">${t('log.week', { parts: parts.join(' · ') })}</button>` : '';
 }
 
 export function activityRow(a: Activity) {

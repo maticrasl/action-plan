@@ -250,6 +250,7 @@ export const guideEn = [
 <p>Being hard on yourself does not make you work better. People who meet a slip with some kindness get back to it sooner than those who meet it with blame.</p>
 <p>Some things need more than a plan. If you feel low or anxious most days, or if tracking food, weight or exercise starts to rule your day, please talk to a doctor or a therapist, and set the tracking aside for now.</p>`,
     related: ['too-many', 'let-go', 'limits'],
+    action: { do: 'view-review', label: 'Open the done log' },
   },
   {
     id: 'too-busy',
@@ -442,10 +443,17 @@ export const guideEn = [
     action: { do: 'view-graphs', label: 'Open Graphs' },
   },
   {
+    id: 'h-review',
+    group: 'how',
+    title: 'Review',
+    body: `<p>The done log lists what you finished, week by week: steps, routine days, values and goals reached. Choose <strong>This plan</strong> or <strong>All plans</strong> above it, and narrow it to one kind with the chips. Tap a line to open it; in All plans that opens its plan first. <strong>Show earlier</strong> adds older weeks. Weeks with nothing done are left out.</p>`,
+    action: { do: 'view-review', label: 'Open Review' },
+  },
+  {
     id: 'h-overview',
     group: 'how',
     title: 'Overview',
-    body: `<p>The Overview is the page for most days: how far along your active goals are on average, the activities due by today or overdue (“Show all” adds the others in progress), the routines today still asks for, and your active goals. Tick things here without going anywhere else. The line “This week” counts what you finished since Monday: steps, routine days, values, and goals reached. A finished step or goal remembers the day; change it in its form under Done on or Achieved on, for example when you record on Monday what you did on Friday.</p>`,
+    body: `<p>The Overview is the page for most days: how far along your active goals are on average, the activities due by today or overdue (“Show all” adds the others in progress), the routines today still asks for, and your active goals. Tick things here without going anywhere else. The line “This week” counts what you finished since Monday: steps, routine days, values, and goals reached; tap it for the done log. A finished step or goal remembers the day; change it in its form under Done on or Achieved on, for example when you record on Monday what you did on Friday.</p>`,
     action: { do: 'view-dashboard', label: 'Open the Overview' },
   },
   {

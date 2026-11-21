@@ -77,6 +77,10 @@
       openForm('state', 'k');
       modal.close();
     });
+    // The done log over the same history, with 240 steps finished across it (feature 13).
+    for (let i = 0; i < 240; i++)
+      db.activities.push({ id: 'a' + i, title: 'Activity ' + i, status: 'done', doneAt: addDays(today(), -i * 4) });
+    check('240 steps + 1,100 amounts: review view', 100, () => setView('review'));
     deletePlan(plans.current);
     // Visions, last so their extra drawing doesn't weigh on the checks above: the 300-item map again,
     // with 20 visions in a tree that every goal serves (clouds, lines, the glow, a gold Purpose).

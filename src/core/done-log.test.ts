@@ -16,7 +16,16 @@ describe('doneDay', () => {
 
 describe('doneLog and weekCounts', () => {
   const data = plan({
-    goals: [{ id: 'g', title: 'Run 5 km', status: 'achieved', achievedAt: '2026-11-18' }],
+    goals: [
+      { id: 'g', title: 'Run 5 km', status: 'achieved', achievedAt: '2026-11-18' },
+      { id: 'g2', title: 'Sleep well', status: 'active' },
+    ],
+    relations: [
+      { id: 'r1', from: 's1', to: 'g', type: 'contributes' },
+      { id: 'r2', from: 's1', to: 'g2', type: 'contributes' },
+      { id: 'r3', from: 'r', to: 'w', type: 'improves' },
+      { id: 'r4', from: 'l', to: 's1', type: 'depends' },
+    ],
     activities: [
       act({ id: 's1', title: 'Buy shoes', status: 'done', doneAt: '2026-11-17' }),
       act({ id: 's-old', title: 'Old', status: 'done', doneAt: '2026-11-09' }),
@@ -68,9 +77,9 @@ describe('doneLog and weekCounts', () => {
 
   test('entries in the range, newest day first; a list shows its items, not itself', () => {
     expect(log.map(e => [e.day, e.kind, e.id])).toEqual([
-      ['2026-11-19', 'item', 'i2'],
+      ['2026-11-19', 'item', 'l'],
       ['2026-11-18', 'goal', 'g'],
-      ['2026-11-18', 'item', 'i1'],
+      ['2026-11-18', 'item', 'l'],
       ['2026-11-18', 'routine', 'r'],
       ['2026-11-18', 'amount', 'km'],
       ['2026-11-17', 'step', 's1'],
@@ -79,6 +88,30 @@ describe('doneLog and weekCounts', () => {
     ]);
     expect(log.find(e => e.kind === 'item')).toMatchObject({ plan: 'p', title: 'Bank', detail: 'Paperwork' });
     expect(log.find(e => e.kind === 'value')?.detail).toBe('81');
+  });
+
+  test('the goals a step, item or routine contributes to', () => {
+    expect(log.find(e => e.kind === 'step')?.goals).toEqual(['g', 'g2']);
+    expect(log.find(e => e.kind === 'routine')?.goals).toEqual([]);
+    expect(log.find(e => e.kind === 'item')?.goals).toEqual([]);
+    expect(log.find(e => e.kind === 'value')?.goals).toBeUndefined();
+  });
+
+  test('range borders are inclusive; a range across New Year', () => {
+    const p = plan({
+      activities: [
+        act({ id: 'x', status: 'done', doneAt: '2026-12-28' }),
+        act({ id: 'y', status: 'done', doneAt: '2027-01-03' }),
+        act({ id: 'z', status: 'done', doneAt: '2027-01-04' }),
+      ],
+    });
+    expect(doneLog([{ plan: 'p', data: p }], '2026-12-28', '2027-01-03').map(e => e.id)).toEqual(['y', 'x']);
+  });
+
+  test('two plans: both, by day', () => {
+    const a = plan({ activities: [act({ id: 'a1', status: 'done', doneAt: '2026-11-17' })] });
+    const b = plan({ activities: [act({ id: 'b1', status: 'done', doneAt: '2026-11-18' })] });
+    expect(doneLog([{ plan: 'A', data: a }, { plan: 'B', data: b }], '2026-11-16', '2026-11-22').map(e => e.plan)).toEqual(['B', 'A']);
   });
 
   test('counts: steps and items, routine days, values and amounts, goals', () => {

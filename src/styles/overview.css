@@ -23,9 +23,20 @@
   padding: 0;
 }
 .week-line {
+  display: block;
   margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 14px;
   color: var(--ink-2);
+  text-align: left;
+  cursor: pointer;
+}
+.week-line:hover {
+  color: var(--ink);
+  text-decoration: underline;
 }
 .facts li {
   padding: 4px 12px;

@@ -1,0 +1,101 @@
+/* The Review view's done log: weeks, days and their lines. */
+.done-log .log-title-h {
+  margin: 0;
+  font-size: 17px;
+}
+.log-week {
+  margin: 18px 0 0;
+}
+.log-week-h {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.log-week-h small {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+}
+.log-day {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.log-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.log-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+}
+.log-line:hover {
+  background: var(--surface-2);
+}
+.log-mark {
+  flex: none;
+  width: 1.2em;
+  color: var(--ok);
+}
+.k-routine .log-mark {
+  color: var(--activity);
+}
+.k-value .log-mark,
+.k-amount .log-mark {
+  color: var(--state);
+}
+.k-goal {
+  border-left: 3px solid var(--purpose);
+  background: var(--goal-soft);
+}
+.k-goal .log-mark {
+  color: var(--purpose);
+}
+.log-what {
+  flex: 1 1 14em;
+  min-width: 0;
+}
+.log-open,
+.log-goal {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.log-open:hover,
+.log-goal:hover {
+  text-decoration: underline;
+}
+.log-detail {
+  margin-left: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.log-goal {
+  font-size: 13px;
+  color: var(--goal);
+}
+.log-plan {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.log-more {
+  margin: 16px 0 0;
+}
