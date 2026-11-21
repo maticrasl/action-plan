@@ -10,7 +10,7 @@ import { decorateWalk, listenWalk } from './tutorial/walkthrough';
 import { decorateHelp } from './tutorial/help';
 import { askForTip, decorateTips, listenTips } from './tutorial/tips';
 import { setAskTip } from './views/guide';
-import './store/users';
+import { userKey } from './store/users';
 import './store/visions';
 import { bootUser, enterUser } from './boot';
 import { onRendered, render } from './views/index';
@@ -20,6 +20,7 @@ import { emptyDb } from './core/model';
 import { setDb } from './core/state';
 import { on } from './store/events';
 import { keepStorage } from './store/persist';
+import { JOURNAL_KEY, loadJournal } from './store/journal';
 import { scheduleSync } from './sync/sync';
 import { connectSync, initSync, renderSync } from './ui/sync-ui';
 import { setRenderer } from './ui/render';
@@ -67,6 +68,8 @@ on('storeReplaced', changed => {
 });
 on('storageError', () => toast(t('err.storage')));
 on('syncChanged', () => renderSync());
+// Another tab saved the journal: this one takes it over, so it never writes an old copy back.
+addEventListener('storage', e => e.key === userKey(JOURNAL_KEY) && loadJournal());
 // The graphs' pointing, the map's gestures, then the timeline's, in the order they had in app.js.
 listenGraphs();
 listenMap();

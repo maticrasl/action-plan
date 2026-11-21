@@ -10,7 +10,7 @@ import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
 const FIX = join(ROOT, 'tests', 'fixtures');
 const PRIVATE = join(FIX, 'private');
 const CLOCK = '2026-11-16T11:00:00.000Z'; // the frozen "now" of every fixture page
-const STORAGE = ['sample-en', 'sample-sl', 'legacy-single', 'two-users', 'rich', 'goal-form', 'demo'];
+const STORAGE = ['sample-en', 'sample-sl', 'legacy-single', 'two-users', 'rich', 'goal-form', 'demo', 'journal'];
 const OUTPUTS = { sync: 'rich.sync.json', exportFull: 'rich.export-full.json', exportTemplate: 'rich.export-template.json', backup: 'rich.backup.json' };
 
 const args = process.argv.slice(2);
@@ -43,7 +43,7 @@ async function generateAll() {
     console.log(`wrote ${only}`);
     return 0;
   }
-  for (const name of ['sample-en', 'sample-sl', 'two-users', 'rich', 'goal-form', 'demo']) {
+  for (const name of ['sample-en', 'sample-sl', 'two-users', 'rich', 'goal-form', 'demo', 'journal']) {
     const out = await run('build:' + name, fresh(name === 'sample-sl' ? 'sl' : 'en'));
     writeJson(`${name}.storage.json`, out.storage);
     if (name === 'rich') for (const [k, file] of Object.entries(OUTPUTS)) writeJson(file, out[k]);
@@ -97,9 +97,9 @@ function withoutNew(want, got) {
   return extra.length ? Object.fromEntries(Object.entries(got).filter(([k]) => !extra.includes(k))) : got;
 }
 
-// The sync file says version 2 since the sync-file guard (docs/specs/2026-11-20-undo-trash.md); a
-// fixture written at version 1 still matches when that is the only difference.
-const oldVersion = (want, got) => (want?.version === 1 && got?.version === 2 ? { ...got, version: 1 } : got);
+// The sync file says version 2 since the sync-file guard (docs/specs/2026-11-20-undo-trash.md), 3 since
+// the journal (docs/specs/2026-11-21-journal.md); an older fixture still matches when that is the only difference.
+const oldVersion = (want, got) => (want?.version < got?.version && got?.version <= 3 ? { ...got, version: want.version } : got);
 
 // Where two JSON values first differ, as "path: want … got …"; '' when equal. Stored strings that
 // hold JSON are compared as JSON, so the path points inside them.

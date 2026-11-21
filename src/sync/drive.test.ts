@@ -52,7 +52,7 @@ test('a sync file from a newer version is refused with update; this version writ
   expect(parseStore(file(SYNC_VERSION)).plans.list).toEqual([]);
   expect(parseStore(file(1)).plans.list).toEqual([]);
   expect(toFile(parseStore(file(1))).version).toBe(SYNC_VERSION);
-  expect(SYNC_VERSION).toBe(2);
+  expect(SYNC_VERSION).toBe(3);
 });
 
 test('trash: read from the file when present, merged, left out when there is none', () => {
@@ -81,4 +81,20 @@ test('mapFold: read from the file when present, later change wins, left out when
   expect(mergeStores(st, other).mapFold!.kinds).toEqual([]);
   expect(mergeStores(st, parseStore(JSON.stringify(base))).mapFold!.kinds).toEqual(['goal']);
   expect(mergeStores(parseStore(JSON.stringify(base)), parseStore(JSON.stringify(base)))).not.toHaveProperty('mapFold');
+});
+
+test('journal: version 3 carries it; read when present, left out when there is none', () => {
+  expect(SYNC_VERSION).toBe(3);
+  const journal = {
+    reviews: [{ id: 'r1', kind: 'week', period: '2026-W47', answers: { a: 1 }, updatedAt: '2026-11-20T10:00:00.000Z' }],
+    sessions: [],
+    deleted: { old: '2026-11-01T10:00:00.000Z' },
+  };
+  const st = parseStore(JSON.stringify({ format: SYNC_FORMAT, version: 3, plans: { list: [] }, journal }));
+  expect(st.journal).toEqual(journal);
+  expect(toFile(st).journal).toEqual(journal);
+  const none = parseStore(JSON.stringify({ format: SYNC_FORMAT, version: 2, plans: { list: [] } }));
+  expect('journal' in none).toBe(false);
+  expect('journal' in toFile(none)).toBe(false);
+  expect(mergeStores(none, st).journal).toEqual(journal);
 });

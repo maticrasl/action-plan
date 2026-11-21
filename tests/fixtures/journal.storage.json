@@ -1,0 +1,9 @@
+{
+  "actionplan.journal": "{\"reviews\":[{\"id\":\"00000000-0000-4000-8000-000000000002\",\"kind\":\"week\",\"period\":\"2026-W46\",\"doneAt\":\"2026-11-16T11:00:00.000Z\",\"answers\":{\"win\":\"Ran twice\"},\"updatedAt\":\"2026-11-16T11:00:00.000Z\"}],\"sessions\":[{\"id\":\"00000000-0000-4000-8000-000000000004\",\"exercise\":\"values\",\"date\":\"2026-11-15\",\"done\":true,\"answers\":{\"top\":[\"health\"]},\"made\":[],\"updatedAt\":\"2026-11-16T11:00:00.000Z\"}],\"deleted\":{\"00000000-0000-4000-8000-000000000003\":\"2026-11-16T11:00:00.000Z\"},\"focus\":{\"week\":\"2026-11-16\",\"plan\":\"00000000-0000-4000-8000-000000000001\",\"item\":\"none-yet\",\"at\":\"2026-11-16T11:00:00.000Z\"}}",
+  "actionplan.lang": "en",
+  "actionplan.plan.00000000-0000-4000-8000-000000000001": "{\"goals\":[],\"states\":[],\"activities\":[],\"relations\":[],\"deleted\":{}}",
+  "actionplan.plans": "{\"current\":\"00000000-0000-4000-8000-000000000001\",\"list\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"My plan\",\"updatedAt\":\"2026-11-16T11:00:00.000Z\"}],\"deleted\":{}}",
+  "actionplan.v1.reachedChecked.00000000-0000-4000-8000-000000000001": "true",
+  "actionplan.v1.seen": "{\"days\":[\"2026-11-16\"],\"views\":{\"map\":true,\"timeline\":true,\"graphs\":true}}",
+  "actionplan.v1.view": "\"dashboard\""
+}

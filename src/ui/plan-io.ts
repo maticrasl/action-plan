@@ -1,4 +1,6 @@
-/** Plans in and out: export and share one, import one, back up and restore all of them. */
+/** Plans in and out: export and share one, import one, back up and restore all of them. */
+import { applyJournal, journal } from '../store/journal';
+import { mergeJournal } from '../core/journal';
 import {
   PLAN_FORMAT,
   PLAN_VERSION,
@@ -158,7 +160,8 @@ planImp.addEventListener('click', e => {
    Full backup: every plan and the visions in one file
    ---------------------------------------------------------
    The file is the sync file's own format with `kind: 'backup'` and `exportedAt` added, so the sync
-   parser reads it. Restoring adds each plan as a new plan and the visions that are missing here;
+   parser reads it. Restoring adds each plan as a new plan and the visions that are missing here,
+   and merges the journal;
    nothing that exists is changed.
    Loaded after drive.js and before app.js; uses their helpers only when called.
    ========================================================= */
@@ -198,7 +201,7 @@ export function parseBackup(text: string): { store: FullStore; exportedAt?: stri
 }
 
 // Adds every plan in the backup as a new plan named "{name} ({date of the backup})" and the visions
-// whose id is not here. The open plan stays open. Returns how many of each were added.
+// whose id is not here, and merges the journal. The open plan stays open. Returns how many of each were added.
 export function restoreBackup({ store, exportedAt }: { store: FullStore; exportedAt?: string }) {
   const at = new Date(exportedAt!);
   const date = isNaN(+at) ? '' : ` (${fmtDate(isoDate(at))})`;
@@ -219,6 +222,8 @@ export function restoreBackup({ store, exportedAt }: { store: FullStore; exporte
   const have = new Set(visions.list.map(v => v.id));
   const missing = store.visions.list.filter(v => !have.has(v.id) && have.add(v.id));
   visions.list.push(...missing);
+  // The journal merges as a sync would: what is here and newer, or deleted since, stays so.
+  if (store.journal) applyJournal(mergeJournal(journal, store.journal));
   save();
   saveVisions();
   renderPlanSwitch();

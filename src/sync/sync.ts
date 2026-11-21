@@ -15,6 +15,7 @@ import { emit } from '../store/events';
 import { applyVisions } from '../store/visions';
 import { SyncError, drive, toFile } from './drive';
 import { prefs } from '../store/prefs';
+import { applyJournal, hasJournal, journal } from '../store/journal';
 
 /* =========================================================
    Google Drive sync
@@ -46,9 +47,18 @@ export function localStore(): FullStore {
   const data = Object.fromEntries(plans.list.map(p => [p.id, p.id === plans.current ? db : readPlan(p.id)]));
   const tips = hasTips() ? getTips() : undefined,
     trash = hasTrash() ? getTrash() : undefined,
-    mapFold = hasMapFold() ? getMapFold() : undefined;
+    mapFold = hasMapFold() ? getMapFold() : undefined,
+    myJournal = hasJournal() ? journal : undefined;
   return JSON.parse(
-    JSON.stringify({ plans: { list: plans.list, deleted: plans.deleted || {} }, data, visions, tips, trash, mapFold }),
+    JSON.stringify({
+      plans: { list: plans.list, deleted: plans.deleted || {} },
+      data,
+      visions,
+      tips,
+      trash,
+      mapFold,
+      journal: myJournal,
+    }),
   );
 }
 
@@ -68,6 +78,7 @@ export function dropStarterPlans(store: FullStore): FullStore {
     ...(store.tips && { tips: store.tips }),
     ...(store.trash && { trash: store.trash }),
     ...(store.mapFold && { mapFold: store.mapFold }),
+    ...(store.journal && { journal: store.journal }),
   };
 }
 
@@ -107,6 +118,7 @@ export function applyStore(store: Store) {
   // shortcut: a merged list may pass the size cap until the next deletion trims it.
   if (store.trash) saveTrash(store.trash);
   if (store.mapFold) saveMapFold(store.mapFold);
+  if (store.journal) applyJournal(store.journal);
   setPlansVersion(plansVersion + 1);
   setDb(readPlan(plans.current as string));
   takeSnapshot(db);

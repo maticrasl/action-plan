@@ -23,6 +23,7 @@ import {
 } from './model';
 import { dropRoutineDeps } from './normalize';
 import { mergeVisions } from './visions';
+import { mergeJournal, type Journal } from './journal';
 import { today } from './dates';
 import { mergeTips, type Tips } from './guidance/tip-history';
 import type { WithList } from './routines/checkins';
@@ -41,9 +42,11 @@ export interface Store {
   tips?: Tips; // tip history; absent from files that never had any
   trash?: Trash; // Recently deleted; absent from files that never had any
   mapFold?: MapFold; // folded Map bands; absent from files that never had any
+  journal?: Journal; // reviews, sessions, focus (core/journal.ts); absent until one is saved
 }
 // A store with every part read (the tips stay optional, so files without them keep their shape).
-export type FullStore = Required<Omit<Store, 'tips' | 'trash' | 'mapFold'>> & Pick<Store, 'tips' | 'trash' | 'mapFold'>;
+export type FullStore = Required<Omit<Store, 'tips' | 'trash' | 'mapFold' | 'journal'>> &
+  Pick<Store, 'tips' | 'trash' | 'mapFold' | 'journal'>;
 // Method syntax keeps the parameters bivariant, so mergeState (states only) fits.
 type MergeItem = { merge(x: SyncItem, y: SyncItem): SyncItem }['merge'];
 
@@ -102,6 +105,30 @@ function stampStatus(data: Db): void {
   });
 }
 
+// One list's change tracking: stamps items whose content differs from `snapshot` (or that are new),
+// records ids that are gone in `deleted`, and forgets deletions older than TOMBSTONE_DAYS.
+// Visions and the journal use it; plans have their own (several lists share one snapshot).
+export function stampList(
+  list: { id: string; updatedAt?: ISOTime }[],
+  snapshot: Map<string, string>,
+  deleted: IdSet<ISOTime>,
+  now: ISOTime,
+): void {
+  const present = new Set<string>();
+  list.forEach(x => {
+    present.add(x.id);
+    if (snapshot.get(x.id) !== itemContent(x)) x.updatedAt = now;
+    delete deleted[x.id];
+  });
+  snapshot.forEach((_, id) => {
+    if (!present.has(id)) deleted[id] = now;
+  });
+  const cutoff = new Date(Date.parse(now) - TOMBSTONE_DAYS * 86400000).toISOString();
+  Object.keys(deleted).forEach(id => {
+    if (deleted[id] < cutoff) delete deleted[id];
+  });
+}
+
 export function stampChanges(data: Db): void {
   const now = new Date().toISOString();
   const present = new Set();
@@ -127,7 +154,7 @@ export function stampChanges(data: Db): void {
 /* ---------- Plan list: names and deleted plans are tracked the same way ---------- */
 
 export let planSnapshot = new Map<string, string>(); // plan id → name and emoji as last saved
-const planLook = (p: Plan) => `${p.name}|${p.emoji ?? ""}`;
+const planLook = (p: Plan) => `${p.name}|${p.emoji ?? ''}`;
 
 export function takePlanSnapshot(index: { list: Plan[] }): void {
   planSnapshot = new Map(index.list.map(p => [p.id, planLook(p)]));
@@ -346,5 +373,6 @@ export function mergeStores(a: Store, b: Store): FullStore {
     ...((a.tips || b.tips) && { tips: mergeTips(a.tips, b.tips) }),
     ...((a.trash || b.trash) && { trash: mergeTrash(a.trash, b.trash) }),
     ...((a.mapFold || b.mapFold) && { mapFold: mergeMapFold(a.mapFold, b.mapFold) }),
+    ...((a.journal || b.journal) && { journal: mergeJournal(a.journal, b.journal) }),
   };
 }

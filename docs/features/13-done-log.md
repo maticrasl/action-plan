@@ -207,3 +207,9 @@ Edge cases
 - Both languages; plural forms for 1, 2, 3–4 and 5+ in Slovenian.
 - Fixture: a plan holding `doneAt`, item `doneAt` and `achievedAt`; the `5b71e59` fixtures load
   unchanged.
+
+## Owner's choices (2026-11-21)
+
+- Built in two parts. **A:** the stored dates, "Done on" / "Achieved on", the Overview line, the
+  sample's dates. **B:** the Review view with only the Done log tab.
+- The Review view and its nav item come with part B, after Graphs, before reviews (14) exist.

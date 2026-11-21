@@ -1,4 +1,5 @@
 /** The plans: loading, saving, opening, creating, deleting and merging them, and their names. */
+import { loadJournal } from './journal';
 import { userStorage } from './users';
 import { normalize } from '../core/normalize';
 import { SYNC_COLLS, emptyDb, type Db, type Item, type ItemKind, type PlanList } from '../core/model';
@@ -39,6 +40,7 @@ export function readPlan(id: string): Db {
 
 export function load() {
   loadVisions();
+  loadJournal();
   try {
     const saved: PlanList | null = JSON.parse(userStorage.getItem(PLANS_KEY) as string);
     if (Array.isArray(saved?.list) && saved.list.length) setPlans(saved as PlanList);
