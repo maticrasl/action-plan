@@ -138,3 +138,10 @@ Edge cases
   as for the users list).
 - Fixture: a sync file written by this release is read by the fixture test; a `5b71e59` sync
   file (no `journal`, `version: 1`) still loads.
+
+## Owner's choices (2026-11-21)
+
+- The journal raises the sync file to `version: 3`. Older copies stop with the `update` status
+  instead of writing a file without the journal.
+- "Back up everything" includes the journal; restoring merges it (`mergeJournal`), never
+  overwrites. Older versions restore such a file and ignore the journal.

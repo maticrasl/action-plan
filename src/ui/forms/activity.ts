@@ -20,8 +20,9 @@ import { dateInput, parseDateInput, today } from '../../core/dates';
 import { $, esc, linkTag } from '../dom';
 import { checklist, linkSection } from './picker';
 import { doneLast } from '../../core/util';
+import { doneDay } from '../../core/done-log';
 import { consistency, routineStreak } from '../../core/routines/keeping';
-import { area, date, field, linksOf, modal, num, select, text, type Errors, type FormVals, type New } from './form';
+import { area, date, field, finishedField, linksOf, modal, num, select, text, type Errors, type FormVals, type New } from './form';
 import type { Activity, ISODate, ListItem, Period, RelType, Repeat } from '../../core/model';
 
 export function activityForm(a: New<Activity>) {
@@ -45,6 +46,7 @@ export function activityForm(a: New<Activity>) {
       ${field('startDate', t('f.startDate'), date('startDate', isRoutine(a) ? routineStart(a) : a.id ? a.startDate : a.startDate || today()))}
       ${field('dueDate', t('f.dueDate'), date('dueDate', a.dueDate))}
     </div>
+    ${!list || a.status === 'done' ? finishedField('doneAt', a.status === 'done' && !isRoutine(a), a.id ? doneDay(a as Activity) : undefined) : ''}
     ${repeatFields(a)}
     ${linkSection(
       `${field('parent', t('f.parentActivity'), select('parent', parents, pick('subactivity')[0] || ''), t('f.parentActivityHint'))}

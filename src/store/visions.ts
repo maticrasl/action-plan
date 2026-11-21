@@ -1,6 +1,6 @@
 /** Visions: the global list above goals, stored apart from plans, and the goals serving them. */
 import { db, setVisions, visions } from '../core/state';
-import { TOMBSTONE_DAYS, itemContent } from '../core/merge';
+import { itemContent, stampList } from '../core/merge';
 import { normalizeVisions, ownVisions, purposeOf, visionAncestors, type PlanData } from '../core/visions';
 import type { VisionList } from '../core/model';
 import { userStorage } from './users';
@@ -40,20 +40,7 @@ export function loadVisions() {
 
 // Stamps what changed since the last save, remembers deleted ids (as plans do), stores the list and syncs.
 export function saveVisions() {
-  const now = new Date().toISOString(),
-    present = new Set<string>();
-  visions.list.forEach(v => {
-    present.add(v.id);
-    if (visionSnapshot.get(v.id) !== itemContent(v)) v.updatedAt = now;
-    delete visions.deleted[v.id];
-  });
-  visionSnapshot.forEach((_, id) => {
-    if (!present.has(id)) visions.deleted[id] = now;
-  });
-  const cutoff = new Date(Date.now() - TOMBSTONE_DAYS * 86400000).toISOString();
-  Object.keys(visions.deleted).forEach(id => {
-    if (visions.deleted[id] < cutoff) delete visions.deleted[id];
-  });
+  stampList(visions.list, visionSnapshot, visions.deleted, new Date().toISOString());
   takeVisionSnapshot();
   visionsVersion++;
   try {

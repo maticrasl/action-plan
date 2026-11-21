@@ -261,6 +261,15 @@
       );
       save();
     },
+    // The journal (docs/specs/2026-11-21-journal.md): a review, a discovery session, this week's focus,
+    // and a deleted review.
+    journal() {
+      const r = addReview({ kind: 'week', period: '2026-W46', doneAt: new Date().toISOString(), answers: { win: 'Ran twice' } });
+      addReview({ kind: 'month', period: '2026-10', answers: {} });
+      deleteReview(journal.reviews.find(x => x.id !== r.id).id);
+      addSession({ exercise: 'values', date: day(-1), done: true, answers: { top: ['health'] }, made: [] });
+      setFocus(plans.current, 'none-yet');
+    },
   };
 
   try {

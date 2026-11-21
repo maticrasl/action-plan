@@ -882,6 +882,7 @@ export const sl: Language = {
     'err.lineDep': 'Element ne more biti odvisen od svojega nadrejenega ali podrejenih elementov, niti ti od njega',
     'err.dependsRoutine': 'Aktivnost ne more biti odvisna od rutine',
     'err.storage': 'Shranjevanje ni uspelo – shramba brskalnika ni na voljo',
+    'err.doneFuture': 'Ta dan še ni prišel.',
     'err.import': 'Datoteka ni veljaven akcijski načrt',
     'err.importVersion':
       'Ta načrt je iz novejše različice Akcijskega načrta. Posodobite aplikacijo in poskusite znova.',
@@ -912,6 +913,26 @@ export const sl: Language = {
       other: '{n} aktivnih ciljev, še nobeden s ciljno vrednostjo.',
     },
     'dash.factDone': 'opravljenih {done} od {total} aktivnosti',
+    'log.week': 'Ta teden: {parts}',
+    'log.steps': {
+      one: '{n} opravljen korak',
+      two: '{n} opravljena koraka',
+      few: '{n} opravljeni koraki',
+      other: '{n} opravljenih korakov',
+    },
+    'log.ticks': {
+      one: '{n} odkljukan dan rutin',
+      two: '{n} odkljukana dneva rutin',
+      few: '{n} odkljukani dnevi rutin',
+      other: '{n} odkljukanih dni rutin',
+    },
+    'log.values': {
+      one: '{n} zapisana vrednost',
+      two: '{n} zapisani vrednosti',
+      few: '{n} zapisane vrednosti',
+      other: '{n} zapisanih vrednosti',
+    },
+    'log.reached': 'Doseženo »{name}«',
     'dash.factLate': {
       one: 'zamuja {n} aktivnost',
       two: 'zamujata {n} aktivnosti',
@@ -1341,6 +1362,8 @@ export const sl: Language = {
     'f.details': 'Podrobnosti',
     'f.detailsPh': 'Neobvezne opombe',
     'f.dueDate': 'Rok',
+    'f.doneAt': 'Opravljeno dne',
+    'f.achievedAt': 'Doseženo dne',
     'f.contributes': 'Prispeva k ciljem',
     'f.linksSection': 'Povezave',
     'f.improves': 'Izboljšuje trenutna stanja',

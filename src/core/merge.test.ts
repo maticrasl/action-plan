@@ -99,6 +99,40 @@ describe('change tracking', () => {
     expect(data.activities[0].statusSince).toBe('2026-11-16');
   });
 
+  test('doneAt and achievedAt: set when done or achieved, kept when set by hand, removed when undone', () => {
+    const data = plan({
+      goals: [goal({ id: 'g' })],
+      activities: [
+        act({ id: 'a' }),
+        act({ id: 'was-done', status: 'done' }),
+        act({ id: 'r', repeat: { every: 1, unit: 'day' } }),
+        act({ id: 'l', list: [{ id: 'i1', text: 'one' }, { id: 'i2', text: 'two', done: true }] }),
+      ],
+    });
+    takeSnapshot(data);
+    const [a, wasDone, r, l] = data.activities;
+    a.status = 'done';
+    data.goals[0].status = 'achieved';
+    r.status = 'done';
+    l.list![0].done = true;
+    stampChanges(data);
+    expect([a.doneAt, data.goals[0].achievedAt, l.list![0].doneAt]).toEqual([today(), today(), today()]);
+    expect(wasDone.doneAt).toBeUndefined(); // done before this feature: stays without a date
+    expect(l.list![1].doneAt).toBeUndefined();
+    expect(r.doneAt).toBeUndefined(); // routines never get one
+    a.doneAt = '2026-11-10'; // changed in the form
+    stampChanges(data);
+    expect(a.doneAt).toBe('2026-11-10');
+    a.status = 'doing';
+    data.goals[0].status = 'active';
+    l.list![0].done = false;
+    stampChanges(data);
+    expect([a.doneAt, data.goals[0].achievedAt, l.list![0].doneAt]).toEqual([undefined, undefined, undefined]);
+    data.activities.push(act({ id: 'new', status: 'done', doneAt: '2026-11-01' }));
+    stampChanges(data);
+    expect(data.activities[4].doneAt).toBe('2026-11-01'); // a new item done on a day given by hand
+  });
+
   test('statusSince: an auto-start leaves it out (autoStarted says since when); a later manual start stamps it', () => {
     const data = plan({ activities: [act({ id: 'a', startDate: '2026-11-10', statusSince: '2026-11-01' })] });
     takeSnapshot(data);

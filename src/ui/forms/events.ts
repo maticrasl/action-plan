@@ -77,6 +77,12 @@ $('#modalForm').addEventListener('focusin', e => {
 $('#modalForm').addEventListener('change', e => {
   if ((e.target as HTMLElement).matches('.li-check'))
     return placeListRow((e.target as HTMLElement).closest<HTMLElement>('.li-row')!);
+  // Done on / Achieved on show while the status says finished.
+  if ((e.target as HTMLElement).id === 'f-status') {
+    const v = (e.target as HTMLSelectElement).value;
+    const box = modal.querySelector<HTMLElement>('[data-field="doneAt"], [data-field="achievedAt"]');
+    if (box) box.hidden = v !== 'done' && v !== 'achieved';
+  }
   if ((e.target as HTMLElement).id === 'f-from' || (e.target as HTMLElement).id === 'f-to') return fillRelTypes();
   if (['f-monthDay', 'f-nth', 'f-weekday'].includes((e.target as HTMLElement).id))
     (e.target as HTMLElement).setAttribute('data-picked', '');

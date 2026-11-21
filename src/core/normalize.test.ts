@@ -186,6 +186,19 @@ describe('resetProgress', () => {
     expect(progressCounts(r)).toEqual({ checkins: 0, measurements: 0, done: 0, started: 0 });
   });
 
+  test('completion dates go with the progress', () => {
+    const { data } = progressPlan();
+    data.goals[0].achievedAt = '2026-11-01';
+    data.activities[0].doneAt = '2026-11-02';
+    data.activities[0].list = [{ id: 'i', text: 'x', done: true, doneAt: '2026-11-03' }];
+    const r = resetProgress(data);
+    expect([r.goals[0].achievedAt, r.activities[0].doneAt, r.activities[0].list![0].doneAt]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
   test('a template moves its dates by whole weeks so the earliest falls this week', () => {
     for (const offset of [-30, -400, 0, 3, 20, 365]) {
       const { data } = progressPlan();

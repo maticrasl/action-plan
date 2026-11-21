@@ -7,6 +7,7 @@ import { normalizeVisions } from '../core/visions';
 import { readTips } from '../core/guidance/tip-history';
 import { normalizeTrash } from '../core/trash';
 import { readMapFold } from '../core/map-fold';
+import { normalizeJournal } from '../core/journal';
 import type { IdSet, ISOTime, Plan, User } from '../core/model';
 
 // The part of Google's sign-in script (loaded at run time by loadGis) this uses.
@@ -49,7 +50,7 @@ export interface Remote {
 
 export const SYNC_FILE = 'actionplan-sync.json';
 // Raise in every release that adds a section an older copy would drop (docs/decisions.md).
-export const SYNC_VERSION = 2;
+export const SYNC_VERSION = 3;
 export const SYNC_FORMAT = 'actionplan-sync';
 export const SYNC_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
@@ -261,6 +262,7 @@ type RawFile = {
   tips?: unknown;
   trash?: unknown;
   mapFold?: unknown;
+  journal?: unknown;
 } | null;
 
 export function parseStore(text: string): FullStore {
@@ -281,6 +283,7 @@ export function parseStore(text: string): FullStore {
     ...(raw.tips !== undefined && { tips: readTips(raw.tips) }),
     ...(raw.trash !== undefined && { trash: normalizeTrash(raw.trash) }),
     ...(raw.mapFold !== undefined && { mapFold: readMapFold(raw.mapFold) }),
+    ...(raw.journal !== undefined && { journal: normalizeJournal(raw.journal) }),
   };
 }
 
@@ -293,5 +296,6 @@ export const toFile = (store: Store) => ({
   ...(store.tips && { tips: store.tips }),
   ...(store.trash && { trash: store.trash }),
   ...(store.mapFold && { mapFold: store.mapFold }),
+  ...(store.journal && { journal: store.journal }),
 });
 export type SyncFile = ReturnType<typeof toFile>;

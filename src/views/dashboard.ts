@@ -13,6 +13,8 @@ import { relsFrom } from '../core/relations';
 import { isList, listDone } from '../core/routines/checkins';
 import type { Activity } from '../core/model';
 import { replanButton } from '../ui/replan';
+import { doneLog, weekCounts } from '../core/done-log';
+import { addDays, weekday } from '../core/routines/schedule';
 
 export function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
@@ -59,6 +61,7 @@ export function renderDashboard() {
         ${overdue ? `<li class="fact-late">${tp('dash.factLate', overdue)} ${replanButton()}</li>` : ''}
         ${waiting ? `<li class="fact-waiting">${tp('dash.factWaiting', waiting)}</li>` : ''}
       </ul>
+      ${weekLine(now)}
     </section>
 
     <h2 class="section-title">${t('dash.next')} <small>${next.length ? t('dash.sorted') : ''}</small></h2>
@@ -80,6 +83,19 @@ export function renderDashboard() {
     <h2 class="section-title">${t('dash.goalsInProgress')} <small>${active.length ? t('dash.clickToEdit') : ''}</small></h2>
     ${active.length ? `<div class="grid">${active.map(goalCard).join('')}</div>` : `<div class="empty">${t('dash.noActive')}</div>`}
   `;
+}
+
+// What this plan finished since Monday (feature 13); nothing at all when nothing was.
+function weekLine(now: string) {
+  const entries = doneLog([{ plan: '', data: db }], addDays(now, -weekday(now)), now);
+  const c = weekCounts(entries);
+  const parts = [
+    ...entries.filter(e => e.kind === 'goal').map(e => t('log.reached', { name: esc(e.title) })),
+    c.steps ? tp('log.steps', c.steps) : '',
+    c.routineDays ? tp('log.ticks', c.routineDays) : '',
+    c.values ? tp('log.values', c.values) : '',
+  ].filter(Boolean);
+  return parts.length ? `<p class="week-line">${t('log.week', { parts: parts.join(' · ') })}</p>` : '';
 }
 
 export function activityRow(a: Activity) {

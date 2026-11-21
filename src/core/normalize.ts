@@ -98,6 +98,7 @@ export function resetProgress(data: Db, { shift = false }: { shift?: boolean } =
     g.current = '';
     if (g.status === 'achieved') g.status = 'active';
     delete g.offeredAt;
+    delete g.achievedAt;
   });
   d.states.forEach(s => {
     Object.assign(s, { value: '', date: '', history: [] });
@@ -107,11 +108,13 @@ export function resetProgress(data: Db, { shift = false }: { shift?: boolean } =
   });
   d.activities.forEach(a => {
     a.status = 'todo';
+    delete a.doneAt;
     delete a.checkins;
     delete a.autoStarted;
     a.list?.forEach(i => {
       i.done = false;
       delete i.at;
+      delete i.doneAt;
     });
     delete a.droppedItems;
     delete a.listDays;
