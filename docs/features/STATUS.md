@@ -39,8 +39,8 @@ Guide article is then added when the Guide exists.
     `feat/undo-trash`; part 1 (journal) still open
 - [ ] `13-done-log`
 - [x] `17-undo-trash-snapshots`, session A: undo and recently deleted 2026-11-21
-  - shipped (`docs/specs/2026-11-20-undo-trash.md`). Known gap: no "Show" after restoring into a
-    plan that is not open
+  - shipped (`docs/specs/2026-11-20-undo-trash.md`). Restoring into a plan that is not open offers "Show" (page test in
+    `tests/browser/trash.js`)
 - [ ] `17-undo-trash-snapshots`, session B: earlier versions and full backup
   - built 2026-11-16 (`js/backup.js`): Back up everything; Restore from a backup as copies, all
     plans, missing visions. Still open: Merge into my plans, choosing which plans, Earlier versions
@@ -103,6 +103,6 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   (`core/trash.ts`, `store/trash.ts`, `ui/undo.ts`, `ui/trash-dialog.ts`). Items are deleted without
   asking; plans keep their dialog. Backups stay `version: 1` and hold no trash, so older copies
   restore them. `scripts/fixtures.mjs` accepts only the version change 1 → 2 in `rich.sync.json`.
-- Next `SYNC_VERSION` bump: the journal (00 part 1). 17 B open; 17 A lacks "Show" after a plan restore.
+- Next `SYNC_VERSION` bump: the journal (00 part 1). 17 B open.
 - Chain `feat/replan` → `feat/pace-forecast` → `feat/is-it-working` → `feat/csv` (`core/csv*.ts`);
   their 07, 09, 14, 15 parts wait for those (19: the note column is written empty, read never).

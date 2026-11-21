@@ -138,6 +138,14 @@ suite(async () => {
       stored.relations.some(r => r.from === a.id),
       'with its link',
     );
+    eq(undoBtn()?.textContent, t('trash.show'), 'the message offers Show');
+    undoBtn().click();
+    assert(
+      plans.current === home && modal.open && $('#f-title').value === 'Sort books',
+      'Show opens its plan at the item',
+    );
+    modal.close();
+    openPlan(work);
     // An item whose plan is gone: asks, then goes into the open plan; a link to a missing end is counted.
     const b = mk('activity', { title: 'Call' });
     const g2 = mk('goal', { title: 'Clients' });
