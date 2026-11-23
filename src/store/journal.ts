@@ -4,6 +4,7 @@ import { normalizeJournal, type Journal, type Review, type Session } from '../co
 import { today } from '../core/dates';
 import { addDays, weekday } from '../core/routines/schedule';
 import { uid } from '../core/util';
+import type { ISODate } from '../core/model';
 import { userStorage } from './users';
 import { emit } from './events';
 
@@ -105,9 +106,10 @@ export function deleteSession(id: string) {
 
 /* ---------- This week's one thing ---------- */
 
-export function setFocus(plan: string, item: string) {
+// `week` (a Monday) is this week unless given: a review done Friday to Sunday chooses for the coming week.
+export function setFocus(plan: string, item: string, week?: ISODate) {
   const day = today();
-  journal.focus = { week: addDays(day, -weekday(day)), plan, item, at: new Date().toISOString() };
+  journal.focus = { week: week || addDays(day, -weekday(day)), plan, item, at: new Date().toISOString() };
   saveJournal();
 }
 // Leaves an empty focus with its time, so another device's older choice does not come back on sync.

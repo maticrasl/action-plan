@@ -20,6 +20,10 @@ import { renderGraphs } from './graphs/states';
 import { renderGuide } from './guide';
 import { renderReview } from './review';
 import { renderToday } from './today';
+import { todaySources } from './focus';
+import { reviewDot } from '../core/reviews';
+import { journal } from '../store/journal';
+import { today } from '../core/dates';
 import { wantRender } from '../ui/render';
 
 // Each view: what its Add button adds ('item' opens a menu of kinds) and the HTML it draws.
@@ -58,6 +62,12 @@ export function render() {
     .querySelectorAll<HTMLElement>('.nav-item')
     .forEach(b => b.classList.toggle('active', b.dataset.view === ui.view));
   $('#navMore').classList.toggle('active', !!$(`.nav-extra[data-view="${ui.view}"]`));
+  // The dot on Review (feature 14): the week that ended last Sunday has no finished review.
+  const dot = reviewDot(journal.reviews, todaySources(), today());
+  document.querySelectorAll<HTMLElement>('.nav-item[data-view="review"], #navMore').forEach(b => {
+    b.classList.toggle('has-dot', dot);
+    if (b.dataset.view) b.title = dot ? `${t('nav.review')} · ${t('review.dot')}` : t('nav.review');
+  });
   $('#helpBtn').setAttribute('aria-pressed', String(ui.view === 'guide'));
   closeCtxMenu();
   closeAmountPop();

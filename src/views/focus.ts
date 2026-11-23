@@ -54,18 +54,22 @@ export function openIn(plan: string, id: string) {
   if (ent) openForm(ent.kind, ent.item.id);
 }
 
-export function chooseFocus(plan: string, id: string) {
+// The week the picker chooses for (a review may choose for the coming week); this week when empty.
+let pickWeek: string | undefined;
+
+export function chooseFocus(plan: string, id: string, week = pickWeek) {
   const a = allPlansData()
     .find(s => s.plan.id === plan)
     ?.data.activities.find(x => x.id === id);
-  setFocus(plan, id);
+  setFocus(plan, id, week);
   toast(t('today.focusSet', { name: a?.title || '' }));
   render();
 }
 
 const pickDlg = () => $<HTMLDialogElement>('#focusPickDlg');
 
-export function openFocusPicker() {
+export function openFocusPicker(week?: string) {
+  pickWeek = week;
   const dlg = pickDlg(),
     many = todaySources().length > 1;
   const steps = todaySources()
@@ -91,15 +95,15 @@ export function openFocusPicker() {
 // Called once from main.ts.
 export function listenToday() {
   pickDlg().addEventListener('input', e => {
-  const q = foldText((e.target as HTMLInputElement).value.trim());
-  pickDlg()
-    .querySelectorAll<HTMLElement>('[data-pick-id]')
-    .forEach(b => (b.hidden = !!q && !b.dataset.text!.includes(q)));
-});
-pickDlg().addEventListener('click', e => {
-  const b = (e.target as HTMLElement).closest<HTMLElement>('[data-pick-id]');
-  if (!b) return;
-  pickDlg().close();
-  chooseFocus(b.dataset.pickPlan!, b.dataset.pickId!);
+    const q = foldText((e.target as HTMLInputElement).value.trim());
+    pickDlg()
+      .querySelectorAll<HTMLElement>('[data-pick-id]')
+      .forEach(b => (b.hidden = !!q && !b.dataset.text!.includes(q)));
+  });
+  pickDlg().addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-pick-id]');
+    if (!b) return;
+    pickDlg().close();
+    chooseFocus(b.dataset.pickPlan!, b.dataset.pickId!);
   });
 }

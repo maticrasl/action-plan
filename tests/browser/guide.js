@@ -180,27 +180,12 @@ suite(async () => {
     search('');
   });
 
-  await step('weekly review: Review done stores today and thanks; the boxes start empty again', () => {
+  await step('weekly review: the article is plain text with one button that opens the weekly review', () => {
     openGuide('review');
     const a = art('review');
-    const boxes = [...a.querySelectorAll('.guide-review input[type="checkbox"]')];
-    eq(boxes.length, 5, 'five lines');
-    eq(
-      [...a.querySelectorAll('.guide-review [data-guide-do]')].map(b => b.dataset.guideDo).join(),
-      'view-activities,view-graphs,view-graphs,view-timeline,pick-focus',
-      'each line links to its place',
-    );
-    boxes.forEach(b => (b.checked = true));
-    a.querySelector('[data-review-done]').click();
-    eq(getSeen().lastReview, today(), 'date stored');
-    eq($('#toast').textContent, t('guide.review.toast'), 'toast');
-    a.querySelector('.guide-review [data-guide-do="view-timeline"]').click();
-    eq(ui.view, 'timeline', 'a line’s link opens its view');
-    openGuide('review');
-    assert(
-      [...art('review').querySelectorAll('.guide-review input')].every(b => !b.checked),
-      'empty on the next visit',
-    );
+    assert(!a.querySelector('input[type="checkbox"]'), 'no checklist (the review is a view of its own, feature 14)');
+    a.querySelector('[data-guide-do="view-review"]').click();
+    eq([ui.view, reviewView.tab], ['review', 'week'], 'opens This week');
   });
 
   await step('Explanations on screen: switched on the Guide, a link in each banner', () => {

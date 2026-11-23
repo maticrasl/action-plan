@@ -206,7 +206,8 @@ export const guideEn = [
 <li>Pause what you will not work on this month.</li>
 <li>For routines, tick today. That is all it takes to be on track again.</li>
 <li>Ask what made you stop. Illness and busy weeks pass by themselves. If the plan was too heavy or the goal stopped mattering, change the plan, not yourself.</li>
-</ol>`,
+</ol>
+<p>The weekly review is the quickest way back in: it shows only what needs a decision.</p>`,
     action: { do: 'replan', label: 'Move late steps…' },
     related: ['routine-slips', 'behind', 'let-go', 'review'],
   },
@@ -326,34 +327,8 @@ export const guideEn = [
     id: 'review',
     group: 'stuck',
     title: 'The weekly review',
-    body: `<p>Once a week, five minutes, on a day and at a time you choose. This is what keeps a plan alive.</p>`,
-    review: [
-      {
-        text: '<strong>Tick what you did.</strong> Activities, list items, routine days you forgot to tick.',
-        go: 'view-activities',
-        label: 'Activities',
-      },
-      {
-        text: '<strong>Measure.</strong> Record a fresh value for each current state that has changed.',
-        go: 'view-graphs',
-        label: 'Graphs',
-      },
-      {
-        text: '<strong>Look back.</strong> What moved this week? What helped? One sentence in your head is enough.',
-        go: 'view-graphs',
-        label: 'Graphs',
-      },
-      {
-        text: '<strong>Fix the plan.</strong> Move dates that no longer hold. Split a step that did not move. Pause what is too much.',
-        go: 'view-timeline',
-        label: 'Timeline',
-      },
-      {
-        text: '<strong>Choose next week’s one thing.</strong> The step that matters most. Give it a day.',
-        go: 'pick-focus',
-        label: 'Choose…',
-      },
-    ],
+    body: `<p>Once a week, five minutes. The Review view walks you through it: tick what you forgot, record fresh values, write a line about how it went, fix dates that no longer hold, and choose the one step that matters most next week. Once a month it asks about your goals: keep going, change, pause or let go. Once a year it asks about your visions.</p>`,
+    action: { do: 'view-review', label: 'Open the weekly review' },
     related: ['method', 'fell-off', 'overplanning'],
   },
 
@@ -461,8 +436,11 @@ export const guideEn = [
     id: 'h-review',
     group: 'how',
     title: 'Review',
-    body: `<p>The done log lists what you finished, week by week: steps, routine days, values and goals reached. Choose <strong>This plan</strong> or <strong>All plans</strong> above it, and narrow it to one kind with the chips. Tap a line to open it; in All plans that opens its plan first. <strong>Show earlier</strong> adds older weeks. Weeks with nothing done are left out.</p>`,
+    body: `<p><strong>This week</strong> is the weekly review: what you did, the measurements with no value from the week, two lines to look back, what needs a decision, and next week’s one thing. Monday to Thursday it looks at last week, Friday to Sunday at the week under way; the arrows go to other weeks. <strong>Finish review</strong> keeps what you wrote.</p>
+<p><strong>This month</strong> asks about your goals, one card each: keep going, change it, pause it or let it go. <strong>This year</strong> asks about your visions and what the next year is for.</p>
+<p><strong>Done log</strong> lists what you finished, week by week, and <strong>Past reviews</strong> keeps every review you finished, to read again. A dot on Review means last week has no review yet.</p>`,
     action: { do: 'view-review', label: 'Open Review' },
+    related: ['review', 'h-today'],
   },
   {
     id: 'h-today',

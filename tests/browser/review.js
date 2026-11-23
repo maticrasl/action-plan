@@ -10,20 +10,24 @@ suite(async () => {
   };
   const toastText = () => $('#toast').firstChild?.textContent;
 
-  await step('review: the Overview line opens it; empty plan shows the empty text; last in the nav, after Today', () => {
-    fresh('Review A');
-    setView('review');
-    eq($('#view .empty')?.textContent, t('log.empty'), 'empty');
-    const nav = [...document.querySelectorAll('.nav .nav-item[data-view]')].map(b => b.dataset.view);
-    eq(nav.join(), 'dashboard,map,timeline,graphs,visions,goals,activities,today,review', 'nav order');
-    const a = mk('activity', { title: 'Buy shoes', startDate: d(-3), dueDate: d(3) });
-    save();
-    a.status = 'done';
-    save();
-    setView('dashboard');
-    $('#view .week-line').click();
-    eq(ui.view, 'review', 'the line opens Review');
-  });
+  await step(
+    'review: the Overview line opens it; empty plan shows the empty text; last in the nav, after Today',
+    () => {
+      fresh('Review A');
+      reviewView.tab = 'log'; // the done log is its own tab (feature 14)
+      setView('review');
+      eq($('#view .empty')?.textContent, t('log.empty'), 'empty');
+      const nav = [...document.querySelectorAll('.nav .nav-item[data-view]')].map(b => b.dataset.view);
+      eq(nav.join(), 'dashboard,map,timeline,graphs,visions,goals,activities,today,review', 'nav order');
+      const a = mk('activity', { title: 'Buy shoes', startDate: d(-3), dueDate: d(3) });
+      save();
+      a.status = 'done';
+      save();
+      setView('dashboard');
+      $('#view .week-line').click();
+      eq(ui.view, 'review', 'the line opens Review');
+    },
+  );
 
   await step('review: today under This week; a list item names its list; routines share a line; goal tag', () => {
     const g = mk('goal', { title: 'Run 5 km' });
@@ -62,7 +66,7 @@ suite(async () => {
       'the value',
     );
     $('#view .log-line.k-step .log-open').click();
-    assert(modal.open, "a line opens the form");
+    assert(modal.open, 'a line opens the form');
     modal.close();
     $('#view .log-goal').click();
     assert(modal.open, 'the goal tag opens the goal');
@@ -86,6 +90,7 @@ suite(async () => {
     const b = mk('activity', { title: 'Other step', status: 'done', doneAt: today() });
     save();
     openPlan(first);
+    reviewView.tab = 'log'; // the done log is its own tab (feature 14)
     setView('review');
     assert(!lines().some(l => l.includes('Other step')), 'this plan only');
     scope('all');
@@ -107,6 +112,7 @@ suite(async () => {
     mk('activity', { title: 'Recent', status: 'done', doneAt: addDays(monday, -7 * 2) });
     mk('activity', { title: 'Long ago', status: 'done', doneAt: addDays(monday, -7 * 10) });
     save();
+    reviewView.tab = 'log'; // the done log is its own tab (feature 14)
     setView('review');
     eq(weekNames().length, 1, 'only the week with something; This week and Last week are empty');
     assert(!lines().some(l => l.includes('Long ago')), 'older than eight weeks: hidden');
