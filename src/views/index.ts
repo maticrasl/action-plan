@@ -5,7 +5,7 @@ import { flowCards, renderActivities } from './activities';
 import { renderVisions } from './visions';
 import { startDueActivities } from '../core/progress';
 import { offerReached } from '../ui/reached';
-import { save } from '../store/plans';
+import { actingPlan, save } from '../store/plans';
 import { ui, type ViewName } from '../store/state';
 import { categories } from '../core/categories';
 import { t, type TextKey } from '../i18n/index';
@@ -19,6 +19,8 @@ import { renderTimeline } from './timeline/render';
 import { renderGraphs } from './graphs/states';
 import { renderGuide } from './guide';
 import { renderReview } from './review';
+import { renderToday } from './today';
+import { wantRender } from '../ui/render';
 
 // Each view: what its Add button adds ('item' opens a menu of kinds) and the HTML it draws.
 export interface View {
@@ -34,11 +36,14 @@ export const VIEWS: Record<ViewName, View> = {
   map: { add: 'item', render: renderMap },
   timeline: { add: 'item', render: renderTimeline },
   graphs: { add: 'state', render: renderGraphs },
+  today: { add: 'goal', render: renderToday },
   review: { add: 'item', render: renderReview },
   guide: { add: 'item', render: renderGuide },
 };
 
 export function render() {
+  // An action on a plan that is not open (Today) sees that plan as open: draw once it is back.
+  if (actingPlan()) return wantRender();
   // A period ending can reach a goal without any edit.
   if (startDueActivities() + Number(offerReached())) save();
   const v = VIEWS[ui.view];

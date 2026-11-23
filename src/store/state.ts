@@ -10,6 +10,7 @@ export type ViewName =
   | 'map'
   | 'timeline'
   | 'graphs'
+  | 'today'
   | 'review'
   | 'guide';
 

@@ -20,7 +20,9 @@ import { requestRender as render } from '../../ui/render';
 import { openForm } from '../../ui/forms/form';
 import { toggleCheckin } from '../routines';
 import { startMapLink } from './link';
-import { save } from '../../store/plans';
+import { actInPlan, save } from '../../store/plans';
+import { plans } from '../../store/state';
+import { inPlan } from '../../ui/render';
 import { tickToast, toast } from '../../ui/toast';
 import { pinch } from './zoom';
 import { relText, removeRelation } from './render';
@@ -48,6 +50,7 @@ import { askClosing } from '../../ui/closing';
 import { hasGraph } from '../../core/series';
 import { deleteItem } from '../../ui/undo';
 import { exportStateCsv, openCsvImport } from '../../ui/csv-dialog';
+import { chooseFocus, openIn } from '../focus';
 
 /* ---------- Map context menu: right-click, long-press, or the context-menu key ---------- */
 
@@ -95,18 +98,9 @@ export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption
       opt('add:goal:subgoal', t('ctx.addSubgoal')),
       opt('add:activity:contributes', t('ctx.addActivityGoal')),
     );
-  } else if (isRoutine(item)) {
-    if (runsOn(item, today()))
-      options.push('-', opt('checkin', t('rt.doneTodayShort'), { checked: checkedOn(item, today()) }));
   } else if (kind === 'activity') {
-    options.push(
-      '-',
-      ...ACTIVITY_STATUS.map(s =>
-        opt('status:' + s, t(('activity.' + s) as TextKey), { checked: (item as Activity).status === s }),
-      ),
-      '-',
-      opt('add:activity:subactivity', t('ctx.addSubactivity')),
-    );
+    options.push(...tickOptions(item as Activity), opt('week', t('ctx.focus.week')));
+    if (!isRoutine(item)) options.push('-', opt('add:activity:subactivity', t('ctx.addSubactivity')));
   } else {
     options.push(
       '-',
@@ -135,6 +129,25 @@ export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption
   options.push(opt('link', t('ctx.link')), '-', opt('delete', t('btn.delete'), { danger: true }));
   return options;
 }
+
+// An activity's ticks: the routine's day, or the step's statuses.
+function tickOptions(a: Activity): (MenuOption | '-')[] {
+  if (isRoutine(a))
+    return runsOn(a, today())
+      ? ['-', { act: 'checkin', label: t('rt.doneTodayShort'), checked: checkedOn(a, today()) }]
+      : ['-'];
+  return [
+    '-',
+    ...ACTIVITY_STATUS.map(s => ({ act: 'status:' + s, label: t(('activity.' + s) as TextKey), checked: a.status === s })),
+  ];
+}
+// An activity of a plan that is not open (on Today): its ticks, this week's one thing, and opening it there.
+const otherPlanOptions = (a: Activity, plan: string): (MenuOption | '-')[] => [
+  ...tickOptions(a),
+  { act: 'week', label: t('ctx.focus.week') },
+  '-',
+  { act: 'open-in', label: t('ctx.openIn', { plan: plans.list.find(p => p.id === plan)?.name || '' }) },
+];
 
 // In the timeline: fold or unfold this goal (when something is under it), and fold or unfold all.
 const tlFoldOptions = (goalId: string): MenuOption[] => [
@@ -240,16 +253,20 @@ export function revealIn(view: ViewName, kind: ItemKind, item: PlanItem | Vision
     );
 }
 
-export function openCtxMenu(id: string, x: number, y: number, byKey = false) {
-  const ent = findEntity(id);
+// `plan`: the plan of the row it was opened on (Today), when that is not the open one.
+export function openCtxMenu(id: string, x: number, y: number, byKey = false, plan = '') {
+  const other = plan && plan !== plans.current ? plan : '';
+  const ent = actInPlan(other, () => findEntity(id));
   if (!ent) return;
-  Object.assign(ctxMenu.dataset, { id, rel: '', add: '' });
+  Object.assign(ctxMenu.dataset, { id, rel: '', add: '', plan: other });
   ctxMenu.setAttribute('aria-label', t('ctx.label', { name: ent.item.title }));
   showCtxMenu(
     ent.kind,
     t(('kind.' + ent.kind) as TextKey),
     ent.item.title,
-    ctxOptions(ent.kind, ent.item),
+    other && ent.kind === 'activity'
+      ? actInPlan(other, () => otherPlanOptions(ent.item as Activity, other))!
+      : ctxOptions(ent.kind, ent.item),
     x,
     y,
     byKey,
@@ -282,7 +299,9 @@ export function openRelMenu(relId: string, x: number, y: number, byKey = false) 
 
 // The menu of a relationship line, or else of an item.
 export const openMenuAt = (line: HTMLElement | null, node: HTMLElement | null, x: number, y: number) =>
-  line ? openRelMenu(line.dataset.relEdit!, x, y) : openCtxMenu(nodeId(node)!, x, y);
+  line
+    ? openRelMenu(line.dataset.relEdit!, x, y)
+    : openCtxMenu(nodeId(node)!, x, y, false, node?.closest<HTMLElement>('[data-in-plan]')?.dataset.inPlan);
 
 export function runRelAction(act: string, relId: string) {
   closeCtxMenu();
@@ -292,7 +311,12 @@ export function runRelAction(act: string, relId: string) {
   render();
 }
 
-export function runCtxAction(act: string, id: string) {
+export function runCtxAction(act: string, id: string, plan = '') {
+  if (act === 'week' || act === 'open-in') {
+    closeCtxMenu();
+    return act === 'week' ? chooseFocus(plan || plans.current!, id) : openIn(plan, id);
+  }
+  if (plan && plan !== plans.current) return inPlan(plan, () => runCtxAction(act, id));
   const ent = findEntity(id);
   closeCtxMenu();
   if (act.startsWith('fold-all:')) return foldAllTl(act === 'fold-all:collapse');

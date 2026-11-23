@@ -83,6 +83,6 @@ export function listenMenuKeys() {
       closeCtxMenu();
       openForm(b.dataset.ctx!.slice(4) as FormKind);
     } else if (b && ctxMenu.dataset.rel) runRelAction(b.dataset.ctx!, ctxMenu.dataset.rel);
-    else if (b) runCtxAction(b.dataset.ctx!, ctxMenu.dataset.id!);
+    else if (b) runCtxAction(b.dataset.ctx!, ctxMenu.dataset.id!, ctxMenu.dataset.plan);
   });
 }

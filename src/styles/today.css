@@ -1,0 +1,85 @@
+/* Today (feature 09): the date, this week's one thing, plans as small headings, the step picker. */
+.today-date {
+  margin: 0 0 6px;
+  color: var(--ink-3);
+  font-size: 15px;
+}
+.focus-card {
+  max-width: 760px;
+  margin: 0 0 8px;
+  padding: 4px 16px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--goal);
+  border-radius: var(--r-md);
+}
+.focus-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.focus-head .section-title {
+  margin: 14px 0 10px;
+  font-size: 16px;
+}
+.focus-card > .empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.focus-done {
+  margin: 10px 0 0;
+  color: var(--ink-3);
+}
+.today-plan-h {
+  margin: 18px 0 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.today-plan:first-child .today-plan-h,
+.section-title + .today-plan .today-plan-h {
+  margin-top: 0;
+}
+.today-later {
+  margin-top: 22px;
+}
+.today-week {
+  padding-top: 10px;
+}
+.focus-pick-dlg input[type='search'] {
+  width: 100%;
+  margin: 4px 0 10px;
+}
+.pick-steps {
+  max-height: min(55vh, 420px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pick-step {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pick-step:hover,
+.pick-step:focus-visible {
+  background: var(--goal-soft);
+}
+.pick-step[hidden] {
+  display: none;
+}
+.pick-step small {
+  color: var(--ink-3);
+  white-space: nowrap;
+}

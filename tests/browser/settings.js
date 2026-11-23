@@ -44,7 +44,7 @@ suite(async () => {
     }
     return $('#installHint').textContent || 'hidden';
   });
-  await step('phone tab bar: visions, goals, activities and review under More', () => {
+  await step('phone tab bar: visions, goals, activities, today and review under More', () => {
     setView('map');
     // The tests run at desktop width; show the menu as a phone would.
     const phone = document.head.appendChild(document.createElement('style'));
@@ -58,7 +58,7 @@ suite(async () => {
     more.click();
     const items = [...sheet.querySelectorAll('[data-sheet-view]')].map(b => b.dataset.sheetView);
     assert(!sheet.hidden && more.getAttribute('aria-expanded') === 'true', 'opens');
-    assert(items.join() === 'visions,goals,activities,review', 'lists the extra views');
+    assert(items.join() === 'visions,goals,activities,today,review', 'lists the extra views');
     assert(sheet.querySelector('[data-sheet-view="goals"]').textContent.trim() === t('nav.goals'), 'with labels');
     assert(document.activeElement === sheet.querySelector('button'), 'first item focused');
     sheet.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));

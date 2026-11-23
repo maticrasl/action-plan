@@ -11,6 +11,7 @@ export const sl: Language = {
     'nav.dashboard': 'Pregled',
     'nav.goals': 'Cilji',
     'nav.graphs': 'Grafi',
+    'nav.today': 'Danes',
     'nav.review': 'Pogled nazaj',
     'view.guide': 'Vodnik',
     'guide.search': 'Iščite po vodniku …',
@@ -89,6 +90,7 @@ export const sl: Language = {
     'map.visionLinked': 'Povezano: »{a}« služi »{b}«',
     'map.visionUnlinked': 'Povezava odstranjena',
     'view.graphs': 'Grafi meritev',
+    'view.today': 'Danes',
     'view.review': 'Pogled nazaj',
     'gr.since': 'od {date}',
     'gr.oneMeasurement': 'Zaenkrat le ena meritev',
@@ -549,6 +551,8 @@ export const sl: Language = {
     'tip.achieved.btn2': 'Napiši zaključni zapisek',
     'tip.first-month.text':
       'Mesec dni se vračate k svojemu načrtu. Ta navada je vredna več kot katerikoli posamezen cilj v njem.',
+    'tip.try-today.text': 'Imate več kot en načrt. Danes na eni strani našteje, kar je na vrsti v vseh.',
+    'tip.try-today.btn': 'Odpri Danes',
     'tip.try-map.text':
       'V vašem načrtu je zdaj dovolj, da je vreden pogled na Zemljevid: pokaže, kaj čemu služi in kaj ničemur.',
     'tip.try-map.btn': 'Odpri Zemljevid',
@@ -678,6 +682,8 @@ export const sl: Language = {
       'Pregled povzame vaš načrt: povprečni napredek aktivnih ciljev, opravljene, zamujene in čakajoče aktivnosti ter kaj je na vrsti: aktivnosti z rokom do danes ali zamujene (Prikaži vse doda še ostale v teku).',
     'help.view.goals':
       'Cilji so tam, kamor želite priti. Vsak naj bo SMART in povezan s trenutnim stanjem, ki ga meri, in z aktivnostmi, ki ga premikajo naprej. Cilj lahko merite tudi preprosto s tem, koliko njegovih aktivnosti je opravljenih. Pridržite kartico ali jo kliknite z desno tipko, da cilj prikažete na časovnici ali zemljevidu.',
+    'help.view.today':
+      'Kar je na vrsti v vseh vaših načrtih, da odkljukate na enem mestu. Kartica na vrhu je korak, ki ste ga izbrali za ta teden.',
     'help.view.review':
       'Kar ste naredili. Dnevnik opravljenega našteje vsak korak, kljukico in vrednost po tednih; tapnite enega, da ga odprete.',
     'help.view.graphs':
@@ -982,6 +988,19 @@ export const sl: Language = {
     'log.more': 'Pokaži prejšnje',
     'log.empty': 'Odkljukanega še ni nič. Kar opravite, bo našteto tukaj, po tednih.',
     'log.openedPlan': 'Odprt načrt »{name}«',
+    'today.focus': 'Ena stvar tega tedna',
+    'today.focusNone': 'Za ta teden ni izbranega koraka.',
+    'today.choose': 'Izberi …',
+    'today.focusDone': 'To je bila ena stvar tega tedna.',
+    'today.focusClear': 'Počisti',
+    'today.pick': 'Kateri korak je ta teden najpomembnejši?',
+    'today.pickSearch': 'Poišči korak',
+    'today.pickNone': 'Ni korakov za izbiro.',
+    'today.due': 'Danes in zamujeno',
+    'today.routines': 'Rutine danes',
+    'today.later': 'Pozneje ta teden',
+    'today.none': 'Danes ni nič na vrsti.',
+    'today.focusSet': 'Ena stvar tega tedna: {name}',
     'dash.factLate': {
       one: 'zamuja {n} aktivnost',
       two: 'zamujata {n} aktivnosti',
@@ -1237,6 +1256,8 @@ export const sl: Language = {
     'ctx.label': 'Možnosti za »{name}«',
     'ctx.highlight': 'Poudari povezave',
     'ctx.focus': 'Prikaži samo ta cilj',
+    'ctx.focus.week': 'Izberi kot eno stvar tega tedna',
+    'ctx.openIn': 'Odpri v »{plan}«',
     'ctx.collapse': 'Strni',
     'ctx.expand': 'Razširi',
     'ctx.markAchieved': 'Označi kot dosežen',

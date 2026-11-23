@@ -102,6 +102,13 @@ const CLASS_D: Tip[] = (
       hits: ({ db, seen }) => once(itemCount(db) >= L.TRY_MAP_ITEMS && !seen?.views?.map),
     },
     {
+      id: 'try-today',
+      view: 'dashboard',
+      guide: 'h-today',
+      action: 'today',
+      hits: ({ activePlans, seen }) => once((activePlans || 0) >= 2 && !seen?.views?.today),
+    },
+    {
       id: 'try-timeline',
       view: 'activities',
       guide: 'h-timeline',

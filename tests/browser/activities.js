@@ -379,6 +379,7 @@ suite(async () => {
           'status:todo',
           'status:doing',
           'status:done',
+          'week',
           'add:activity:subactivity',
           'show:map',
           'show:timeline',

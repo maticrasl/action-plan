@@ -1,20 +1,17 @@
 /** The overview: a summary line, what is due next, routines due today and goals in progress. */
-import { byDeadline, byDueDate, deadlineTag, emptyState, esc, itemCount, linkTag, statusCheck } from '../ui/dom';
+import { byDeadline, byDueDate, emptyState, itemCount } from '../ui/dom';
 import { t, tp } from '../i18n/index';
 import { db } from '../core/state';
-import { activityState, blockers, goalProgress, hasPercent } from '../core/progress';
+import { blockers, goalProgress, hasPercent } from '../core/progress';
 import { isRoutine, type Routine } from '../core/routines/schedule';
 import { daysUntil, today } from '../core/dates';
 import { routineToday } from '../core/routines/keeping';
 import { ui } from '../store/state';
-import { listFold, listOpen, listTicks, routineRow } from './routines';
+import { routineRow } from './routines';
 import { goalCard } from '../ui/goal-card';
-import { relsFrom } from '../core/relations';
-import { isList, listDone } from '../core/routines/checkins';
-import type { Activity } from '../core/model';
 import { replanButton } from '../ui/replan';
-import { doneLog, weekCounts } from '../core/done-log';
-import { addDays, weekday } from '../core/routines/schedule';
+import { activityRow, weekLine } from './day-rows';
+import { focusCard } from './focus';
 
 export function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
@@ -54,6 +51,7 @@ export function renderDashboard() {
 
   const waiting = todo.filter(a => blockers(a).length).length;
   return `
+    ${focusCard(undefined, true)}
     <section class="summary">
       <p class="summary-line">${headline}</p>
       <ul class="facts">
@@ -85,32 +83,3 @@ export function renderDashboard() {
   `;
 }
 
-// What this plan finished since Monday (feature 13); nothing at all when nothing was.
-function weekLine(now: string) {
-  const entries = doneLog([{ plan: '', data: db }], addDays(now, -weekday(now)), now);
-  const c = weekCounts(entries);
-  const parts = [
-    ...entries.filter(e => e.kind === 'goal').map(e => t('log.reached', { name: esc(e.title) })),
-    c.steps ? tp('log.steps', c.steps) : '',
-    c.routineDays ? tp('log.ticks', c.routineDays) : '',
-    c.values ? tp('log.values', c.values) : '',
-  ].filter(Boolean);
-  return parts.length ? `<button class="week-line" data-log="view">${t('log.week', { parts: parts.join(' · ') })}</button>` : '';
-}
-
-export function activityRow(a: Activity) {
-  const goals = relsFrom(a.id, 'contributes')
-    .map(r => linkTag(r.to))
-    .join('');
-  const blocked = blockers(a).length;
-  const open = isList(a) && a.list.length > 0 && listOpen(a.id);
-  return `<div class="row glass st-${activityState(a)}${open ? ' open' : ''}" data-open="${a.id}" data-ctx-item="${a.id}">
-    ${statusCheck(a)}
-    <span class="grow ${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</span>
-    ${isList(a) && a.list.length ? listFold(a.id, listDone(a), a.list.length) : ''}
-    ${blocked ? `<span class="tag bad" title="${esc(tp('blocked.title', blocked))}">${t('blocked')}</span>` : ''}
-    <span class="links">${goals}</span>
-    ${deadlineTag(a.dueDate, a.status === 'done')}
-    ${open && isList(a) ? `<div class="row-items">${listTicks(a)}</div>` : ''}
-  </div>`;
-}

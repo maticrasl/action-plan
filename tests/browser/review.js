@@ -10,12 +10,12 @@ suite(async () => {
   };
   const toastText = () => $('#toast').firstChild?.textContent;
 
-  await step('review: the Overview line opens it; empty plan shows the empty text; last in the nav', () => {
+  await step('review: the Overview line opens it; empty plan shows the empty text; last in the nav, after Today', () => {
     fresh('Review A');
     setView('review');
     eq($('#view .empty')?.textContent, t('log.empty'), 'empty');
     const nav = [...document.querySelectorAll('.nav .nav-item[data-view]')].map(b => b.dataset.view);
-    eq(nav.join(), 'dashboard,map,timeline,graphs,visions,goals,activities,review', 'nav order');
+    eq(nav.join(), 'dashboard,map,timeline,graphs,visions,goals,activities,today,review', 'nav order');
     const a = mk('activity', { title: 'Buy shoes', startDate: d(-3), dueDate: d(3) });
     save();
     a.status = 'done';

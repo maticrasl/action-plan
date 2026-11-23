@@ -15,7 +15,8 @@ import { WALK_VIEWS, walkView } from '../core/guidance/walk';
 import { today } from '../core/dates';
 import { db, visions } from '../core/state';
 import { findEntity } from '../core/relations';
-import { ui, type ViewName } from '../store/state';
+import { plans, ui, type ViewName } from '../store/state';
+import { allPlansData } from '../store/visions';
 import { isDemo } from '../store/plans';
 import { getSeen, markDay, markView } from '../store/seen';
 import { getTips, saveTips } from '../store/tips';
@@ -54,7 +55,10 @@ function tipInput(): TipInput {
     installed: isInstalled(),
     fine: matchMedia('(pointer: fine)').matches,
   };
-  return { db, visions: visions.list, today: today(), lastReview: seen.lastReview, seen, device };
+  const activePlans = allPlansData().filter(
+    ({ plan, data }) => !plans.list.find(p => p.id === plan.id)?.demo && data.goals.some(g => g.status === 'active'),
+  ).length;
+  return { db, visions: visions.list, today: today(), lastReview: seen.lastReview, seen, device, activePlans };
 }
 
 // Getting started is on and its first stage is open: one voice at a time.
@@ -69,6 +73,7 @@ const target = (c: Chosen) => c.hit.target || c.hit.id || '';
 const goTo = (view: ViewName) => () => setView(view);
 
 export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
+  today: goTo('today'),
   timeline: goTo('timeline'),
   // The back tip can show with nothing late: then the Timeline, as before.
   replan: () => (lateSteps(db, today()).length ? openReplan() : setView('timeline')),
@@ -158,7 +163,7 @@ export function decorateTips() {
   const before = getTips();
   if (!before.off && !isDemo()) {
     markDay(today());
-    if ((WALK_VIEWS as readonly string[]).includes(ui.view)) markView(ui.view);
+    if ([...WALK_VIEWS, 'today'].includes(ui.view)) markView(ui.view);
   }
   if (ui.view === 'guide' || document.querySelector('dialog[open]')) return;
   const inp = tipInput();

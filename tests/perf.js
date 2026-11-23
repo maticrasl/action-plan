@@ -82,6 +82,21 @@
       db.activities.push({ id: 'a' + i, title: 'Activity ' + i, status: 'done', doneAt: addDays(today(), -i * 4) });
     check('240 steps + 1,100 amounts: review view', 100, () => setView('review'));
     deletePlan(plans.current);
+    // Today over 5 plans of 300 activities each (feature 09): steps due around today, and daily routines.
+    const made = [];
+    for (let p = 0; p < 5; p++) {
+      const data = emptyDb();
+      for (let i = 0; i < 300; i++)
+        data.activities.push(
+          i % 3
+            ? { id: `t${p}-${i}`, title: 'Step ' + i, status: 'todo', dueDate: addDays(today(), (i % 20) - 10) }
+            : { id: `t${p}-${i}`, title: 'Routine ' + i, status: 'doing', repeat: { every: 1, unit: 'day' }, checkins: {} },
+        );
+      createPlan('Today ' + p, data);
+      made.push(plans.current);
+    }
+    check('5 plans x 300 items: today view', 150, () => setView('today'));
+    made.forEach(id => deletePlan(id));
     // Visions, last so their extra drawing doesn't weigh on the checks above: the 300-item map again,
     // with 20 visions in a tree that every goal serves (clouds, lines, the glow, a gold Purpose).
     createPlan('Visions map', emptyDb());

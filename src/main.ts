@@ -41,6 +41,7 @@ import { listenRestore } from './ui/restore-dialog';
 import { listenReplan } from './ui/replan';
 import { listenClosing } from './ui/closing';
 import { listenCsv } from './ui/csv-dialog';
+import { listenToday } from './views/focus';
 
 // Screen parts below the views redraw, switch users and offer the welcome through these.
 setRenderer(render);
@@ -80,6 +81,7 @@ addEventListener('storage', e => takeOtherTab(e.key));
 addEventListener('resize', measureTopbar);
 // The graphs' pointing, the map's gestures, then the timeline's, in the order they had in app.js.
 listenGraphs();
+listenToday();
 listenMap();
 listenTlDrag();
 listenGuide();

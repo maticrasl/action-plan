@@ -129,6 +129,14 @@ describe('class D', () => {
     expect(ids('try-map', plan({ goals: items(6) }), { seen: { views: { map: true } } })).toEqual([]);
   });
 
+  test('try-today: two or more plans with an active goal, and Today never opened', () => {
+    const p = plan({ goals: items(1) });
+    expect(ids('try-today', p, { activePlans: 2 })).toEqual(['·']);
+    expect(ids('try-today', p, { activePlans: 1 })).toEqual([]);
+    expect(ids('try-today', p)).toEqual([]);
+    expect(ids('try-today', p, { activePlans: 3, seen: { views: { today: true } } })).toEqual([]);
+  });
+
   test('try-timeline: 4 items with dates and the Timeline never opened', () => {
     const dated = (n: number) => items(4).map((g, i) => (i < n ? { ...g, deadline: '2027-01-01' } : g));
     expect(ids('try-timeline', plan({ goals: dated(4) }))).toEqual(['·']);

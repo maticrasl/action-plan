@@ -346,8 +346,8 @@ export const guideEn = [
       },
       {
         text: '<strong>Choose next week’s one thing.</strong> The step that matters most. Give it a day.',
-        go: 'view-dashboard',
-        label: 'Overview',
+        go: 'pick-focus',
+        label: 'Choose…',
       },
     ],
     related: ['method', 'fell-off', 'overplanning'],
@@ -458,10 +458,18 @@ export const guideEn = [
     action: { do: 'view-review', label: 'Open Review' },
   },
   {
+    id: 'h-today',
+    group: 'how',
+    title: 'Today',
+    body: `<p><strong>Today</strong> lists what is due from all your plans: steps due today or overdue, and the routines today asks for. Tick them here without changing plan; tap a title to open it in its plan. At the top sits this week’s one thing: the step you chose as the one that matters most. Choose it from any step’s menu, or at the end of the weekly review. A new week starts with none.</p>`,
+    action: { do: 'view-today', label: 'Open Today' },
+    related: ['h-overview', 'review'],
+  },
+  {
     id: 'h-overview',
     group: 'how',
     title: 'Overview',
-    body: `<p>The Overview is the page for most days: how far along your active goals are on average, the activities due by today or overdue (“Show all” adds the others in progress), the routines today still asks for, and your active goals. Tick things here without going anywhere else. The line “This week” counts what you finished since Monday: steps, routine days, values, and goals reached; tap it for the done log. A finished step or goal remembers the day; change it in its form under Done on or Achieved on, for example when you record on Monday what you did on Friday.</p>`,
+    body: `<p>The Overview is the page for most days: how far along your active goals are on average, the activities due by today or overdue (“Show all” adds the others in progress), the routines today still asks for, and your active goals. Tick things here without going anywhere else. The line “This week” counts what you finished since Monday: steps, routine days, values, and goals reached; tap it for the done log. A finished step or goal remembers the day; change it in its form under Done on or Achieved on, for example when you record on Monday what you did on Friday. The Overview shows one plan; Today shows the same for all of them.</p>`,
     action: { do: 'view-dashboard', label: 'Open the Overview' },
   },
   {

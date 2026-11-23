@@ -70,6 +70,7 @@ export function load() {
 }
 
 export function save() {
+  if (acting) return saveActing(acting);
   emit('saving');
   stampChanges(db);
   stampPlanChanges(plans);
@@ -98,29 +99,45 @@ export function withPlan<T>(data: Db, fn: () => T): T {
 // Changes a plan and saves it, open or not; false when there is no such plan. Another plan is
 // stamped against what it held, and the open plan's change tracking is left as it was.
 export function editPlan(id: string, fn: (data: Db) => void): boolean {
-  if (id === plans.current) {
+  if (id !== plans.current && !plans.list.some(p => p.id === id)) return false;
+  actInPlan(id, () => {
     fn(db);
     save();
-    return true;
-  }
-  if (!plans.list.some(p => p.id === id)) return false;
+  });
+  return true;
+}
+
+// The plan a screen action works on while it is not the open one (Today): the core sees it as the
+// open plan, and save() writes it under its own key, leaving the plan list alone.
+let acting: string | null = null;
+export const actingPlan = () => acting;
+// Runs `fn` on plan `id` as if it were open (synchronous). The open plan, '' or a nested call on the
+// same plan run `fn` as it is; an unknown plan does not run it.
+export function actInPlan<T>(id: string, fn: () => T): T | undefined {
+  if (acting && id && id !== acting) throw new Error('actInPlan: nested on another plan');
+  if (!id || id === plans.current || acting) return fn();
+  if (!plans.list.some(p => p.id === id)) return undefined;
   const data = readPlan(id),
     kept = keepSnapshot();
+  acting = id;
   try {
     takeSnapshot(data);
-    withPlan(data, () => fn(data));
-    stampChanges(data);
+    return withPlan(data, fn);
   } finally {
+    acting = null;
     restoreSnapshot(kept);
   }
+}
+// No 'saving': a goal reached in a plan that is not open is offered when that plan is opened.
+function saveActing(id: string) {
+  stampChanges(db);
   setPlansVersion(plansVersion + 1);
   try {
-    userStorage.setItem(planKey(id), JSON.stringify(data));
+    userStorage.setItem(planKey(id), JSON.stringify(db));
   } catch (e) {
     emit('storageError');
   }
   emit('saved');
-  return true;
 }
 
 // The order plans were opened in on this device (a higher number is more recent), for the plan list.
@@ -220,7 +237,9 @@ export function mergePlanInto(fromId: string, toId: string, remove = false) {
 
 // Removes an item and keeps it in Recently deleted; says whether it could be kept there.
 export function removeEntity(kind: ItemKind, id: string): 'ok' | 'large' | 'full' {
-  const kept = trashAdd(kind === 'vision' ? visionEntry(id) : itemEntry(kind, id, plans.current!, currentPlan()?.name || ''));
+  const kept = trashAdd(
+    kind === 'vision' ? visionEntry(id) : itemEntry(kind, id, plans.current!, currentPlan()?.name || ''),
+  );
   if (kind === 'vision') {
     if (ui.mapSelected === id) ui.mapSelected = null;
     deleteVision(id);

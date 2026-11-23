@@ -63,11 +63,12 @@ describe('journal store', () => {
     expect(stored().reviews.map((x: { id: string }) => x.id)).toEqual([r.id]);
   });
 
-  test('focus: set with the Monday of this week, cleared', () => {
+  test('focus: set with the Monday of this week, cleared with a mark', () => {
     setFocus('p1', 'a1');
     expect(stored().focus).toEqual({ week: '2026-11-16', plan: 'p1', item: 'a1', at: '2026-11-21T10:00:00.000Z' });
     clearFocus();
-    expect(stored().focus).toBeUndefined();
+    // A mark with its time, so another device's older choice does not come back on sync.
+    expect(stored().focus).toEqual({ week: '2026-11-16', plan: '', item: '', at: '2026-11-21T10:00:00.000Z' });
   });
 
   test('a merged journal from sync is stored as it is, without new stamps', () => {

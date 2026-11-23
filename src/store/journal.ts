@@ -110,9 +110,5 @@ export function setFocus(plan: string, item: string) {
   journal.focus = { week: addDays(day, -weekday(day)), plan, item, at: new Date().toISOString() };
   saveJournal();
 }
-// shortcut: a cleared focus leaves no mark, so another device's older focus comes back on sync; add a
-// cleared-at time when a screen lets people clear it (feature 09).
-export function clearFocus() {
-  delete journal.focus;
-  saveJournal();
-}
+// Leaves an empty focus with its time, so another device's older choice does not come back on sync.
+export const clearFocus = () => setFocus('', '');
