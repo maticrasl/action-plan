@@ -74,12 +74,12 @@ export function renderTimeline() {
   const px = ui.tlPx;
   const todayN = dayNum(today());
 
-  // Date range: everything shown plus today, padded and starting on the 1st of a month.
+  // Date range: everything shown plus today, padded by 160 px on both sides.
   const dates = (
     rows.flatMap(r => (r.item ? [r.item.startDate, endOf(r.kind, r.item)] : [])).filter(Boolean) as string[]
   ).map(dayNum);
   const pad = Math.ceil(160 / px);
-  const from = dayNum(dayStr(Math.min(todayN, ...dates) - pad).slice(0, 8) + '01');
+  const from = Math.min(todayN, ...dates) - pad;
   const to = Math.max(todayN, ...dates) + pad;
   const W = (to - from + 1) * px;
   const x = (n: number) => (n - from) * px;
@@ -99,7 +99,8 @@ export function renderTimeline() {
     months.push(
       `<div class="tl-month" style="left:${x(n)}px;width:${(Math.min(next, to + 1) - n) * px}px"><span>${esc(label)}</span></div>`,
     );
-    lines.push(`<i class="tl-line major" style="left:${x(n)}px"></i>`);
+    // A month's line where it begins: the first month can start mid-month at the left edge.
+    if (d.getUTCDate() === 1) lines.push(`<i class="tl-line major" style="left:${x(n)}px"></i>`);
     n = next;
   }
   for (let n = from; n <= to; n++) {

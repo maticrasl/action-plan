@@ -105,13 +105,14 @@ suite(async () => {
     save();
     setView('graphs');
     assert(!card(s.id).querySelector('.gr-pace, .gr-pace-facts'), 'not started: no pace');
-    // A single measurement: the tag, the needed rate, no forecast and no trend.
+    // A single measurement: the tag and the needed rate; no pace line, legend, forecast or trend.
     const one = setup('Pace single');
     one.s.history = one.s.history.slice(-1);
     save();
     setView('graphs');
     const c = card(one.s.id);
-    assert(c.querySelector('.gr-pace') && !c.querySelector('.gr-trend'), 'a pace line, no trend');
+    assert(!c.querySelector('.gr-pace, .gr-trend'), 'no pace line, no trend');
+    assert(!c.querySelector('.gr-legend').textContent.includes('Pace to target'), 'no pace in the legend');
     const facts = c.querySelector('.gr-pace-facts').textContent;
     assert(!facts.includes('At this rate'), facts);
     setView('goals');

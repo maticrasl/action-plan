@@ -64,32 +64,42 @@ export function hideGraphPoint(plot: HTMLElement) {
   delete plot.dataset.i;
 }
 
-export function nearestPoint(plot: HTMLElement, clientX: number) {
+// The measurement under the pointer: its dot, or for bars (they have their own tip) its column; -1 if none.
+export function nearestPoint(plot: HTMLElement, clientX: number, clientY: number, reach: number) {
   const c = grCharts[plot.closest<HTMLElement>('[data-gr]')!.dataset.gr!];
-  const x = clientX - plot.querySelector('svg')!.getBoundingClientRect().left;
+  const r = plot.querySelector('svg')!.getBoundingClientRect(),
+    x = clientX - r.left,
+    y = clientY - r.top;
   let best = 0;
   c.points.forEach((p, i) => {
     if (Math.abs(c.px(p.day) - x) < Math.abs(c.px(c.points[best].day) - x)) best = i;
   });
-  return best;
+  const p = c.points[best];
+  const far = Math.abs(c.px(p.day) - x) > reach || (!c.tip && Math.abs(c.py(p.value) - y) > reach);
+  return far ? -1 : best;
 }
 
 // Charts are drawn at the view's pixel width, so redraw them when it changes.
 let grResize: ReturnType<typeof setTimeout> | undefined;
 
 export function listenGraphs() {
-  (['pointermove', 'pointerdown'] as const).forEach(type =>
-    viewEl.addEventListener(type, e => {
-      const plot = (e.target as Element).closest<HTMLElement>('.gr-plot');
-      if (plot) showGraphPoint(plot, nearestPoint(plot, e.clientX));
-    }),
-  );
+  // A mouse shows a point by hovering it; a finger by tapping it, so a pinch or a scroll shows nothing.
+  const point = (e: PointerEvent | MouseEvent, reach: number) => {
+    const plot = (e.target as Element).closest<HTMLElement>('.gr-plot');
+    if (!plot) return;
+    const i = nearestPoint(plot, e.clientX, e.clientY, reach);
+    if (i < 0) hideGraphPoint(plot);
+    else showGraphPoint(plot, i);
+  };
+  viewEl.addEventListener('pointermove', e => e.pointerType !== 'touch' && point(e, 16));
+  viewEl.addEventListener('click', e => point(e, (e as PointerEvent).pointerType === 'touch' ? 28 : 16));
   viewEl.addEventListener('pointerout', e => {
     const plot = (e.target as Element).closest<HTMLElement>('.gr-plot');
     if (plot && !plot.contains(e.relatedTarget as Node | null) && document.activeElement !== plot) hideGraphPoint(plot);
   });
   viewEl.addEventListener('focusin', e => {
-    if ((e.target as Element).matches('.gr-plot'))
+    // From the keyboard only: a click or tap focuses the plot too, and shows its own point.
+    if ((e.target as Element).matches('.gr-plot:focus-visible'))
       showGraphPoint(
         e.target as HTMLElement,
         grCharts[(e.target as Element).closest<HTMLElement>('[data-gr]')!.dataset.gr!].points.length - 1,

@@ -44,7 +44,7 @@ suite(async () => {
     modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     assert(!modal.open, 'a real backdrop click still closes');
   });
-  await step('new item: relationships folded; open when editing or links are preset', () => {
+  await step('relationships folded, also when editing; open for a new item with a preset link', () => {
     const sec = () => modal.querySelector('details.link-sec');
     for (const k of ['goal', 'state', 'vision']) {
       openForm(k);
@@ -54,9 +54,9 @@ suite(async () => {
     openForm('activity', null, { repeat: 'once' });
     assert(sec() && !sec().open && sec().querySelector('#f-parent'), 'activity: parent and link lists folded');
     modal.close();
-    const g = db.goals[0];
+    const g = db.goals.find(x => db.relations.some(r => r.from === x.id || r.to === x.id));
     openForm('goal', g.id);
-    assert(sec().open, 'editing: open');
+    assert(sec().querySelector('[data-picked-id]') && !sec().open, 'editing an item with links: folded');
     modal.close();
     openForm('activity', null, { repeat: 'once', contributes: [g.id] });
     assert(sec().open, 'a preset link: open');
@@ -261,6 +261,7 @@ suite(async () => {
     const a = mk('activity', { title: 'Train', startDate: d(0), dueDate: d(7) });
     rel(a, g1, 'contributes');
     openForm('activity', a.id);
+    modal.querySelector('details.link-sec').open = true; // folded when editing
     const pk = modal.querySelector('.picker[data-picker="goal"]');
     const list = pk.querySelector('.pick-list'),
       search = pk.querySelector('.picker-search');
