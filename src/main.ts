@@ -22,6 +22,7 @@ import { on } from './store/events';
 import { keepStorage } from './store/persist';
 import { JOURNAL_KEY, loadJournal } from './store/journal';
 import { scheduleSync } from './sync/sync';
+import { takeOtherTab } from './sync/tabs';
 import { connectSync, initSync, renderSync } from './ui/sync-ui';
 import { setRenderer } from './ui/render';
 import { offerReached } from './ui/reached';
@@ -70,6 +71,8 @@ on('storageError', () => toast(t('err.storage')));
 on('syncChanged', () => renderSync());
 // Another tab saved the journal: this one takes it over, so it never writes an old copy back.
 addEventListener('storage', e => e.key === userKey(JOURNAL_KEY) && loadJournal());
+// Another tab saved plans or visions: merged here item by item (sync/tabs.ts).
+addEventListener('storage', e => takeOtherTab(e.key));
 // The graphs' pointing, the map's gestures, then the timeline's, in the order they had in app.js.
 listenGraphs();
 listenMap();
