@@ -99,30 +99,13 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
-- 2026-11-23, branch `feat/guided-discovery`: 01 built, not yet seen by the owner (line not ticked).
-  Spec `docs/specs/2026-11-23-guided-discovery.md`. Rules in `core/discovery.ts`, dialog in
-  `ui/discovery.ts` and `ui/discovery-steps.ts`, page test `tests/browser/discovery.js`. Runs are
-  journal sessions (no new key, no sync change). The yearly review (14) still has to end with it.
-- 2026-11-23, branch `feat/life-areas`: 03 built, not yet seen by the owner (line not ticked). Spec
-  `docs/specs/2026-11-23-life-areas.md` (counting rule, buttons instead of a context menu). Rules in
-  `core/areas.ts`, screen in `views/areas.ts`, page test `tests/browser/visions.areas.js`. "Rated" came with 01.
-- 2026-11-23, branch `feat/line-of-sight`: 05 built, not yet seen by the owner (line not ticked).
-  Rules in `core/line-of-sight.ts`, tag and toast in `ui/line-of-sight.ts`, page test
-  `tests/browser/today.sight.js`. The toast names the vision only when the tick has no other
-  message (a met week keeps its own). Perf: goals view 9 → 20 ms (Serves line on each card).
-- 2026-11-23, branch `feat/today`: 09 built, not yet seen by the owner (line not ticked). Today sits
-  before Review (on phones under More), not first as the plan said: the owner's choice for now.
-  Other plans are ticked through `actInPlan` (`store/plans.ts`) and `inPlan` (`ui/render.ts`); a
-  cleared focus is stored as an empty focus with its time. Left out: Move late steps per plan on
-  Today, week strips on Today's routine rows. Perf: 5 plans x 300 items ~120-180 ms (budget 150).
+- 2026-11-23, branches `feat/keep-goals` (07) and `feat/reviews` (14 A, B, C, stacked on it): built, full
+  `npm run check` passes, not yet seen by the owner (lines not ticked). Specs `docs/specs/2026-11-23-keep-goals.md`
+  and `docs/specs/2026-11-23-reviews.md` record what the build decided. Shipping `feat/reviews` ships both.
+- 07: `goal.keep { min?, max? }`, rules in `core/keep.ts`, form parts `ui/forms/keep-form.ts`, band `views/graphs/band.ts`.
+- 14: rules in `core/reviews*.ts`, pages `views/review-*.ts`; the Guide checklist is gone; tips `week`, `month`,
+  `new-year` open their review. Two `shortcut:` limits (flexible routines in Forgot to tick; biggest changes).
+- 01, 03, 05 and 09 are shipped (#60–#63) but still wait for the owner to look before their lines are ticked.
+- Next open lines after the owner looks: `18-progress-report` (needs 13 and 14), then `20-mcp-server`.
 - Plans were written 2026-11-15 against `5b71e59`; find code with `npm run map`, not the plans' paths.
-- Confirmed 2026-11-21: decisions 1, 2, 4 to 9, 11, 12; ticked 06, Guidance 3, 17 A. Still waiting:
-  decision 10 (feedback channel) and the owner's check of `feedback-link` (#32).
-- 2026-11-20, branch `feat/undo-trash`: sync-file guard, Undo, synced Recently deleted
-  (`core/trash.ts`, `store/trash.ts`, `ui/undo.ts`, `ui/trash-dialog.ts`). Items are deleted without
-  asking; plans keep their dialog. Backups stay `version: 1` and hold no trash, so older copies
-  restore them. `scripts/fixtures.mjs` accepts only the version change 1 → 2 in `rich.sync.json`.
-- Journal store shipped (#49): sync file version 3; reviews (14), Today (09) and discovery (01)
-  write into it. 17 B open.
-- Review view exists (`views/review.ts`, `core/done-log.ts`) with only the done log; weekly
-  reviews (14) add their part there.
+- Still waiting: decision 10 (feedback channel, Q-010).
