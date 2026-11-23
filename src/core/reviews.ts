@@ -37,6 +37,12 @@ export function weekPeriod(monday: ISODate): string {
   return `${year}-W${String(n).padStart(2, '0')}`;
 }
 
+// The Monday of a stored week, '2026-W47'.
+export function weekMonday(period: string): ISODate {
+  const [y, w] = period.split('-W').map(Number);
+  return addDays(mondayOf(`${y}-01-04`), (w - 1) * 7);
+}
+
 // The latest value or amount of a state, and whether it has one in [from, to].
 function lastOf(s: State): { date: ISODate; value: string } | undefined {
   const list = isCumulative(s)

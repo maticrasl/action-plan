@@ -303,3 +303,35 @@
 .rv-work li + li {
   margin-top: 4px;
 }
+/* Past reviews: one line each, newest first. */
+.rv-past {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 70ch;
+}
+.rv-past-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rv-past-open:hover .grow,
+.rv-past-open:focus-visible .grow {
+  color: var(--goal);
+}
+.rv-past-open small {
+  color: var(--ink-2);
+}
+.rv-text {
+  white-space: pre-line;
+  margin: 0 0 8px;
+}

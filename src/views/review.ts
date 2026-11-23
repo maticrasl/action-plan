@@ -15,6 +15,8 @@ import { setView } from '../ui/nav';
 import { requestRender as render } from '../ui/render';
 import { reviewView, tabsHtml, type ReviewTab } from './review-frame';
 import { finishWeek, renderWeekReview, shiftWeek } from './review-week';
+import { chooseForVision, finishYear, renderYearReview, shiftYearView, type VChoice } from './review-year';
+import { deletePast, renderPastReviews } from './review-past';
 import {
   chooseForGoal,
   finishMonth,
@@ -52,6 +54,15 @@ const MARK: Record<DoneKind, string> = {
   note: '✎',
 };
 
+// Each tab: how it draws, and for the reviews, their arrows and Finish.
+const PAGES: Record<ReviewTab, { render: () => string; shift?: (dir: number) => void; finish?: () => void }> = {
+  week: { render: () => renderWeekReview(), shift: d => shiftWeek(d), finish: () => finishWeek() },
+  month: { render: () => renderMonthReview(), shift: d => shiftMonthView(d), finish: () => finishMonth() },
+  year: { render: () => renderYearReview(), shift: d => shiftYearView(d), finish: () => finishYear() },
+  log: { render: () => renderLog() },
+  past: { render: () => renderPastReviews() },
+};
+
 // Opens the Review view on one of its tabs (tips, Getting started and the Guide's buttons).
 export function openReview(tab: ReviewTab) {
   reviewView.tab = tab;
@@ -62,7 +73,7 @@ export function openReview(tab: ReviewTab) {
 // The switch, then the tab shown.
 export function renderReview(): string {
   const tab = reviewView.tab;
-  const body = tab === 'week' ? renderWeekReview() : tab === 'month' ? renderMonthReview() : renderLog();
+  const body = PAGES[tab].render();
   return `<div class="rv-view">${tabsHtml()}${body}</div>`;
 }
 
@@ -189,9 +200,13 @@ export function reviewClick(el: HTMLElement) {
   if (what === 'tab') {
     reviewView.tab = el.dataset.v as ReviewTab;
     reviewView.open = '';
-  } else if (what === 'shift') (reviewView.tab === 'month' ? shiftMonthView : shiftWeek)(Number(el.dataset.dir));
+  } else if (what === 'shift') PAGES[reviewView.tab].shift?.(Number(el.dataset.dir));
   else if (what === 'edit') reviewView.editing = el.closest<HTMLElement>('[data-period]')?.dataset.period || '';
-  else if (what === 'finish') (reviewView.tab === 'month' ? finishMonth : finishWeek)();
+  else if (what === 'finish') PAGES[reviewView.tab].finish?.();
+  else if (what === 'vchoice') return chooseForVision(el.dataset.id!, el.dataset.v as VChoice);
+  else if (what === 'past') reviewView.open = el.dataset.id!;
+  else if (what === 'pastBack') reviewView.open = '';
+  else if (what === 'pastDelete') return deletePast(el.dataset.id!);
   else if (what === 'choice') return chooseForGoal(el.dataset.plan!, el.dataset.id!, el.dataset.v as Choice);
   else if (what === 'unpause') return unpauseGoal(el.dataset.plan!, el.dataset.id!);
   else if (what === 'focus') return openFocusPicker(el.dataset.week);
