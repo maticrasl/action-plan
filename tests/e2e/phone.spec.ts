@@ -1,4 +1,4 @@
-/** Playwright: the app on a phone (390×844, touch): the tab bar, the More sheet, the floating add button, a form. */
+/** Playwright: the app on a phone (390×844, touch): the tab bar, the More sheet, the floating add button, a form, the timeline turned sideways. */
 import { expect, test } from '@playwright/test';
 import { DIST, quietStart, serve } from './serve';
 
@@ -46,4 +46,15 @@ test('tab bar at the bottom, More sheet, floating add button, a form that fits',
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.locator('#f-title').fill('Run a marathon');
   await expect(page.locator('#f-title')).toHaveValue('Run a marathon');
+});
+
+test('turned sideways, the timeline dates stick at the top of the screen', async ({ page }) => {
+  await quietStart(page);
+  await page.goto(app.url);
+  await page.locator('[data-sample]').first().tap();
+  await page.locator('#navMore').tap();
+  await page.locator('[data-sheet-view="timeline"]').tap();
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.locator('.tl-body .tl-row').last().scrollIntoViewIfNeeded();
+  await expect.poll(async () => (await page.locator('.tl-head').boundingBox())!.y).toBeLessThan(2);
 });

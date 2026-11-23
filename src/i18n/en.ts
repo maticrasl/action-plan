@@ -410,8 +410,7 @@ export const en = {
     'tip.goal-behind.text':
       '“{name}” is at {pct}% with {days} days to go. Three honest options: make room for it this week, move the date, or lower the target.',
     'tip.goal-behind.btn': 'Open the goal',
-    'tip.goal-past.text':
-      '“{name}” passed its date at {pct}%. That is {pct}% further than where you began. Give it a new date, or pause it if now is not the time.',
+    'tip.goal-past.text': '“{name}” passed its date at {pct}%. Give it a new date, or pause it if now is not the time.',
     'tip.goal-past.btn': 'Open the goal',
     'tip.stuck-step.text':
       '“{name}” has been in progress for {n} weeks. A step that will not finish is often several steps in one. Split it, or turn it into a list.',

@@ -13,7 +13,7 @@ import { setAskTip } from './views/guide';
 import { userKey } from './store/users';
 import './store/visions';
 import { bootUser, enterUser } from './boot';
-import { onRendered, render } from './views/index';
+import { measureTopbar, onRendered, render } from './views/index';
 // Listen-only, like ui/forms/events (whose click listener must come first).
 import './views/events';
 import { emptyDb } from './core/model';
@@ -73,6 +73,7 @@ on('syncChanged', () => renderSync());
 addEventListener('storage', e => e.key === userKey(JOURNAL_KEY) && loadJournal());
 // Another tab saved plans or visions: merged here item by item (sync/tabs.ts).
 addEventListener('storage', e => takeOtherTab(e.key));
+addEventListener('resize', measureTopbar);
 // The graphs' pointing, the map's gestures, then the timeline's, in the order they had in app.js.
 listenGraphs();
 listenMap();

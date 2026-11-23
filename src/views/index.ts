@@ -84,10 +84,7 @@ export function render() {
   });
   // Keep the map / timeline where the user left it; on first show, centre on the goals / today.
   const wrap = $('.map-wrap, .tl-scroll');
-  // The map's toolbar sticks just under the top bar, where that bar sticks too.
-  // shortcut: measured per draw, not on resize; a resize that wraps the top bar shows until the next draw.
-  const bar = $('.topbar');
-  viewEl.style.setProperty('--topbar-h', getComputedStyle(bar).position === 'sticky' ? `${bar.offsetHeight}px` : '0px');
+  measureTopbar();
   if (wrap) {
     const box = scrollBox(wrap),
       // focusX is measured from the wrap's left; the main pane starts further left.
@@ -98,6 +95,12 @@ export function render() {
   markVisions();
   rendered.forEach(fn => fn());
   updatePlanBadges();
+}
+// The map's toolbar and the timeline's dates stick just under the top bar, where that bar sticks too
+// (not on a phone held sideways). Measured per draw and on resize, so turning the phone moves them.
+export function measureTopbar() {
+  const bar = $('.topbar');
+  viewEl.style.setProperty('--topbar-h', getComputedStyle(bar).position === 'sticky' ? `${bar.offsetHeight}px` : '0px');
 }
 // What runs after each draw, set from above the views (main.ts: help mode's tips).
 export const rendered: (() => void)[] = [];
