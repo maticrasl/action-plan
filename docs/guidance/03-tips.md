@@ -118,8 +118,8 @@ can tune them.
 | `many-doing` | 6 or more activities In progress | {n} activities are in progress. Finishing one will do more for you than starting another. Which is closest to done? | Open Activities | Activities | `not-starting` |
 | `no-vision` | 2 or more active goals, no visions, first item 14 or more days ago | What are your goals for? A vision is one sentence about the life they add up to. It is the reason you will look at on the hard days. | Add a vision | Goals | `vision-how` |
 | `week` | First opening of a new week (Monday or later), the plan has an active goal, and the last weekly review was 6 or more days ago or never | A new week. Five minutes now: what moved last week, and what is the one step that matters most this week? | Open the weekly review | Overview | `review` |
-| `month` | First opening in a new month, and the plan has a state measuring an active goal not measured this month | A new month is a good moment to measure. Record fresh values for your current states. | Open Current states | Current states | `h-states` |
-| `new-year` | 1–14 January, the plan has an active goal. Once per year | A new year is a good moment to begin again. Wishes fade by February; steps with dates do not. Look at your goals and choose this month's one. | Open Goals | Overview | `what-goal` |
+| `month` | First opening in a new month, and the plan has a state measuring an active goal not measured this month | A new month is a good moment to look at your goals: are they still the right ones? The monthly review goes through them one by one. | Open the monthly review | Current states | `h-review` |
+| `new-year` | 1–14 January, the plan has an active goal. Once per year | A new year is a good moment to begin again. Wishes fade by February; steps with dates do not. Look at your goals and choose this month's one. | Open the yearly review | Overview | `what-goal` |
 
 `week`, `month`, `new-year` are keyed with their period (`week:2026-W47`), show once per
 period, and have no cooldown.

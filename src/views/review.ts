@@ -15,6 +15,14 @@ import { setView } from '../ui/nav';
 import { requestRender as render } from '../ui/render';
 import { reviewView, tabsHtml, type ReviewTab } from './review-frame';
 import { finishWeek, renderWeekReview, shiftWeek } from './review-week';
+import {
+  chooseForGoal,
+  finishMonth,
+  renderMonthReview,
+  shiftMonthView,
+  unpauseGoal,
+  type Choice,
+} from './review-month';
 import { openFocusPicker, openIn } from './focus';
 import { openReplan } from '../ui/replan';
 import { addEntry, isCumulative, recordMeasurement } from '../core/cumulative';
@@ -54,7 +62,7 @@ export function openReview(tab: ReviewTab) {
 // The switch, then the tab shown.
 export function renderReview(): string {
   const tab = reviewView.tab;
-  const body = tab === 'week' ? renderWeekReview() : renderLog();
+  const body = tab === 'week' ? renderWeekReview() : tab === 'month' ? renderMonthReview() : renderLog();
   return `<div class="rv-view">${tabsHtml()}${body}</div>`;
 }
 
@@ -181,9 +189,11 @@ export function reviewClick(el: HTMLElement) {
   if (what === 'tab') {
     reviewView.tab = el.dataset.v as ReviewTab;
     reviewView.open = '';
-  } else if (what === 'shift') shiftWeek(Number(el.dataset.dir));
+  } else if (what === 'shift') (reviewView.tab === 'month' ? shiftMonthView : shiftWeek)(Number(el.dataset.dir));
   else if (what === 'edit') reviewView.editing = el.closest<HTMLElement>('[data-period]')?.dataset.period || '';
-  else if (what === 'finish') finishWeek();
+  else if (what === 'finish') (reviewView.tab === 'month' ? finishMonth : finishWeek)();
+  else if (what === 'choice') return chooseForGoal(el.dataset.plan!, el.dataset.id!, el.dataset.v as Choice);
+  else if (what === 'unpause') return unpauseGoal(el.dataset.plan!, el.dataset.id!);
   else if (what === 'focus') return openFocusPicker(el.dataset.week);
   else if (what === 'states') return setView('graphs');
   else if (what === 'record') return recordValue(el);

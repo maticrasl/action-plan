@@ -266,3 +266,40 @@
     margin-left: 0;
   }
 }
+/* The monthly review's goal cards: one choice each, marked until the review is finished. */
+.rv-goals {
+  display: grid;
+  gap: 10px;
+}
+.rv-goal {
+  padding: 12px 14px;
+}
+.rv-goal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rv-goal h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.rv-goal p {
+  margin: 4px 0;
+}
+.rv-progress strong {
+  font-variant-numeric: tabular-nums;
+}
+.rv-why {
+  color: var(--ink-2);
+}
+.rv-choices {
+  margin-top: 8px;
+}
+.rv-work {
+  margin: 0;
+  padding-left: 18px;
+}
+.rv-work li + li {
+  margin-top: 4px;
+}

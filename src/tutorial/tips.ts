@@ -100,6 +100,8 @@ export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
   findVisions: () => openDiscovery(),
   recordValue: (c, el) => openStateValue(target(c), el),
   review: () => openReview('week'),
+  reviewMonth: () => openReview('month'),
+  reviewYear: () => openReview('year'),
   templates: () => openTemplates(),
   backup: () => (syncConfigured() ? openSettings('syncSection') : openExport()),
   install: () => (installPrompt ? $('#installBtn').click() : openSettings('installSection')),

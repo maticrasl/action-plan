@@ -54,7 +54,9 @@ export const TIPS_B: Tip[] = [
         .filter(g => {
           const tree = treeActivities(g);
           const once = tree.filter(a => !isRoutine(a));
-          return once.length > 0 && once.every(a => a.status === 'done') && !tree.some(isRoutine) && goalProgress(g) < 100;
+          return (
+            once.length > 0 && once.every(a => a.status === 'done') && !tree.some(isRoutine) && goalProgress(g) < 100
+          );
         })
         .map(g => named(g)),
   },
@@ -124,7 +126,9 @@ export const TIPS_B: Tip[] = [
     action: 'addSubgoal',
     hits: ({ db, today }) =>
       activeGoals(db)
-        .filter(g => g.deadline && g.deadline > addMonths(today, L.FAR_GOAL_MONTHS) && !descendants(g.id, 'subgoal').length)
+        .filter(
+          g => g.deadline && g.deadline > addMonths(today, L.FAR_GOAL_MONTHS) && !descendants(g.id, 'subgoal').length,
+        )
         .map(g => named(g, { n: monthsFrom(today, g.deadline!) })),
   },
   {
@@ -142,7 +146,11 @@ export const TIPS_B: Tip[] = [
           relsFrom(a.id, 'depends')
             .map(r => byId.get(r.to))
             .filter((b): b is Activity => !!b && !isRoutine(b) && b.status === 'todo')
-            .map(b => ({ a, b, days: daysFrom(later(a.createdAt || dayOf(a.updatedAt), statusSince(b)) || today, today) })),
+            .map(b => ({
+              a,
+              b,
+              days: daysFrom(later(a.createdAt || dayOf(a.updatedAt), statusSince(b)) || today, today),
+            })),
         )
         .filter(x => x.days >= L.WAITING_DAYS)
         .sort((x, y) => y.days - x.days)
@@ -213,8 +221,8 @@ export const TIPS_B: Tip[] = [
     cls: 'B',
     view: 'graphs',
     cooldown: 0,
-    guide: 'h-states',
-    action: 'graphs',
+    guide: 'h-review',
+    action: 'reviewMonth',
     hits: ({ db, today, prevDay }) => {
       const from = calPeriod('month', today).from;
       if (prevDay && prevDay >= from) return [];
@@ -230,7 +238,7 @@ export const TIPS_B: Tip[] = [
     view: 'dashboard',
     cooldown: 0,
     guide: 'what-goal',
-    action: 'goals',
+    action: 'reviewYear',
     hits: ({ db, today }) =>
       today.slice(5, 7) === '01' && Number(today.slice(8)) <= L.NEW_YEAR_LAST_DAY && activeGoals(db).length
         ? [{ id: today.slice(0, 4) }]
