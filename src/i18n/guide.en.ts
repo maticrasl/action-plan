@@ -535,8 +535,8 @@ export const guideEn = [
     group: 'data',
     title: 'What logging in with Google does',
     body: `<p>Logging in gives Action Plan one permission: to keep its own data in a hidden folder of your Google Drive. The app cannot see your other files, your mail or your contacts, and other apps cannot see this folder. Your email address and name are read when you log in, to show who is logged in on this device.</p>
-<p>The plans in that folder, and what you deleted in the last 30 days (Recently deleted), are stored by Google under your account and under Google’s terms. They are not encrypted by Action Plan beyond what Google does for all Drive files.</p>
-<p>To stop: log out in Settings › Account and sync. To remove the copy in Drive: open your Google Drive settings, “Manage apps”, find Action Plan and choose “Delete hidden app data”. You can withdraw the permission in your Google account under “Third-party apps and services”.</p>`,
+<p>The plans in that folder, what you deleted in the last 30 days (Recently deleted), and the dated copies kept for Earlier versions, are stored by Google under your account and under Google’s terms. They are not encrypted by Action Plan beyond what Google does for all Drive files.</p>
+<p>To stop: log out in Settings › Account and sync. To remove the copy in Drive: open your Google Drive settings, “Manage apps”, find Action Plan and choose “Delete hidden app data”; that removes the dated copies too. You can withdraw the permission in your Google account under “Third-party apps and services”.</p>`,
     related: ['p-where', 'h-sync'],
   },
   {
@@ -559,7 +559,8 @@ export const guideEn = [
 <li><strong>Log in with Google</strong>, so that a copy is in your Drive and on your other devices.</li>
 <li><strong>Export a full copy</strong> of each plan now and then, or use <strong>Back up everything</strong> in Settings › Data for all your plans and visions in one file, and keep the file somewhere else.</li>
 </ul>
-<p>A deleted item or plan stays in Settings › Data › Recently deleted for 30 days; with sync on, on your other devices too. After that it is gone. Deleting a plan with sync on deletes it on your other devices as well. The delete dialog offers to download a backup first.</p>`,
+<p>A deleted item or plan stays in Settings › Data › Recently deleted for 30 days; with sync on, on your other devices too. After that it is gone. Deleting a plan with sync on deletes it on your other devices as well. The delete dialog offers to download a backup first.</p>
+<p>With Google sync on, the app also keeps dated copies of all your plans in your Drive: one for each of the last 7 days it synced, then one a week for 8 weeks. Settings › Account and sync › Earlier versions brings back the plans you choose from one of them, as copies; nothing you have is changed. Restore from a backup… in Settings › Data can also merge a backup into your plans, as a sync with another device would.</p>`,
     action: { do: 'export', label: 'Export plan' },
     related: ['h-plans', 'h-sync'],
   },

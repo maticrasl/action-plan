@@ -14,6 +14,7 @@ import { SYNC_COLLS, emptyDb, type Plan } from '../core/model';
 import { emit } from '../store/events';
 import { applyVisions } from '../store/visions';
 import { SyncError, drive, toFile } from './drive';
+import { copyBeforeSync } from './snapshots';
 import { prefs } from '../store/prefs';
 import { applyJournal, hasJournal, journal } from '../store/journal';
 
@@ -158,7 +159,9 @@ export async function syncNow(interactive = false): Promise<void> {
     applyStore(merged);
     const file = toFile(merged);
     if (!remote.content || JSON.stringify(file) !== JSON.stringify(toFile(remote.content)) || remote.extra.length) {
+      if (remote.id) await copyBeforeSync(token, remote.id);
       await drive.write(token, remote.id, file);
+      emit('uploaded');
       for (const id of remote.extra) await drive.remove(token, id);
     }
     if (!mine()) return;

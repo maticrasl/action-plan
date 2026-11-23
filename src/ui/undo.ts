@@ -9,6 +9,8 @@ import { currentUser, userStorage } from '../store/users';
 import { emit } from '../store/events';
 import { t, type TextKey } from '../i18n/index';
 import { requestRender } from './render';
+import { applyStore, localStore } from '../sync/sync';
+import type { FullStore } from '../core/merge';
 import { hideToast, toast } from './toast';
 
 type Copy = {
@@ -18,13 +20,15 @@ type Copy = {
   plans: PlanList;
   plan?: { id: string; data: Db }; // a plan the action deletes
   trash: string[]; // entries the action put in Recently deleted
+  store?: FullStore; // everything, for an action that changes every plan (merging a backup)
 };
 let pending: Copy | null = null;
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 
 // Runs `fn` (which changes, saves and returns the message) and offers Undo in the toast. Only the
 // last action can be undone, and only until anything else is saved (see dropUndo).
-export function undoable(fn: () => string, deletesPlan?: string) {
+// `whole`: the action may change every plan; Undo then puts the whole store back as it was.
+export function undoable(fn: () => string, deletesPlan?: string, whole = false) {
   const before = new Set(getTrash().items.map(e => e.id));
   const copy: Copy = {
     user: currentUser().id,
@@ -35,6 +39,7 @@ export function undoable(fn: () => string, deletesPlan?: string) {
       ? { id: deletesPlan, data: clone(deletesPlan === plans.current ? db : readPlan(deletesPlan)) }
       : undefined,
     trash: [],
+    store: whole ? localStore() : undefined,
   };
   pending = null;
   const msg = fn();
@@ -46,8 +51,9 @@ export function undoable(fn: () => string, deletesPlan?: string) {
 }
 
 // Any later save, a sync that changed something, or another user: undoing then would lose newer work.
-export function dropUndo() {
-  if (!pending) return;
+// `wholeOnly`: drops only an Undo of the whole store (see main.ts, 'uploaded').
+export function dropUndo(wholeOnly = false) {
+  if (!pending || (wholeOnly && !pending.store)) return;
   pending = null;
   hideToast();
 }
@@ -55,6 +61,10 @@ export function dropUndo() {
 function undo(c: Copy) {
   if (pending !== c || currentUser().id !== c.user) return;
   pending = null;
+  if (c.store) {
+    applyStore(c.store);
+    return toast(t('toast.undone'));
+  }
   trashForget(c.trash);
   if (c.plan)
     try {
