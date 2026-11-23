@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   mergeActivity,
+  mergeGoal,
   mergePlans,
   mergeState,
   mergeStores,
@@ -437,6 +438,32 @@ describe('mergePlans', () => {
       ba = mergePlans(b, a);
     expect(sorted(ab)).toBe(sorted(ba));
     expect(ab.activities[2].status).toBe('done');
+  });
+});
+
+describe('notes merge', () => {
+  const N = (id: string, at: string) => ({ id, date: '2026-11-01', text: id, at });
+  test('mergeGoal: the newer goal wins and notes from both are kept', () => {
+    const a = goal({ id: 'g', title: 'A', updatedAt: '2099-01-02T00:00:00.000Z', notes: [N('n1', 'x')] });
+    const b = goal({ id: 'g', title: 'B', updatedAt: '2099-01-01T00:00:00.000Z', notes: [N('n2', 'y')] });
+    for (const m of [mergeGoal(a, b), mergeGoal(b, a)]) {
+      expect(m.title).toBe('A');
+      expect(m.notes!.map(n => n.id)).toEqual(['n1', 'n2']);
+    }
+    expect('notes' in mergeGoal(goal({ id: 'g' }), goal({ id: 'g' }))).toBe(false);
+  });
+  test('states and activities keep notes from both; a deleted one stays deleted', () => {
+    const s1 = state({ id: 's', updatedAt: '2099-01-02T00:00:00.000Z', notes: [N('n1', 'x')], droppedNotes: { n3: 1 } });
+    const s2 = state({ id: 's', notes: [N('n2', 'y'), N('n3', 'z')] });
+    expect(mergeState(s1, s2).notes!.map(n => n.id)).toEqual(['n1', 'n2']);
+    const a1 = act({ id: 'a', updatedAt: '2099-01-02T00:00:00.000Z' });
+    const a2 = act({ id: 'a', notes: [N('n2', 'y')] });
+    expect(mergeActivity(a1, a2).notes!.map(n => n.id)).toEqual(['n2']);
+  });
+  test('mergePlans merges goals through mergeGoal', () => {
+    const a = plan({ goals: [goal({ id: 'g', updatedAt: '2099-01-02T00:00:00.000Z', notes: [N('n1', 'x')] })] });
+    const b = plan({ goals: [goal({ id: 'g', notes: [N('n2', 'y')] })] });
+    expect(mergePlans(a, b).goals[0].notes!.length).toBe(2);
   });
 });
 

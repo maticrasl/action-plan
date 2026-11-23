@@ -287,6 +287,43 @@
       });
       save();
     },
+    // Notes (docs/specs/2026-11-23-notes.md): on a goal (one closing), an activity and a state, a deleted
+    // one, and notes on a measurement and an amount.
+    notes() {
+      const at = '2026-11-16T10:00:00.000Z';
+      const note = (id, text, extra = {}) => ({ id, date: day(-2), text, at, ...extra });
+      db.goals.push({
+        id: uid(),
+        title: 'Run 5 km',
+        status: 'achieved',
+        startDate: day(-30),
+        notes: [note('n1', 'Moved the long run to Sunday.\nSaturdays never work.'), note('n2', 'Sleep', { kind: 'closing' })],
+        droppedNotes: { n0: 1 },
+      });
+      db.activities.push({ id: uid(), title: 'Stretch', status: 'todo', notes: [note('n3', 'Knees <fine> & "ok"')] });
+      db.states.push({
+        id: uid(),
+        title: 'Weight',
+        description: '',
+        unit: 'kg',
+        value: '80',
+        date: day(-1),
+        history: [{ date: day(-1), value: '80', note: 'after two weeks off' }],
+        notes: [note('n4', 'New scale')],
+      });
+      db.states.push({
+        id: uid(),
+        title: 'Distance',
+        description: '',
+        unit: 'km',
+        value: '5',
+        history: [],
+        cumulative: true,
+        scale: 'week',
+        entries: [{ id: 'e1', date: day(-1), amount: '5', note: 'rain' }],
+      });
+      save();
+    },
   };
 
   try {

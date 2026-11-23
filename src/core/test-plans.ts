@@ -61,7 +61,7 @@ export const progressPlan = () => ({
         status: 'doing',
         startDate: d(-21),
         dueDate: d(50),
-        notes: 'Three runs a week',
+        extra: 'Three runs a week',
       },
       { id: 'a3', title: 'Someday', status: 'todo' },
       {

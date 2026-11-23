@@ -188,7 +188,7 @@ describe('resetProgress', () => {
     expect(r.activities.map(a => a.status)).toEqual(['todo', 'todo', 'todo', 'todo']);
     expect('checkins' in r1).toBe(false);
     expect(r1.repeat).toEqual(before.activities[3].repeat);
-    expect((a2 as unknown as { notes: string }).notes).toBe('Three runs a week');
+    expect((a2 as unknown as { extra: string }).extra).toBe('Three runs a week');
     expect(r.relations).toEqual(before.relations);
     expect([...r.goals, ...r.states, ...r.activities].map(x => x.id)).toEqual(
       [...before.goals, ...before.states, ...before.activities].map(x => x.id),
@@ -203,7 +203,7 @@ describe('resetProgress', () => {
       before.goals[0].createdAt,
     ]);
     expect([a3.startDate, a3.dueDate]).toEqual([undefined, undefined]);
-    expect(progressCounts(r)).toEqual({ checkins: 0, measurements: 0, done: 0, started: 0 });
+    expect(progressCounts(r)).toEqual({ checkins: 0, measurements: 0, done: 0, started: 0, notes: 0 });
   });
 
   test('completion dates go with the progress', () => {
@@ -252,11 +252,45 @@ describe('resetProgress', () => {
 test('progress is counted for the import question', () => {
   // 2 ticked check-ins (the unticked one does not count), 2 history entries + 2 goal current values,
   // 1 done activity + 1 achieved goal, 1 activity in progress.
-  expect(progressCounts(progressPlan().data)).toEqual({ checkins: 2, measurements: 4, done: 2, started: 1 });
-  expect(progressCounts(emptyDb())).toEqual({ checkins: 0, measurements: 0, done: 0, started: 0 });
+  expect(progressCounts(progressPlan().data)).toEqual({ checkins: 2, measurements: 4, done: 2, started: 1, notes: 0 });
+  expect(progressCounts(emptyDb())).toEqual({ checkins: 0, measurements: 0, done: 0, started: 0, notes: 0 });
   const one = (s: object) => progressCounts({ ...emptyDb(), states: [s] } as Db).measurements;
   expect(one({ id: 's', title: 'x', value: '3', date: d(-1) })).toBe(1);
   expect(one({ id: 's', title: 'x', value: '', history: [] })).toBe(0);
+});
+
+const N = { id: 'n1', date: '2026-11-01', text: 'Knees fine', at: '2026-11-01T10:00:00.000Z' };
+const withNotes = (): Db => ({
+  ...emptyDb(),
+  goals: [{ id: 'g', title: 'g', status: 'active', notes: [N], droppedNotes: { n0: 1 } }],
+  activities: [{ id: 'a', title: 'a', status: 'todo', notes: [{ ...N, id: 'n2' }] }],
+  states: [
+    { id: 's', title: 's', description: '', value: '3', date: '2026-11-01', notes: [{ ...N, id: 'n3' }],
+      history: [{ date: '2026-11-01', value: '3', note: 'after a week off' }] },
+    { id: 'c', title: 'c', description: '', value: '2', history: [], cumulative: true,
+      entries: [{ id: 'e', date: '2026-11-01', amount: '2', note: 'rain' }] },
+  ],
+});
+
+describe('notes', () => {
+  test('normalize keeps good notes and measurement notes, drops bad ones', () => {
+    const good = withNotes();
+    expect(normalize(clone(good))).toEqual(good);
+    const bad = clone(good) as unknown as { goals: { notes: unknown }[]; states: { history: { note: unknown }[] }[] };
+    bad.goals[0].notes = [{ id: 'x y', date: '2026-11-01', text: 'x' }];
+    bad.states[0].history[0].note = 5;
+    const n = normalize(bad);
+    expect(n.goals[0].notes).toBeUndefined();
+    expect('note' in n.states[0].history[0]).toBe(false);
+  });
+  test('reset drops notes and measurement notes; the import question counts notes', () => {
+    expect(progressCounts(withNotes()).notes).toBe(3);
+    const r = resetProgress(withNotes());
+    const all = [...r.goals, ...r.activities, ...r.states];
+    expect(all.some(x => 'notes' in x || 'droppedNotes' in x)).toBe(false);
+    expect(r.states[1].entries).toEqual([]);
+    expect(progressCounts(r).notes).toBe(0);
+  });
 });
 
 describe('parsePlanFile', () => {

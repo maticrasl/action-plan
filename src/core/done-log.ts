@@ -2,14 +2,14 @@
 import { isoDate } from './dates';
 import type { Activity, Db, Goal, ISODate, ISOTime } from './model';
 
-export type DoneKind = 'step' | 'item' | 'routine' | 'value' | 'amount' | 'goal';
+export type DoneKind = 'step' | 'item' | 'routine' | 'value' | 'amount' | 'goal' | 'note';
 export interface DoneEntry {
   day: ISODate;
   kind: DoneKind;
   plan: string;
   id: string; // a list item's is its list's, so tapping it opens the list
   title: string;
-  detail?: string; // an item's list title, a value or an amount
+  detail?: string; // an item's list title, a value, an amount or the start of a note
   goals?: string[]; // a step's, item's or routine's: the goals it contributes to
 }
 export interface DoneCounts {
@@ -27,8 +27,9 @@ export const doneDay = (a: Activity): ISODate | undefined =>
 export const achievedDay = (g: Goal): ISODate | undefined =>
   g.status === 'achieved' ? g.achievedAt || dayOf(g.updatedAt) : undefined;
 
-// Newest day first; within a day goals, then items and steps, routines, values.
-const ORDER: DoneKind[] = ['goal', 'item', 'step', 'routine', 'amount', 'value'];
+// Newest day first; within a day goals, then items and steps, routines, values, notes.
+const ORDER: DoneKind[] = ['goal', 'item', 'step', 'routine', 'amount', 'value', 'note'];
+const cut = (s: string) => (s.length > 80 ? s.slice(0, 80) + '…' : s);
 
 export function doneLog(plans: { plan: string; data: Db }[], from: ISODate, to: ISODate): DoneEntry[] {
   const out: DoneEntry[] = [];
@@ -60,6 +61,9 @@ export function doneLog(plans: { plan: string; data: Db }[], from: ISODate, to: 
         });
       else s.history.forEach(h => add(h.date, { kind: 'value', plan, id: s.id, title: s.title, detail: h.value }));
     });
+    [...data.goals, ...data.activities, ...data.states].forEach(x =>
+      x.notes?.forEach(n => add(n.date, { kind: 'note', plan, id: x.id, title: x.title, detail: cut(n.text) })),
+    );
   }
   return out.sort((x, y) => y.day.localeCompare(x.day) || ORDER.indexOf(x.kind) - ORDER.indexOf(y.kind));
 }
