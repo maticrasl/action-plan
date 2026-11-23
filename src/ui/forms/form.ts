@@ -72,8 +72,8 @@ export const finishedField = (name: 'doneAt' | 'achievedAt', shown: boolean, day
 const finishedDay = (v: FormVals, name: 'doneAt' | 'achievedAt') =>
   modal.querySelector<HTMLElement>(`[data-field="${name}"]`)?.hidden === false ? v[name] || '' : '';
 
-export const text = (name: string, v: string | undefined, ph = '') =>
-  `<input type="text" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}">`;
+export const text = (name: string, v: string | undefined, ph = '', max = 0) =>
+  `<input type="text" id="f-${name}" name="${name}" value="${esc(v)}" placeholder="${esc(ph)}"${max ? ` maxlength="${max}"` : ''}>`;
 // A text field rather than type="number", so both a decimal dot and comma work in every browser.
 export const num = (name: string, v: string | number | undefined, ph = '') =>
   `<input type="text" data-num id="f-${name}" name="${name}" value="${esc(numInput(v))}" placeholder="${esc(ph)}" inputmode="decimal" autocomplete="off">`;
@@ -83,8 +83,8 @@ export const date = (name: string, v: string | undefined) => `<div class="date-f
   <input type="text" data-date id="f-${name}" name="${name}" value="${esc(dateInput(v))}" placeholder="${esc(t('f.datePh'))}" inputmode="numeric" autocomplete="off" maxlength="10">
   <button type="button" class="date-pick" data-cal-open title="${esc(t('f.pickDate'))}" aria-label="${esc(t('f.pickDate'))}" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></button>
 </div>`;
-export const area = (name: string, v: string | undefined, ph = '') =>
-  `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
+export const area = (name: string, v: string | undefined, ph = '', max = 0) =>
+  `<textarea id="f-${name}" name="${name}" placeholder="${esc(ph)}"${max ? ` maxlength="${max}"` : ''}>${esc(v)}</textarea>`;
 export const select = (name: string, opts: Record<string, string>, v: string | undefined) =>
   `<select id="f-${name}" name="${name}">${Object.entries(opts)
     .map(([k, l]) => `<option value="${esc(k)}" ${k === v ? 'selected' : ''}>${esc(l)}</option>`)
@@ -218,6 +218,9 @@ export function submitForm() {
   if (kind === 'vision') {
     const vis = (existing || { id: uid(), createdAt: today(), parents: [] }) as Vision;
     Object.assign(vis, { title: v.title.trim(), description: (v.description || '').trim(), parents: [] });
+    const avoid = (v.avoid || '').trim().slice(0, 2000);
+    if (avoid) vis.avoid = avoid;
+    else delete vis.avoid;
     if (!existing) visions.list.push(vis);
     arr('parents').forEach(p => {
       if (!canParent(vis.id, p)) vis.parents.push(p);
@@ -261,7 +264,7 @@ export function submitForm() {
     // How a state that adds up counts; kept when the field is not shown.
     if (v.period && !$('#f-period').closest<HTMLElement>('.field')!.hidden) g.period = v.period as Scale;
     // The obstacle and the plan for it: no field at all when empty.
-    for (const k of ['obstacle', 'ifThen'] as const) {
+    for (const k of ['obstacle', 'ifThen', 'cost'] as const) {
       const s = (v[k] || '').trim().slice(0, 500);
       if (s) g[k] = s;
       else delete g[k];
@@ -274,7 +277,8 @@ export function submitForm() {
     setIncoming(g.id, 'contributes', arr('activities'));
     // The picker shows one state: another linked one stays unless the goal is unlinked or linked to a new one.
     if (!v.measuredBy) setIncoming(g.id, 'measures', []);
-    else if (!relsTo(g.id, 'measures').some(r => r.from === v.measuredBy)) setIncoming(g.id, 'measures', [v.measuredBy]);
+    else if (!relsTo(g.id, 'measures').some(r => r.from === v.measuredBy))
+      setIncoming(g.id, 'measures', [v.measuredBy]);
     setGoalVisions(g, arr('visions'));
     const c = smartCheck(g),
       lit = 'SMART'.split('').filter(l => c[l as 'S']).length;
@@ -355,6 +359,9 @@ export function submitForm() {
     // A routine keeps its check-ins even when it stops repeating, in case it is switched back.
     if (repeat) Object.assign(a, { repeat, status: 'todo', checkins: a.checkins || {} });
     else delete a.repeat;
+    const reward = (v.reward || '').trim().slice(0, 120);
+    if (reward) a.reward = reward;
+    else delete a.reward;
     if (list) {
       // Only items that changed get a new time; removed ones are remembered for sync. A list
       // routine's items are ticked per day instead (listDays).
@@ -365,7 +372,9 @@ export function submitForm() {
         const was = before.get(i.id);
         // The day it was ticked stays while it is ticked (feature 13).
         const day = was?.done && i.done && was.doneAt ? { doneAt: was.doneAt } : {};
-        return was && was.text === i.text && !!was.done === i.done ? { ...i, at: was.at, ...day } : { ...i, at: now, ...day };
+        return was && was.text === i.text && !!was.done === i.done
+          ? { ...i, at: was.at, ...day }
+          : { ...i, at: now, ...day };
       });
       const kept = new Set(a.list.map(i => i.id));
       const removed = [...before.keys()].filter(id => !kept.has(id));

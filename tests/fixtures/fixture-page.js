@@ -270,6 +270,23 @@
       addSession({ exercise: 'values', date: day(-1), done: true, answers: { top: ['health'] }, made: [] });
       setFocus(plans.current, 'none-yet');
     },
+    // The person's own words (docs/specs/2026-11-23-cost-reward-avoid.md): a goal's cost, a routine's
+    // reward, a vision's future to avoid.
+    'own-words'() {
+      visions.list.push({ id: uid(), title: 'To be fit', parents: [], avoid: 'Out of breath on the stairs\nevery day' });
+      saveVisions();
+      db.goals.push({ id: uid(), title: 'Run 10 km', status: 'active', startDate: day(-3), cost: 'Two evenings of series' });
+      db.activities.push({
+        id: uid(),
+        title: 'Run',
+        status: 'todo',
+        startDate: day(-3),
+        repeat: { every: 1, unit: 'week', times: 3 },
+        checkins: {},
+        reward: 'make my favourite tea',
+      });
+      save();
+    },
   };
 
   try {

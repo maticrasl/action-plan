@@ -418,3 +418,7 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+/* "You have n active goals" under What will it cost? goes once the field has text. */
+#f-cost:not(:placeholder-shown) ~ .cost-many {
+  display: none;
+}

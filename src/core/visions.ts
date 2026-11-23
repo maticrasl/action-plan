@@ -32,7 +32,11 @@ export function normalizeVisions(input: unknown): VisionList {
   if (Array.isArray(raw?.list))
     out.list = raw.list
       .filter(v => v && typeof v === 'object' && safeId(v.id) && typeof v.title === 'string')
-      .map(v => ({ ...v, parents: Array.isArray(v.parents) ? v.parents.filter(safeId) : [] }));
+      .map(v => {
+        const out = { ...v, parents: Array.isArray(v.parents) ? v.parents.filter(safeId) : [] };
+        if (typeof out.avoid !== 'string') delete out.avoid;
+        return out;
+      });
   if (raw?.deleted && typeof raw.deleted === 'object' && !Array.isArray(raw.deleted))
     out.deleted = raw.deleted as IdSet<ISOTime>;
   if (typeof raw?.purposeFound === 'string') out.purposeFound = raw.purposeFound;

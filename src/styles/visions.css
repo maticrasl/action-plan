@@ -244,3 +244,15 @@
   margin: 0 0 6px;
   color: var(--ink-2);
 }
+/* The future to avoid (feature 21): folded, quiet, line breaks kept. */
+.card.vision .vis-avoid summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 0.9em;
+}
+.card.vision .vis-avoid p {
+  margin: 0.3em 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  color: var(--ink-2);
+}

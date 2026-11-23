@@ -60,8 +60,10 @@ export function normalize(input: unknown): Db {
   d.goals.forEach(g => {
     if (typeof g.obstacle !== 'string') delete g.obstacle;
     if (typeof g.ifThen !== 'string') delete g.ifThen;
+    if (typeof g.cost !== 'string') delete g.cost;
   });
   d.activities.forEach(a => {
+    if (typeof a.reward !== 'string') delete a.reward;
     if (Array.isArray(a.list)) a.list = a.list.filter(i => i && safeId(i.id) && typeof i.text === 'string');
     else delete a.list;
     if (!a.list || !a.droppedItems || typeof a.droppedItems !== 'object' || Array.isArray(a.droppedItems))
@@ -82,7 +84,11 @@ export const PLAN_DATES: DateKey[] = ['startDate', 'deadline', 'dueDate'];
 // A copy of plan data with the progress taken out: goals active again with no current value, no
 // measurements, activities to do, no check-ins, no sync bookkeeping. With `shift`, every date moves
 // by the same whole number of weeks (so weekly routines keep their days) to put the earliest one this week.
-export function resetProgress(data: Db, { shift = false }: { shift?: boolean } = {}): Db {
+// With `template`, the person's own words (cost, reward) go too (decision 12).
+export function resetProgress(
+  data: Db,
+  { shift = false, template = false }: { shift?: boolean; template?: boolean } = {},
+): Db {
   const d = normalize(JSON.parse(JSON.stringify(data)));
   d.deleted = {};
   const dated: Dated[] = [...d.goals, ...d.activities];
@@ -99,6 +105,7 @@ export function resetProgress(data: Db, { shift = false }: { shift?: boolean } =
     if (g.status === 'achieved') g.status = 'active';
     delete g.offeredAt;
     delete g.achievedAt;
+    if (template) delete g.cost;
   });
   d.states.forEach(s => {
     Object.assign(s, { value: '', date: '', history: [] });
@@ -111,6 +118,7 @@ export function resetProgress(data: Db, { shift = false }: { shift?: boolean } =
     delete a.doneAt;
     delete a.checkins;
     delete a.autoStarted;
+    if (template) delete a.reward;
     a.list?.forEach(i => {
       i.done = false;
       delete i.at;

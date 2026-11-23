@@ -85,6 +85,7 @@ export interface Goal extends Item {
   obstacle?: string;
   ifThen?: string;
   relevant?: string;
+  cost?: string; // what the person gives up to make room for it (feature 30); not in templates
   startDate?: ISODate;
   deadline?: ISODate;
   // Progress by its activities or routines instead of the metric; 'measure' (older plans) is the metric.
@@ -157,6 +158,7 @@ export interface ListItem {
 export interface Activity extends Item {
   title: string;
   description?: string; // activities made from a template without one have none
+  reward?: string; // the small thing that follows a tick, said in its toast (feature 25); not in templates
   status: ActivityStatus;
   startDate?: ISODate;
   dueDate?: ISODate;
@@ -204,6 +206,7 @@ export interface PlanList {
 export interface Vision extends Item {
   title: string;
   description?: string;
+  avoid?: string; // where things would be if left to slide (feature 21); shown folded, never a goal
   parents: string[];
   createdAt?: ISODate;
 }

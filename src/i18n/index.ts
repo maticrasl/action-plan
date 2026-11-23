@@ -24,7 +24,7 @@ export interface Sample {
     relevant: string;
   }[];
   states: { title: string; description: string; unit?: string }[];
-  activities: { title: string; description: string; list?: string[] }[];
+  activities: { title: string; description: string; list?: string[]; reward?: string }[];
 }
 // English sets the keys: every other language has exactly the same ones, plural where English is.
 type EnStrings = typeof en.strings;

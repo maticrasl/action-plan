@@ -7,6 +7,7 @@ import {
   contributingIds,
   goalVisionIds,
   mergeVisions,
+  normalizeVisions,
   purposeOf,
   visionAncestors,
   visionChildren,
@@ -45,6 +46,20 @@ const ids = (list: Iterable<string | { id: string }>) => [...list].map(x => (typ
 beforeEach(() => {
   setDb(emptyDb());
   setVisions({ list: [], deleted: {} });
+});
+
+describe('normalizeVisions', () => {
+  test('the future to avoid is kept as text, line breaks too, and dropped otherwise', () => {
+    const v = normalizeVisions({
+      list: [
+        { id: 'v1', title: 'Fit', avoid: 'Tired\nevery evening' },
+        { id: 'v2', title: 'Calm', avoid: 7 },
+        { id: 'v3', title: 'Older' },
+      ],
+    });
+    expect(v.list[0].avoid).toBe('Tired\nevery evening');
+    expect(['avoid' in v.list[1], 'avoid' in v.list[2]]).toEqual([false, false]);
+  });
 });
 
 describe('the vision tree', () => {

@@ -21,7 +21,7 @@ import { openForm } from '../../ui/forms/form';
 import { toggleCheckin } from '../routines';
 import { startMapLink } from './link';
 import { save } from '../../store/plans';
-import { toast } from '../../ui/toast';
+import { tickToast, toast } from '../../ui/toast';
 import { pinch } from './zoom';
 import { relText, removeRelation } from './render';
 import { tlDrag } from '../timeline/drag';
@@ -67,6 +67,7 @@ export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption
       ...(ui.view === 'map' ? [opt('highlight', t('ctx.highlight'))] : []),
       '-',
       opt('add:vision:parents', t('ctx.addSubvision')),
+      ...((item as Vision).avoid ? [] : [opt('edit:avoid', t('ctx.addAvoid'))]),
       '-',
       ...SHOW_IN.vision
         .filter(v => v !== ui.view)
@@ -297,7 +298,11 @@ export function runCtxAction(act: string, id: string) {
   if (!ent) return;
   const { kind, item } = ent;
   const [verb, arg, type] = act.split(':');
-  if (verb === 'edit') return openForm(kind, id);
+  if (verb === 'edit') {
+    openForm(kind, id);
+    if (arg) $<HTMLElement>(`#f-${arg}`)?.focus(); // edit:avoid opens the form at that field
+    return;
+  }
   if (verb === 'checkin') return toggleCheckin(id, today());
   // The popup opens by what the menu was opened on: a card, a box on the map, or a graph's heading (not the tall graph).
   if (verb === 'value') {
@@ -324,6 +329,7 @@ export function runCtxAction(act: string, id: string) {
     save();
     render();
     const waits = kind === 'activity' && arg === 'done' ? blockers(item as Activity) : [];
+    if (kind === 'activity' && arg === 'done' && !waits.length && tickToast(item as Activity)) return;
     return toast(
       waits.length
         ? t('acts.notDone', { name: waits[0].title })

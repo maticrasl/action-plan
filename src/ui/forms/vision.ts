@@ -17,6 +17,7 @@ export function visionForm(v: New<Vision>) {
   return `
     ${field('title', t('f.vision'), text('title', v.title, t('f.visionPh')))}
     ${field('description', t('f.visionDesc'), area('description', v.description, t('f.visionDescPh')))}
+    ${field('avoid', t('f.visionAvoid'), area('avoid', v.avoid, t('f.visionAvoidPh'), 2000))}
     ${linkSection(
       `${checklist('parents', t('f.visionParents'), 'vision', options, parents, t('f.visionParentsHint'))}
       ${checklist('goals', t('f.visionGoals'), 'goal', db.goals, goals)}`,

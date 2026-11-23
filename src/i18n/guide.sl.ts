@@ -92,6 +92,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<p>Vizija ni cilj. »Biti prisoten oče« ali »Živeti brez skrbi za denar« nikoli ne zaključite; le približujete se ali oddaljujete. Prav zato je koristna: ko je cilj dosežen ali spodleti, vizija ostane in vam pove, kateri cilj je naslednji.</p>
 <p>Da jo najdete, vzemite cilj, ki ga že imate, in se vprašajte »čemu?«. Potem vprašajte isto še za odgovor. »Preteči 10 km« – čemu? »Da bom v formi.« – čemu? »Da mi bo pri petdesetih ostalo dovolj energije za otroke.« Ko se odgovor ne spreminja več, imate vizijo. Zapišite jo, kot da je že resnična, s svojimi besedami, ne z besedami, ki lepo zvenijo.</p>
 <p>Znaki, da je vizija res vaša: želeli bi si jo, tudi če nihče ne bi vedel zanjo; pomembna bi bila, tudi če zanjo nikoli ne bi dobili pohvale.</p>
+<p>Pomaga lahko, če zapišete tudi drugo stran: kje bi bili čez nekaj let, če bi to zanemarili. Obrazec vizije ima polje zanjo. Naj bo zapis iskren in kratek, in naj ostane, kjer je: cilji delujejo bolje, ko povedo, kam se premikate, zato jih postavite iz vizije, ne iz strahu.</p>
 <p>Za uporabo aplikacije vizij ne potrebujete. Najbolj pomagajo na dneve, ko je cilj le še obveznost, ker vas spomnijo, zakaj ste si ga postavili.</p>
 <p>Ko vse vizije vodijo k eni viziji na vrhu in ji služijo vsi aktivni cilji, jo aplikacija označi kot vaš <strong>Smisel</strong>. Vzemite ga kot urejeno sliko tega, za kar delate zdaj, ne kot končni odgovor; ljudem se smisel spreminja.</p>`,
     action: { do: 'add-vision', label: 'Dodaj vizijo' },
@@ -107,6 +108,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li>Druge nastavite na <strong>Zaustavljen</strong> (odprite cilj, »Stanje«). Zaustavljeni cilji obdržijo vse in ne štejejo kot zamujeni. So vrsta, ne pokopališče.</li>
 <li>Ko je en cilj dosežen ali je postal navada, vzemite naslednjega.</li>
 <li>Če se dva cilja med sabo vlečeta (varčevati, več potovati), se odločite, kateri gre to obdobje prvi. Tega načrt ne more odločiti namesto vas, če pa vprašanje pustite odprto, se upočasnita oba.</li>
+<li>Ko dodate cilj, obrazec vpraša, kaj vas bo stal. Če ne znate poimenovati ničesar, čemur bi se zanj odpovedali, je morda cilj za pozneje; nastavite ga na Zaustavljen.</li>
 </ul>`,
     action: { do: 'view-goals', label: 'Odpri Cilje' },
     related: ['what-goal', 'pressure'],
@@ -120,7 +122,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Natančen</strong> – opišite, kaj boste videli tisti dan, ko bo opravljeno. »Priti v formo« postane »Preteči od doma do jezera in nazaj brez hoje«.</li>
 <li><strong>Merljiv</strong> – če ga že merite kot trenutno stanje, izberite to stanje pod <strong>»Meri ga stanje«</strong>: enota in trenutna vrednost mu nato sledita. Če nobeno število ne ustreza, spremenite »Napredek iz« v <strong>»Opravljenih aktivnosti«</strong> (cilj je dosežen, ko so opravljeni njegovi koraki) ali <strong>»Izvajanje rutin«</strong> (cilj je to, kako redno vztrajate). Oboje sta pošteni meri.</li>
 <li><strong>Izvedljiv</strong> – poimenujte tisto, kar vas bo najverjetneje oviralo, in kaj boste naredili, ko pride. »Če sem po službi brez moči, namesto teka deset minut hodim.« Načrt za slab dan je tisto, kar naredi cilj izvedljiv.</li>
-<li><strong>Pomemben</strong> – zakaj je pomemben <em>vam</em>. »Zdravnik je rekel« je začetek; »Želim priti po stopnicah brez ustavljanja« je boljše.</li>
+<li><strong>Pomemben</strong> – zakaj je pomemben <em>vam</em>. »Zdravnik je rekel« je začetek; »Želim priti po stopnicah brez ustavljanja« je boljše. Pod tem <strong>»Kaj vas bo stal?«</strong> vpraša, čemu se boste odpovedali, da mu naredite prostor.</li>
 <li><strong>Časovno določen</strong> – datum je ocena, ne obljuba. Izberite enega in ga premaknite, ko boste vedeli več.</li>
 </ul>
 <p>Prva različica, ki je približno prava, zadošča. Čez dva tedna cilj spet odprite in ga izboljšajte; takrat boste vedeli stvari, ki jih danes ne morete.</p>
@@ -167,6 +169,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Dajte mu čas in kraj.</strong> »V soboto po zajtrku za kuhinjsko mizo odprem stari življenjepis.« Korak, vezan na trenutek, je opravljen veliko pogosteje kot korak, ki ga nameravate narediti »ta teden«. Trenutek zapišite v naslov aktivnosti, dan pa v njen rok.</li>
 <li><strong>Poimenujte oviro, preden pride.</strong> Kaj vas bo najverjetneje ustavilo? Utrujenost po službi? Potem: »Če sem po službi brez moči, naredim samo pet minut.« Obrazec cilja to vpraša pod Izvedljiv; pri posameznem koraku to zapišite v »Podrobnosti«.</li>
 <li><strong>Še nocoj odstranite eno oviro.</strong> Copati pri vratih. Natisnjen obrazec. Odprt zavihek.</li>
+<li><strong>Dajte si nekaj, česar se veselite.</strong> V obrazcu aktivnosti »Ko to opravim, …« poimenuje nekaj majhnega, kar si privoščite takoj po njej: kavo, deset minut knjige. Aplikacija vas spomni, ko odkljukate.</li>
 </ul>
 <p>Če se korak še vedno ne premakne, se vprašajte, ali si cilj želite ali le mislite, da bi ga morali. To je pošteno vprašanje, o njem govori [[let-go]].</p>`,
     related: ['first-steps', 'overplanning', 'let-go'],
@@ -182,6 +185,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Navežite jo na nekaj, kar se že zgodi.</strong> Po jutranji kavi. Ko parkiram avto. Stara navada postane opomnik. Zapišite jo v ime rutine.</li>
 <li><strong>Dovolite si majhno različico za slabe dni.</strong> »Na slab dan obujem copate in grem do vogala.« Šteje. Odkljukajte jo.</li>
 <li><strong>Sprostite dneve.</strong> Če določeni dnevi ne ustrezajo vašim tednom, rutino spremenite v število ponovitev na teden ali vklopite »Zamujeni dan je mogoče nadoknaditi na drug dan«.</li>
+<li><strong>Veselite se nečesa.</strong> »Ko to opravim, …« v obrazcu rutine poimenuje majhno nagrado, ki jo aplikacija omeni ob kljukici; glejte [[not-starting]].</li>
 </ul>
 <p>Aplikacija nima opomnikov. Prve tedne si nastavite budilko na telefonu ali rutino vpišite v koledar.</p>`,
     action: { do: 'view-activities', label: 'Odpri Aktivnosti' },
@@ -388,7 +392,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
 </ul>
 <p>Aktivnost lahko pozneje spremenite v seznam: odprite jo in izberite <strong>Naredi seznam</strong>; rutina tako postane rutinski seznam.</p>
 <p>Enkratne aktivnosti in seznami so pod rutinami: najprej tiste v teku, nato za izvedbo, nato opravljene, vsake po roku. Tapnite krog na kartici, da jo premaknete naprej: Za izvedbo, V teku, Opravljeno. Na začetni datum se aktivnost sama premakne v V teku.</p>
-<p>Aktivnost povežite s cilji, h katerim <strong>prispeva</strong>, in stanji, ki jih <strong>izboljšuje</strong>. Lahko je <strong>del</strong> večje aktivnosti (podaktivnost) in je lahko <strong>odvisna od</strong> druge aktivnosti, ki mora biti opravljena prej; do takrat je prikazana kot čakajoča. »Skrij opravljeno in doseženo« skrije dokončane kartice.</p>`,
+<p>Aktivnost povežite s cilji, h katerim <strong>prispeva</strong>, in stanji, ki jih <strong>izboljšuje</strong>. Lahko je <strong>del</strong> večje aktivnosti (podaktivnost) in je lahko <strong>odvisna od</strong> druge aktivnosti, ki mora biti opravljena prej; do takrat je prikazana kot čakajoča. »Skrij opravljeno in doseženo« skrije dokončane kartice.</p>
+<p>»Ko to opravim, …« poimenuje majhno nagrado; kartica jo pokaže, sporočilo po kljukici pa jo pove.</p>`,
     action: { do: 'add-activity', label: 'Dodaj aktivnost' },
     related: ['first-steps'],
   },
@@ -409,7 +414,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-visions',
     group: 'how',
     title: 'Vizije in Smisel',
-    body: `<p>Vizije so v pogledu Vizije in pripadajo vsem vašim načrtom skupaj. Dodajte vizijo, opišite, kako je videti, kot da je že resnična, in izberite cilje, ki ji služijo; ali pa odprite cilj in izberite »Služi vizijam«. Vizija lahko služi širšim vizijam.</p>
+    body: `<p>Vizije so v pogledu Vizije in pripadajo vsem vašim načrtom skupaj. Dodajte vizijo, opišite, kako je videti, kot da je že resnična, in izberite cilje, ki ji služijo; ali pa odprite cilj in izberite »Služi vizijam«. Vizija lahko služi širšim vizijam. »Če to zanemarim« hrani drugo stran, zloženo na kartici, dokler je ne odprete.</p>
 <p>Pogled pove, koliko vizij je na vrhu in kateri aktivni cilji ne služijo nobeni. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj v vsakem načrtu, jo aplikacija pokaže v zlati barvi kot vaš <strong>Smisel</strong>.</p>
 <p>Sij okoli vsega, kar služi vašemu Smislu, je zlat, dokler je vsak aktiven cilj SMART. Napol izpolnjen shranjen cilj ga obarva srebrno, dokler ga ne dokončate.</p>`,
     action: { do: 'add-vision', label: 'Dodaj vizijo' },
