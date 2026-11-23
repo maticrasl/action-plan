@@ -297,7 +297,7 @@ export const guideEn = [
     title: 'I reached my goal. Now what?',
     body: `<p>Mark it Achieved and stop for a moment before the next one. It is easy to skip this, and it is the part that makes the next goal easier.</p>
 <ul>
-<li><strong>Note what worked.</strong> Which step or routine made the difference? Write two lines in the goal’s description while you still remember.</li>
+<li><strong>Note what worked.</strong> Which step or routine made the difference? The app asks when you mark the goal Achieved. Two lines are enough.</li>
 <li><strong>Decide what stays.</strong> Many results need upkeep: the weight, the language, the savings. Keep one small routine and let the others end.</li>
 <li><strong>Choose what is next from the vision,</strong> not from the momentum. What does “To be fit and live healthily” ask for now? Perhaps something quite different.</li>
 <li><strong>Take a paused goal out of the queue,</strong> if one is waiting.</li>
@@ -365,7 +365,8 @@ export const guideEn = [
 <li><strong>Activities done</strong> – the share of the goal’s activities that are done.</li>
 <li><strong>Routines kept</strong> – how steadily you keep the routines linked to the goal.</li>
 </ul>
-<p>A goal can be <strong>part of</strong> a bigger goal (a sub-goal), can <strong>depend on</strong> another goal, and can <strong>serve</strong> visions. “Status” sets it to Active, Paused or Achieved; when a goal reaches its target the app asks whether to mark it achieved. A <strong>category</strong> (Health, Finance…) lets you filter goals with the chips above the list. Long-press or right-click a goal for more: add a sub-goal, add an activity for it, show it on the Map or the Timeline.</p>`,
+<p>A goal can be <strong>part of</strong> a bigger goal (a sub-goal), can <strong>depend on</strong> another goal, and can <strong>serve</strong> visions. “Status” sets it to Active, Paused or Achieved; when a goal reaches its target the app asks whether to mark it achieved. A <strong>category</strong> (Health, Finance…) lets you filter goals with the chips above the list. Long-press or right-click a goal for more: add a sub-goal, add an activity for it, show it on the Map or the Timeline.</p>
+<p>Notes at the end of the form keep dated remarks; long-press the card and choose “Add a note” to write one quickly.</p>`,
     action: { do: 'add-goal', label: 'Add a goal' },
     related: ['smart-fit', 'no-number'],
   },
@@ -376,7 +377,8 @@ export const guideEn = [
     body: `<p>A current state is something you measure. Say what the value means and how you take it, so that every measurement is taken the same way. Its card is in Graphs; tap + on it to record a new value: one per day; a second value on the same day replaces the first. Decimals work with a dot or a comma.</p>
 <p>A state can <strong>add up</strong> instead (“Adds up: Yes”): kilometres run, money put aside. Then each entry is an amount, several a day are fine, the card shows the total, and + adds an amount. A goal measured by such a state chooses how it counts: in total, or per day, week, month or year.</p>
 <p>Link the state to a goal (“Describes the current state of goal(s)”) and the goal’s progress follows it. A wrong value is deleted in Graphs, in the table under the state’s graph, or in the state’s form under the history.</p>
-<p>Values you already keep in a spreadsheet can be brought in: in the state’s menu (right-click or long-press its card or graph) or its form, “Import from CSV…” reads a file with a date and a value on each line. “Export as CSV” takes them out again.</p>`,
+<p>Values you already keep in a spreadsheet can be brought in: in the state’s menu (right-click or long-press its card or graph) or its form, “Import from CSV…” reads a file with a date and a value on each line. “Export as CSV” takes them out again.</p>
+<p>A value can carry a short note, such as “after two weeks off”. It shows under the graph and on the point.</p>`,
     action: { do: 'add-state', label: 'Add a current state' },
     related: ['h-graphs', 'no-number'],
   },
@@ -393,7 +395,8 @@ export const guideEn = [
 <p>To turn an activity into a list later, open it and choose <strong>Make it a list</strong>; a routine becomes a routine list.</p>
 <p>One-time activities and lists sit below the routines: in progress first, then to do, then done, each by due date. Tap a card’s circle to move it along: To do, In progress, Done. On its start date an activity moves to In progress by itself.</p>
 <p>Link an activity to the goals it <strong>contributes to</strong> and the states it <strong>improves</strong>. It can be <strong>part of</strong> a larger activity (a sub-activity), and it can <strong>depend on</strong> another activity that must be done first; until then it shows as waiting. “Hide done and achieved” clears finished cards from view.</p>
-<p>“After I do it, I…” names a small reward; the card shows it, and the message after your tick says it.</p>`,
+<p>“After I do it, I…” names a small reward; the card shows it, and the message after your tick says it.</p>
+<p>Notes at the end of the form keep dated remarks; long-press the card and choose “Add a note” to write one quickly.</p>`,
     action: { do: 'add-activity', label: 'Add an activity' },
     related: ['first-steps'],
   },

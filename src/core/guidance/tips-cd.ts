@@ -72,6 +72,7 @@ const CLASS_C: Tip[] = [
     cooldown: 0,
     guide: 'reached',
     action: 'editItem',
+    action2: 'closingNote', // shown while the goal has no closing note (feature 15)
     hits: ({ db, today }) =>
       db.goals
         .filter(g => g.status === 'achieved' && g.statusSince && daysFrom(g.statusSince, today) <= L.ACHIEVED_DAYS)

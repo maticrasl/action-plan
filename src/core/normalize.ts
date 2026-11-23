@@ -16,6 +16,7 @@ import { migrateCumulative } from './cumulative';
 import { dayNum } from './days';
 import { today } from './dates';
 import { isNum } from './util';
+import { normalizeNotes } from './notes';
 
 // A plan as storage, Drive or a file may hold it, before normalize checks it.
 type RawDb = Partial<Record<Coll | 'deleted', unknown>> | null | undefined;
@@ -28,6 +29,7 @@ export interface ProgressCounts {
   measurements: number;
   done: number;
   started: number;
+  notes: number;
 }
 // A plan file as read: its name, whether it is a full copy or a template, and the plan.
 export interface PlanFileRead {
@@ -70,6 +72,12 @@ export function normalize(input: unknown): Db {
       delete a.droppedItems;
     if (!a.list || !a.listDays || typeof a.listDays !== 'object' || Array.isArray(a.listDays)) delete a.listDays;
   });
+  [...d.goals, ...d.activities, ...d.states].forEach(normalizeNotes);
+  d.states.forEach(s =>
+    [...(Array.isArray(s.history) ? s.history : []), ...(Array.isArray(s.entries) ? s.entries : [])].forEach(m => {
+      if (m && typeof m.note !== 'string') delete m.note;
+    }),
+  );
   migrateCumulative(d);
   return d;
 }
@@ -100,6 +108,10 @@ export function resetProgress(
   for (const x of [...dated, ...d.states, ...d.relations]) delete x.updatedAt;
   for (const x of dated)
     for (const k of [...PLAN_DATES, 'createdAt' as const]) if (by && x[k]) x[k] = addDays(x[k], by);
+  for (const x of [...d.goals, ...d.activities, ...d.states]) {
+    delete x.notes;
+    delete x.droppedNotes;
+  }
   d.goals.forEach(g => {
     g.current = '';
     if (g.status === 'achieved') g.status = 'active';
@@ -145,6 +157,7 @@ export function progressCounts(data: Db): ProgressCounts {
     // Those started by their start date alone (see startDueActivities) are not progress.
     started: data.activities.filter(a => a.status === 'doing' && !(a.autoStarted && a.autoStarted === a.startDate))
       .length,
+    notes: [...data.goals, ...data.activities, ...data.states].reduce((n, x) => n + (x.notes?.length || 0), 0),
   };
 }
 export const hasProgress = (data: Db): boolean => Object.values(progressCounts(data)).some(Boolean);

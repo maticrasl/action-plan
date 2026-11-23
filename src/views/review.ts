@@ -27,7 +27,7 @@ const WEEKS = 8; // shown at first, and added by "Show earlier"
 // What the log shows; the same for every user and plan, so not stored.
 export const logView = { all: false, filter: 'all' as LogFilter, weeks: WEEKS };
 
-const MARK: Record<DoneKind, string> = { step: '✓', item: '✓', routine: '⟳', value: '◐', amount: '◐', goal: '★' };
+const MARK: Record<DoneKind, string> = { step: '✓', item: '✓', routine: '⟳', value: '◐', amount: '◐', goal: '★', note: '✎' };
 
 export function renderReview(): string {
   const now = today(),

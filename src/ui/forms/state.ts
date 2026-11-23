@@ -10,6 +10,7 @@ import { checklist, linkSection } from './picker';
 import { db } from '../../core/state';
 import { area, date, field, formCtx, linksOf, num, select, text, type New } from './form';
 import type { Entry, State } from '../../core/model';
+import { VALUE_NOTE_MAX } from '../../core/notes';
 
 export function stateForm(s: New<State>) {
   const linked = s.id ? relsFrom(s.id, 'measures').map(r => r.to) : linksOf(s, 'measures');
@@ -31,6 +32,7 @@ export function stateForm(s: New<State>) {
       ${field('value', t('f.value'), num('value', '', t('f.optional')), `<span id="valueHint" data-plain="${esc(latest)}"></span>`)}
       ${field('date', t('f.asOf'), date('date', today()))}
     </div>
+    ${field('valueNote', t('f.valueNote'), text('valueNote', '', t('f.valueNotePh'), VALUE_NOTE_MAX))}
     ${linkSection(checklist('goals', t('f.describesGoals'), 'goal', db.goals, linked, t('f.describesHint')), !!s.id)}
     ${history.length > 1 ? `<div class="field" id="historyList"><span class="label">${t('f.history')}</span><div class="history">${history.map(h => `<div><span>${fmtRel(h.date, true)}</span><strong>${fmtNum(h.value)} ${esc(s.unit || '')}</strong></div>`).join('')}</div></div>` : ''}
     ${isCumulative(s as State) && entriesOf(s as State).length ? entryList(s as State) : ''}

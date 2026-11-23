@@ -50,6 +50,7 @@ suite(async () => {
       all(),
       [
         'edit',
+        'note',
         'status:achieved',
         'add:goal:subgoal',
         'add:activity:contributes',
@@ -262,6 +263,7 @@ suite(async () => {
       all(),
       [
         'edit',
+        'note',
         'highlight',
         'focus',
         'status:achieved',
@@ -383,7 +385,7 @@ suite(async () => {
     openCtxMenu(g.id, 60, 60);
     eq(
       seen(),
-      ['edit', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'parent', 'link', 'delete'],
+      ['edit', 'note', 'status:achieved', 'add:goal:subgoal', 'add:activity:contributes', 'parent', 'link', 'delete'],
       'one entry for the views',
     );
     assert(
@@ -401,6 +403,7 @@ suite(async () => {
       seen(),
       [
         'edit',
+        'note',
         'status:achieved',
         'add:goal:subgoal',
         'add:activity:contributes',

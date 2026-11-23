@@ -66,11 +66,25 @@ export interface Item {
   updatedAt?: ISOTime;
 }
 
+// A dated note on a goal, an activity or a state (feature 15); `at` is when it was written or changed.
+export interface Note {
+  id: string;
+  date: ISODate;
+  text: string;
+  kind?: 'closing';
+  at: ISOTime;
+}
+// Goals, activities and states can carry notes; deleted ones stay in droppedNotes so a merge drops them.
+export interface WithNotes {
+  notes?: Note[];
+  droppedNotes?: IdSet;
+}
+
 // The calendar periods sums are counted by; 'total' counts everything.
 export type Period = 'day' | 'week' | 'month' | 'year';
 export type Scale = Period | 'total';
 
-export interface Goal extends Item {
+export interface Goal extends Item, WithNotes {
   title: string;
   status: GoalStatus;
   category?: string;
@@ -104,6 +118,7 @@ export interface Goal extends Item {
 export interface Measurement {
   date: ISODate;
   value: string;
+  note?: string; // a short note on this measurement (feature 15); absent when empty
 }
 // An amount added to a state that adds up; `routine` is the routine whose tick it belongs to.
 export interface Entry {
@@ -111,9 +126,10 @@ export interface Entry {
   date: ISODate;
   amount: string;
   routine?: string;
+  note?: string; // as on a measurement
 }
 
-export interface State extends Item {
+export interface State extends Item, WithNotes {
   title: string;
   description: string;
   unit?: string; // states made from a template without one have none
@@ -155,7 +171,7 @@ export interface ListItem {
   doneAt?: ISODate; // the day it was ticked; absent when not ticked and on older items
 }
 
-export interface Activity extends Item {
+export interface Activity extends Item, WithNotes {
   title: string;
   description?: string; // activities made from a template without one have none
   reward?: string; // the small thing that follows a tick, said in its toast (feature 25); not in templates

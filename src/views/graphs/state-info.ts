@@ -4,7 +4,7 @@ import type { Routine } from '../../core/routines/schedule';
 import { isRoutine } from '../../core/routines/schedule';
 import { isCumulative } from '../../core/cumulative';
 import { relsFrom } from '../../core/relations';
-import { esc, linkTag } from '../../ui/dom';
+import { esc, linkTag, noteTag } from '../../ui/dom';
 import { t } from '../../i18n/index';
 
 // + asks for a new value, or an amount for a state that adds up.
@@ -26,7 +26,7 @@ export function stateInfo(item: State | Routine) {
     .map(r => linkTag(r.to))
     .join('');
   return `${s.description ? `<p class="desc">${esc(s.description)}</p>` : ''}
-    ${goals ? `<div class="links">${goals}</div>` : ''}`;
+    ${goals || s.notes?.length ? `<div class="links">${goals}${noteTag(s)}</div>` : ''}`;
 }
 
 // A state with nothing measured yet: its card without a plot.

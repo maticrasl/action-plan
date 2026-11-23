@@ -73,6 +73,7 @@ export const en = {
     'vis.noGoalsShort': 'No goals yet',
     'ctx.addSubvision': 'Add narrower vision',
     'ctx.addAvoid': 'Add what to avoid',
+    'ctx.addNote': 'Add a note',
     'purpose.title': 'You have found your Purpose',
     'purpose.text':
       'All your visions meet in “{name}”, and every active goal serves it. Everything you do now works toward one Purpose.',
@@ -476,6 +477,7 @@ export const en = {
     'tip.achieved.text':
       'You reached “{name}”. Before the next one: what made the difference? And is there a small routine worth keeping so the result stays?',
     'tip.achieved.btn': 'Open the goal',
+    'tip.achieved.btn2': 'Write a closing note',
     'tip.first-month.text': 'A month of coming back to your plan. That habit is worth more than any single goal in it.',
     'tip.try-map.text':
       'Your plan has enough in it now for the Map to be worth a look: it shows what serves what, and what serves nothing.',
@@ -683,6 +685,23 @@ export const en = {
     'import.measurements': { one: '{n} measurement', other: '{n} measurements' },
     'import.done': { one: '{n} completed item', other: '{n} completed items' },
     'import.started': { one: '{n} activity in progress', other: '{n} activities in progress' },
+    'import.notes': { one: '{n} note', other: '{n} notes' },
+    'notes.title': 'Notes',
+    'notes.add': 'Add a note…',
+    'notes.addBtn': 'Add',
+    'notes.count': { one: '{n} note', other: '{n} notes' },
+    'notes.edit': 'Edit',
+    'notes.delete': 'Delete',
+    'notes.closing': 'Closing note',
+    'notes.tooLong': 'A note can hold 2,000 characters.',
+    'toast.noteAdded': 'Note added',
+    'f.valueNote': 'Note',
+    'f.valueNotePh': 'Optional: what was different today?',
+    'closing.title': 'You reached “{name}”',
+    'closing.text': 'What made the difference? Two lines are enough; you will be glad of them at the next goal.',
+    'closing.save': 'Save',
+    'closing.skip': 'Skip',
+    'closing.earlier': 'Last time you wrote:',
     'plan.newPrompt': 'New plan',
     'plan.nameLabel': 'Name',
     'plan.emojiLabel': 'Emoji (shown before the name)',
@@ -1282,6 +1301,10 @@ export const en = {
     'toast.template': '“{name}” created from a template',
   },
   sample: {
+    notes: {
+      closing: 'Twenty minutes every evening, before the phone came out.',
+      measurement: 'After a week off with a cold',
+    },
     goals: [
       {
         category: 'Health',

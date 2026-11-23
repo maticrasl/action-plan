@@ -10,6 +10,7 @@ import { t } from '../i18n/index';
 import { save } from '../store/plans';
 import { requestRender } from './render';
 import { toast } from './toast';
+import { askClosing } from './closing';
 
 /* ---------- "Target reached": offer to mark a goal achieved ----------
    After a change, each active goal that has reached its target since it was last offered gets a
@@ -53,6 +54,7 @@ export function showReached() {
       save();
       requestRender();
       toast(t('ctx.statusSet', { s: t('goal.achieved') }));
+      askClosing(g!);
     },
   });
 }

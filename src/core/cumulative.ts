@@ -213,7 +213,9 @@ export function recordMeasurements(s: State, list: Measurement[]) {
   if (s.dropped && !Object.keys(s.dropped).length) delete s.dropped;
   followLatest(s);
 }
-export const recordMeasurement = (s: State, date: ISODate, value: string) => recordMeasurements(s, [{ date, value }]);
+// `note`: a short note on this measurement (feature 15); none when empty.
+export const recordMeasurement = (s: State, date: ISODate, value: string, note = '') =>
+  recordMeasurements(s, [{ date, value, ...(note.trim() && { note: note.trim() }) }]);
 
 // A deleted date is remembered, so syncing with an older copy does not bring the measurement back.
 export function deleteMeasurement(s: State, date: ISODate) {

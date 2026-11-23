@@ -33,6 +33,7 @@ export interface GraphPoint {
   day: number;
   value: number;
   date?: ISODate;
+  note?: string; // a measurement's note (feature 15)
 }
 // A goal's target line: its value, to the goal's deadline (a day number) if it has one.
 export interface GraphTarget {
@@ -172,7 +173,7 @@ export function graphCard(s: State, width: number) {
     .join('');
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${px(p.day).toFixed(1)},${py(p.value).toFixed(1)}`).join(' ');
   const area = areaFill(s.id, `${path} L${px(last.day).toFixed(1)},${py(y0)} L${px(x0).toFixed(1)},${py(y0)} Z`);
-  const dots = points.map(p => grDot(px(p.day), py(p.value), p === last)).join('');
+  const dots = points.map(p => grDot(px(p.day), py(p.value), p === last, !!p.note)).join('');
 
   // Direct labels: each target at the start of its line, the latest value next to its dot – in the first
   // spot (above, below, right, left) that stays inside the plot and clear of the target labels.
@@ -229,7 +230,7 @@ export function graphCard(s: State, width: number) {
         delta = prev ? Number((p.value - prev.value).toFixed(9)) : 0;
       const aim = prev && targets.length ? Math.sign(targets[0].value - prev.value) : 0;
       const cls = !aim || !delta ? '' : Math.sign(delta) === aim ? 'gr-ok' : 'gr-bad';
-      return `<tr><td>${fmtRel(p.date, true)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td class="${cls}">${prev ? esc(withUnit(signed(delta), unit)) : '—'}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
+      return `<tr><td>${fmtRel(p.date, true)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}${p.note ? `<span class="measure-note">${esc(p.note)}</span>` : ''}</td><td class="${cls}">${prev ? esc(withUnit(signed(delta), unit)) : '—'}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
     })
     .reverse()
     .join('');
@@ -294,9 +295,9 @@ export const gridLines = (ticks: number[], py: Axis, W: number) =>
       (v, i) => `<line class="gr-grid${i ? '' : ' base'}" x1="${GR.L}" x2="${W - GR.R}" y1="${py(v)}" y2="${py(v)}"/>`,
     )
     .join('') + yLabels(ticks, py);
-// A point's dot on a line; the latest is larger.
-export const grDot = (x: number, y: number, last: boolean) =>
-  `<circle class="gr-dot${last ? ' last' : ''}" cx="${x}" cy="${y}" r="${last ? 5 : 3.5}"/>`;
+// A point's dot on a line; the latest is larger, and one with a note has a ring.
+export const grDot = (x: number, y: number, last: boolean, note = false) =>
+  `<circle class="gr-dot${last ? ' last' : ''}" cx="${x}" cy="${y}" r="${last ? 5 : 3.5}"/>${note ? `<circle class="gr-note-ring" cx="${x}" cy="${y}" r="${last ? 8 : 6.5}"/>` : ''}`;
 export const yLabels = (ticks: number[], py: Axis) =>
   ticks
     .map(v => `<text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`)

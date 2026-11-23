@@ -297,7 +297,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Cilj je dosežen. Kaj zdaj?',
     body: `<p>Označite ga kot dosežen in se pred naslednjim za trenutek ustavite. Ta del je lahko preskočiti, prav on pa olajša naslednji cilj.</p>
 <ul>
-<li><strong>Zapišite, kaj je delovalo.</strong> Kateri korak ali rutina je naredila razliko? V opis cilja napišite dve vrstici, dokler se še spomnite.</li>
+<li><strong>Zapišite, kaj je delovalo.</strong> Kateri korak ali rutina je naredila razliko? Aplikacija vas vpraša, ko cilj označite kot doseženega. Dovolj sta dve vrstici.</li>
 <li><strong>Odločite, kaj ostane.</strong> Veliko rezultatov potrebuje vzdrževanje: teža, jezik, prihranki. Obdržite eno majhno rutino, druge naj se končajo.</li>
 <li><strong>Naslednje izberite iz vizije,</strong> ne iz zagona. Kaj zdaj zahteva »Biti v dobri formi in živeti zdravo«? Morda nekaj povsem drugega.</li>
 <li><strong>Iz vrste vzemite zaustavljen cilj,</strong> če kateri čaka.</li>
@@ -365,7 +365,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Opravljenih aktivnosti</strong> – delež opravljenih aktivnosti cilja.</li>
 <li><strong>Izvajanje rutin</strong> – kako redno izvajate rutine, povezane s ciljem.</li>
 </ul>
-<p>Cilj je lahko <strong>del</strong> večjega cilja (podcilj), je lahko <strong>odvisen od</strong> drugega cilja in lahko <strong>služi</strong> vizijam. »Stanje« ga nastavi na Aktiven, Zaustavljen ali Dosežen; ko cilj doseže ciljno vrednost, vas aplikacija vpraša, ali ga označite kot doseženega. <strong>Kategorija</strong> (Zdravje, Finance …) vam omogoča, da cilje filtrirate z oznakami nad seznamom. Pridržite cilj ali ga kliknite z desno tipko za več: dodajte podcilj ali aktivnost zanj, prikažite ga na Zemljevidu ali Časovnici.</p>`,
+<p>Cilj je lahko <strong>del</strong> večjega cilja (podcilj), je lahko <strong>odvisen od</strong> drugega cilja in lahko <strong>služi</strong> vizijam. »Stanje« ga nastavi na Aktiven, Zaustavljen ali Dosežen; ko cilj doseže ciljno vrednost, vas aplikacija vpraša, ali ga označite kot doseženega. <strong>Kategorija</strong> (Zdravje, Finance …) vam omogoča, da cilje filtrirate z oznakami nad seznamom. Pridržite cilj ali ga kliknite z desno tipko za več: dodajte podcilj ali aktivnost zanj, prikažite ga na Zemljevidu ali Časovnici.</p>
+<p>Zapiski na koncu obrazca hranijo datirane opombe; pridržite kartico in izberite »Dodaj zapisek«, da hitro zapišete enega.</p>`,
     action: { do: 'add-goal', label: 'Dodaj cilj' },
     related: ['smart-fit', 'no-number'],
   },
@@ -376,7 +377,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<p>Trenutno stanje je nekaj, kar merite. Zapišite, kaj vrednost pomeni in kako jo merite, da je vsaka meritev opravljena enako. Njegova kartica je v Grafih; tapnite + na njej, da vpišete novo vrednost: eno na dan; druga vrednost istega dne nadomesti prvo. Decimalke delujejo s piko ali z vejico.</p>
 <p>Stanje se lahko namesto tega <strong>sešteva</strong> (»Se sešteva: Da«): pretečeni kilometri, privarčevan denar. Takrat je vsak vnos količina, več na dan jih je v redu, kartica kaže vsoto, + pa doda količino. Cilj, ki ga meri tako stanje, izbere, kako šteje: skupno ali na dan, teden, mesec ali leto.</p>
 <p>Stanje povežite s ciljem (»Opisuje trenutno stanje ciljev«) in napredek cilja mu sledi. Napačno vrednost izbrišete v Grafih, v tabeli pod grafom stanja, ali v obrazcu stanja pod zgodovino.</p>
-<p>Vrednosti, ki jih že vodite v preglednici, lahko prenesete sem: v meniju stanja (desni klik ali pridržanje na kartici ali grafu) ali v njegovem obrazcu »Uvozi iz CSV …« prebere datoteko z datumom in vrednostjo v vsaki vrstici. »Izvozi kot CSV« jih spet prenese ven.</p>`,
+<p>Vrednosti, ki jih že vodite v preglednici, lahko prenesete sem: v meniju stanja (desni klik ali pridržanje na kartici ali grafu) ali v njegovem obrazcu »Uvozi iz CSV …« prebere datoteko z datumom in vrednostjo v vsaki vrstici. »Izvozi kot CSV« jih spet prenese ven.</p>
+<p>Vrednost ima lahko kratek zapisek, na primer »po dveh tednih premora«. Prikaže se pod grafom in ob točki.</p>`,
     action: { do: 'add-state', label: 'Dodaj trenutno stanje' },
     related: ['h-graphs', 'no-number'],
   },
@@ -393,7 +395,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <p>Aktivnost lahko pozneje spremenite v seznam: odprite jo in izberite <strong>Naredi seznam</strong>; rutina tako postane rutinski seznam.</p>
 <p>Enkratne aktivnosti in seznami so pod rutinami: najprej tiste v teku, nato za izvedbo, nato opravljene, vsake po roku. Tapnite krog na kartici, da jo premaknete naprej: Za izvedbo, V teku, Opravljeno. Na začetni datum se aktivnost sama premakne v V teku.</p>
 <p>Aktivnost povežite s cilji, h katerim <strong>prispeva</strong>, in stanji, ki jih <strong>izboljšuje</strong>. Lahko je <strong>del</strong> večje aktivnosti (podaktivnost) in je lahko <strong>odvisna od</strong> druge aktivnosti, ki mora biti opravljena prej; do takrat je prikazana kot čakajoča. »Skrij opravljeno in doseženo« skrije dokončane kartice.</p>
-<p>»Ko to opravim, …« poimenuje majhno nagrado; kartica jo pokaže, sporočilo po kljukici pa jo pove.</p>`,
+<p>»Ko to opravim, …« poimenuje majhno nagrado; kartica jo pokaže, sporočilo po kljukici pa jo pove.</p>
+<p>Zapiski na koncu obrazca hranijo datirane opombe; pridržite kartico in izberite »Dodaj zapisek«, da hitro zapišete enega.</p>`,
     action: { do: 'add-activity', label: 'Dodaj aktivnost' },
     related: ['first-steps'],
   },

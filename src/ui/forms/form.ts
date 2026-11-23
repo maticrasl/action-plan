@@ -13,6 +13,8 @@ import { goalForm, updateMeasuredBy, updateProgressFields, updateSmartLive } fro
 import { stateForm, updateStateFields } from './state';
 import { fillRelTypes, relationForm } from './relation';
 import { visionForm } from './vision';
+import { applyNotes, flushNotes, notesSection } from './notes';
+import { askClosing } from '../closing';
 import { saveVisions } from '../../store/visions';
 import { goalErrors, ownMetric, smartCheck } from '../../core/progress';
 import { addEntry, convertState, deleteEntry, entriesOf, isCumulative, recordMeasurement } from '../../core/cumulative';
@@ -21,7 +23,7 @@ import { dropRoutineDeps } from '../../core/normalize';
 import { achievedDay, doneDay } from '../../core/done-log';
 import { save } from '../../store/plans';
 import { requestRender } from '../render';
-import type { Activity, Goal, Item, ItemKind, RelType, Relation, Scale, State, Vision } from '../../core/model';
+import type { Activity, Goal, Item, ItemKind, RelType, Relation, Scale, State, Vision, WithNotes } from '../../core/model';
 import type { TextKey } from '../../i18n/index';
 import type { WithList } from '../../core/routines/checkins';
 
@@ -118,6 +120,8 @@ export function openForm(kind: FormKind, id: string | null = null, links: Links 
       (item: New<Item>) => string
     >
   )[kind](item || { links });
+  if (kind === 'goal' || kind === 'activity' || kind === 'state')
+    $('#modalBody').insertAdjacentHTML('beforeend', notesSection((item as WithNotes | null) || {}));
   if (kind === 'relation') {
     const r = (item || links) as Partial<Relation>;
     if (r.from) $<HTMLSelectElement>('#f-from').value = r.from;
@@ -213,6 +217,7 @@ export function submitForm() {
   }
 
   if (Object.keys(bad).length) return showErrors(bad);
+  if (!flushNotes()) return;
   if (!v.title || !v.title.trim()) return showErrors({ title: t('err.titleRequired') });
 
   if (kind === 'vision') {
@@ -241,6 +246,7 @@ export function submitForm() {
     if (Object.keys(errs).length) return showErrors(errs);
     const reachedOn = finishedDay(v, 'achievedAt'),
       wasReached = existing ? achievedDay(existing as Goal) : undefined;
+    const becomes = v.status === 'achieved' && (existing as Goal | null)?.status !== 'achieved';
     if (reachedOn > today()) return showErrors({ achievedAt: t('err.doneFuture') });
     const g = Object.assign((existing as Goal) || { id: uid(), createdAt: today() }, {
       title: v.title.trim(),
@@ -271,6 +277,7 @@ export function submitForm() {
     }
     // A day given in the form; the day it showed already may be an estimate, which is never stored.
     if (g.status === 'achieved' && reachedOn && reachedOn !== wasReached) g.achievedAt = reachedOn;
+    applyNotes(g);
     if (!existing) db.goals.push(g);
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
@@ -282,8 +289,13 @@ export function submitForm() {
     setGoalVisions(g, arr('visions'));
     const c = smartCheck(g),
       lit = 'SMART'.split('').filter(l => c[l as 'S']).length;
-    if (lit < 5) return finish(t(existing ? 'toast.goalUpdatedPartial' : 'toast.goalAddedPartial', { n: lit }));
-    return finish(t(existing ? 'toast.goalUpdated' : 'toast.goalCreated'));
+    finish(
+      lit < 5
+        ? t(existing ? 'toast.goalUpdatedPartial' : 'toast.goalAddedPartial', { n: lit })
+        : t(existing ? 'toast.goalUpdated' : 'toast.goalCreated'),
+    );
+    if (becomes) askClosing(g);
+    return;
   }
 
   if (kind === 'state') {
@@ -305,6 +317,7 @@ export function submitForm() {
       unit: v.unit.trim(),
     }) as State;
     s.history ||= [];
+    applyNotes(s);
     if (!existing) db.states.push(s);
     setLinks(s.id, 'measures', arr('goals'));
     // The goals it measures take its unit.
@@ -319,8 +332,11 @@ export function submitForm() {
     // An empty value keeps the latest measurement; a value for a date that has one replaces it.
     // A state that adds up takes it as one more amount.
     if (isNum(v.value)) {
-      if (isCumulative(s)) addEntry(s, v.date || today(), v.value);
-      else recordMeasurement(s, v.date || today(), v.value);
+      const note = (v.valueNote || '').trim().slice(0, 200);
+      if (isCumulative(s)) {
+        const e = addEntry(s, v.date || today(), v.value);
+        if (note) e.note = note;
+      } else recordMeasurement(s, v.date || today(), v.value, note);
     }
     return finish(t(existing ? 'toast.stateUpdated' : 'toast.stateAdded'));
   }
@@ -388,6 +404,7 @@ export function submitForm() {
       if (!repeat) followList(a as WithList);
     }
     if (!repeat && a.status === 'done' && doneOn && doneOn !== wasDone) a.doneAt = doneOn;
+    applyNotes(a);
     if (!existing) db.activities.push(a);
     setLinks(a.id, 'subactivity', v.parent ? [v.parent] : []);
     setLinks(a.id, 'contributes', arr('goals'));

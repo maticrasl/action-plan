@@ -20,12 +20,15 @@ export interface AmountAsk {
   withDate?: boolean;
   okLabel: string;
   skipLabel?: string;
+  // A text line under the numbers (feature 15): a measurement's note, or the note itself.
+  note?: { label: string; placeholder?: string; max: number };
+  pastOnly?: boolean; // the date may not be after today
 }
 
 export function openAmountPop(
   anchor: HTMLElement,
-  { title, hint, fields, withDate, okLabel, skipLabel }: AmountAsk,
-  submit: (amounts: (number | null)[], date: ISODate) => void,
+  { title, hint, fields, withDate, okLabel, skipLabel, note, pastOnly }: AmountAsk,
+  submit: (amounts: (number | null)[], date: ISODate, note: string) => void,
   skip: (() => void) | null = null,
 ) {
   closeAmountPop();
@@ -41,6 +44,7 @@ export function openAmountPop(
       <input type="text" data-amount="${i}" inputmode="decimal" autocomplete="off" placeholder="0">${f.unit ? `<span class="amount-unit">${esc(f.unit)}</span>` : ''}</span></label>`,
       )
       .join('')}
+    ${note ? `<label class="amount-field amount-note"><span>${esc(note.label)}</span><input type="text" data-amount-note maxlength="${note.max}" placeholder="${esc(note.placeholder || '')}" autocomplete="off"></label>` : ''}
     ${withDate ? `<label class="amount-field"><span>${t('f.asOf')}</span><input type="text" data-amount-date value="${esc(dateInput(today()))}" placeholder="${esc(t('f.datePh'))}" inputmode="numeric" autocomplete="off" maxlength="10"></label>` : ''}
     <div class="amount-err" role="alert"></div>
     <div class="amount-actions">${skipLabel ? `<button type="button" class="btn small ghost" data-amount-skip>${esc(skipLabel)}</button>` : ''}<button type="submit" class="btn small primary">${esc(okLabel)}</button></div>`;
@@ -59,13 +63,19 @@ export function openAmountPop(
     );
     const dateBox = el.querySelector<HTMLInputElement>('[data-amount-date]');
     const date = dateBox ? parseDateInput(dateBox.value) : today();
-    const err = amounts.some(n => Number.isNaN(n)) ? t('err.number') : !date ? t('err.date') : '';
+    const err = amounts.some(n => Number.isNaN(n))
+      ? t('err.number')
+      : !date
+        ? t('err.date')
+        : pastOnly && date > today()
+          ? t('err.doneFuture')
+          : '';
     if (err) {
       el.querySelector('.amount-err')!.textContent = err;
       return;
     }
     closeAmountPop();
-    submit(amounts, date!);
+    submit(amounts, date!, el.querySelector<HTMLInputElement>('[data-amount-note]')?.value.trim() || '');
   });
   el.addEventListener('click', e => {
     if ((e.target as Element).closest('[data-amount-skip]')) skipAmount();

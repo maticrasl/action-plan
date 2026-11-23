@@ -25,6 +25,8 @@ export interface Sample {
   }[];
   states: { title: string; description: string; unit?: string }[];
   activities: { title: string; description: string; list?: string[]; reward?: string }[];
+  // A closing note on the achieved goal and a note on one measurement (feature 15).
+  notes: { closing: string; measurement: string };
 }
 // English sets the keys: every other language has exactly the same ones, plural where English is.
 type EnStrings = typeof en.strings;

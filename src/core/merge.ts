@@ -25,6 +25,7 @@ import {
 import { dropRoutineDeps } from './normalize';
 import { mergeVisions } from './visions';
 import { mergeJournal, type Journal } from './journal';
+import { mergeNotes } from './notes';
 import { today } from './dates';
 import { mergeTips, type Tips } from './guidance/tip-history';
 import type { WithList } from './routines/checkins';
@@ -238,6 +239,7 @@ export function mergeState(x: State, y: State): State {
   if (dropped.length) merged.dropped = Object.fromEntries(dropped.map(d => [d, 1]));
   else delete merged.dropped;
   if (newer.entries || older.entries) mergeEntries(merged, newer, older);
+  mergeNotes(merged, newer, older);
   if (isCumulative(merged)) refreshTotal(merged);
   else {
     const last = history[history.length - 1];
@@ -273,8 +275,10 @@ export function mergeActivity(x: Activity, y: Activity): Activity {
     Object.entries(newer.listDays || {}).forEach(([d, ticks]) => (days[d] = { ...days[d], ...ticks }));
     merged = { ...merged, listDays: days };
   }
+  merged = { ...merged };
+  mergeNotes(merged, newer, older);
   return Array.isArray(newer.list) && Array.isArray(older.list)
-    ? mergeList({ ...merged }, newer as WithList, older as WithList)
+    ? mergeList(merged, newer as WithList, older as WithList)
     : merged;
 }
 
@@ -293,7 +297,19 @@ export function mergeList(merged: Activity, newer: WithList, older: WithList): A
   return merged;
 }
 
-export const MERGE_ITEM: Partial<Record<Coll, MergeItem>> = { states: mergeState, activities: mergeActivity };
+// Goals merge whole (the newer copy wins), apart from their notes.
+export function mergeGoal(x: Goal, y: Goal): Goal {
+  const newer = newerOf(x, y),
+    merged = { ...newer };
+  mergeNotes(merged, newer, newer === x ? y : x);
+  return merged;
+}
+
+export const MERGE_ITEM: Partial<Record<Coll, MergeItem>> = {
+  goals: mergeGoal,
+  states: mergeState,
+  activities: mergeActivity,
+};
 
 export function mergePlans(a: Db, b: Db): Db {
   const out = emptyDb();

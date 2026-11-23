@@ -13,7 +13,7 @@ import {
   measuringState,
 } from '../core/progress';
 import { isRoutine } from '../core/routines/schedule';
-import { deadlineTag, esc, linkTag, smartBadge, trail, waitsForTag } from './dom';
+import { deadlineTag, esc, linkTag, noteTag, smartBadge, trail, waitsForTag } from './dom';
 import { relsFrom } from '../core/relations';
 import { t, tp, type TextKey } from '../i18n/index';
 import { fmtNum, isNum } from '../core/util';
@@ -77,6 +77,7 @@ export function goalCard(g: Goal) {
       ${measured || (!acts.length && routines.length) ? '' : `<span>${t('goals.activities', { done, total: acts.length })}</span>`}
       ${routines.length ? `<span title="${esc(routines.map(a => `${a.title}: ${periodText(a)}`).join('\n'))}">⟳ ${esc(tp('goals.routines', routines.length))}</span>` : ''}
       ${st ? `<span title="${esc(t('goals.measuredBy'))}">◐ ${esc(st.title)}</span>` : ''}
+      ${noteTag(g)}
     </div>
     ${parent ? `<div class="links"><span class="meta">${t('goals.partOf')}</span>${linkTag(parent.to)}</div>` : ''}
   </article>`;

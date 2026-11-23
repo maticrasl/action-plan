@@ -46,6 +46,7 @@ export type TipAction =
   | 'activities'
   | 'graphs'
   | 'editItem'
+  | 'closingNote'
   | 'addActivity'
   | 'addRoutine'
   | 'addState'

@@ -375,6 +375,7 @@ suite(async () => {
         acts(),
         [
           'edit',
+          'note',
           'status:todo',
           'status:doing',
           'status:done',

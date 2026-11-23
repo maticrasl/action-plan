@@ -40,6 +40,7 @@ export function showGraphPoint(plot: HTMLElement, i: number) {
   if (c.tip) c.tip(p).forEach(([cls, text]) => row(cls, text));
   else {
     row('gr-tip-value', withUnit(fmtNum(p.value), c.unit));
+    if (p.note) row('gr-tip-note', p.note);
     row('gr-tip-date', fmtRel(p.date, true));
     if (p !== c.points[0])
       row('gr-tip-row', t('gr.tipChange', { value: withUnit(signed(p.value - c.points[0].value), c.unit) }));

@@ -20,7 +20,7 @@ import type { ISODate, State } from '../core/model';
 import type { WithList } from '../core/routines/checkins';
 import type { Routine } from '../core/routines/schedule';
 import { save } from '../store/plans';
-import { $, esc, linkTag, progressBar, waitsForTag } from '../ui/dom';
+import { $, esc, linkTag, noteTag, progressBar, waitsForTag } from '../ui/dom';
 import { addEntry, dropRoutineEntries, improvedStates } from '../core/cumulative';
 import { keptDay, makesUp, periodProgress, routineStreak, routineToday, type TodayAsk } from '../core/routines/keeping';
 import {
@@ -247,6 +247,7 @@ export function routineCard(a: Routine) {
       ${streak.n ? `<span class="tag ok">${esc(streakText(streak))}</span>` : ''}
       ${when}
       ${blocked.length ? waitsForTag(blocked) : ''}
+      ${noteTag(a)}
     </div>
     ${goals ? `<div class="links">${goals}</div>` : ''}
   </article>`;

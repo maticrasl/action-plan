@@ -108,6 +108,18 @@ describe('doneLog and weekCounts', () => {
     expect(doneLog([{ plan: 'p', data: p }], '2026-12-28', '2027-01-03').map(e => e.id)).toEqual(['y', 'x']);
   });
 
+  test('notes: on their day, the first 80 characters, last in the day', () => {
+    const long = 'x'.repeat(90);
+    const p = plan({
+      goals: [{ id: 'g', title: 'Run', status: 'active', notes: [{ id: 'n', date: '2026-11-17', text: long, at: '' }] }],
+      activities: [act({ id: 's', status: 'done', doneAt: '2026-11-17' })],
+    });
+    const log = doneLog([{ plan: 'p', data: p }], '2026-11-16', '2026-11-22');
+    expect(log.map(e => e.kind)).toEqual(['step', 'note']);
+    expect(log[1]).toMatchObject({ id: 'g', title: 'Run', detail: 'x'.repeat(80) + '…' });
+    expect(weekCounts(log).steps).toBe(1);
+  });
+
   test('two plans: both, by day', () => {
     const a = plan({ activities: [act({ id: 'a1', status: 'done', doneAt: '2026-11-17' })] });
     const b = plan({ activities: [act({ id: 'b1', status: 'done', doneAt: '2026-11-18' })] });

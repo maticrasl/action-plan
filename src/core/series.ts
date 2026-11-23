@@ -8,7 +8,7 @@ import { entriesOf, isCumulative } from './cumulative';
 export function stateSeries(s: State) {
   return (s.history || [])
     .filter(h => h.date && isNum(h.value))
-    .map(h => ({ day: dayNum(h.date), date: h.date, value: Number(h.value) }))
+    .map(h => ({ day: dayNum(h.date), date: h.date, value: Number(h.value), ...(h.note && { note: h.note }) }))
     .sort((a, b) => a.day - b.day);
 }
 

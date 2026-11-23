@@ -62,6 +62,9 @@ export const scaleSwitch = (s: State | Routine) =>
       `<button class="chip ${k === graphScale(s) ? 'active' : ''}" data-gr-scale="${k}" data-state="${s.id}" aria-pressed="${k === graphScale(s)}">${t(('cu.scale.' + k) as TextKey)}</button>`,
   ).join('')}</div>`;
 
+// An amount's note (feature 15), under the amount.
+const noteOf = (e: Entry) => (e.note ? `<span class="measure-note">${esc(e.note)}</span>` : '');
+
 export const entryDel = (s: State, e: Entry) => {
   const del = t('cu.deleteEntry', { value: withUnit(fmtNum(e.amount), s.unit || ''), date: fmtDate(e.date) });
   return `<td class="gr-del"><button type="button" class="btn small ghost" data-del-entry="${s.id}" data-entry="${e.id}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td>`;
@@ -141,7 +144,7 @@ export function periodGraphCard(s: State | Routine, width: number) {
       .reverse()
       .map(
         e =>
-          `<tr class="gr-entry"><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td>${entryDel(s, e)}</tr>`,
+          `<tr class="gr-entry"><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}${noteOf(e)}</td>${entryDel(s, e)}</tr>`,
       )
       .join('')}`,
         )
@@ -224,7 +227,7 @@ export function totalGraphCard(s: State | Routine, width: number) {
         .slice()
         .reverse()
         .map(e => {
-          const row = `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
+          const row = `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}${noteOf(e)}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
           running = Number((running - Number(e.amount)).toFixed(9));
           return row;
         })

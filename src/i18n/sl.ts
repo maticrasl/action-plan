@@ -77,6 +77,7 @@ export const sl: Language = {
     'vis.noGoalsShort': 'Še brez ciljev',
     'ctx.addSubvision': 'Dodaj ožjo vizijo',
     'ctx.addAvoid': 'Dodaj, čemu se izogniti',
+    'ctx.addNote': 'Dodaj zapisek',
     'purpose.title': 'Našli ste svoj Smisel',
     'purpose.text':
       'Vse vaše vizije se stekajo v »{name}« in vsak aktivni cilj ji služi. Vse, kar počnete, zdaj vodi k enemu Smislu.',
@@ -545,6 +546,7 @@ export const sl: Language = {
     'tip.achieved.text':
       'Dosegli ste »{name}«. Preden začnete naslednjega: kaj je naredilo razliko? In ali je kakšna majhna rutina vredna, da ostane, da rezultat zdrži?',
     'tip.achieved.btn': 'Odpri cilj',
+    'tip.achieved.btn2': 'Napiši zaključni zapisek',
     'tip.first-month.text':
       'Mesec dni se vračate k svojemu načrtu. Ta navada je vredna več kot katerikoli posamezen cilj v njem.',
     'tip.try-map.text':
@@ -769,6 +771,23 @@ export const sl: Language = {
       few: '{n} aktivnosti v teku',
       other: '{n} aktivnosti v teku',
     },
+    'import.notes': { one: '{n} zapisek', two: '{n} zapiska', few: '{n} zapiski', other: '{n} zapiskov' },
+    'notes.title': 'Zapiski',
+    'notes.add': 'Dodaj zapisek …',
+    'notes.addBtn': 'Dodaj',
+    'notes.count': { one: '{n} zapisek', two: '{n} zapiska', few: '{n} zapiski', other: '{n} zapiskov' },
+    'notes.edit': 'Uredi',
+    'notes.delete': 'Izbriši',
+    'notes.closing': 'Zaključni zapisek',
+    'notes.tooLong': 'Zapisek lahko obsega 2.000 znakov.',
+    'toast.noteAdded': 'Zapisek dodan',
+    'f.valueNote': 'Zapisek',
+    'f.valueNotePh': 'Neobvezno: kaj je bilo danes drugače?',
+    'closing.title': 'Dosegli ste »{name}«',
+    'closing.text': 'Kaj je naredilo razliko? Dovolj sta dve vrstici; ob naslednjem cilju vam bosta prav prišli.',
+    'closing.save': 'Shrani',
+    'closing.skip': 'Preskoči',
+    'closing.earlier': 'Zadnjič ste zapisali:',
     'plan.newPrompt': 'Nov načrt',
     'plan.nameLabel': 'Ime',
     'plan.emojiLabel': 'Emoji (prikazan pred imenom)',
@@ -1456,6 +1475,10 @@ export const sl: Language = {
     'toast.template': 'Načrt »{name}« ustvarjen iz predloge',
   },
   sample: {
+    notes: {
+      closing: 'Dvajset minut vsak večer, še pred telefonom.',
+      measurement: 'Po tednu premora zaradi prehlada',
+    },
     goals: [
       {
         category: 'Zdravje',

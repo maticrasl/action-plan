@@ -12,6 +12,7 @@ import { updateMeasuredBy, updateProgressFields, updateSmartLive } from './goal'
 import { updateStateFields } from './state';
 import { addListRow, makeList, placeListRow, updateListDone, updateRepeatFields } from './activity';
 import { fillRelTypes } from './relation';
+import { noteBlur, noteClick, noteInput, noteKey } from './notes';
 import { formChanged, formCtx, modal, openForm, submitForm } from './form';
 
 $('#modalForm').addEventListener('keydown', e => {
@@ -22,6 +23,7 @@ $('#modalForm').addEventListener('keydown', e => {
     if (!$('#saveBtn').hidden) $<HTMLFormElement>('#modalForm').requestSubmit($('#saveBtn'));
     return;
   }
+  if (noteKey(e)) return;
   // A phone keyboard sends Enter only for `enterkeyhint="enter"` (its Next key would jump to the next
   // field instead); Enter that finishes typing in an input method is left to it.
   if (e.key === 'Enter' && !e.isComposing && (e.target as HTMLElement).matches('.li-input')) {
@@ -34,6 +36,7 @@ $('#modalForm').addEventListener('submit', e => {
   if (!formCtx?.choose) submitForm();
 });
 $('#modalBody').addEventListener('click', e => {
+  if (noteClick(e)) return;
   if ((e.target as HTMLElement).closest('[data-li-add]')) return addListRow();
   const toList = (e.target as HTMLElement).closest<HTMLElement>('[data-to-list]');
   if (toList) return makeList(toList);
@@ -65,6 +68,8 @@ $('#modalBody').addEventListener('click', e => {
   if (b && formCtx?.choose) openForm('activity', null, { ...formCtx.choose, repeat: b.dataset.actKind });
 });
 $('#modalForm').addEventListener('input', updateSmartLive);
+$('#modalForm').addEventListener('input', noteInput);
+$('#modalForm').addEventListener('focusout', noteBlur);
 $('#modalForm').addEventListener('input', e => {
   if (['f-every', 'f-count', 'f-startDate'].includes((e.target as HTMLElement).id)) updateRepeatFields(e);
 });

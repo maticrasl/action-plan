@@ -39,6 +39,7 @@ import { listenFeedback } from './ui/feedback';
 import { listenTrash } from './ui/trash-dialog';
 import { listenRestore } from './ui/restore-dialog';
 import { listenReplan } from './ui/replan';
+import { listenClosing } from './ui/closing';
 import { listenCsv } from './ui/csv-dialog';
 
 // Screen parts below the views redraw, switch users and offer the welcome through these.
@@ -88,6 +89,7 @@ listenFeedback();
 listenTrash();
 listenRestore();
 listenReplan();
+listenClosing();
 listenCsv();
 listenUndo();
 
