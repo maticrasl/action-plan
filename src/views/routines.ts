@@ -14,7 +14,7 @@ import {
   tickable,
 } from '../core/routines/checkins';
 import { activityState, blockers } from '../core/progress';
-import { toast } from '../ui/toast';
+import { tickToast, toast } from '../ui/toast';
 import { t, type TextKey } from '../i18n/index';
 import type { ISODate, State } from '../core/model';
 import type { WithList } from '../core/routines/checkins';
@@ -52,8 +52,10 @@ export function tickListItem(id: string, itemId: string, iso: ISODate = today())
   const was = a.status;
   followList(a);
   const waits = blockers(a);
-  if (a.status === 'done' && was !== 'done')
-    toast(waits.length ? t('acts.notDone', { name: waits[0].title }) : t('list.complete', { name: a.title }));
+  if (a.status === 'done' && was !== 'done') {
+    if (waits.length) toast(t('acts.notDone', { name: waits[0].title }));
+    else tickToast(a) || toast(t('list.complete', { name: a.title }));
+  }
   save();
   render();
   // The card is drawn anew (perhaps in another column): keep the keyboard on the item, without
@@ -74,7 +76,7 @@ export function tickRoutineItem(a: Routine & WithList, itemId: string, iso: ISOD
   setDayItems(a, iso, { [itemId]: on ? 1 : 0 });
   if (all !== checkedOn(a, iso) && (all || !on)) {
     // A met week (or month) says so; otherwise the day's list does.
-    if (!setRoutineDay(a, iso, all) && all) toast(t('list.dayDone', { name: a.title }));
+    if (!setRoutineDay(a, iso, all) && all && !tickToast(a, '', iso)) toast(t('list.dayDone', { name: a.title }));
   } else {
     save();
     render();
@@ -129,8 +131,10 @@ export function setRoutineDay(a: Routine, iso: ISODate, on: boolean, amounts: [S
   // Only the period running now is "this week done"; filling in an earlier one says nothing.
   const current = periodOf(a, today()).from === periodOf(a, iso).from;
   const met = current && !wasMet && periodProgress(a, iso).met;
-  if (met)
-    toast(t(({ month: 'rt.metMonth', year: 'rt.metYear' } as Record<string, TextKey>)[periodUnit(a)] || 'rt.metWeek'));
+  const metText = t(
+    ({ month: 'rt.metMonth', year: 'rt.metYear' } as Record<string, TextKey>)[periodUnit(a)] || 'rt.metWeek',
+  );
+  if (on) tickToast(a, met ? metText : '', iso) || (met && toast(metText));
   $(`[data-checkin="${id}"][data-date="${iso}"]`)?.focus();
   return met;
 }
@@ -234,6 +238,7 @@ export function routineCard(a: Routine) {
   return `<article class="card glass activity routine st-${st}" data-open="${a.id}" data-ctx-item="${a.id}">
     <div class="card-head"><h3>${esc(a.title)}</h3><span class="tag rt-sched" title="${esc(scheduleText(a))}">${esc(shortSchedule(a))}</span></div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
+    ${a.reward ? `<p class="meta reward">${esc(t('reward.card', { reward: a.reward }))}</p>` : ''}
     ${progressBar(p.target ? clamp((p.done / p.target) * 100, 0, 100) : 0, `<span class="rt-progress">${esc(label)}</span>`)}
     ${routineWeek(a, week)}
     ${todayTag(a) ? `<div class="meta rt-now">${todayTag(a)}</div>` : ''}

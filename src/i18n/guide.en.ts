@@ -92,6 +92,7 @@ export const guideEn = [
     body: `<p>A vision is not a goal. You never finish “To be a present father” or “To live without money worries”; you only move closer or further. That is what makes it useful: when a goal is reached, or fails, the vision is still there and tells you what the next goal is.</p>
 <p>To find one, take a goal you already have and ask “what for?”. Then ask again of the answer. “Run 10 km” – what for? “To be fit.” – what for? “To have energy for my kids when I’m fifty.” When the answer stops changing, you have a vision. Write it as if it were already true, in your own words, not in words that sound good.</p>
 <p>Signs that a vision is really yours: you would want it even if nobody knew; it would still matter if you never got praise for it.</p>
+<p>It can help to write the other side too: where you would be in a few years if you let this slide. The vision form has a field for it. Keep it honest and short, and keep it where it is: goals work better when they say what you are moving toward, so set them from the vision, not from the fear.</p>
 <p>You do not need visions to use the app. They help most on the days when a goal feels like a chore, because they remind you why you set it.</p>
 <p>When every vision leads to one vision at the top and every active goal serves it, the app marks that one as your <strong>Purpose</strong>. Treat it as a tidy picture of what you are working for now, not as a final answer; people’s purposes change.</p>`,
     action: { do: 'add-vision', label: 'Add a vision' },
@@ -107,6 +108,7 @@ export const guideEn = [
 <li>Set the others to <strong>Paused</strong> (open the goal, “Status”). Paused goals keep everything and do not count as late. They are a queue, not a graveyard.</li>
 <li>When one goal is achieved or has become routine, bring the next one in.</li>
 <li>If two goals pull against each other (save money, travel more), decide which goes first this season. The plan cannot settle that for you, but leaving it open slows both.</li>
+<li>When you add a goal, the form asks what it will cost. If you cannot name anything you would give up for it, it may be a goal for later; set it to Paused.</li>
 </ul>`,
     action: { do: 'view-goals', label: 'Open Goals' },
     related: ['what-goal', 'pressure'],
@@ -120,7 +122,7 @@ export const guideEn = [
 <li><strong>Specific</strong> – describe what you would see on the day it is done. “Get fit” becomes “Run from home to the lake and back without walking”.</li>
 <li><strong>Measurable</strong> – if you already measure it as a current state, pick that state under <strong>“Measured by”</strong>: the unit and current value then follow it. If no number fits, change “Progress from” to <strong>“Activities done”</strong> (the goal is done when its steps are done) or <strong>“Routines kept”</strong> (the goal is how steadily you keep at it). Both are honest ways to measure.</li>
 <li><strong>Achievable</strong> – name the one thing most likely to get in your way, and what you will do when it comes. “If I’m tired after work, I walk for ten minutes instead.” A plan for the bad day is what makes a goal realistic.</li>
-<li><strong>Relevant</strong> – why it matters <em>to you</em>. “My doctor said so” is a start; “I want to climb stairs without stopping” is better.</li>
+<li><strong>Relevant</strong> – why it matters <em>to you</em>. “My doctor said so” is a start; “I want to climb stairs without stopping” is better. Below it, <strong>“What will it cost?”</strong> asks what you will give up to make room for it.</li>
 <li><strong>Time-bound</strong> – a date is a guess, not a promise. Choose one, and move it when you know more.</li>
 </ul>
 <p>A first version that is roughly right is enough. Open the goal again in two weeks and improve it; by then you will know things you cannot know today.</p>
@@ -167,6 +169,7 @@ export const guideEn = [
 <li><strong>Give it a time and a place.</strong> “On Saturday after breakfast, at the kitchen table, I open the old CV.” A step tied to a moment gets done far more often than a step you mean to do “this week”. Put the moment in the activity’s title and the day in its due date.</li>
 <li><strong>Name the obstacle before it comes.</strong> What will most likely stop you? Tired after work? Then: “If I’m tired after work, I do just five minutes.” The goal form asks this under Achievable; for a single step, write it in “Details”.</li>
 <li><strong>Remove one barrier tonight.</strong> Shoes by the door. The form printed. The tab left open.</li>
+<li><strong>Give it something to look forward to.</strong> In the activity’s form, “After I do it, I…” names a small thing you will have right after: a coffee, ten minutes of your book. The app reminds you when you tick.</li>
 </ul>
 <p>If a step still does not move, ask whether you want the goal or only think you ought to. That is a fair question, and [[let-go]] is about it.</p>`,
     related: ['first-steps', 'overplanning', 'let-go'],
@@ -182,6 +185,7 @@ export const guideEn = [
 <li><strong>Tie it to something that already happens.</strong> After the morning coffee. When I park the car. The old habit becomes the reminder. Put it in the routine’s name.</li>
 <li><strong>Allow a small version for bad days.</strong> “On a bad day, I put on the shoes and walk to the corner.” It counts. Tick it.</li>
 <li><strong>Loosen the days.</strong> If set days do not fit your weeks, change the routine to a number of times a week, or switch on “A missed day can be made up on another day”.</li>
+<li><strong>Look forward to something.</strong> “After I do it, I…” in the routine’s form names a small reward the app mentions when you tick; see [[not-starting]].</li>
 </ul>
 <p>The app has no reminders. Set an alarm on your phone, or put the routine in your calendar, for the first few weeks.</p>`,
     action: { do: 'view-activities', label: 'Open Activities' },
@@ -388,7 +392,8 @@ export const guideEn = [
 </ul>
 <p>To turn an activity into a list later, open it and choose <strong>Make it a list</strong>; a routine becomes a routine list.</p>
 <p>One-time activities and lists sit below the routines: in progress first, then to do, then done, each by due date. Tap a card’s circle to move it along: To do, In progress, Done. On its start date an activity moves to In progress by itself.</p>
-<p>Link an activity to the goals it <strong>contributes to</strong> and the states it <strong>improves</strong>. It can be <strong>part of</strong> a larger activity (a sub-activity), and it can <strong>depend on</strong> another activity that must be done first; until then it shows as waiting. “Hide done and achieved” clears finished cards from view.</p>`,
+<p>Link an activity to the goals it <strong>contributes to</strong> and the states it <strong>improves</strong>. It can be <strong>part of</strong> a larger activity (a sub-activity), and it can <strong>depend on</strong> another activity that must be done first; until then it shows as waiting. “Hide done and achieved” clears finished cards from view.</p>
+<p>“After I do it, I…” names a small reward; the card shows it, and the message after your tick says it.</p>`,
     action: { do: 'add-activity', label: 'Add an activity' },
     related: ['first-steps'],
   },
@@ -409,7 +414,7 @@ export const guideEn = [
     id: 'h-visions',
     group: 'how',
     title: 'Visions and Purpose',
-    body: `<p>Visions are in the Visions view and belong to all your plans together. Add one, describe what it looks like as if it were already true, and choose the goals that serve it; or open a goal and choose “Serves visions”. A vision can serve broader visions.</p>
+    body: `<p>Visions are in the Visions view and belong to all your plans together. Add one, describe what it looks like as if it were already true, and choose the goals that serve it; or open a goal and choose “Serves visions”. A vision can serve broader visions. “If I let this slide” keeps the other side, folded away on the card until you open it.</p>
 <p>The view tells you how many visions are at the top and which active goals serve none. When one vision is at the top of all the others and every active goal in every plan serves it, the app shows it in gold as your <strong>Purpose</strong>.</p>
 <p>The glow round everything that serves your Purpose is gold while every active goal is SMART. A goal saved half-finished turns it silver until you finish it.</p>`,
     action: { do: 'add-vision', label: 'Add a vision' },

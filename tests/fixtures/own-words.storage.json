@@ -1,0 +1,9 @@
+{
+  "actionplan.lang": "en",
+  "actionplan.plan.00000000-0000-4000-8000-000000000001": "{\"goals\":[{\"id\":\"00000000-0000-4000-8000-000000000003\",\"title\":\"Run 10 km\",\"status\":\"active\",\"startDate\":\"2026-11-13\",\"cost\":\"Two evenings of series\",\"statusSince\":\"2026-11-16\",\"updatedAt\":\"2026-11-16T11:00:00.000Z\"}],\"states\":[],\"activities\":[{\"id\":\"00000000-0000-4000-8000-000000000004\",\"title\":\"Run\",\"status\":\"todo\",\"startDate\":\"2026-11-13\",\"repeat\":{\"every\":1,\"unit\":\"week\",\"times\":3},\"checkins\":{},\"reward\":\"make my favourite tea\",\"statusSince\":\"2026-11-16\",\"updatedAt\":\"2026-11-16T11:00:00.000Z\"}],\"relations\":[],\"deleted\":{}}",
+  "actionplan.plans": "{\"current\":\"00000000-0000-4000-8000-000000000001\",\"list\":[{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"My plan\",\"updatedAt\":\"2026-11-16T11:00:00.000Z\"}],\"deleted\":{}}",
+  "actionplan.v1.reachedChecked.00000000-0000-4000-8000-000000000001": "true",
+  "actionplan.v1.seen": "{\"days\":[\"2026-11-16\"],\"views\":{\"map\":true,\"timeline\":true,\"graphs\":true}}",
+  "actionplan.v1.view": "\"dashboard\"",
+  "actionplan.visions": "{\"list\":[{\"id\":\"00000000-0000-4000-8000-000000000002\",\"title\":\"To be fit\",\"parents\":[],\"avoid\":\"Out of breath on the stairs\\nevery day\",\"updatedAt\":\"2026-11-16T11:00:00.000Z\"}],\"deleted\":{}}"
+}

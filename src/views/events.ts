@@ -2,7 +2,7 @@
 import { db } from '../core/state';
 import { ACTIVITY_STATUS } from '../core/model';
 import { blockers } from '../core/progress';
-import { toast } from '../ui/toast';
+import { tickToast, toast } from '../ui/toast';
 import { t } from '../i18n/index';
 import { save } from '../store/plans';
 import { $, itemCount, viewEl } from '../ui/dom';
@@ -42,6 +42,7 @@ export function cycleStatus(id: string) {
   const next = ACTIVITY_STATUS[(ACTIVITY_STATUS.indexOf(a.status) + 1) % ACTIVITY_STATUS.length];
   const waits = blockers(a);
   if (next === 'done' && waits.length) toast(t('acts.notDone', { name: waits[0].title }));
+  else if (next === 'done') tickToast(a);
   a.status = next;
   save();
   render();
@@ -59,6 +60,8 @@ $('#addBtn').addEventListener('click', e => {
 });
 
 viewEl.addEventListener('click', e => {
+  // A fold inside a card (a vision's future to avoid) opens and closes by itself, not the card's form.
+  if ((e.target as HTMLElement).closest('details.vis-avoid')) return;
   const el = (e.target as HTMLElement).closest<HTMLElement>(
     '[data-li-fold],[data-li-show-done],[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more],[data-replan],[data-log]',
   );

@@ -22,7 +22,20 @@ import { checklist, linkSection } from './picker';
 import { doneLast } from '../../core/util';
 import { doneDay } from '../../core/done-log';
 import { consistency, routineStreak } from '../../core/routines/keeping';
-import { area, date, field, finishedField, linksOf, modal, num, select, text, type Errors, type FormVals, type New } from './form';
+import {
+  area,
+  date,
+  field,
+  finishedField,
+  linksOf,
+  modal,
+  num,
+  select,
+  text,
+  type Errors,
+  type FormVals,
+  type New,
+} from './form';
 import type { Activity, ISODate, ListItem, Period, RelType, Repeat } from '../../core/model';
 
 export function activityForm(a: New<Activity>) {
@@ -40,6 +53,7 @@ export function activityForm(a: New<Activity>) {
   return `
     ${field('title', t('f.activity'), text('title', a.title, t(list ? 'f.listPh' : 'f.activityPh')))}
     ${field('description', t('f.details'), area('description', a.description, t('f.detailsPh')))}
+    ${field('reward', t('f.reward'), text('reward', a.reward, t('f.rewardPh'), 120), esc(t('f.rewardHint')))}
     ${list ? listEditor(list) : a.id ? `<div class="field"><button type="button" class="btn ghost" data-to-list>${t('list.make')}</button></div>` : ''}
     <div class="${list ? 'row2' : 'row3'}">
       ${list ? '' : field('status', t('f.status'), select('status', statusLabels(ACTIVITY_STATUS, 'activity.'), a.status || 'todo'))}

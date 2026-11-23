@@ -63,6 +63,26 @@ describe('normalize', () => {
     ]);
   });
 
+  test("a goal's cost and an activity's reward are kept as text and dropped otherwise", () => {
+    const d = normalize({
+      goals: [
+        { id: 'g1', title: 'A', cost: 'Two evenings' },
+        { id: 'g2', title: 'B', cost: 5 },
+      ],
+      activities: [
+        { id: 'a1', title: 'A', status: 'todo', reward: 'have a coffee' },
+        { id: 'a2', title: 'B', status: 'todo', reward: ['x'] },
+      ],
+    });
+    expect([d.goals[0].cost, d.activities[0].reward]).toEqual(['Two evenings', 'have a coffee']);
+    expect(['cost' in d.goals[1], 'reward' in d.activities[1]]).toEqual([false, false]);
+    // A template leaves the person out; starting fresh and a full copy keep them.
+    const tpl = resetProgress(d, { shift: true, template: true });
+    expect([tpl.goals[0].cost, tpl.activities[0].reward]).toEqual([undefined, undefined]);
+    const fresh = resetProgress(d);
+    expect([fresh.goals[0].cost, fresh.activities[0].reward]).toEqual(['Two evenings', 'have a coffee']);
+  });
+
   test('"is related to" links are dropped; the rest stays', () => {
     const old = {
       goals: [

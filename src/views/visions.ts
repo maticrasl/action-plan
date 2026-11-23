@@ -82,6 +82,7 @@ export function visionCard(v: Vision, depth: number, ps: PurposeState, reached: 
   return `<article class="card vision${reached.has(v.id) ? ' reached' : ''}${ps.root?.id === v.id ? ' purpose' : ''}" style="--level:${depth}" data-open="${v.id}" data-ctx-item="${v.id}">
     <div class="card-head"><h3>${esc(v.title)}</h3>${ps.root?.id === v.id ? purposeTag() : ''}</div>
     ${v.description ? `<p class="desc">${esc(v.description)}</p>` : ''}
+    ${v.avoid ? `<details class="vis-avoid"><summary>${t('vis.avoid')}</summary><p>${esc(v.avoid)}</p></details>` : ''}
     ${also.length ? `<div class="links"><span class="meta">${t('vis.alsoUnder')}</span>${also.map(p => `<span class="tag vision" data-open="${p.id}">${esc(p.title)}</span>`).join('')}</div>` : ''}
     ${goals ? `<div class="links"><span class="meta">${t('vis.servedBy')}</span>${goals}</div>` : ''}
   </article>`;

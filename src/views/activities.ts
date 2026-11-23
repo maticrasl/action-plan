@@ -76,6 +76,7 @@ export function activityCard(a: Activity) {
   return `<article class="card glass activity st-${activityState(a)}" data-open="${a.id}" data-ctx-item="${a.id}">
     <div class="card-head"><h3 class="${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</h3>${statusCheck(a)}</div>
     ${a.description ? `<p class="desc">${esc(a.description)}</p>` : ''}
+    ${a.reward ? `<p class="meta reward">${esc(t('reward.card', { reward: a.reward }))}</p>` : ''}
     ${children.length ? progressBar((childrenDone / children.length) * 100, t('acts.subDone', { done: childrenDone, total: children.length })) : ''}
     ${isList(a) ? listTicks(a) : ''}
     <div class="meta">

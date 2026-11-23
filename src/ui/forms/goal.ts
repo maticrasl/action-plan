@@ -11,7 +11,8 @@ import { today } from '../../core/dates';
 import { categorySuggestions } from '../../core/categories';
 import { GOAL_STATUS } from '../../core/model';
 import { checklist, linkSection } from './picker';
-import { ownVisions } from '../../core/visions';
+import { isActiveGoal, ownVisions } from '../../core/visions';
+import { allPlansData } from '../../store/visions';
 import { achievedDay } from '../../core/done-log';
 import {
   area,
@@ -32,6 +33,16 @@ import type { Goal } from '../../core/model';
 
 export function smartSection(letter: string, body: string) {
   return `<fieldset class="smart-block" data-smart="${letter}"><legend><span class="letter">${letter}</span>${t(('smart.' + letter) as TextKey)}</legend>${body}</fieldset>`;
+}
+
+// A new goal while 4 or more are active (all plans but demos): a line that something will give way.
+// CSS hides it once the cost field has text.
+function costMany(g: New<Goal>) {
+  if (g.id) return '';
+  const n = allPlansData()
+    .filter(({ plan }) => !plan.demo)
+    .reduce((sum, { data }) => sum + data.goals.filter(isActiveGoal).length, 0);
+  return n >= 4 ? `<p class="hint cost-many">${esc(t('f.costMany', { n }))}</p>` : '';
 }
 
 export function goalForm(g: New<Goal>) {
@@ -88,7 +99,11 @@ export function goalForm(g: New<Goal>) {
       ${field('ifThen', t('f.ifThen'), area('ifThen', g.ifThen, t('f.ifThenPh')))}
       ${g.achievable?.trim() ? field('achievable', t('f.achievable'), area('achievable', g.achievable, t('f.achievablePh'))) : ''}`,
     )}
-    ${smartSection('R', field('relevant', t('f.relevant'), area('relevant', g.relevant, t('f.relevantPh'))))}
+    ${smartSection(
+      'R',
+      `${field('relevant', t('f.relevant'), area('relevant', g.relevant, t('f.relevantPh')))}
+      ${field('cost', t('f.cost'), area('cost', g.cost, t('f.costPh'), 500) + costMany(g), esc(t('f.costHint')))}`,
+    )}
     ${smartSection(
       'T',
       `<div class="row2">

@@ -1,4 +1,4 @@
-/** Plans in and out: export and share one, import one, back up and restore all of them. */
+/** Plans in and out: export and share one, import one, back up and restore all of them. */
 import { applyJournal, journal } from '../store/journal';
 import { mergeJournal } from '../core/journal';
 import {
@@ -33,7 +33,7 @@ import { requestRender } from './render';
 /* ---------- Import / export / sample ---------- */
 
 export function planFile(kind: string) {
-  const data = kind === 'template' ? resetProgress(db, { shift: true }) : db;
+  const data = kind === 'template' ? resetProgress(db, { shift: true, template: true }) : db;
   const { goals, states, activities, relations } = data;
   return {
     format: PLAN_FORMAT,
