@@ -1,13 +1,21 @@
 /** Page lookups, HTML escaping, text cut to fit a width, and small HTML pieces shared by the views and dialogs. */
 import { db } from '../core/state';
 import { smartCheck } from '../core/progress';
-import { t, type TextKey } from '../i18n/index';
+import { t, tp, type TextKey } from '../i18n/index';
 import { daysUntil, fmtDate, fmtRel } from '../core/dates';
 import { ui } from '../store/state';
-import { type Activity, type Goal, type ISODate, type Item, type Relation } from '../core/model';
+import { type Activity, type Goal, type ISODate, type Item, type Relation, type WithNotes } from '../core/model';
 import { findEntity } from '../core/relations';
 
 /* ---------- Utilities ---------- */
+
+// A card's notes as a small tag; it opens the item's form at its Notes (feature 15).
+export function noteTag(x: Item & WithNotes): string {
+  const n = x.notes?.length || 0;
+  if (!n) return '';
+  const label = esc(tp('notes.count', n));
+  return `<button type="button" class="tag note-tag" data-notes="${x.id}" title="${label}" aria-label="${label}">✎ ${n}</button>`;
+}
 
 // The element is taken to exist; lookups that may find none use `?.`.
 export const $ = <E extends Element = HTMLElement>(sel: string, root: ParentNode = document) =>
@@ -99,10 +107,15 @@ export const byDueDate = (a: Activity, b: Activity) => (a.dueDate || '9999').loc
 export const byDeadline = (a: { deadline?: ISODate }, b: { deadline?: ISODate }) =>
   (a.deadline || '9999').localeCompare(b.deadline || '9999');
 export const matchesSearch = (
-  item: Item & { title: string; description?: string; specific?: string; list?: { text: string }[] },
+  item: Item & WithNotes & { title: string; description?: string; specific?: string; list?: { text: string }[] },
 ) =>
   !ui.search ||
-  [item.title, item.description || item.specific || '', ...(item.list || []).map(i => i.text)]
+  [
+    item.title,
+    item.description || item.specific || '',
+    ...(item.list || []).map(i => i.text),
+    ...(item.notes || []).map(n => n.text),
+  ]
     .join(' ')
     .toLowerCase()
     .includes(ui.search.toLowerCase());

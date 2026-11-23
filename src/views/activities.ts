@@ -11,6 +11,7 @@ import {
   progressBar,
   statusCheck,
   waitsForTag,
+  noteTag,
 } from '../ui/dom';
 import { t } from '../i18n/index';
 import { categorySelect, goalSelect, scopeFor, searchBox } from './filters';
@@ -82,6 +83,7 @@ export function activityCard(a: Activity) {
     <div class="meta">
       ${deadlineTag(a.dueDate, a.status === 'done')}
       ${blocked.length ? waitsForTag(blocked) : ''}
+      ${noteTag(a)}
     </div>
     ${parent ? `<div class="links"><span class="meta">${t('acts.partOf')}</span>${linkTag(parent.to)}</div>` : ''}
     ${goals ? `<div class="links">${goals}</div>` : ''}
