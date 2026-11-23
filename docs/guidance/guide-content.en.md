@@ -89,6 +89,8 @@ Try one of these, with pen and paper, ten minutes:
 - **Start from what you already do.** Something you return to without being told is a clue.
   What would “a step further” be?
 
+The app can walk you through two of these: “A good ordinary day” and “Where things stand”.
+
 Then pick **one**. Not the most important one: the one you would be glad to work on this
 month. A first goal that takes four to eight weeks teaches you more than a perfect five-year
 goal.
@@ -96,7 +98,7 @@ goal.
 If nothing comes, open the templates and read a few. You do not have to use one; seeing how
 others have put a wish into steps often shakes loose your own.
 
-Action: Start from a template
+Action: Start from a template · Second action: Find your visions
 Related: `vision-how`, `smart-fit`, `too-many`
 
 ### `vision-how` · I don't know what my visions are
@@ -105,10 +107,10 @@ A vision is not a goal. You never finish “To be a present father” or “To l
 worries”; you only move closer or further. That is what makes it useful: when a goal is
 reached, or fails, the vision is still there and tells you what the next goal is.
 
-To find one, take a goal you already have and ask “what for?”. Then ask again of the answer.
-“Run 10 km” – what for? “To be fit.” – what for? “To have energy for my kids when I'm fifty.”
-When the answer stops changing, you have a vision. Write it as if it were already true, in your
-own words, not in words that sound good.
+The app can help you find one. **Find your visions** offers three short writing exercises: “A
+good ordinary day”, “What for?” (start from a goal you have and ask what it is for, until the
+answer stops changing) and “Where things stand”. Each ends with a vision in your own words,
+written as if it were already true.
 
 Signs that a vision is really yours: you would want it even if nobody knew; it would still
 matter if you never got praise for it.
@@ -120,7 +122,7 @@ When every vision leads to one vision at the top and every active goal serves it
 that one as your **Purpose**. Treat it as a tidy picture of what you are working for now, not
 as a final answer; people's purposes change.
 
-Action: Add a vision
+Action: Find your visions
 Related: `what-goal`, `h-visions`, `let-go`
 
 ### `too-many` · I want to change everything at once
@@ -642,6 +644,9 @@ your plans.
 
 ⚠ If you log in with Google, a copy is also kept in your own Google Drive, in a hidden app
 folder. See `p-google`.
+
+Your reflections and reviews are kept with your plans: on this device and, with sync on, in the
+same hidden Drive folder.
 
 ⚠ The app does not use advertising or tracking, and it does not count what you do in it.
 

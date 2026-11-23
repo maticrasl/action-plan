@@ -30,6 +30,7 @@ import { fillWork } from './graphs/working';
 import { foldAllTl, toggleTlFold } from './timeline/rows';
 import { openStateValue } from '../ui/state-value';
 import { openReplan } from '../ui/replan';
+import { openDiscovery } from '../ui/discovery';
 import { logClick, setLogScope } from './review';
 import { todayClick } from './today';
 import { showVision } from './visions';
@@ -70,7 +71,7 @@ viewEl.addEventListener('click', e => {
   // A fold inside a card (a vision's future to avoid) opens and closes by itself, not the card's form.
   if ((e.target as HTMLElement).closest('details.vis-avoid')) return;
   const el = (e.target as HTMLElement).closest<HTMLElement>(
-    '[data-li-fold],[data-li-show-done],[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-notes],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more],[data-replan],[data-log],[data-today],[data-show-vision],[data-los-next],[data-vis-mode],[data-area-new],[data-area-hide],[data-area-rename]',
+    '[data-li-fold],[data-li-show-done],[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-notes],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more],[data-replan],[data-log],[data-today],[data-show-vision],[data-los-next],[data-vis-mode],[data-area-new],[data-area-hide],[data-area-rename],[data-disc]',
   );
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !(e.target as HTMLElement).closest('[data-map-zoom]')) {
@@ -115,6 +116,7 @@ function act(el: HTMLElement, e: MouseEvent) {
   if (el.dataset.relOpen) return openForm('relation', el.dataset.relOpen);
   if (el.dataset.relRemove) return removeRelation(el.dataset.relRemove);
   if (el.hasAttribute('data-replan')) return openReplan();
+  if (el.hasAttribute('data-disc')) return openDiscovery();
   if (el.dataset.log) return logClick(el);
   if (el.dataset.today) return todayClick(el);
   if (el.dataset.showVision) return showVision(el.dataset.showVision);

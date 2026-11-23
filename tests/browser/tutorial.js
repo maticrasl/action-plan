@@ -53,7 +53,7 @@ suite(async () => {
       kept = cook.checkins;
     cook.checkins = {};
     const seen = new Set();
-    const per = views.map(v => {
+    const per = [...views, 'visions'].map(v => {
       setView(v);
       $('#view')
         .querySelectorAll('[data-help-tip]')

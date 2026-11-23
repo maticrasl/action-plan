@@ -14,6 +14,7 @@ describe('Guide articles', () => {
     for (const [, list] of langs) {
       expect(list.map(a => `${a.group}:${a.id}`)).toEqual(GUIDE.en.map(a => `${a.group}:${a.id}`));
       expect(list.map(a => a.action?.do)).toEqual(GUIDE.en.map(a => a.action?.do));
+      expect(list.map(a => a.more?.do)).toEqual(GUIDE.en.map(a => a.more?.do));
       expect(list.map(a => (a.related ?? []).join())).toEqual(GUIDE.en.map(a => (a.related ?? []).join()));
       expect(list.map(a => (a.review ?? []).map(r => r.go).join())).toEqual(
         GUIDE.en.map(a => (a.review ?? []).map(r => r.go).join()),

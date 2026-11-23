@@ -1,8 +1,18 @@
 /** The Areas side of the Visions view (feature 03): each part of life with its visions, active goals and effort. */
 import { t, tp } from '../i18n/index';
-import { areaReport, areaSentences, emptyAreas, renameGoals, renameVisions, type AreaBlock } from '../core/areas';
+import {
+  areaKey,
+  areaReport,
+  areaSentences,
+  emptyAreas,
+  renameGoals,
+  renameVisions,
+  type AreaBlock,
+} from '../core/areas';
+import { latestRatings } from '../core/discovery';
+import { journal } from '../store/journal';
 import { visions } from '../core/state';
-import { today } from '../core/dates';
+import { fmtDay, today } from '../core/dates';
 import { esc, progressBar } from '../ui/dom';
 import { prefs } from '../store/prefs';
 import { allPlansData, saveVisions } from '../store/visions';
@@ -31,8 +41,9 @@ const sources = () =>
     .filter(p => !p.plan.demo)
     .map(p => ({ plan: p.plan.id, data: p.data }));
 
-function block(b: AreaBlock) {
+function block(b: AreaBlock, ratings: ReturnType<typeof latestRatings>) {
   const name = b.name || t('areas.none');
+  const r = b.name ? ratings.get(areaKey(b.name)) : undefined;
   return `<section class="card area-block" data-area="${esc(b.name)}">
     <div class="card-head"><h3>${esc(name)}</h3>${
       b.name
@@ -42,6 +53,7 @@ function block(b: AreaBlock) {
     ${b.visions.length ? `<div class="links">${b.visions.map(v => `<span class="tag vision" data-open="${esc(v.id)}">◇ ${esc(v.title)}</span>`).join('')}</div>` : ''}
     <div class="area-counts">
       <p class="meta">${esc(b.goals ? tp('areas.goals', b.goals) : t('areas.noGoal'))}${b.effort ? ` · ${esc(tp('areas.effort', b.effort))}` : ''}</p>
+      ${r ? `<p class="meta area-rated">${esc(t('disc.rated', { n: String(r.value), date: fmtDay(r.date, { day: 'numeric', month: 'short' }) }))}</p>` : ''}
       ${
         b.goals || !b.visions.length
           ? progressBar(b.share)
@@ -53,6 +65,7 @@ function block(b: AreaBlock) {
 
 export function renderAreas() {
   const r = areaReport(sources(), today());
+  const ratings = latestRatings(journal.sessions);
   const lines = areaSentences(r).map(s =>
     s.key === 'most'
       ? t('areas.most', { area: s.area })
@@ -64,7 +77,7 @@ export function renderAreas() {
   );
   const empty = emptyAreas(t('cat.suggestions').split(','), r, hiddenAreas()).map(s => s.trim());
   return `${lines.length ? `<div class="vis-status">${lines.map(l => `<p>${esc(l)}</p>`).join('')}</div>` : ''}
-    <div class="area-list">${[...r.blocks, ...(r.none ? [r.none] : [])].map(block).join('')}</div>
+    <div class="area-list">${[...r.blocks, ...(r.none ? [r.none] : [])].map(b => block(b, ratings)).join('')}</div>
     ${
       empty.length
         ? `<section class="area-empty"><h3>${esc(t('areas.empty'))}</h3><p class="meta">${esc(t('areas.emptyHint'))}</p>

@@ -99,9 +99,13 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
+- 2026-11-23, branch `feat/guided-discovery`: 01 built, not yet seen by the owner (line not ticked).
+  Spec `docs/specs/2026-11-23-guided-discovery.md`. Rules in `core/discovery.ts`, dialog in
+  `ui/discovery.ts` and `ui/discovery-steps.ts`, page test `tests/browser/discovery.js`. Runs are
+  journal sessions (no new key, no sync change). The yearly review (14) still has to end with it.
 - 2026-11-23, branch `feat/life-areas`: 03 built, not yet seen by the owner (line not ticked). Spec
   `docs/specs/2026-11-23-life-areas.md` (counting rule, buttons instead of a context menu). Rules in
-  `core/areas.ts`, screen in `views/areas.ts`, page test `tests/browser/visions.areas.js`. "Rated" waits for 01.
+  `core/areas.ts`, screen in `views/areas.ts`, page test `tests/browser/visions.areas.js`. "Rated" came with 01.
 - 2026-11-23, branch `feat/line-of-sight`: 05 built, not yet seen by the owner (line not ticked).
   Rules in `core/line-of-sight.ts`, tag and toast in `ui/line-of-sight.ts`, page test
   `tests/browser/today.sight.js`. The toast names the vision only when the tick has no other

@@ -25,6 +25,7 @@ import { syncConfigured, syncConnected } from '../sync/sync';
 import { $, esc, viewEl } from '../ui/dom';
 import { setView } from '../ui/nav';
 import { openForm } from '../ui/forms/form';
+import { openDiscovery } from '../ui/discovery';
 import { openStateValue } from '../ui/state-value';
 import { askClosing } from '../ui/closing';
 import { openSettings } from '../ui/settings';
@@ -96,7 +97,7 @@ export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
   addRoutineList: () => openForm('activity', null, { repeat: 'listRoutine' }),
   addState: c => openForm('state', null, { measures: [target(c)] }),
   addSubgoal: c => openForm('goal', null, { subgoal: [target(c)] }),
-  addVision: () => openForm('vision'),
+  findVisions: () => openDiscovery(),
   recordValue: (c, el) => openStateValue(target(c), el),
   review: () => openGuide('review'),
   templates: () => openTemplates(),

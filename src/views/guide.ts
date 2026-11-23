@@ -1,5 +1,6 @@
 /** The Guide: how the method works, what to do when stuck, how each feature works, what happens to the data. */
 import { openReplan } from '../ui/replan';
+import { openDiscovery } from '../ui/discovery';
 import { GUIDE, GUIDE_GROUPS, type Article, type GuideAction, type GuideFact } from '../i18n/guide';
 import { feedbackRows } from '../ui/feedback';
 import { lang, t, type TextKey } from '../i18n/index';
@@ -69,6 +70,7 @@ export const GUIDE_DO: Record<GuideAction, () => void> = {
   'view-visions': view('visions'),
   'view-review': view('review'),
   'pick-focus': () => openFocusPicker(),
+  'find-visions': () => openDiscovery(),
   'ask-tip': () => askTip(),
 };
 
@@ -92,7 +94,8 @@ function actionHtml(a: Article) {
         : ''
     }`;
   }
-  return `<p class="guide-act"><button type="button" class="btn primary" data-guide-do="${a.action.do}">${esc(a.action.label)}</button></p>`;
+  const more = a.more ? ` <button type="button" class="btn" data-guide-do="${a.more.do}">${esc(a.more.label)}</button>` : '';
+  return `<p class="guide-act"><button type="button" class="btn primary" data-guide-do="${a.action.do}">${esc(a.action.label)}</button>${more}</p>`;
 }
 
 function reviewHtml(a: Article) {

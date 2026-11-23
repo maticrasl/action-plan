@@ -29,6 +29,7 @@ export const GUIDE_ACTIONS = [
   'view-visions',
   'view-review',
   'pick-focus',
+  'find-visions',
   'ask-tip',
 ] as const;
 export type GuideAction = (typeof GUIDE_ACTIONS)[number];
@@ -47,6 +48,7 @@ export interface Article<Id extends string = string> {
   title: string;
   body: string;
   action?: { do: GuideAction; label: string };
+  more?: { do: GuideAction; label: string }; // a second, quieter button
   related?: readonly Id[];
   review?: readonly { text: string; go: GuideAction; label: string }[];
 }
