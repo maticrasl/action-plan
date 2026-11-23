@@ -41,6 +41,40 @@ export const sl: Language = {
     'f.visionAvoid': 'Če to zanemarim',
     'f.visionAvoidPh':
       'Kje bi bili čez tri do pet let, če ne bi storili ničesar? Napišite naravnost, kot bi zares bilo.',
+    'f.visionArea': 'Področje',
+    'f.visionAreaPh': 'Na primer Zdravje',
+    'areas.switch': 'Prikaži vizije kot',
+    'areas.tree': 'Drevo',
+    'areas.areas': 'Področja',
+    'areas.none': 'Brez področja',
+    'areas.goals': {
+      one: '{n} aktiven cilj',
+      two: '{n} aktivna cilja',
+      few: '{n} aktivni cilji',
+      other: '{n} aktivnih ciljev',
+    },
+    'areas.noGoal': 'Ni aktivnega cilja',
+    'areas.effort': {
+      one: '{n} korak ali dan rutine v 30 dneh',
+      two: '{n} koraka ali dneva rutine v 30 dneh',
+      few: '{n} koraki in dnevi rutine v 30 dneh',
+      other: '{n} korakov in dni rutine v 30 dneh',
+    },
+    'areas.empty': 'Tu še ni ničesar',
+    'areas.emptyHint': 'tapnite eno, da dodate vizijo',
+    'areas.hide': 'Ni zame',
+    'areas.rename': 'Preimenuj področje …',
+    'areas.renameAsk': 'Novo ime za {area}',
+    'areas.renamed': '{from} preimenovano v {to}.',
+    'areas.most': 'Največ vašega truda v zadnjih 30 dneh je šlo za {area}.',
+    'areas.unserved': '{area} ima vizijo in nobenega aktivnega cilja.',
+    'areas.unservedMore': {
+      one: '{area} in še eno področje imata vizijo in nobenega aktivnega cilja.',
+      two: '{area} in še {n} področji imajo vizijo in nobenega aktivnega cilja.',
+      few: '{area} in še {n} področja imajo vizijo in nobenega aktivnega cilja.',
+      other: '{area} in še {n} področij ima vizijo in nobenega aktivnega cilja.',
+    },
+    'areas.quiet': 'V zadnjih 30 dneh ni bilo odkljukano nič.',
     'vis.avoid': 'Če to zanemarim',
     'f.visionParents': 'Služi širšim vizijam',
     'f.visionParentsHint': 'Ponujene so le vizije, ki ne bi ustvarile kroga.',
@@ -557,6 +591,8 @@ export const sl: Language = {
     'tip.achieved.btn2': 'Napiši zaključni zapisek',
     'tip.first-month.text':
       'Mesec dni se vračate k svojemu načrtu. Ta navada je vredna več kot katerikoli posamezen cilj v njem.',
+    'tip.try-areas.text': 'Število področij življenja, ki jih pokrivajo vaše vizije: {n}. Pogled Področja pokaže, kako je med njimi razdeljen vaš trud.',
+    'tip.try-areas.btn': 'Odpri Področja',
     'tip.try-today.text': 'Imate več kot en načrt. Danes na eni strani našteje, kar je na vrsti v vseh.',
     'tip.try-today.btn': 'Odpri Danes',
     'tip.try-map.text':
@@ -683,7 +719,7 @@ export const sl: Language = {
     'help.off': 'Izklopi razlage',
     'help.tipLabel': 'Kaj je to?',
     'help.view.visions':
-      'Vizije so stanja, ki si jih želite in jih nikoli ne zaključite; cilji so način, kako se jim približujete. Dodajte vizijo, izberite cilje, ki ji služijo, in ožje vizije postavite pod širše. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj, je označena kot vaš Smisel.',
+      'Vizije so stanja, ki si jih želite in jih nikoli ne zaključite; cilji so način, kako se jim približujete. Dodajte vizijo, izberite cilje, ki ji služijo, in ožje vizije postavite pod širše. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj, je označena kot vaš Smisel. Preklopite na Področja, da vidite, kako je razdeljen vaš trud.',
     'help.view.dashboard':
       'Pregled povzame vaš načrt: povprečni napredek aktivnih ciljev, opravljene, zamujene in čakajoče aktivnosti ter kaj je na vrsti: aktivnosti z rokom do danes ali zamujene (Prikaži vse doda še ostale v teku).',
     'help.view.goals':

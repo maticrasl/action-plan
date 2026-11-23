@@ -41,6 +41,28 @@ export const en = {
     'f.visionAvoid': 'If I let this slide',
     'f.visionAvoidPh':
       'Where would you be in three to five years if you did nothing about this? Write it plainly, as it would really be.',
+    'f.visionArea': 'Area',
+    'f.visionAreaPh': 'For example Health',
+    'areas.switch': 'Show visions as',
+    'areas.tree': 'Tree',
+    'areas.areas': 'Areas',
+    'areas.none': 'No area',
+    'areas.goals': { one: '{n} active goal', other: '{n} active goals' },
+    'areas.noGoal': 'No active goal',
+    'areas.effort': { one: '{n} step or routine day in 30 days', other: '{n} steps and routine days in 30 days' },
+    'areas.empty': 'Nothing here yet',
+    'areas.emptyHint': 'tap one to add a vision',
+    'areas.hide': 'Not for me',
+    'areas.rename': 'Rename area…',
+    'areas.renameAsk': 'New name for {area}',
+    'areas.renamed': 'Renamed {from} to {to}.',
+    'areas.most': 'Most of your effort in the last 30 days went to {area}.',
+    'areas.unserved': '{area} has a vision and no active goal.',
+    'areas.unservedMore': {
+      one: '{area} and {n} more have a vision and no active goal.',
+      other: '{area} and {n} more have a vision and no active goal.',
+    },
+    'areas.quiet': 'Nothing was ticked in the last 30 days.',
     'vis.avoid': 'If I let it slide',
     'f.visionParents': 'Serves broader visions',
     'f.visionParentsHint': 'Only visions that would not make a loop are offered.',
@@ -490,6 +512,8 @@ export const en = {
     'tip.try-map.text':
       'Your plan has enough in it now for the Map to be worth a look: it shows what serves what, and what serves nothing.',
     'tip.try-map.btn': 'Open the Map',
+    'tip.try-areas.text': 'Your visions cover {n} areas of life. The Areas view shows how your effort is spread among them.',
+    'tip.try-areas.btn': 'Open Areas',
     'tip.try-today.text': 'You have more than one plan. Today lists what is due from all of them on one page.',
     'tip.try-today.btn': 'Open Today',
     'tip.try-timeline.text': 'The Timeline shows your steps on a calendar. Drag a bar to move its dates.',
@@ -613,7 +637,7 @@ export const en = {
     'help.off': 'Turn off explanations',
     'help.tipLabel': 'What is this?',
     'help.view.visions':
-      'Visions are states you wish for and never finish; goals are how you move toward them. Add a vision, choose the goals that serve it, and put narrower visions under broader ones. When one vision stands above all the others and every active goal serves it, it is marked as your Purpose.',
+      'Visions are states you wish for and never finish; goals are how you move toward them. Add a vision, choose the goals that serve it, and put narrower visions under broader ones. When one vision stands above all the others and every active goal serves it, it is marked as your Purpose. Switch to Areas to see how your effort is spread.',
     'help.view.dashboard':
       'The overview sums up your plan: average progress of active goals, finished, late and waiting activities, and what is due next: the activities due by today or overdue (Show all adds the others in progress).',
     'help.view.goals':

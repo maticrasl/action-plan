@@ -137,6 +137,14 @@ describe('class D', () => {
     expect(ids('try-today', p, { activePlans: 3, seen: { views: { today: true } } })).toEqual([]);
   });
 
+  test('try-areas: visions in two areas and Areas never opened', () => {
+    const v = (area?: string) => ({ id: 'v' + Math.random(), title: 'v', parents: [], ...(area ? { area } : {}) });
+    expect(hits('try-areas', plan({ goals: items(1) }), { visions: [v('Health'), v(' health')] })).toEqual([]);
+    expect(hits('try-areas', plan({ goals: items(1) }), { visions: [v('Health'), v('Home'), v()] })).toEqual([{ vars: { n: 2 } }]);
+    expect(hits('try-areas', plan({ goals: items(1) }), { visions: [v('Health'), v()] })).toEqual([]);
+    expect(hits('try-areas', plan({ goals: items(1) }), { visions: [v('Health'), v('Home')], seen: { views: { areas: true } } })).toEqual([]);
+  });
+
   test('try-timeline: 4 items with dates and the Timeline never opened', () => {
     const dated = (n: number) => items(4).map((g, i) => (i < n ? { ...g, deadline: '2027-01-01' } : g));
     expect(ids('try-timeline', plan({ goals: dated(4) }))).toEqual(['·']);

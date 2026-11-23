@@ -6,6 +6,8 @@ import { checklist, linkSection } from './picker';
 import type { Vision } from '../../core/model';
 import type { New } from './form';
 import { area, field, text } from './form';
+import { areaSuggestions } from '../../core/categories';
+import { esc } from '../dom';
 
 export function visionForm(v: New<Vision>) {
   const parents = v.id ? v.parents! : (v.links?.parents as string[] | undefined) || [];
@@ -16,6 +18,14 @@ export function visionForm(v: New<Vision>) {
     : (v.links?.goals as string[] | undefined) || [];
   return `
     ${field('title', t('f.vision'), text('title', v.title, t('f.visionPh')))}
+    ${field(
+      'area',
+      t('f.visionArea'),
+      `<input type="text" id="f-area" name="area" list="areaList" maxlength="80" value="${esc(v.area ?? v.links?.area ?? '')}" placeholder="${esc(t('f.visionAreaPh'))}">
+      <datalist id="areaList">${areaSuggestions()
+        .map(c => `<option value="${esc(c)}">`)
+        .join('')}</datalist>`,
+    )}
     ${field('description', t('f.visionDesc'), area('description', v.description, t('f.visionDescPh')))}
     ${field('avoid', t('f.visionAvoid'), area('avoid', v.avoid, t('f.visionAvoidPh'), 2000))}
     ${linkSection(

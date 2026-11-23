@@ -60,6 +60,17 @@ describe('normalizeVisions', () => {
     expect(v.list[0].avoid).toBe('Tired\nevery evening');
     expect(['avoid' in v.list[1], 'avoid' in v.list[2]]).toEqual([false, false]);
   });
+  test('the area is kept as text and dropped otherwise', () => {
+    const v = normalizeVisions({
+      list: [
+        { id: 'v1', title: 'Fit', area: 'Health' },
+        { id: 'v2', title: 'Calm', area: ['x'] },
+        { id: 'v3', title: 'Older' },
+      ],
+    });
+    expect(v.list[0].area).toBe('Health');
+    expect(['area' in v.list[1], 'area' in v.list[2]]).toEqual([false, false]);
+  });
 });
 
 describe('the vision tree', () => {

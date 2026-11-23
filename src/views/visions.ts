@@ -9,6 +9,7 @@ import { unservedVisions } from '../core/line-of-sight';
 import { fmtDay, today } from '../core/dates';
 import { setView } from '../ui/nav';
 import type { Vision } from '../core/model';
+import { modeSwitch, renderAreas, visionsMode } from './areas';
 
 type PurposeState = ReturnType<typeof purposeState>;
 
@@ -100,7 +101,7 @@ export function visionCard(v: Vision, depth: number, ps: PurposeState, reached: 
     )
     .join('');
   return `<article class="card vision${reached.has(v.id) ? ' reached' : ''}${ps.root?.id === v.id ? ' purpose' : ''}" style="--level:${depth}" data-open="${v.id}" data-ctx-item="${v.id}">
-    <div class="card-head"><h3>${esc(v.title)}</h3>${ps.root?.id === v.id ? purposeTag() : ''}</div>
+    <div class="card-head"><h3>${esc(v.title)}</h3>${v.area ? `<span class="tag area">${esc(v.area)}</span>` : ''}${ps.root?.id === v.id ? purposeTag() : ''}</div>
     ${v.description ? `<p class="desc">${esc(v.description)}</p>` : ''}
     ${v.avoid ? `<details class="vis-avoid"><summary>${t('vis.avoid')}</summary><p>${esc(v.avoid)}</p></details>` : ''}
     ${also.length ? `<div class="links"><span class="meta">${t('vis.alsoUnder')}</span>${also.map(p => `<span class="tag vision" data-open="${p.id}">${esc(p.title)}</span>`).join('')}</div>` : ''}
@@ -114,10 +115,12 @@ export function renderVisions() {
   if (!visions.list.length)
     return `<div class="empty"><h3>${t('vis.emptyTitle')}</h3><div>${t('vis.emptyText')}</div>
     <button class="btn primary" data-new="vision"><span aria-hidden="true">+</span> ${t('add.vision')}</button></div>${note}`;
+  const mode = visionsMode();
+  if (mode === 'areas') return `${note}${modeSwitch(mode)}${renderAreas()}`;
   const ps = purposeState(),
     reached = reachedVisions(),
     unserved = new Map(unservedVisions(allPlansData(), today()).map(u => [u.vision.id, u]));
-  return `${note}${purposeStatus(ps)}<div class="vision-tree">${visionOrder()
+  return `${note}${modeSwitch(mode)}${purposeStatus(ps)}<div class="vision-tree">${visionOrder()
     .map(({ v, depth }) => visionCard(v, depth, ps, reached, unserved.get(v.id)))
     .join('')}</div>`;
 }

@@ -142,6 +142,7 @@ Each also needs "at least 5 days since the first item", so they never crowd the 
 |---|---|---|---|---|---|
 | `try-map` | 6 or more items, Map never opened | Your plan has enough in it now for the Map to be worth a look: it shows what serves what, and what serves nothing. | Open the Map | Overview | `h-map` |
 | `try-today` | 2 or more plans (not samples) with an active goal, Today never opened | You have more than one plan. Today lists what is due from all of them on one page. | Open Today | Overview | `h-today` |
+| `try-areas` | Visions in 2 or more areas, the Areas side never opened | Your visions cover {n} areas of life. The Areas view shows how your effort is spread among them. | Open Areas | Visions | `h-visions` |
 | `try-timeline` | 4 or more items with dates, Timeline never opened | The Timeline shows your steps on a calendar. Drag a bar to move its dates. | Open the Timeline | Activities | `h-timeline` |
 | `try-graphs` | A state has 3 or more measurements, Graphs never opened | “{name}” has enough measurements to draw a line. Graphs shows it against your target. | Open Graphs | Current states | `h-graphs` |
 | `make-up` | A routine on set days has a missed day in the last 14 days and make-up is off | When a set day does not work out, a routine can let you make it up on another day. It is a switch under Repeats. | Edit the routine | Activities | `h-routines` |

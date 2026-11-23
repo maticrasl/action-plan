@@ -107,7 +107,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li>Naj bodo aktivni <strong>dva ali trije</strong> cilji. Pri več se vsak premika tako počasi, da se zdi brez pomena.</li>
 <li>Druge nastavite na <strong>Zaustavljen</strong> (odprite cilj, »Stanje«). Zaustavljeni cilji obdržijo vse in ne štejejo kot zamujeni. So vrsta, ne pokopališče.</li>
 <li>Ko je en cilj dosežen ali je postal navada, vzemite naslednjega.</li>
-<li>Če se dva cilja med sabo vlečeta (varčevati, več potovati), se odločite, kateri gre to obdobje prvi. Tega načrt ne more odločiti namesto vas, če pa vprašanje pustite odprto, se upočasnita oba.</li>
+<li>Če se dva cilja med sabo vlečeta (varčevati, več potovati), se odločite, kateri gre to obdobje prvi. Tega načrt ne more odločiti namesto vas, če pa vprašanje pustite odprto, se upočasnita oba. Stran Področja v pogledu Vizije pokaže, kam je šel vaš trud.</li>
 <li>Ko dodate cilj, obrazec vpraša, kaj vas bo stal. Če ne znate poimenovati ničesar, čemur bi se zanj odpovedali, je morda cilj za pozneje; nastavite ga na Zaustavljen.</li>
 </ul>`,
     action: { do: 'view-goals', label: 'Odpri Cilje' },
@@ -421,6 +421,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<p>Vizije so v pogledu Vizije in pripadajo vsem vašim načrtom skupaj. Dodajte vizijo, opišite, kako je videti, kot da je že resnična, in izberite cilje, ki ji služijo; ali pa odprite cilj in izberite »Služi vizijam«. Vizija lahko služi širšim vizijam. »Če to zanemarim« hrani drugo stran, zloženo na kartici, dokler je ne odprete.</p>
 <p>Pogled pove, koliko vizij je na vrhu in kateri aktivni cilji ne služijo nobeni. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj v vsakem načrtu, jo aplikacija pokaže v zlati barvi kot vaš <strong>Smisel</strong>.</p>
 <p>Na Danes in na Pregledu vsak korak pokaže vizijo, ki ji služi. Vizija, ki ji ne služi noben aktiven cilj, to pove in ponudi »Kaj je naslednje?«.</p>
+<p>Viziji določite <strong>področje</strong>, na primer Zdravje ali Odnosi. Stran Področja v pogledu Vizije (stikalo na vrhu) nato za vsako področje pokaže vaše vizije, aktivne cilje in koliko ste zanj odkljukali v zadnjih 30 dneh. Svinčnik preimenuje področje na vseh vizijah in na vseh ciljih s to kategorijo.</p>
 <p>Sij okoli vsega, kar služi vašemu Smislu, je zlat, dokler je vsak aktiven cilj SMART. Napol izpolnjen shranjen cilj ga obarva srebrno, dokler ga ne dokončate.</p>`,
     action: { do: 'add-vision', label: 'Dodaj vizijo' },
     related: ['vision-how'],

@@ -223,6 +223,7 @@ export interface Vision extends Item {
   title: string;
   description?: string;
   avoid?: string; // where things would be if left to slide (feature 21); shown folded, never a goal
+  area?: string; // a part of life, such as Health (feature 03); not stored when empty
   parents: string[];
   createdAt?: ISODate;
 }

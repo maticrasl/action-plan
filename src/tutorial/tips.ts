@@ -35,6 +35,8 @@ import { openReplan } from '../ui/replan';
 import { lateSteps } from '../core/replan';
 import { requestRender } from '../ui/render';
 import { openGuide } from '../views/guide';
+import { visionsMode } from '../views/areas';
+import { prefs } from '../store/prefs';
 import { hasWork, openWork } from '../views/graphs/working';
 import { walkInput } from './walkthrough';
 
@@ -81,6 +83,10 @@ export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
   activities: goTo('activities'),
   graphs: goTo('graphs'),
   map: goTo('map'),
+  areas: () => {
+    prefs.set('visionsMode', 'areas');
+    setView('visions');
+  },
   editItem: c => {
     const e = findEntity(target(c));
     if (e && (e.kind === 'goal' || e.kind === 'activity' || e.kind === 'state')) openForm(e.kind, target(c));
@@ -164,6 +170,7 @@ export function decorateTips() {
   if (!before.off && !isDemo()) {
     markDay(today());
     if ([...WALK_VIEWS, 'today'].includes(ui.view)) markView(ui.view);
+    if (ui.view === 'visions' && visionsMode() === 'areas') markView('areas');
   }
   if (ui.view === 'guide' || document.querySelector('dialog[open]')) return;
   const inp = tipInput();

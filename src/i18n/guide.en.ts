@@ -107,7 +107,7 @@ export const guideEn = [
 <li>Keep <strong>two or three</strong> goals Active. More than that and each one moves so slowly that it stops feeling worth it.</li>
 <li>Set the others to <strong>Paused</strong> (open the goal, “Status”). Paused goals keep everything and do not count as late. They are a queue, not a graveyard.</li>
 <li>When one goal is achieved or has become routine, bring the next one in.</li>
-<li>If two goals pull against each other (save money, travel more), decide which goes first this season. The plan cannot settle that for you, but leaving it open slows both.</li>
+<li>If two goals pull against each other (save money, travel more), decide which goes first this season. The plan cannot settle that for you, but leaving it open slows both. The Areas side of the Visions view shows where your effort has been going.</li>
 <li>When you add a goal, the form asks what it will cost. If you cannot name anything you would give up for it, it may be a goal for later; set it to Paused.</li>
 </ul>`,
     action: { do: 'view-goals', label: 'Open Goals' },
@@ -421,6 +421,7 @@ export const guideEn = [
     body: `<p>Visions are in the Visions view and belong to all your plans together. Add one, describe what it looks like as if it were already true, and choose the goals that serve it; or open a goal and choose “Serves visions”. A vision can serve broader visions. “If I let this slide” keeps the other side, folded away on the card until you open it.</p>
 <p>The view tells you how many visions are at the top and which active goals serve none. When one vision is at the top of all the others and every active goal in every plan serves it, the app shows it in gold as your <strong>Purpose</strong>.</p>
 <p>On Today and on the Overview, each step shows the vision it serves. A vision that no active goal serves says so and offers “What is next?”.</p>
+<p>Give a vision an <strong>area</strong>, such as Health or Relationships. The Areas side of the Visions view (the switch at the top) then shows, for each area, your visions, your active goals and how much you ticked for it in the last 30 days. The pencil renames an area on every vision and on every goal with that category.</p>
 <p>The glow round everything that serves your Purpose is gold while every active goal is SMART. A goal saved half-finished turns it silver until you finish it.</p>`,
     action: { do: 'add-vision', label: 'Add a vision' },
     related: ['vision-how'],
