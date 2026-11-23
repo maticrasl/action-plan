@@ -148,7 +148,7 @@ const progressPlan = () => {
     status: 'doing',
     startDate: d(-21),
     dueDate: d(50),
-    notes: 'Three runs a week',
+    extra: 'Three runs a week', // a field the app does not know: kept as it is
   };
   const a3 = { id: uid(), title: 'Someday', status: 'todo' };
   const r1 = {

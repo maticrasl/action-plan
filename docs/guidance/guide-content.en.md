@@ -381,8 +381,8 @@ Related: `vision-how`, `pressure`, `reached`
 Mark it Achieved and stop for a moment before the next one. It is easy to skip this, and it is
 the part that makes the next goal easier.
 
-- **Note what worked.** Which step or routine made the difference? Write two lines in the
-  goal's description while you still remember.
+- **Note what worked.** Which step or routine made the difference? The app asks when you
+  mark the goal Achieved. Two lines are enough.
 - **Decide what stays.** Many results need upkeep: the weight, the language, the savings. Keep
   one small routine and let the others end.
 - **Choose what is next from the vision,** not from the momentum. What does “To be fit and
@@ -449,6 +449,9 @@ target the app asks whether to mark it achieved. A **category** (Health, Finance
 filter goals with the chips above the list. Long-press or right-click a goal for more: add a
 sub-goal, add an activity for it, show it on the Map or the Timeline.
 
+Notes at the end of the form keep dated remarks; long-press the card and choose “Add a note”
+to write one quickly.
+
 Action: Add a goal · Related: `smart-fit`, `no-number`
 
 ### `h-states` · Current states
@@ -464,6 +467,9 @@ such a state chooses how it counts: in total, or per day, week, month or year.
 Link the state to a goal (“Describes the current state of goal(s)”) and the goal's progress
 follows it. A wrong value is deleted in Graphs, in the table under the state's graph, or in the
 state's form under the history.
+
+A value can carry a short note, such as “after two weeks off”. It shows under the graph and on
+the point.
 
 Action: Add a current state · Related: `h-graphs`, `no-number`
 
@@ -482,6 +488,9 @@ Link an activity to the goals it **contributes to** and the states it **improves
 **part of** a larger activity (a sub-activity), and it can **depend on** another activity that
 must be done first; until then it shows as waiting. “Hide done and achieved” clears finished
 cards from view.
+
+Notes at the end of the form keep dated remarks; long-press the card and choose “Add a note”
+to write one quickly.
 
 Action: Add an activity · Related: `first-steps`
 

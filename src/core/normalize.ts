@@ -155,9 +155,9 @@ export function progressCounts(data: Db): ProgressCounts {
     done:
       data.activities.filter(a => a.status === 'done').length + data.goals.filter(g => g.status === 'achieved').length,
     // Those started by their start date alone (see startDueActivities) are not progress.
-    notes: [...data.goals, ...data.activities, ...data.states].reduce((n, x) => n + (x.notes?.length || 0), 0),
     started: data.activities.filter(a => a.status === 'doing' && !(a.autoStarted && a.autoStarted === a.startDate))
       .length,
+    notes: [...data.goals, ...data.activities, ...data.states].reduce((n, x) => n + (x.notes?.length || 0), 0),
   };
 }
 export const hasProgress = (data: Db): boolean => Object.values(progressCounts(data)).some(Boolean);

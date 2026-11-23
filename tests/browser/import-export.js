@@ -13,7 +13,7 @@ suite(async () => {
     assert(!isNaN(Date.parse(full.exportedAt)), 'export time recorded');
     eq(full.goals, db.goals, 'full copy keeps everything');
     eq(full.activities, db.activities, 'full copy keeps check-ins');
-    eq(progressCounts(tpl), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'template has no progress');
+    eq(progressCounts(tpl), { checkins: 0, measurements: 0, done: 0, started: 0, notes: 0 }, 'template has no progress');
     assert(datesOf(tpl).sort()[0] >= today(), 'template dates moved to now');
     assert(
       db.goals[1].status === 'achieved' && db.activities[3].checkins,
@@ -143,7 +143,7 @@ suite(async () => {
     eq(got[0].json.kind, 'template', 'template file');
     eq(
       progressCounts(got[0].json),
-      { checkins: 0, measurements: 0, done: 0, started: 0 },
+      { checkins: 0, measurements: 0, done: 0, started: 0, notes: 0 },
       'template file has no progress',
     );
     assert(
@@ -287,7 +287,7 @@ suite(async () => {
       !imp.open && plans.list.length === n0 + 2 && currentPlan().name === `${name} 2`,
       'Start fresh adds the plan',
     );
-    eq(progressCounts(db), { checkins: 0, measurements: 0, done: 0, started: 0 }, 'without progress');
+    eq(progressCounts(db), { checkins: 0, measurements: 0, done: 0, started: 0, notes: 0 }, 'without progress');
     eq(datesOf(db), datesOf(data), 'dates left as they were');
     eq(
       [db.goals.length, db.states.length, db.activities.length, db.relations.length],

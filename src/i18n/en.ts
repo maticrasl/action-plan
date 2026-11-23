@@ -1301,6 +1301,10 @@ export const en = {
     'toast.template': '“{name}” created from a template',
   },
   sample: {
+    notes: {
+      closing: 'Twenty minutes every evening, before the phone came out.',
+      measurement: 'After a week off with a cold',
+    },
     goals: [
       {
         category: 'Health',

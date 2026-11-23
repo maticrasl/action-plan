@@ -1475,6 +1475,10 @@ export const sl: Language = {
     'toast.template': 'Načrt »{name}« ustvarjen iz predloge',
   },
   sample: {
+    notes: {
+      closing: 'Dvajset minut vsak večer, še pred telefonom.',
+      measurement: 'Po tednu premora zaradi prehlada',
+    },
     goals: [
       {
         category: 'Zdravje',

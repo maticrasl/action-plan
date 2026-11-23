@@ -17,7 +17,7 @@ export function openNotePop(id: string, anchor: HTMLElement) {
       title: t('ctx.addNote'),
       hint: ent.item.title,
       fields: [],
-      note: { label: t('notes.title'), placeholder: t('notes.add'), max: NOTE_MAX },
+      note: { label: t('f.valueNote'), placeholder: t('notes.add'), max: NOTE_MAX },
       withDate: true,
       pastOnly: true,
       okLabel: t('notes.addBtn'),

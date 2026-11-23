@@ -271,6 +271,12 @@ export function sampleData(): Omit<Db, 'deleted'> {
     ),
     relations: [],
   } as Omit<Db, 'deleted'>;
+  // A closing note on the finished course, and a note on the run after a cold (feature 15).
+  const at = new Date().toISOString();
+  data.goals.find(g => g.id === course)!.notes = [
+    { id: uid(), date: d(-10), text: txt.notes.closing, kind: 'closing', at },
+  ];
+  data.states.find(s => s.id === fitness)!.history.find(h => h.date === d(-30))!.note = txt.notes.measurement;
   data.activities[13].list = txt.activities[13].list!.map((text, i) => ({ id: uid(), text, done: i === 0 }));
   // Strength training is a routine list: every ticked day has all its exercises ticked.
   const strength = data.activities[24];
