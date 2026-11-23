@@ -403,12 +403,10 @@ suite(async () => {
     goal.period = 'week';
     km.scale = 'week';
     render();
-    setView('states');
     assert(
-      $(`.card.state[data-open="${km.id}"] .cu-now`).textContent === scaleText(km, 'week'),
-      'the state card follows the scale',
+      $(`[data-gr="${km.id}"] .gr-value`).textContent === scaleText(km, 'week'),
+      'the card follows the scale',
     );
-    setView('graphs');
     const plain = db.states.find(s => !isCumulative(s) && $(`[data-gr="${s.id}"]`));
     assert(!$(`[data-gr="${plain.id}"] .gr-scale`), 'plain states have no switch');
     // Show in Graphs, for a routine too.

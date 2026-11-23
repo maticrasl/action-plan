@@ -327,7 +327,7 @@ suite(async () => {
     save();
     // Every view draws it, without errors.
     const before = __errors.length;
-    for (const v of ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs']) {
+    for (const v of ['dashboard', 'goals', 'activities', 'map', 'timeline', 'graphs']) {
       setView(v);
       render();
     }

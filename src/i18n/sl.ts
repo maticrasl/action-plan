@@ -10,7 +10,6 @@ export const sl: Language = {
     'nav.main': 'Glavni meni',
     'nav.dashboard': 'Pregled',
     'nav.goals': 'Cilji',
-    'nav.states': 'Stanja',
     'nav.graphs': 'Grafi',
     'nav.review': 'Pogled nazaj',
     'view.guide': 'Vodnik',
@@ -92,9 +91,6 @@ export const sl: Language = {
     'view.review': 'Pogled nazaj',
     'gr.since': 'od {date}',
     'gr.oneMeasurement': 'Zaenkrat le ena meritev',
-    'gr.measurements': 'Meritve',
-    'gr.targetOf': 'Ciljna vrednost za »{goal}«',
-    'gr.targets': 'Ciljne vrednosti',
     'gr.targetLabel': 'Cilj {value}',
     'gr.aria': 'Graf meritev za {name}. S puščičnima tipkama levo in desno preberete posamezne meritve.',
     'gr.table': 'Prikaži meritve v tabeli',
@@ -122,7 +118,6 @@ export const sl: Language = {
     'pace.deadline': '(rok {date})',
     'pace.never': 'S tem tempom ciljna vrednost ne bo dosežena.',
     'pace.steps': '{done} od {total} korakov · minilo je {pct} % časa',
-    'pace.legend': 'Tempo do cilja',
     'pace.tip': 'tempo: {value}',
     'work.title': 'Ali deluje?',
     'work.kept': {
@@ -270,7 +265,6 @@ export const sl: Language = {
 
     'view.dashboard': 'Pregled',
     'view.goals': 'Cilji',
-    'view.states': 'Trenutna stanja',
     'view.activities': 'Aktivnosti',
     'view.map': 'Zemljevid povezav',
 
@@ -524,7 +518,7 @@ export const sl: Language = {
       'Nov teden. Pet minut zdaj: kaj se je premaknilo prejšnji teden in kateri korak je ta teden najpomembnejši?',
     'tip.week.btn': 'Odpri tedenski pregled',
     'tip.month.text': 'Nov mesec je dober trenutek za merjenje. Zapišite sveže vrednosti trenutnih stanj.',
-    'tip.month.btn': 'Odpri Stanja',
+    'tip.month.btn': 'Odpri Grafe',
     'tip.new-year.text':
       'Novo leto je dober trenutek za nov začetek. Želje do februarja zbledijo, koraki z datumi ne. Poglejte svoje cilje in izberite tistega za ta mesec.',
     'tip.new-year.btn': 'Odpri Cilje',
@@ -541,8 +535,6 @@ export const sl: Language = {
     'tip.try-map.btn': 'Odpri Zemljevid',
     'tip.try-timeline.text': 'Časovnica pokaže vaše korake na koledarju. Povlecite trak, da premaknete njegove datume.',
     'tip.try-timeline.btn': 'Odpri Časovnico',
-    'tip.try-graphs.text': '»{name}« ima dovolj meritev za črto. Grafi jo pokažejo ob vaši ciljni vrednosti.',
-    'tip.try-graphs.btn': 'Odpri Grafe',
     'tip.make-up.text':
       'Ko določen dan za »{name}« ne gre, vam rutina lahko dovoli, da ga nadoknadite na drug dan. To je stikalo pod Ponavljanjem.',
     'tip.make-up.btn': 'Uredi rutino',
@@ -667,12 +659,10 @@ export const sl: Language = {
       'Pregled povzame vaš načrt: povprečni napredek aktivnih ciljev, opravljene, zamujene in čakajoče aktivnosti ter kaj je na vrsti: aktivnosti z rokom do danes ali zamujene (Prikaži vse doda še ostale v teku).',
     'help.view.goals':
       'Cilji so tam, kamor želite priti. Vsak naj bo SMART in povezan s trenutnim stanjem, ki ga meri, in z aktivnostmi, ki ga premikajo naprej. Cilj lahko merite tudi preprosto s tem, koliko njegovih aktivnosti je opravljenih. Pridržite kartico ali jo kliknite z desno tipko, da cilj prikažete na časovnici ali zemljevidu.',
-    'help.view.states':
-      'Trenutna stanja so tisto, kar merite, na primer najdaljši tek ali prihranke. Opišite, kaj vrednost pomeni in kako jo merite, ob vsaki spremembi pa vpišite novo vrednost, da se ohrani zgodovina; Grafi jo prikažejo skozi čas. Stanje lahko količine tudi sešteva – pretečene kilometre, privarčevani denar: količino dodate s tapom na kartico (ali na +) ali s kljukico pri rutini, ki ga izboljšuje. Tapnite kartico, da vpišete novo vrednost; pridržite jo ali jo kliknite z desno tipko, da dodate vrednost, stanje uredite ali ga prikažete v Grafih ali na zemljevidu.',
     'help.view.review':
       'Kar ste naredili. Dnevnik opravljenega našteje vsak korak, kljukico in vrednost po tednih; tapnite enega, da ga odprete.',
     'help.view.graphs':
-      'Grafi kažejo, kako se je spreminjalo posamezno trenutno stanje: vse meritve, ciljno vrednost cilja, ki ga meri, in spremembo od prve meritve. Nove vrednosti vpisujte pri stanju, da se črta podaljša – ena na dan, zato nova vrednost za isti dan nadomesti staro. Stanje, ki se sešteva, pokaže vsote po dnevih, tednih, mesecih ali letih (tekoče obdobje je svetlejše) ali skupno vsoto – preklopite nad grafom. Vsaka rutina pokaže odkljukanja po obdobjih glede na to, koliko obdobje zahteva; nad grafom lahko preklopite, da jih prešteje po dnevih, tednih, mesecih ali letih ali skupaj, tako kot pri stanju, ki se sešteva. Današnji dan je svetlo rdeč stolpec. Časovno os grafa raztegnete z razmikom prstov ali s Ctrl + koleščkom (ali s tipkama + in −, ko je graf izbran), po njej pa se premikate z vlečenjem; z enim prstom tapnite, se znova dotaknite in povlecite navzdol, da jo raztegnete, ali navzgor, da jo skrčite. Tabela pod grafom našteje meritve od najnovejše; napačno meritev izbrišete tam. Pridržite graf ali ga kliknite z desno tipko za njegov meni: element uredite, dodate vrednost ali ga prikažete v drugem pogledu.',
+      'V Grafih imate svoja trenutna stanja. Tapnite + na kartici, da vpišete novo vrednost ali dodate količino stanju, ki se sešteva. Vsak graf kaže, kako se je stanje spreminjalo: vse meritve, ciljno vrednost cilja, ki ga meri, in spremembo od prve meritve. Nove vrednosti vpisujte pri stanju, da se črta podaljša – ena na dan, zato nova vrednost za isti dan nadomesti staro. Stanje, ki se sešteva, pokaže vsote po dnevih, tednih, mesecih ali letih (tekoče obdobje je svetlejše) ali skupno vsoto – preklopite nad grafom. Vsaka rutina pokaže odkljukanja po obdobjih glede na to, koliko obdobje zahteva; nad grafom lahko preklopite, da jih prešteje po dnevih, tednih, mesecih ali letih ali skupaj, tako kot pri stanju, ki se sešteva. Današnji dan je svetlo rdeč stolpec. Časovno os grafa raztegnete z razmikom prstov ali s Ctrl + koleščkom (ali s tipkama + in −, ko je graf izbran), po njej pa se premikate z vlečenjem; z enim prstom tapnite, se znova dotaknite in povlecite navzdol, da jo raztegnete, ali navzgor, da jo skrčite. Tabela pod grafom našteje meritve od najnovejše; napačno meritev izbrišete tam. Pridržite kartico ali jo kliknite z desno tipko za njen meni: element uredite, dodate vrednost ali ga prikažete v drugem pogledu.',
     'help.view.activities':
       'Aktivnosti so koraki, ki jih naredite. Povežite jih s cilji, h katerim prispevajo, in stanji, ki jih izboljšujejo. Nova aktivnost najprej vpraša, katere vrste je: enkraten korak, seznam, rutina ali rutinski seznam. Seznam je kontrolni seznam: postavke odkljukate na kartici (ali v aktivnosti), in ko so odkljukane vse, je opravljena. Aktivnosti, ki se ponavljajo, so rutine: prikazane so nad drugimi aktivnostmi, odkljukate pa jih vsakič, ko jih opravite. Rutinski seznam je kontrolni seznam, ki se ponavlja: vsakič odkljukate njegove postavke, in ko so odkljukane vse, je dan odkljukan. Pridržite kartico ali jo kliknite z desno tipko za več možnosti, na primer da jo premaknete v V teku ali Opravljeno ali jo izbrano prikažete na časovnici ali zemljevidu.',
     'help.tip.routines':
@@ -689,7 +679,7 @@ export const sl: Language = {
     'help.tip.trail':
       'Napredek od začetne vrednosti (levo) do cilja (desno) – pri cilju, ki ga merijo aktivnosti, pa od nobene do vseh opravljenih. Oznaka kaže, kje ste zdaj.',
     'help.tip.stateValue':
-      'Zadnja izmerjena vrednost. Tapnite kartico, da vpišete novo (ena na dan; nova vrednost za isti dan jo nadomesti); decimalna števila lahko vpišete z vejico ali piko (78,5 ali 78.5).',
+      'Zadnja izmerjena vrednost. Tapnite +, da vpišete novo (ena na dan; nova vrednost za isti dan jo nadomesti); decimalna števila lahko vpišete z vejico ali piko (78,5 ali 78.5).',
     'help.tip.check': 'Tapnite, da aktivnost premaknete naprej: Za izvedbo → V teku → Opravljeno.',
     'help.tip.list':
       'Seznam: tapnite postavko, da jo odkljukate (ali kljukico odstranite). Prva kljukica premakne seznam v V teku; ko so odkljukane vse postavke, je opravljen. Postavke dodajate, preimenujete ali odstranite v aktivnosti.',
@@ -704,7 +694,7 @@ export const sl: Language = {
     'help.tip.grLegend':
       'Polna črta so vaše meritve, črtkana pa ciljna vrednost cilja, ki se konča pri roku. Za posamezne vrednosti se z miško postavite na graf ali ga tapnite.',
     'help.tip.addAmount':
-      'To stanje se sešteva: oznaka kaže skupno vsoto (in vsoto tega obdobja, kot je izbrano na grafu). Tapnite +, da dodate količino – tek, polog – z datumom; lahko jih je več na dan.',
+      'Tapnite +, da vnesete novo vrednost z današnjim datumom, če ga ne spremenite. Pri stanju, ki se sešteva, + doda količino – tek, polog – z datumom; lahko jih je več na dan. Stanje uredite z desnim klikom ali dolgim pritiskom na njegovo kartico.',
     'plan.label': 'Akcijski načrt',
     'plan.showAll': 'Pokaži vse ({n})',
     'plan.showFewer': 'Pokaži manj',
@@ -1179,11 +1169,6 @@ export const sl: Language = {
     'cu.vsPrev.week': '{period} glede na teden prej',
     'cu.vsPrev.month': '{period} glede na mesec prej',
     'cu.vsPrev.year': '{period} glede na leto prej',
-    'cu.legend.day': 'Dnevne vsote',
-    'cu.legend.week': 'Tedenske vsote',
-    'cu.legend.month': 'Mesečne vsote',
-    'cu.legend.year': 'Letne vsote',
-    'cu.legend.total': 'Skupna vsota',
     'cu.scaleLabel': 'Prikaži vsote po',
     'cu.scaleLabelRoutine': 'Prikaži odkljukanja po',
     'cu.scale.day': 'Dan',
@@ -1191,8 +1176,6 @@ export const sl: Language = {
     'cu.scale.month': 'Mesec',
     'cu.scale.year': 'Leto',
     'cu.scale.total': 'Skupaj',
-    'cu.legendRoutine': 'Odkljukanja',
-    'cu.legendAsks': 'Koliko zahteva obdobje',
     'cu.col.period': 'Obdobje',
     'cu.col.amount': 'Količina',
     'cu.col.total': 'Skupaj',

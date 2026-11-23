@@ -1,7 +1,7 @@
 /** Page tests: every template as a sound plan in both languages and every view, Exodus 90, the picker. */
 suite(async () => {
   await step('templates: every template becomes a sound plan, in both languages, and every view draws it', () => {
-    const views = ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs'];
+    const views = ['dashboard', 'goals', 'activities', 'map', 'timeline', 'graphs'];
     const made = [];
     let items = 0;
     for (const code of ['en', 'sl']) {

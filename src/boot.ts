@@ -40,7 +40,9 @@ export function bootUser() {
   applyTheme();
   load();
   renderPlanSwitch();
-  if (VIEWS[prefs.get<ViewName>('view')]) ui.view = prefs.get<ViewName>('view');
+  // The States view went into Graphs (2026-11): a saved States view opens Graphs.
+  const saved = prefs.get<string>('view') === 'states' ? 'graphs' : prefs.get<ViewName>('view');
+  if (VIEWS[saved as ViewName]) ui.view = saved as ViewName;
   ui.hideDone = prefs.get<unknown>('hideDone', false) === true;
   ui.hideVisions = prefs.get<unknown>('hideVisions', false) === true;
   ui.nextAll = prefs.get<unknown>('nextAll', false) === true;

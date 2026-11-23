@@ -1,4 +1,4 @@
-/** The plot that bar and step graphs share (grid, dates, today, targets, hover layer), their legend and card. */
+/** The plot that bar and step graphs share (grid, dates, today, targets, hover layer) and their card. */
 import { GR, dateAxis, grCharts, gridLines, niceTicks, todayCol, yAxisPinned, zoomedWidth } from './states';
 import type { Axis, GraphPoint, GraphTarget, TipRow } from './states';
 import { dayNum } from '../../core/days';
@@ -8,6 +8,7 @@ import { withUnit } from '../../ui/text';
 import { fmtNum } from '../../core/util';
 import { esc } from '../../ui/dom';
 import { workFold } from './working';
+import { cardHead, stateInfo } from './state-info';
 import type { State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
 
@@ -87,26 +88,20 @@ export function plotSvg<P extends GraphPoint>(
     </div>`;
 }
 
-export const grLegend = (items: TipRow[]) =>
-  `<div class="gr-legend">${items.map(([cls, text]) => `<span><i class="key ${cls}"></i>${esc(text)}</span>`).join('')}</div>`;
-export const targetKey = (targets: GraphTarget[]): TipRow => [
-  'key-target',
-  targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title }),
-];
-
 export function grCardHtml(
   item: State | Routine,
   stats: string,
-  legend: string,
+  facts: string,
   plot: string,
   table: string,
   scales = '',
 ) {
   return `<article class="card glass gr-card" data-gr="${item.id}" data-ctx-item="${item.id}">
-    <div class="card-head"><h3>${esc(item.title)}</h3><button class="btn small ghost" data-open="${item.id}">${t('btn.edit')}</button></div>
+    ${cardHead(item)}
+    ${stateInfo(item)}
     <div class="gr-stats">${stats}</div>
     ${scales}
-    ${legend}
+    ${facts}
     ${plot}
     <details class="gr-table"><summary>${t('gr.table')}</summary>${table}</details>
     ${workFold(item)}

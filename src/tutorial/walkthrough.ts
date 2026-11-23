@@ -88,7 +88,7 @@ export const WALK_DO: Record<TaskId, () => void> = {
   firstDone: () => showMe('activities', ['#view .acts .check']),
   routine: () => openForm('activity', null, { repeat: 'routine' }),
   tick: () => showMe(ui.view === 'dashboard' && firstVisible(['#view .rt-week']) ? 'dashboard' : 'activities', ['#view .rt-week']),
-  measure: () => showMe('states', ['#view .card.state']),
+  measure: () => showMe('graphs', ['#view .gr-add']),
   days: () => {},
   backup: () => (syncConfigured() ? openSettings('syncSection') : openExport()),
   install: () => (installPrompt ? $('#installBtn').click() : openSettings('installSection')),

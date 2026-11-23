@@ -10,7 +10,6 @@ export const en = {
     'nav.main': 'Main',
     'nav.dashboard': 'Overview',
     'nav.goals': 'Goals',
-    'nav.states': 'States',
     'nav.graphs': 'Graphs',
     'nav.review': 'Review',
     'view.guide': 'Guide',
@@ -88,9 +87,6 @@ export const en = {
     'view.review': 'Review',
     'gr.since': 'since {date}',
     'gr.oneMeasurement': 'Only one measurement so far',
-    'gr.measurements': 'Measurements',
-    'gr.targetOf': 'Target of “{goal}”',
-    'gr.targets': 'Goal targets',
     'gr.targetLabel': 'Target {value}',
     'gr.aria': 'Measurement graph of {name}. Use the left and right arrow keys to read each measurement.',
     'gr.table': 'Show measurements as a table',
@@ -116,7 +112,6 @@ export const en = {
     'pace.deadline': '(deadline {date})',
     'pace.never': 'At this rate the target is not reached.',
     'pace.steps': '{done} of {total} steps · {pct} % of the time gone',
-    'pace.legend': 'Pace to target',
     'pace.tip': 'pace: {value}',
     'work.title': 'Is it working?',
     'work.kept': { one: 'Week you kept it ({n}):', other: 'Weeks you kept it ({n}):' },
@@ -221,7 +216,6 @@ export const en = {
 
     'view.dashboard': 'Overview',
     'view.goals': 'Goals',
-    'view.states': 'Current states',
     'view.activities': 'Activities',
     'view.map': 'Relationship map',
 
@@ -460,7 +454,7 @@ export const en = {
       'A new week. Five minutes now: what moved last week, and what is the one step that matters most this week?',
     'tip.week.btn': 'Open the weekly review',
     'tip.month.text': 'A new month is a good moment to measure. Record fresh values for your current states.',
-    'tip.month.btn': 'Open States',
+    'tip.month.btn': 'Open Graphs',
     'tip.new-year.text':
       "A new year is a good moment to begin again. Wishes fade by February; steps with dates do not. Look at your goals and choose this month's one.",
     'tip.new-year.btn': 'Open Goals',
@@ -476,8 +470,6 @@ export const en = {
     'tip.try-map.btn': 'Open the Map',
     'tip.try-timeline.text': 'The Timeline shows your steps on a calendar. Drag a bar to move its dates.',
     'tip.try-timeline.btn': 'Open the Timeline',
-    'tip.try-graphs.text': '“{name}” has enough measurements to draw a line. Graphs shows it against your target.',
-    'tip.try-graphs.btn': 'Open Graphs',
     'tip.make-up.text':
       'When a set day of “{name}” does not work out, the routine can let you make it up on another day. It is a switch under Repeats.',
     'tip.make-up.btn': 'Edit the routine',
@@ -602,11 +594,9 @@ export const en = {
       'The overview sums up your plan: average progress of active goals, finished, late and waiting activities, and what is due next: the activities due by today or overdue (Show all adds the others in progress).',
     'help.view.goals':
       'Goals are where you want to get. Make each one SMART and link it to the current state that measures it and the activities that move it forward. A goal can also be measured simply by how many of its activities are done. Long-press or right-click a card to show the goal in the timeline or on the map.',
-    'help.view.states':
-      'Current states are what you measure, such as your longest run or your savings. Describe what the value means and how you measure it, and record a new value whenever it changes to keep a history; Graphs draws it over time. A state can instead add up its amounts – kilometres run, money saved: add one by tapping its card (or +), or by ticking a routine that improves it. Tap a card to record a new value; long-press or right-click it to add a value, edit the state or show it in Graphs or on the map.',
     'help.view.review': 'What you did. The done log lists every step, tick and value by week; tap one to open it.',
     'help.view.graphs':
-      'Graphs show how each current state has changed: every measurement, the target of the goal it measures, and the change since the first measurement. Record new values on the state to extend the line – one per day, so a new value for a day replaces the old one. A state that adds up shows its sums per day, week, month or year (the period under way is lighter), or its running total – switch above the graph. Each routine shows its check-ins per period against what the period asks for; switch above its graph to count them per day, week, month or year, or in total, like a state that adds up. Today is the light red column. Pinch or Ctrl + scroll on a graph to stretch its time axis (or press + and − while it is selected), and drag to move along it; with one finger, tap, then touch again and drag down to stretch it, up to shrink it. The table below each graph lists the measurements, newest first; delete a wrong one there. Long-press or right-click a graph for its menu: edit the item, add a value or show it in another view.',
+      'Graphs is where you keep your current states. Tap + on a card to record a new value, or to add an amount to a state that adds up. Each graph shows how the state has changed: every measurement, the target of the goal it measures, and the change since the first measurement. Record new values on the state to extend the line – one per day, so a new value for a day replaces the old one. A state that adds up shows its sums per day, week, month or year (the period under way is lighter), or its running total – switch above the graph. Each routine shows its check-ins per period against what the period asks for; switch above its graph to count them per day, week, month or year, or in total, like a state that adds up. Today is the light red column. Pinch or Ctrl + scroll on a graph to stretch its time axis (or press + and − while it is selected), and drag to move along it; with one finger, tap, then touch again and drag down to stretch it, up to shrink it. The table below each graph lists the measurements, newest first; delete a wrong one there. Long-press or right-click a card for its menu: edit the item, add a value or show it in another view.',
     'help.view.activities':
       'Activities are the steps you take. Link them to goals they contribute to and states they improve. A new activity first asks what kind it is: a one-time step, a list, a routine or a routine list. A list is a checklist: tick its items off on the card (or in the activity), and once all are ticked it is done. Activities that repeat are routines: they sit above the other activities, and you tick them off each time you do them. A routine list is a checklist that repeats: tick off its items each time, and once all are ticked the day is ticked off. Long-press or right-click a card for more options, such as moving it to In progress or Done, or showing it in the timeline or on the map, selected.',
     'help.tip.routines':
@@ -623,7 +613,7 @@ export const en = {
     'help.tip.trail':
       'Progress from the starting value (left) to the target (right) – or, for a goal measured by its activities, from none to all of them done. The marker is where you are now.',
     'help.tip.stateValue':
-      'The latest measured value. Tap the card to record a new one (one per day; a new value for the same day replaces it); decimals work with a dot or a comma (78.5 or 78,5).',
+      'The latest measured value. Tap + to record a new one (one per day; a new value for the same day replaces it); decimals work with a dot or a comma (78.5 or 78,5).',
     'help.tip.check': 'Tap to move the activity along: To do → In progress → Done.',
     'help.tip.list':
       'A list: tap an item to tick it off (or untick it). The first tick moves the list to In progress; once every item is ticked, it is done. Add, rename or remove items in the activity.',
@@ -638,7 +628,7 @@ export const en = {
     'help.tip.grLegend':
       'The solid line is your measurements; the dashed line is the goal’s target, ending at its deadline. Hover over or tap the graph to read each value.',
     'help.tip.addAmount':
-      'This state adds up: the tag shows the total (and this period’s sum, as chosen on its graph). Tap + to add an amount – a run, a deposit – with its date; several a day are fine.',
+      'Tap + to enter a new value, dated today unless you change it. For a state that adds up, + adds an amount – a run, a deposit – with its date; several a day are fine. To edit the state, right-click or long-press its card.',
     'plan.label': 'Action plan',
     'plan.showAll': 'Show all ({n})',
     'plan.showFewer': 'Show fewer',
@@ -1010,11 +1000,6 @@ export const en = {
     'cu.vsPrev.week': '{period} vs the week before',
     'cu.vsPrev.month': '{period} vs the month before',
     'cu.vsPrev.year': '{period} vs the year before',
-    'cu.legend.day': 'Daily totals',
-    'cu.legend.week': 'Weekly totals',
-    'cu.legend.month': 'Monthly totals',
-    'cu.legend.year': 'Yearly totals',
-    'cu.legend.total': 'Running total',
     'cu.scaleLabel': 'Show sums per',
     'cu.scaleLabelRoutine': 'Show check-ins per',
     'cu.scale.day': 'Day',
@@ -1022,8 +1007,6 @@ export const en = {
     'cu.scale.month': 'Month',
     'cu.scale.year': 'Year',
     'cu.scale.total': 'Total',
-    'cu.legendRoutine': 'Check-ins',
-    'cu.legendAsks': 'What the period asks for',
     'cu.col.period': 'Period',
     'cu.col.amount': 'Amount',
     'cu.col.total': 'Total',

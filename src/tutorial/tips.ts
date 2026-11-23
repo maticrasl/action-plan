@@ -73,7 +73,6 @@ export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
   replan: () => (lateSteps(db, today()).length ? openReplan() : setView('timeline')),
   goals: goTo('goals'),
   activities: goTo('activities'),
-  states: goTo('states'),
   graphs: goTo('graphs'),
   map: goTo('map'),
   editItem: c => {

@@ -60,7 +60,6 @@ export const GUIDE_DO: Record<GuideAction, () => void> = {
   'view-dashboard': view('dashboard'),
   'view-goals': view('goals'),
   'view-activities': view('activities'),
-  'view-states': view('states'),
   'view-map': view('map'),
   'view-timeline': view('timeline'),
   replan: () => openReplan(),

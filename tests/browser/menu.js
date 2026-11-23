@@ -293,16 +293,16 @@ suite(async () => {
     assert(ui.view === 'activities' && card.classList.contains('flash'), 'card flashes');
     card.dispatchEvent(new Event('animationend'));
     assert(!card.classList.contains('flash'), 'and stops');
-    // States: graphs only for one with measurements; graphs → states.
-    setView('states');
-    eq(rightClick($(`.card[data-open="${s.id}"]`)), ['map', 'graphs'], 'state with data');
-    closeCtxMenu();
-    eq(rightClick($(`.card[data-open="${bare.id}"]`)), ['map'], 'state without data');
-    closeCtxMenu();
+    // States: every state has a card in Graphs, with data or without.
     setView('graphs');
-    eq(rightClick($(`[data-gr="${s.id}"] .card-head`)), ['states', 'map'], 'graph heading');
-    pick('states');
-    assert(ui.view === 'states' && $(`.card[data-open="${s.id}"]`).classList.contains('flash'), 'state card flashes');
+    eq(rightClick($(`[data-gr="${s.id}"] .card-head`)), ['map'], 'graph heading');
+    closeCtxMenu();
+    eq(rightClick($(`[data-gr="${bare.id}"]`)), ['map'], 'a card without data');
+    closeCtxMenu();
+    setView('map');
+    eq(rightClick($(`[data-map-node="${bare.id}"]`)), ['graphs'], 'Graphs offered for a state without data');
+    pick('graphs');
+    assert(ui.view === 'graphs' && $(`[data-gr="${bare.id}"]`).classList.contains('flash'), 'its card flashes');
     const plot = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
     setView('graphs');
     $(`[data-gr="${s.id}"] .gr-plot`).dispatchEvent(plot);
@@ -495,7 +495,7 @@ suite(async () => {
     ctxMenu.style.maxHeight = '';
     closeCtxMenu();
     // Only one other view: offered directly.
-    setView('states');
+    setView('graphs');
     openCtxMenu(bare.id, 60, 60);
     const one = ctxMenu.querySelector('[data-ctx="show:map"]');
     assert(

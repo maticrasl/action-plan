@@ -1,4 +1,4 @@
-/** Page tests: state descriptions in both languages, the sample's, and a click on a card for a new value. */
+/** Page tests: state descriptions in both languages, the sample's, state cards on Graphs and their + for a new value. */
 suite(async () => {
   await step('states: the description is what is measured, in both languages', () => {
     const labels = {
@@ -20,11 +20,11 @@ suite(async () => {
       eq(s.description, 'My own words stay as they were.', `${code}: saved unchanged`);
       // The help no longer asks to describe where you stand today.
       assert(
-        !/where you stand today|kje ste danes/i.test(t('help.view.states')),
+        !/where you stand today|kje ste danes/i.test(t('help.view.graphs')),
         `${code}: help updated`,
       );
       assert(
-        /measure|meri/i.test(t('help.view.states')),
+        /measure|meri/i.test(t('help.view.graphs')),
         `${code}: it talks about measuring`,
       );
       deletePlan(plans.current);
@@ -60,16 +60,17 @@ suite(async () => {
     changeLanguage('en');
     return out.join(' | ');
   });
-  await step('states: a click on a card asks for a new value; Edit is in its menu', () => {
+  await step('states: + on a card asks for a new value; Edit is in its menu', () => {
     fresh('State value');
     const now = today();
     const s = mk('state', { title: 'Weight', unit: 'kg', history: [] });
     recordMeasurement(s, addDays(now, -3), '80');
     const sum = mk('state', { title: 'Run', unit: 'km', cumulative: true, scale: 'week', entries: [] });
     save();
-    setView('states');
-    const card = id => $(`.card.state[data-open="${id}"]`);
-    card(s.id).click();
+    setView('graphs');
+    const card = id => $(`[data-gr="${id}"]`),
+      plus = id => card(id).querySelector('[data-add-amount]');
+    plus(s.id).click();
     assert(!modal.open && $('.amount-pop'), 'a popup, not the form');
     eq(
       [
@@ -91,18 +92,18 @@ suite(async () => {
     $('.amount-pop').requestSubmit();
     eq([s.value, s.date, s.history.length], ['78.5', now, 2], 'recorded as the latest');
     eq($('#toast').textContent, t('sv.saved', { value: '78.5 kg', name: 'Weight' }), 'says so');
-    assert(card(s.id).querySelector('.tag.state').textContent === '78.5 kg', 'the card shows it');
+    eq(card(s.id).querySelector('.gr-value').textContent, '78.5 kg', 'the card shows it');
     // Empty saves nothing; Escape closes.
-    card(s.id).click();
+    plus(s.id).click();
     $('.amount-pop').requestSubmit();
     assert(!$('.amount-pop') && s.history.length === 2, 'empty: nothing');
-    card(s.id).click();
+    plus(s.id).click();
     $('.amount-pop input').dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
     );
     assert(!$('.amount-pop'), 'Escape closes');
     // A state that adds up asks for an amount.
-    card(sum.id).click();
+    plus(sum.id).click();
     assert(
       $('.amount-pop .amount-title').textContent === t('cu.addTo', { name: 'Run' }) && !$('.amount-pop .amount-hint'),
       'an amount for one that adds up',
@@ -143,5 +144,41 @@ suite(async () => {
     assert(s.value === '77' && s.history.length === 2, 'from the map: same day replaced');
     deletePlan(plans.current);
     return `${s.history.length} measurements`;
+  });
+  await step('states: a card on Graphs shows what the States view showed; one without data too', () => {
+    fresh('State cards');
+    const g = mk('goal', { title: 'Run a half marathon', target: '21', deadline: addDays(today(), 60) });
+    const s = mk('state', { title: 'Longest run', unit: 'km', description: 'Easy pace, weekend run.', history: [] });
+    recordMeasurement(s, addDays(today(), -10), '8');
+    recordMeasurement(s, today(), '10');
+    const bare = mk('state', { title: 'Savings', description: 'Emergency fund.' });
+    const a = mk('activity', { title: 'Long run' });
+    rel(s, g, 'measures');
+    rel(a, s, 'improves');
+    save();
+    setView('graphs');
+    const card = $(`[data-gr="${s.id}"]`),
+      text = card.textContent;
+    assert(text.includes('Easy pace, weekend run.'), 'description');
+    assert(text.includes(t('states.asOf', { date: 'today' })), 'as of today');
+    assert(text.includes(tp('states.improvers', 1)) && text.includes(tp('states.measurements', 2)), 'improvers and count');
+    assert(card.querySelector(`.links [data-open="${g.id}"]`), 'the goal it measures');
+    assert(!card.querySelector('[data-open].btn') && !card.querySelector('.gr-legend'), 'no Edit button, no legend');
+    const plus = card.querySelector('.card-head [data-add-amount]');
+    assert(plus && plus.getBoundingClientRect().width >= 40, 'a large + in the head');
+    const empty = $(`[data-gr="${bare.id}"]`);
+    assert(
+      empty && !empty.querySelector('.gr-plot') && empty.querySelector('[data-add-amount]') && empty.textContent.includes('Emergency fund.'),
+      'a state without data: a card with +, without a plot',
+    );
+    eq([...document.querySelectorAll('.nav [data-view="states"]')].length, 0, 'no States tab');
+    deletePlan(plans.current);
+    return 'ok';
+  });
+  await step('states: a saved States view opens Graphs', () => {
+    prefs.set('view', 'states');
+    enterUser(currentUser().id);
+    eq(ui.view, 'graphs', 'Graphs instead');
+    return ui.view;
   });
 });

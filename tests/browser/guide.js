@@ -42,7 +42,7 @@ suite(async () => {
   await step('Escape leaves the Guide for the view before; not while a dialog is open or a search has text', () => {
     const esc = (target = document.body) =>
       target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-    setView('states');
+    setView('graphs');
     $('#helpBtn').click();
     modal.showModal();
     esc();
@@ -53,9 +53,9 @@ suite(async () => {
     eq(ui.view, 'guide', 'Escape in a search with text: stays (the box clears it)');
     search('');
     esc($('#guideSearch'));
-    eq(ui.view, 'states', 'back to the view before');
+    eq(ui.view, 'graphs', 'back to the view before');
     esc();
-    eq(ui.view, 'states', 'outside the Guide: nothing');
+    eq(ui.view, 'graphs', 'outside the Guide: nothing');
   });
 
   await step('every article is listed, in its group, closed', () => {
@@ -187,15 +187,15 @@ suite(async () => {
     eq(boxes.length, 5, 'five lines');
     eq(
       [...a.querySelectorAll('.guide-review [data-guide-do]')].map(b => b.dataset.guideDo).join(),
-      'view-activities,view-states,view-graphs,view-timeline,view-dashboard',
+      'view-activities,view-graphs,view-graphs,view-timeline,view-dashboard',
       'each line links to its place',
     );
     boxes.forEach(b => (b.checked = true));
     a.querySelector('[data-review-done]').click();
     eq(getSeen().lastReview, today(), 'date stored');
     eq($('#toast').textContent, t('guide.review.toast'), 'toast');
-    a.querySelector('.guide-review [data-guide-do="view-states"]').click();
-    eq(ui.view, 'states', 'a line’s link opens its view');
+    a.querySelector('.guide-review [data-guide-do="view-timeline"]').click();
+    eq(ui.view, 'timeline', 'a line’s link opens its view');
     openGuide('review');
     assert(
       [...art('review').querySelectorAll('.guide-review input')].every(b => !b.checked),

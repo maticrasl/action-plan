@@ -38,13 +38,12 @@ export interface TipHit {
   target?: string;
 }
 export type TipClass = 'A' | 'B' | 'C' | 'D';
-export type TipView = 'dashboard' | 'goals' | 'activities' | 'states' | 'graphs';
+export type TipView = 'dashboard' | 'goals' | 'activities' | 'graphs';
 export type TipAction =
   | 'timeline'
   | 'replan'
   | 'goals'
   | 'activities'
-  | 'states'
   | 'graphs'
   | 'editItem'
   | 'addActivity'

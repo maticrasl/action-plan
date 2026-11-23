@@ -9,7 +9,7 @@ import { deleteMeasurement, graphScale, isCumulative } from '../../core/cumulati
 import { save } from '../../store/plans';
 import { requestRender as render } from '../../ui/render';
 import { toast } from '../../ui/toast';
-import { $, emptyState, esc, linkTag, matchesSearch, viewEl } from '../../ui/dom';
+import { $, emptyState, esc, matchesSearch, viewEl } from '../../ui/dom';
 import { relsFrom } from '../../core/relations';
 import { byActivities } from '../../core/progress';
 import { isRoutine, periodUnit } from '../../core/routines/schedule';
@@ -19,10 +19,10 @@ import { categorySelect, goalSelect, scopeFor, searchBox } from '../filters';
 import { periodGraphCard, routineGraphCard, totalGraphCard } from './sums';
 import type { Goal, ISODate, State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
-import { areaFill } from './plot';
+import { areaFill, grCardHtml } from './plot';
+import { noDataCard } from './state-info';
 import { hasGraph, stateSeries } from '../../core/series';
 import { paceFacts, paceGoals, paceMarks } from './pace';
-import { workFold } from './working';
 
 /* ---------- Graphs (measurement history of each current state) ----------
    One line chart per current state: its measurements over time, a target line for every goal it
@@ -221,14 +221,6 @@ export function graphCard(s: State, width: number) {
   const spot = spots.find(s => free(s, [...hard, ...todayBox])) || spots.find(s => free(s, hard)) || spots[0];
   const valueLabel = `<text class="gr-label" x="${spot.x}" y="${spot.y}" text-anchor="${spot.anchor}">${esc(vText)}</text>`;
 
-  const legend = targets.length
-    ? `<div class="gr-legend">
-      <span><i class="key key-measure"></i>${t('gr.measurements')}</span>
-      <span><i class="key key-target"></i>${esc(targets.length > 1 ? t('gr.targets') : t('gr.targetOf', { goal: targets[0].goal.title }))}</span>
-      ${paces.length ? `<span><i class="key key-pace"></i>${t('pace.legend')}</span>` : ''}
-    </div>`
-    : '';
-
   // Newest first, each with a button to delete it.
   const rowsHtml = points
     .slice()
@@ -239,23 +231,21 @@ export function graphCard(s: State, width: number) {
     })
     .join('');
 
-  return `<article class="card glass gr-card" data-gr="${s.id}" data-ctx-item="${s.id}">
-    <div class="card-head"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
-    <div class="gr-stats"><strong class="gr-value">${esc(withUnit(fmtNum(last.value), unit))}</strong>${changeTag(s, change)}</div>
-    ${paceFacts(needs, unit)}${legend}
-    <div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
+  return grCardHtml(
+    s,
+    `<strong class="gr-value">${esc(withUnit(fmtNum(last.value), unit))}</strong>${changeTag(s, change)}`,
+    paceFacts(needs, unit),
+    `<div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
       <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
         ${grid}${todayLine}${area}${targetLines}${paceMarks(paces, points, px, py, x0, x1)}<path class="gr-line" d="${path}"/>${dots}${targetLabels}${valueLabel}${xAxis}
         <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
         <circle class="gr-focus" r="6" hidden/>
       </svg>${W > width ? yAxisPinned(ticks, py) : ''}
       <div class="gr-tip" hidden></div>
-    </div>
-    <details class="gr-table"><summary>${t('gr.table')}</summary>
-      <table><thead><tr><th>${t('gr.col.date')}</th><th>${t('gr.col.value')}</th><th>${t('gr.col.change')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rowsHtml}</tbody></table>
-    </details>
-    ${workFold(s)}
-  </article>`;
+    </div>`,
+    `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('gr.col.value')}</th><th>${t('gr.col.change')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rowsHtml}</tbody></table>
+    `,
+  );
 }
 
 // A routine's graph adds up its check-ins like a state's amounts, but on its own period's scale it
@@ -368,9 +358,8 @@ export function renderGraphs() {
   );
   Object.keys(grCharts).forEach(k => delete grCharts[k]);
   grDrawW = width;
-  const cards = [...withData, ...kept].map(item => graphFor(item, width));
+  const cards = [...withData.map(item => graphFor(item, width)), ...kept.map(item => graphFor(item, width)), ...without.map(noDataCard)];
   return `
     <div class="toolbar">${categorySelect()}${goalSelect('graphs', ui.graphGoal)}${searchBox()}</div>
-    ${cards.length ? `<div class="gr-list">${cards.join('')}</div>` : `<div class="empty">${t('gr.none')}</div>`}
-    ${without.length ? `<p class="meta gr-without">${t('gr.without')} ${without.map(s => linkTag(s.id)).join(' ')}</p>` : ''}`;
+    ${cards.length ? `<div class="gr-list">${cards.join('')}</div>` : `<div class="empty">${t('gr.none')}</div>`}`;
 }

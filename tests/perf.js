@@ -72,7 +72,7 @@
         db.states[0].scale = scale;
         setView('graphs');
       });
-    check('1,100 amounts: states view', 100, () => setView('states'));
+    check('1,100 amounts: graphs view', 100, () => setView('graphs'));
     check('1,100 amounts: state form', 150, () => {
       openForm('state', 'k');
       modal.close();
