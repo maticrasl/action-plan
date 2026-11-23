@@ -14,6 +14,7 @@ export interface TipInput {
   prevDay?: ISODate; // the last day a tip of the day was chosen before today
   since?: Record<string, ISODate>; // facts the tips saw first on a day (tips.since)
   seen?: TipSeen;
+  activePlans?: number; // plans (not samples) with an active goal
   device?: TipDevice; // unknown in tests of rules that do not need it; tips that need it stay quiet
 }
 // What this device remembers of using the app (store/seen).
@@ -40,6 +41,7 @@ export interface TipHit {
 export type TipClass = 'A' | 'B' | 'C' | 'D';
 export type TipView = 'dashboard' | 'goals' | 'activities' | 'graphs';
 export type TipAction =
+  | 'today'
   | 'timeline'
   | 'replan'
   | 'goals'

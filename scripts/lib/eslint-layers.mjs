@@ -7,7 +7,7 @@ const SRC = resolve(import.meta.dirname, '../../src');
 const LAYERS = ['i18n', 'core', 'store', 'sync', 'ui', 'views', 'tutorial', 'main'];
 // Inside src/views: the views, by file or folder. index.ts (the table of views) and events.ts (their listeners) sit
 // above them and may import any; every other file directly in src/views is a piece the views share, and imports none.
-const VIEWS = new Set(['dashboard', 'goals', 'activities', 'visions', 'map', 'timeline', 'graphs']);
+const VIEWS = new Set(['dashboard', 'goals', 'activities', 'visions', 'map', 'timeline', 'graphs', 'today']);
 const HUBS = new Set(['index', 'events']);
 
 // A file under src/ ('views/map/zoom.ts'): its layer, and inside src/views which view or piece it belongs to.

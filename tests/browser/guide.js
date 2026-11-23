@@ -187,7 +187,7 @@ suite(async () => {
     eq(boxes.length, 5, 'five lines');
     eq(
       [...a.querySelectorAll('.guide-review [data-guide-do]')].map(b => b.dataset.guideDo).join(),
-      'view-activities,view-graphs,view-graphs,view-timeline,view-dashboard',
+      'view-activities,view-graphs,view-graphs,view-timeline,pick-focus',
       'each line links to its place',
     );
     boxes.forEach(b => (b.checked = true));

@@ -31,6 +31,10 @@ import { foldAllTl, toggleTlFold } from './timeline/rows';
 import { openStateValue } from '../ui/state-value';
 import { openReplan } from '../ui/replan';
 import { logClick, setLogScope } from './review';
+import { todayClick } from './today';
+import { plans } from '../store/state';
+import { inPlan } from '../ui/render';
+import { openIn } from './focus';
 
 export let lastNodeClick: { id: string | null; t: number } = { id: null, t: 0 };
 export function setLastNodeClick(v: typeof lastNodeClick) {
@@ -64,7 +68,7 @@ viewEl.addEventListener('click', e => {
   // A fold inside a card (a vision's future to avoid) opens and closes by itself, not the card's form.
   if ((e.target as HTMLElement).closest('details.vis-avoid')) return;
   const el = (e.target as HTMLElement).closest<HTMLElement>(
-    '[data-li-fold],[data-li-show-done],[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-notes],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more],[data-replan],[data-log]',
+    '[data-li-fold],[data-li-show-done],[data-tl-fold],[data-tl-fold-all],[data-rel-open],[data-rel-remove],[data-rt-week],[data-checkin],[data-li-tick],[data-add-amount],[data-del-measure],[data-del-entry],[data-gr-scale],[data-cycle],[data-notes],[data-open],[data-new],[data-sample],[data-templates],[data-goal-filter],[data-rel-edit],[data-map-node],[data-tl-node],[data-map-clear],[data-map-fold],[data-hide-done],[data-hide-visions],[data-category],[data-tl-zoom],[data-tl-deps],[data-map-zoom],[data-next-more],[data-replan],[data-log],[data-today]',
   );
   // While linking by tapping, a box finishes the link and anything else (but zooming) cancels it.
   if (ui.mapLinkFrom && !(e.target as HTMLElement).closest('[data-map-zoom]')) {
@@ -85,6 +89,23 @@ viewEl.addEventListener('click', e => {
     return;
   }
   e.stopPropagation();
+  // A row on Today from a plan that is not open: its title opens that plan, the rest acts on it there.
+  const plan = el.closest<HTMLElement>('[data-in-plan]')?.dataset.inPlan;
+  if (plan && plan !== plans.current) {
+    if (el.dataset.open) return openIn(plan, el.dataset.open);
+    const again = Object.entries(el.dataset)
+      .map(([k, v]) => `[data-${k.replace(/[A-Z]/g, c => '-' + c.toLowerCase())}="${CSS.escape(v!)}"]`)
+      .join('');
+    inPlan(plan, () => act(el, e));
+    // Drawn anew after the action: the keyboard stays on the same button (unless a popover took it).
+    const f = document.activeElement;
+    if (!f || f === document.body || !f.isConnected) $<HTMLElement>(again)?.focus({ preventScroll: true });
+    return;
+  }
+  act(el, e);
+});
+
+function act(el: HTMLElement, e: MouseEvent) {
   if (el.dataset.liFold) return toggleListFold(el.dataset.liFold);
   if (el.dataset.liShowDone) return toggleListDone(el.dataset.liShowDone);
   if (el.dataset.tlFold) return toggleTlFold(el.dataset.tlFold);
@@ -93,6 +114,7 @@ viewEl.addEventListener('click', e => {
   if (el.dataset.relRemove) return removeRelation(el.dataset.relRemove);
   if (el.hasAttribute('data-replan')) return openReplan();
   if (el.dataset.log) return logClick(el);
+  if (el.dataset.today) return todayClick(el);
   if (el.hasAttribute('data-next-more')) {
     ui.nextAll = !ui.nextAll;
     prefs.set('nextAll', ui.nextAll);
@@ -175,7 +197,7 @@ viewEl.addEventListener('click', e => {
   }
   if (el.hasAttribute('data-hide-done')) return setToggle('hideDone', !ui.hideDone);
   if (el.hasAttribute('data-hide-visions')) return setToggle('hideVisions', !ui.hideVisions);
-});
+}
 
 // Toggle does not bubble; caught on the way down. Is it working? is worked out only when opened.
 viewEl.addEventListener(

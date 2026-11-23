@@ -57,10 +57,14 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M8 12l2.5 2.5L16 9"/></svg>
         <span data-i18n="nav.activities">Activities</span>
       </button>
+      <button class="nav-item nav-extra" data-view="today" data-i18n-title="nav.today">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+        <span data-i18n="nav.today">Today</span>
+      </button>
       <button class="nav-item nav-extra" data-view="review" data-i18n-title="nav.review">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></svg>
         <span data-i18n="nav.review">Review</span>
-      </button>      <!-- Phones: visions, goals, activities and review move into a menu behind this button, to keep the tab bar short. -->
+      </button>      <!-- Phones: visions, goals, activities, today and review move into a menu behind this button, to keep the tab bar short. -->
       <button class="nav-item nav-more" id="navMore" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="navSheet">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/></svg>
         <span data-i18n="nav.more">More</span>
@@ -127,6 +131,18 @@
         <h2 id="purposeTitle" data-i18n="purpose.title">You have found your Purpose</h2>
         <p id="purposeText"></p>
         <button class="btn primary" value="ok" data-i18n="purpose.ok">Wonderful</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="focusPickDlg" class="modal focus-pick-dlg" aria-labelledby="focusPickTitle">
+    <form method="dialog" novalidate>
+      <div class="closing-body">
+        <h2 id="focusPickTitle"></h2>
+        <input type="search" id="focusPickSearch" autocomplete="off">
+        <div class="pick-steps" id="focusPickList"></div>
+        <div class="closing-actions">
+          <button class="btn ghost" value="cancel" id="focusPickCancel"></button>
+        </div>
       </div>
     </form>
   </dialog>

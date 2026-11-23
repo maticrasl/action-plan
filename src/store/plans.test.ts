@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   PLANS_KEY,
+  actInPlan,
+  actingPlan,
   createPlan,
   deletePlan,
   editPlan,
@@ -287,5 +289,41 @@ describe('working on a plan that is not open', () => {
     let seen = '';
     editPlan(plans.current!, d => (seen = d.goals[0].id));
     expect(seen).toBe('g1');
+  });
+  test('actInPlan: a screen action on another plan saves there, and leaves the open plan and list alone', () => {
+    createPlan('Other');
+    const otherId = plans.current!;
+    db.activities.push({ id: 's1', title: 'Step', status: 'todo' });
+    save();
+    createPlan('Open');
+    db.goals.push({ id: 'g1', title: 'Mine', status: 'active' });
+    save();
+    const open = db,
+      list = JSON.stringify(plans),
+      mine = JSON.stringify(db);
+    vi.setSystemTime(new Date('2026-11-18T12:00:00Z'));
+    const seen = actInPlan(otherId, () => {
+      expect(actingPlan()).toBe(otherId);
+      db.activities[0].status = 'done';
+      save();
+      return db.activities.length;
+    });
+    expect(seen).toBe(1);
+    expect(actingPlan()).toBeNull();
+    expect(db).toBe(open);
+    expect(JSON.stringify(db)).toBe(mine);
+    expect(JSON.stringify(plans)).toBe(list);
+    expect(readPlan(otherId).activities[0]).toMatchObject({ status: 'done', updatedAt: '2026-11-18T12:00:00.000Z' });
+    expect(readPlan(plans.current!).goals.map(g => g.title)).toEqual(['Mine']);
+    // The open plan, or none: the action runs as it is; an unknown plan: not at all.
+    expect(actInPlan(plans.current!, () => db === open)).toBe(true);
+    expect(actInPlan('', () => db === open)).toBe(true);
+    expect(actInPlan('nope', () => 1)).toBeUndefined();
+    expect(() =>
+      actInPlan(otherId, () => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    expect([db === open, actingPlan()]).toEqual([true, null]);
   });
 });

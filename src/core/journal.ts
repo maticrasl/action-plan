@@ -58,7 +58,14 @@ export function normalizeJournal(input: unknown): Journal {
     deleted: isObj(raw.deleted) ? (raw.deleted as IdSet<ISOTime>) : {},
   };
   const f = raw.focus;
-  if (isObj(f) && typeof f.week === 'string' && safeId(f.plan) && safeId(f.item) && typeof f.at === 'string')
+  // A cleared focus keeps plan and item empty, and its time.
+  const cleared = isObj(f) && f.plan === '' && f.item === '';
+  if (
+    isObj(f) &&
+    typeof f.week === 'string' &&
+    (cleared || (safeId(f.plan) && safeId(f.item))) &&
+    typeof f.at === 'string'
+  )
     out.focus = f as unknown as Focus;
   return out;
 }
@@ -85,7 +92,7 @@ export function mergeJournal(rawA: unknown, rawB: unknown): Journal {
     deleted,
   };
   // The later one; on a tie the larger by content, so both devices keep the same.
-  const later = (x: Focus, y: Focus) => (y.at !== x.at ? y.at > x.at : JSON.stringify(y) > JSON.stringify(x)) ? y : x;
+  const later = (x: Focus, y: Focus) => ((y.at !== x.at ? y.at > x.at : JSON.stringify(y) > JSON.stringify(x)) ? y : x);
   const focus = a.focus && b.focus ? later(a.focus, b.focus) : a.focus || b.focus;
   if (focus) out.focus = focus;
   return out;

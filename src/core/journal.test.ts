@@ -38,6 +38,9 @@ describe('normalizeJournal', () => {
     const focus = { week: '2026-11-16', plan: 'p1', item: 'a1', at: T1 };
     const s = { id: 's1', exercise: 'values', date: '2026-11-16', done: false, answers: {}, made: [] };
     expect(normalizeJournal({ sessions: [s], focus })).toEqual(journal({ sessions: [s], focus }));
+    const cleared = { week: '2026-11-16', plan: '', item: '', at: T1 };
+    expect(normalizeJournal({ focus: cleared }).focus).toEqual(cleared);
+    expect(normalizeJournal({ focus: { ...cleared, plan: 'p1' } }).focus).toBeUndefined();
   });
 });
 

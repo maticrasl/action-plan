@@ -61,7 +61,7 @@ async function generateAll() {
 async function checkAll() {
   const fails = [];
   const compare = (label, want, got) => {
-    const diff = firstDiff(want, withoutNew(want, got));
+    const diff = firstDiff(want, seenToday(want, withoutNew(want, got)));
     if (diff) fails.push(`FAIL ${label}: ${diff}`);
   };
   let checks = 0;
@@ -95,6 +95,23 @@ function withoutNew(want, got) {
   if (!got || typeof got !== 'object' || Array.isArray(got)) return got;
   const extra = Object.keys(got).filter(k => !(k in want) && NEW_KEYS.some(re => re.test(k)));
   return extra.length ? Object.fromEntries(Object.entries(got).filter(([k]) => !extra.includes(k))) : got;
+}
+
+// Today (feature 09) is a view the tips note as seen; a fixture written before it never opened it.
+const SEEN = /^actionplan\.(u\.[^.]+\.)?v1\.seen$/;
+function seenToday(want, got) {
+  if (!got || typeof got !== 'object') return got;
+  const out = { ...got };
+  for (const k of Object.keys(out).filter(k => SEEN.test(k) && typeof want?.[k] === 'string')) {
+    try {
+      const w = JSON.parse(want[k]), g = JSON.parse(out[k]);
+      if (w.views && !w.views.today && g.views?.today) {
+        delete g.views.today;
+        out[k] = JSON.stringify(g);
+      }
+    } catch { /* compared as text */ }
+  }
+  return out;
 }
 
 // The sync file says version 2 since the sync-file guard (docs/specs/2026-11-20-undo-trash.md), 3 since

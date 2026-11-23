@@ -346,8 +346,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
       },
       {
         text: '<strong>Izberite eno stvar za naslednji teden.</strong> Korak, ki je najpomembnejši. Dajte mu dan.',
-        go: 'view-dashboard',
-        label: 'Pregled',
+        go: 'pick-focus',
+        label: 'Izberi …',
       },
     ],
     related: ['method', 'fell-off', 'overplanning'],
@@ -458,10 +458,18 @@ export const guideSl: readonly Article<ArticleId>[] = [
     action: { do: 'view-review', label: 'Odpri Pogled nazaj' },
   },
   {
+    id: 'h-today',
+    group: 'how',
+    title: 'Danes',
+    body: `<p><strong>Danes</strong> našteje, kar je na vrsti v vseh vaših načrtih: korake z rokom danes ali zamujene in rutine, ki jih današnji dan čaka. Tu jih odkljukate, ne da bi zamenjali načrt; tapnite naslov, da ga odprete v njegovem načrtu. Na vrhu je ena stvar tega tedna: korak, ki ste ga izbrali kot najpomembnejšega. Izberete ga v meniju katerega koli koraka ali na koncu tedenskega pregleda. Nov teden se začne brez nje.</p>`,
+    action: { do: 'view-today', label: 'Odpri Danes' },
+    related: ['h-overview', 'review'],
+  },
+  {
     id: 'h-overview',
     group: 'how',
     title: 'Pregled',
-    body: `<p>Pregled je stran za večino dni: koliko ste v povprečju napredovali pri aktivnih ciljih, aktivnosti z rokom do danes ali zamujene (»Prikaži vse« doda še ostale v teku), rutine, ki jih današnji dan še čakajo, in vaši aktivni cilji. Tu kljukate, ne da bi šli kam drugam. Vrstica »Ta teden« prešteje, kaj ste opravili od ponedeljka: korake, dneve rutin, vrednosti in dosežene cilje; tapnite jo za dnevnik opravljenega. Opravljen korak ali dosežen cilj si zapomni dan; spremenite ga v njegovem obrazcu pod Opravljeno dne ali Doseženo dne, na primer ko v ponedeljek zapišete, kar ste naredili v petek.</p>`,
+    body: `<p>Pregled je stran za večino dni: koliko ste v povprečju napredovali pri aktivnih ciljih, aktivnosti z rokom do danes ali zamujene (»Prikaži vse« doda še ostale v teku), rutine, ki jih današnji dan še čakajo, in vaši aktivni cilji. Tu kljukate, ne da bi šli kam drugam. Vrstica »Ta teden« prešteje, kaj ste opravili od ponedeljka: korake, dneve rutin, vrednosti in dosežene cilje; tapnite jo za dnevnik opravljenega. Opravljen korak ali dosežen cilj si zapomni dan; spremenite ga v njegovem obrazcu pod Opravljeno dne ali Doseženo dne, na primer ko v ponedeljek zapišete, kar ste naredili v petek. Pregled pokaže en načrt; Danes pokaže isto za vse.</p>`,
     action: { do: 'view-dashboard', label: 'Odpri Pregled' },
   },
   {

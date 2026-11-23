@@ -41,7 +41,8 @@ import { ui } from '../store/state';
 import { periodText, scheduleText, shortSchedule, streakText, weekdayName } from '../ui/text';
 import { relsFrom } from '../core/relations';
 import { openAmountPop } from '../ui/amount-popover';
-import { requestRender as render } from '../ui/render';
+import { inPlan, requestRender as render } from '../ui/render';
+import { actingPlan } from '../store/plans';
 
 export function tickListItem(id: string, itemId: string, iso: ISODate = today()) {
   const a = db.activities.find(x => x.id === id);
@@ -331,6 +332,23 @@ export function listTicks(a: WithList) {
 
 export function openTickAmount(a: Routine, iso: ISODate, anchor: HTMLElement) {
   const states = improvedStates(a);
+  // Opened from Today for a plan that is not open: the answer is saved in that plan, read anew then.
+  const plan = actingPlan() || '';
+  const tick = (amounts: (number | null)[] | null) =>
+    inPlan(plan, () => {
+      const r = db.activities.find(x => x.id === a.id);
+      if (!r || !isRoutine(r)) return;
+      const ss = improvedStates(r);
+      setRoutineDay(
+        r,
+        iso,
+        true,
+        (amounts || []).map((n, i) => [ss[i], n] as [State, number | null]).filter(([s, n]) => s && n !== null) as [
+          State,
+          number,
+        ][],
+      );
+    });
   const title =
     iso === today()
       ? t('cu.howMuch', { name: a.title })
@@ -343,16 +361,7 @@ export function openTickAmount(a: Routine, iso: ISODate, anchor: HTMLElement) {
       okLabel: t('cu.add'),
       skipLabel: t('cu.tickOnly'),
     },
-    amounts =>
-      setRoutineDay(
-        a,
-        iso,
-        true,
-        states.map((s, i) => [s, amounts[i]] as [State, number | null]).filter(([, n]) => n !== null) as [
-          State,
-          number,
-        ][],
-      ),
-    () => setRoutineDay(a, iso, true),
+    amounts => tick(amounts),
+    () => tick(null),
   );
 }

@@ -17,6 +17,7 @@ import { openExport } from '../ui/plan-io';
 import { installHintKey, installPrompt, isInstalled } from '../ui/install';
 import { openSettings, setHelp } from '../ui/settings';
 import { toast } from '../ui/toast';
+import { openFocusPicker } from './focus';
 
 // The open article and the search text, kept while the app is open (not stored).
 export const guideState: { open: string | null; query: string } = { open: null, query: '' };
@@ -64,7 +65,9 @@ export const GUIDE_DO: Record<GuideAction, () => void> = {
   'view-timeline': view('timeline'),
   replan: () => openReplan(),
   'view-graphs': view('graphs'),
+  'view-today': view('today'),
   'view-review': view('review'),
+  'pick-focus': () => openFocusPicker(),
   'ask-tip': () => askTip(),
 };
 

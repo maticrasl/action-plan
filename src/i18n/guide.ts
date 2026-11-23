@@ -25,7 +25,9 @@ export const GUIDE_ACTIONS = [
   'view-timeline',
   'replan',
   'view-graphs',
+  'view-today',
   'view-review',
+  'pick-focus',
   'ask-tip',
 ] as const;
 export type GuideAction = (typeof GUIDE_ACTIONS)[number];
