@@ -36,8 +36,11 @@ Guide article is then added when the Guide exists.
 
 - [ ] `00-foundation`
   - parts 2 (sync-file guard, `SYNC_VERSION = 2`) and 3 (`withPlan`, `editPlan`) built 2026-11-20 on
-    `feat/undo-trash`; part 1 (journal) still open
+    `feat/undo-trash`; part 1 (journal store, `SYNC_VERSION = 3`) built and shipped 2026-11-21 (#49),
+    no screen yet
 - [ ] `13-done-log`
+  - part A (completion dates, Done on / Achieved on, This week line, dated sample) shipped
+    2026-11-21 (#49); part B (Review view with the done log) built 2026-11-21 on `feat/done-log`
 - [x] `17-undo-trash-snapshots`, session A: undo and recently deleted 2026-11-21
   - shipped (`docs/specs/2026-11-20-undo-trash.md`). Restoring into a plan that is not open offers "Show" (page test in
     `tests/browser/trash.js`)
@@ -103,6 +106,9 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   (`core/trash.ts`, `store/trash.ts`, `ui/undo.ts`, `ui/trash-dialog.ts`). Items are deleted without
   asking; plans keep their dialog. Backups stay `version: 1` and hold no trash, so older copies
   restore them. `scripts/fixtures.mjs` accepts only the version change 1 → 2 in `rich.sync.json`.
-- Next `SYNC_VERSION` bump: the journal (00 part 1). 17 B open.
+- Journal store shipped (#49): sync file version 3; reviews (14), Today (09) and discovery (01)
+  write into it. 17 B open.
+- Review view exists (`views/review.ts`, `core/done-log.ts`) with only the done log; weekly
+  reviews (14) add their part there.
 - Chain `feat/replan` → `feat/pace-forecast` → `feat/is-it-working` → `feat/csv` (`core/csv*.ts`);
   their 07, 09, 14, 15 parts wait for those (19: the note column is written empty, read never).
