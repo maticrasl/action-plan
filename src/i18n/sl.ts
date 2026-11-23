@@ -546,6 +546,7 @@ export const sl: Language = {
     'tip.achieved.text':
       'Dosegli ste »{name}«. Preden začnete naslednjega: kaj je naredilo razliko? In ali je kakšna majhna rutina vredna, da ostane, da rezultat zdrži?',
     'tip.achieved.btn': 'Odpri cilj',
+    'tip.achieved.btn2': 'Napiši zaključni zapisek',
     'tip.first-month.text':
       'Mesec dni se vračate k svojemu načrtu. Ta navada je vredna več kot katerikoli posamezen cilj v njem.',
     'tip.try-map.text':

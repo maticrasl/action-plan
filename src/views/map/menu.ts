@@ -44,6 +44,7 @@ import {
 } from '../timeline/rows';
 import { openStateValue } from '../../ui/state-value';
 import { openNotePop } from '../../ui/note-popover';
+import { askClosing } from '../../ui/closing';
 import { hasGraph } from '../../core/series';
 import { deleteItem } from '../../ui/undo';
 import { exportStateCsv, openCsvImport } from '../../ui/csv-dialog';
@@ -327,9 +328,14 @@ export function runCtxAction(act: string, id: string) {
     return openForm(arg as FormKind, null, { [type]: [id], category: kind === 'goal' ? (item as Goal).category : '' });
   if (verb === 'link') return ui.view === 'map' ? startMapLink(id) : openForm('relation', null, { from: id });
   if (verb === 'status') {
+    const was = (item as { status: string }).status;
     (item as { status: string }).status = arg;
     save();
     render();
+    if (kind === 'goal' && arg === 'achieved' && was !== 'achieved') {
+      toast(t('ctx.statusSet', { s: t('goal.achieved') }));
+      return askClosing(item as Goal);
+    }
     const waits = kind === 'activity' && arg === 'done' ? blockers(item as Activity) : [];
     if (kind === 'activity' && arg === 'done' && !waits.length && tickToast(item as Activity)) return;
     return toast(

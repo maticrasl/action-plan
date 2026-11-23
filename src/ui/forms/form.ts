@@ -14,6 +14,7 @@ import { stateForm, updateStateFields } from './state';
 import { fillRelTypes, relationForm } from './relation';
 import { visionForm } from './vision';
 import { applyNotes, flushNotes, notesSection } from './notes';
+import { askClosing } from '../closing';
 import { saveVisions } from '../../store/visions';
 import { goalErrors, ownMetric, smartCheck } from '../../core/progress';
 import { addEntry, convertState, deleteEntry, entriesOf, isCumulative, recordMeasurement } from '../../core/cumulative';
@@ -245,6 +246,7 @@ export function submitForm() {
     if (Object.keys(errs).length) return showErrors(errs);
     const reachedOn = finishedDay(v, 'achievedAt'),
       wasReached = existing ? achievedDay(existing as Goal) : undefined;
+    const becomes = v.status === 'achieved' && (existing as Goal | null)?.status !== 'achieved';
     if (reachedOn > today()) return showErrors({ achievedAt: t('err.doneFuture') });
     const g = Object.assign((existing as Goal) || { id: uid(), createdAt: today() }, {
       title: v.title.trim(),
@@ -287,8 +289,13 @@ export function submitForm() {
     setGoalVisions(g, arr('visions'));
     const c = smartCheck(g),
       lit = 'SMART'.split('').filter(l => c[l as 'S']).length;
-    if (lit < 5) return finish(t(existing ? 'toast.goalUpdatedPartial' : 'toast.goalAddedPartial', { n: lit }));
-    return finish(t(existing ? 'toast.goalUpdated' : 'toast.goalCreated'));
+    finish(
+      lit < 5
+        ? t(existing ? 'toast.goalUpdatedPartial' : 'toast.goalAddedPartial', { n: lit })
+        : t(existing ? 'toast.goalUpdated' : 'toast.goalCreated'),
+    );
+    if (becomes) askClosing(g);
+    return;
   }
 
   if (kind === 'state') {

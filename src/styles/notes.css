@@ -109,3 +109,22 @@
   font-style: italic;
   color: var(--ink-2);
 }
+.closing-dlg {
+  max-width: 460px;
+}
+.closing-body {
+  padding: 22px 22px 18px;
+}
+.closing-body h2 {
+  margin: 0 0 8px;
+  font-size: 19px;
+}
+.closing-body textarea {
+  width: 100%;
+  margin-top: 6px;
+}
+.closing-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}

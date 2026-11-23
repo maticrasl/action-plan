@@ -130,6 +130,20 @@
       </div>
     </form>
   </dialog>
+  <dialog id="closingDlg" class="modal closing-dlg" aria-labelledby="closingTitle" aria-describedby="closingText">
+    <form method="dialog" novalidate>
+      <div class="closing-body">
+        <h2 id="closingTitle"></h2>
+        <p id="closingText"></p>
+        <textarea id="closingNote" rows="3" maxlength="2000" aria-labelledby="closingText"></textarea>
+        <p class="closing-earlier" id="closingEarlier" hidden></p>
+        <div class="closing-actions">
+          <button class="btn primary" value="save" id="closingSave"></button>
+          <button class="btn ghost" value="skip" id="closingSkip"></button>
+        </div>
+      </div>
+    </form>
+  </dialog>
   <dialog id="planDelete" class="modal plan-delete" aria-labelledby="planDeleteTitle">
     <form method="dialog" id="planDeleteForm" novalidate>
       <header class="modal-head">

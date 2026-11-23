@@ -188,6 +188,81 @@ suite(async () => {
     );
   });
 
+  await step('closing note: asked each of three ways; Save stores it, Skip stores none', async () => {
+    fresh('Notes');
+    const dlg = $('#closingDlg');
+    const g = mk('goal', { title: 'Run 5 km', startDate: d(-30) });
+    save();
+    setView('goals');
+    // 1. The item menu.
+    openCtxMenu(g.id, 10, 10);
+    $('#ctxMenu [data-ctx="status:achieved"]').click();
+    assert(dlg.open, 'asked from the menu');
+    eq($('#closingTitle').textContent, t('closing.title', { name: 'Run 5 km' }), 'names the goal');
+    assert($('#closingEarlier').hidden, 'nothing earlier');
+    $('#closingNote').value = '  Sleep, and the Sunday runs  ';
+    $('#closingSave').click();
+    await tick(); // the dialog's close event comes after the click
+    assert(!dlg.open, 'closed');
+    eq(g.status, 'achieved', 'achieved');
+    eq(
+      [g.notes.length, g.notes[0].kind, g.notes[0].text, g.notes[0].date],
+      [1, 'closing', 'Sleep, and the Sunday runs', today()],
+      'a closing note',
+    );
+    render();
+    openForm('goal', g.id);
+    assert($('#noteList .note-kind')?.textContent === t('notes.closing'), 'labelled in the form');
+    // 2. The form: back to Active (not asked), then Achieved again (asked, with the earlier note).
+    $('#f-status').value = 'active';
+    submitForm();
+    assert(!dlg.open, 'not asked when it stops being achieved');
+    openForm('goal', g.id);
+    $('#f-status').value = 'achieved';
+    $('#f-status').dispatchEvent(new Event('change', { bubbles: true }));
+    submitForm();
+    assert(dlg.open, 'asked from the form');
+    assert(
+      !$('#closingEarlier').hidden && $('#closingEarlier').textContent.includes('Sunday runs'),
+      'the earlier note below',
+    );
+    $('#closingNote').value = 'not kept';
+    $('#closingSkip').click();
+    await tick();
+    eq(g.notes.length, 1, 'Skip stores nothing');
+    openForm('goal', g.id);
+    submitForm();
+    assert(!dlg.open, 'saving an achieved goal again does not ask');
+    // 3. The "target reached" toast's button.
+    const h = mk('goal', { title: 'Read 10 books', metric: 'books', baseline: '0', target: '10', current: '10' });
+    g.status = 'active';
+    save();
+    reachedQueue.length = 0;
+    reachedQueue.push(h.id);
+    hideToast();
+    showReached();
+    $('#toast button').click();
+    eq(h.status, 'achieved', 'achieved from the toast');
+    assert(dlg.open, 'asked from the toast');
+    dlg.close();
+    await tick();
+    eq(h.notes, undefined, 'Esc or closing stores nothing');
+  });
+
+  await step('closing note: not asked in a demo plan; the achieved tip offers it while there is none', () => {
+    loadSample();
+    const g = db.goals.find(x => x.status !== 'achieved');
+    openCtxMenu(g.id, 10, 10);
+    $('#ctxMenu [data-ctx="status:achieved"]').click();
+    assert(!$('#closingDlg').open, 'demo: not asked');
+    fresh('Notes');
+    const h = mk('goal', { title: 'Swim', status: 'achieved', statusSince: today() });
+    save();
+    TIP_DO.closingNote({ tip: { id: 'achieved' }, hit: { id: h.id } }, $('#view'));
+    assert($('#closingDlg').open, 'the tip button opens it');
+    $('#closingDlg').close();
+  });
+
   await step('search finds an item by a word in its note', () => {
     fresh('Notes');
     mk('goal', { title: 'Run', notes: [{ id: 'n1', date: d(-1), text: 'flamingo', at: '' }] });

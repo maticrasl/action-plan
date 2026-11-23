@@ -25,6 +25,7 @@ import { $, esc, viewEl } from '../ui/dom';
 import { setView } from '../ui/nav';
 import { openForm } from '../ui/forms/form';
 import { openStateValue } from '../ui/state-value';
+import { askClosing } from '../ui/closing';
 import { openSettings } from '../ui/settings';
 import { openExport, planExp } from '../ui/plan-io';
 import { installHintKey, installPrompt, isInstalled } from '../ui/install';
@@ -91,6 +92,10 @@ export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
   backup: () => (syncConfigured() ? openSettings('syncSection') : openExport()),
   install: () => (installPrompt ? $('#installBtn').click() : openSettings('installSection')),
   working: c => openWork(target(c)),
+  closingNote: c => {
+    const g = db.goals.find(x => x.id === target(c));
+    if (g) askClosing(g);
+  },
   share: () => {
     openExport();
     planExp.querySelector<HTMLInputElement>('input[name="exportKind"][value="template"]')!.checked = true;
@@ -114,8 +119,10 @@ const closeX = () =>
 const btn = (act: string, label: string, cls: string) =>
   `<button type="button" class="${cls}" data-tip="${act}">${esc(label)}</button>`;
 
-// Is it working? only where the state has a fold to open.
+// Is it working? only where the state has a fold to open; a closing note only while there is none.
 const showsSecond = (c: Chosen) => {
+  if (c.tip.action2 === 'closingNote')
+    return !db.goals.find(g => g.id === target(c))?.notes?.some(n => n.kind === 'closing');
   const s = db.states.find(x => x.id === target(c));
   return c.tip.action2 !== 'working' || (!!s && hasWork(s));
 };

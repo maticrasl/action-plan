@@ -477,6 +477,7 @@ export const en = {
     'tip.achieved.text':
       'You reached “{name}”. Before the next one: what made the difference? And is there a small routine worth keeping so the result stays?',
     'tip.achieved.btn': 'Open the goal',
+    'tip.achieved.btn2': 'Write a closing note',
     'tip.first-month.text': 'A month of coming back to your plan. That habit is worth more than any single goal in it.',
     'tip.try-map.text':
       'Your plan has enough in it now for the Map to be worth a look: it shows what serves what, and what serves nothing.',
