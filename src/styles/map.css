@@ -18,6 +18,8 @@
   height: 100vh;
   height: 100dvh;
   overflow: auto;
+  /* The bars below are 100cqw wide; a classic vertical scrollbar would make them overflow sideways. */
+  scrollbar-gutter: stable;
   container-type: inline-size;
 }
 .main:has(> #view[data-view='map']) > .topbar {

@@ -135,7 +135,9 @@ export function graphCard(s: State, width: number) {
     .filter((g): g is Goal => !!g && !byActivities(g) && isNum(g.target))
     .map(g => ({ goal: g, value: Number(g.target), end: g.deadline ? dayNum(g.deadline) : null }));
   const change = stateChange(s, points, targets);
-  const paces = paceGoals(targets);
+  const needs = paceGoals(targets);
+  // One measurement is no line yet: the pace drawn against it reads as a wrong pace.
+  const paces = points.length > 1 ? needs : [];
   const unit = s.unit || '';
   const last = points[points.length - 1];
 
@@ -240,7 +242,7 @@ export function graphCard(s: State, width: number) {
   return `<article class="card glass gr-card" data-gr="${s.id}" data-ctx-item="${s.id}">
     <div class="card-head"><h3>${esc(s.title)}</h3><button class="btn small ghost" data-open="${s.id}">${t('btn.edit')}</button></div>
     <div class="gr-stats"><strong class="gr-value">${esc(withUnit(fmtNum(last.value), unit))}</strong>${changeTag(s, change)}</div>
-    ${paceFacts(paces, unit)}${legend}
+    ${paceFacts(needs, unit)}${legend}
     <div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
       <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
         ${grid}${todayLine}${area}${targetLines}${paceMarks(paces, points, px, py, x0, x1)}<path class="gr-line" d="${path}"/>${dots}${targetLabels}${valueLabel}${xAxis}

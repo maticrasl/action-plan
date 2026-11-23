@@ -41,10 +41,10 @@ export function checklist(name: string, label: string, kind: string, items: Pick
     <div class="pick-list" role="listbox" aria-label="${esc(label)}" hidden>${options}<div class="pick-empty"></div></div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
 }
 
-// A form's relationships in a section that folds: folded for a new item (a simpler form), unless a link is preset.
+// A form's relationships in a section that folds: folded (a simpler form), unless a new item comes with a link preset.
 export function linkSection(inner: string, editing: boolean) {
   if (!inner.trim()) return '';
-  const open = editing || inner.includes('data-picked-id') || /<option value="[^"]+" selected/.test(inner);
+  const open = !editing && (inner.includes('data-picked-id') || /<option value="[^"]+" selected/.test(inner));
   return `<details class="link-sec"${open ? ' open' : ''}><summary>${t('f.linksSection')}</summary>${inner}</details>`;
 }
 

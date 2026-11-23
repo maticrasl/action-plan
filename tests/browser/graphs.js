@@ -1,13 +1,37 @@
 /** Page tests: the graphs: pointer and keys, ticks, pinch and zoom, routine and cumulative graphs, their menu. */
 suite(async () => {
   loadSample(); // the first step reads the sample plan's first graph
-  await step('graphs pointer + keyboard', () => {
+  await step('graphs pointer + keyboard: a tip only on a dot; a finger taps, does not slide', () => {
     setView('graphs');
-    const plot = $('.gr-plot');
-    const r = plot.getBoundingClientRect();
-    plot.dispatchEvent(
-      new PointerEvent('pointermove', { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + 20 }),
-    );
+    const plot = $('.gr-plot'),
+      c = grCharts[plot.closest('[data-gr]').dataset.gr],
+      last = c.points.at(-1),
+      r = plot.querySelector('svg').getBoundingClientRect();
+    const at = (type, dx, dy, pointerType = 'mouse') =>
+      plot.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          pointerType,
+          clientX: r.left + c.px(last.day) + dx,
+          clientY: r.top + c.py(last.value) + dy,
+        }),
+      );
+    const shown = () => !plot.querySelector('.gr-tip').hidden;
+    at('pointermove', 40, 0);
+    assert(!shown(), 'right of the latest dot: no tip');
+    at('pointermove', 0, 60);
+    assert(!shown(), 'below the latest dot: no tip');
+    at('pointermove', 4, -4);
+    assert(shown() && plot.dataset.i === String(c.points.length - 1), 'on the latest dot: its tip');
+    at('pointermove', 40, 0);
+    assert(!shown(), 'moving off hides it');
+    at('pointermove', 0, 0, 'touch');
+    assert(!shown(), 'a finger sliding (a pinch, a scroll) shows nothing');
+    at('click', 10, 10, 'touch');
+    assert(shown(), 'a tap on the dot shows it');
+    at('click', 60, 0, 'touch');
+    assert(!shown(), 'a tap elsewhere hides it');
+    at('pointermove', 0, 0);
     const tip = plot.querySelector('.gr-tip').textContent;
     plot.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     const i = plot.dataset.i;

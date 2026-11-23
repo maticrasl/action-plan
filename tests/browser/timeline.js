@@ -258,4 +258,20 @@ suite(async () => {
       setView('dashboard');
     },
   );
+
+  await step('timeline: starts 160 px before the earliest date at every zoom, not on the 1st of a month', () => {
+    fresh('Timeline start');
+    mk('goal', { title: 'Early', startDate: d(-40), deadline: d(10) });
+    save();
+    setView('timeline');
+    const seen = [TL.ZOOM.week, TL.ZOOM.month, TL.ZOOM.quarter, TL.MIN].map(px => {
+      ui.tlPx = px;
+      render();
+      const days = dayNum(d(-40)) - Number($('.tl-scroll').dataset.from);
+      eq(days, Math.ceil(160 / px), `days before the first bar at ${px} px a day`);
+      return days;
+    });
+    setView('dashboard');
+    return seen.join(' ');
+  });
 });
