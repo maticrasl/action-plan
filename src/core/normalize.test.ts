@@ -83,6 +83,29 @@ describe('normalize', () => {
     expect([fresh.goals[0].cost, fresh.activities[0].reward]).toEqual(['Two evenings', 'have a coffee']);
   });
 
+  test('a keep goal keeps a valid range; a broken one is dropped; a template keeps it', () => {
+    const d = normalize({
+      goals: [
+        { id: 'g1', title: 'A', keep: { max: 75 } },
+        { id: 'g2', title: 'B', keep: { min: '3', max: 5 } },
+        { id: 'g3', title: 'C', keep: {} },
+        { id: 'g4', title: 'D', keep: { min: 5, max: 5 } },
+        { id: 'g5', title: 'E', keep: 'x' },
+        { id: 'g6', title: 'F', target: '10' },
+      ],
+    });
+    expect(d.goals.map(g => g.keep)).toEqual([
+      { max: 75 },
+      { min: 3, max: 5 },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(['keep' in d.goals[2], 'keep' in d.goals[5]]).toEqual([false, false]);
+    expect(resetProgress(d, { shift: true, template: true }).goals[0].keep).toEqual({ max: 75 });
+  });
+
   test('"is related to" links are dropped; the rest stays', () => {
     const old = {
       goals: [
@@ -265,10 +288,24 @@ const withNotes = (): Db => ({
   goals: [{ id: 'g', title: 'g', status: 'active', notes: [N], droppedNotes: { n0: 1 } }],
   activities: [{ id: 'a', title: 'a', status: 'todo', notes: [{ ...N, id: 'n2' }] }],
   states: [
-    { id: 's', title: 's', description: '', value: '3', date: '2026-11-01', notes: [{ ...N, id: 'n3' }],
-      history: [{ date: '2026-11-01', value: '3', note: 'after a week off' }] },
-    { id: 'c', title: 'c', description: '', value: '2', history: [], cumulative: true,
-      entries: [{ id: 'e', date: '2026-11-01', amount: '2', note: 'rain' }] },
+    {
+      id: 's',
+      title: 's',
+      description: '',
+      value: '3',
+      date: '2026-11-01',
+      notes: [{ ...N, id: 'n3' }],
+      history: [{ date: '2026-11-01', value: '3', note: 'after a week off' }],
+    },
+    {
+      id: 'c',
+      title: 'c',
+      description: '',
+      value: '2',
+      history: [],
+      cumulative: true,
+      entries: [{ id: 'e', date: '2026-11-01', amount: '2', note: 'rain' }],
+    },
   ],
 });
 

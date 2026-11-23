@@ -17,6 +17,7 @@ import { dayNum } from './days';
 import { today } from './dates';
 import { isNum } from './util';
 import { normalizeNotes } from './notes';
+import { validKeep } from './keep';
 
 // A plan as storage, Drive or a file may hold it, before normalize checks it.
 type RawDb = Partial<Record<Coll | 'deleted', unknown>> | null | undefined;
@@ -63,6 +64,9 @@ export function normalize(input: unknown): Db {
     if (typeof g.obstacle !== 'string') delete g.obstacle;
     if (typeof g.ifThen !== 'string') delete g.ifThen;
     if (typeof g.cost !== 'string') delete g.cost;
+    const keep = validKeep(g.keep);
+    if (keep) g.keep = keep;
+    else delete g.keep;
   });
   d.activities.forEach(a => {
     if (typeof a.reward !== 'string') delete a.reward;

@@ -1,5 +1,6 @@
 /** Pace and forecast: where a goal should be by now, what it needs from here, and when it would arrive. */
 import { clamp, isNum } from './util';
+import { isKeep } from './keep';
 import { dayNum } from './days';
 import { entriesOf, goalPeriod, isCumulative } from './cumulative';
 import { stateSeries } from './series';
@@ -115,7 +116,7 @@ export function paceSeries(s: State, g: Goal): (PacePoint & { date: ISODate })[]
 
 // Everything the goal card, the graphs and the tip `goal-behind` say about a goal's pace.
 export function goalPace(g: Goal, today: ISODate) {
-  if (g.status !== 'active') return null;
+  if (g.status !== 'active' || isKeep(g)) return null; // a keep goal has no pace (07)
   if (byActivities(g)) {
     const counted = countedActivities(g),
       done = counted.filter(a => a.status === 'done').length;

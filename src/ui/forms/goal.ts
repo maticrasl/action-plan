@@ -30,6 +30,7 @@ import {
   type New,
 } from './form';
 import type { Goal } from '../../core/model';
+import { formGoal, keepDraft, keepErrs, keepFields, keepRoutines, kindField, updateKindFields } from './keep-form';
 
 export function smartSection(letter: string, body: string) {
   return `<fieldset class="smart-block" data-smart="${letter}"><legend><span class="letter">${letter}</span>${t(('smart.' + letter) as TextKey)}</legend>${body}</fieldset>`;
@@ -45,7 +46,9 @@ function costMany(g: New<Goal>) {
   return n >= 4 ? `<p class="hint cost-many">${esc(t('f.costMany', { n }))}</p>` : '';
 }
 
-export function goalForm(g: New<Goal>) {
+export function goalForm(given: New<Goal>) {
+  // "Set up a keep goal" after a reached goal opens a new one filled in from it (07).
+  const g = given.links?.keepFrom ? keepDraft(given.links.keepFrom as string) : given;
   const parent = linksOf(g, 'subgoal')[0] || '';
   const parents: Record<string, string> = { '': t('f.none') };
   db.goals
@@ -67,17 +70,19 @@ export function goalForm(g: New<Goal>) {
     ${smartSection(
       'M',
       `
+      ${kindField(g)}
       ${field('progress', t('f.progress'), select('progress', { measure: t('f.progressMeasure'), activities: t('f.progressActs'), routines: t('f.progressRoutines') }, g.progress || 'measure'))}
       <p class="hint" id="actsHint">${t('f.progressActsHint')}</p>
       <p class="hint" id="routinesHint">${t('f.progressRoutinesHint')}</p>
       <div id="measureFields">
-      ${field('measuredBy', t('f.measuredBy'), select('measuredBy', states, linked?.id || ''), esc(t('f.measuredByHint')))}
+      ${field('measuredBy', t('f.measuredBy'), select('measuredBy', states, linked?.id || (g.links?.measures as string) || ''), esc(t('f.measuredByHint')))}
       <div class="row2">
         ${field('metric', t('f.metric'), text('metric', g.metric, t('f.metricPh')))}
         ${field('unit', t('f.unit'), text('unit', g.unit, t('f.unitPh')))}
       </div>
       ${field('period', t('cu.counts'), select('period', Object.fromEntries(['total', ...PERIODS].map(k => [k, t(('cu.count.' + k) as TextKey)])), goalPeriod(g as Goal)), ' ')}
-      <div class="row3">
+      ${keepFields(g)}
+      <div class="row3" id="reachFields">
         ${field(
           'baseline',
           t('f.baseline'),
@@ -108,7 +113,7 @@ export function goalForm(g: New<Goal>) {
       'T',
       `<div class="row2">
         ${field('startDate', t('f.startDate'), date('startDate', g.startDate || today()))}
-        ${field('deadline', t('f.deadline'), date('deadline', g.deadline))}
+        ${field('deadline', t('f.deadline'), date('deadline', g.deadline), esc(t('f.untilHint')))}
       </div>`,
     )}
     <div class="row3">
@@ -135,12 +140,13 @@ export function goalForm(g: New<Goal>) {
       linksOf(g, 'depends'),
     )}`,
       !!g.id,
-    )}`;
+    )}
+    ${keepRoutines(g)}`;
 }
 
 // The metric fields, or the hint for measuring by activities or routines.
 export function updateProgressFields() {
-  const by = $<HTMLSelectElement>('#f-progress').value;
+  const by = updateKindFields() ? 'measure' : $<HTMLSelectElement>('#f-progress').value;
   $('#measureFields').hidden = by !== 'measure';
   $('#actsHint').hidden = by !== 'activities';
   $('#routinesHint').hidden = by !== 'routines';
@@ -173,12 +179,14 @@ export function updateMeasuredBy(fill = true) {
 export function updateSmartLive() {
   if (formCtx?.kind !== 'goal') return;
   const { v } = formValues();
-  const c = smartCheck(v as unknown as Goal);
+  const g = formGoal(v);
+  const c = smartCheck(g);
+  const errs = keepErrs(g, c.errs as Record<string, string | undefined>);
   modal
     .querySelectorAll<HTMLElement>('.smart-block')
     .forEach(b => b.classList.toggle('ok', !!c[b.dataset.smart as 'S']));
   modal.querySelectorAll<HTMLElement>('.smart-block .field[data-field]').forEach(f => {
-    const msg = c.errs[f.dataset.field as SmartField] || '';
+    const msg = errs[f.dataset.field as SmartField] || '';
     let hint = f.querySelector<HTMLElement>('.smart-hint');
     if (!hint && !msg) return;
     if (!hint) {
@@ -189,6 +197,6 @@ export function updateSmartLive() {
     hint.hidden = !msg;
   });
   const okCount = 'SMART'.split('').filter(l => c[l as 'S']).length;
-  $('#smartLive').innerHTML = smartBadge(v as unknown as Goal);
+  $('#smartLive').innerHTML = smartBadge(g);
   $('#smartLiveText').textContent = okCount === 5 ? t('smart.ok') : t('smart.partial', { n: okCount });
 }

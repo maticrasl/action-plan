@@ -6,6 +6,7 @@ import { today } from '../core/dates';
 import { isRoutine, runsOn } from '../core/routines/schedule';
 import { routineState, routineToday } from '../core/routines/keeping';
 import { userStorage } from '../store/users';
+import { isKeep, keepNow } from '../core/keep';
 import { currentPlan, plans, ui } from '../store/state';
 import { $, esc } from './dom';
 import { toast } from './toast';
@@ -41,7 +42,12 @@ export function planHealth(data: Db): Health {
     const due = (date: ISODate | undefined, open: boolean) => {
       if (open && date && date <= now) flag(date < now ? 'late' : 'today');
     };
-    db.goals.forEach(g => due(g.deadline, g.status === 'active' || !g.status));
+    // A keep goal is red while out of range; its Until is no due date (07).
+    db.goals.forEach(g =>
+      isKeep(g)
+        ? (g.status === 'active' || !g.status) && keepNow(g).kind === 'out' && flag('late')
+        : due(g.deadline, g.status === 'active' || !g.status),
+    );
     db.activities.forEach(a => {
       if (!isRoutine(a)) return due(a.dueDate, a.status !== 'done');
       if (!runsOn(a, now)) return;

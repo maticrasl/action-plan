@@ -7,6 +7,11 @@ import { isDemo, save } from '../store/plans';
 import { $ } from './dom';
 import { requestRender } from './render';
 import type { Goal } from '../core/model';
+import { isKeep } from '../core/keep';
+import { ownMetric } from '../core/progress';
+import { relsTo } from '../core/relations';
+import { isNum } from '../core/util';
+import { openForm } from './forms/form';
 
 const dlg = $<HTMLDialogElement>('#closingDlg');
 
@@ -23,6 +28,12 @@ export function askClosing(g: Goal) {
   // Built with textContent: the note is the person's own text.
   $('#closingEarlier').textContent = earlier ? `${t('closing.earlier')}\n${earlier.text}` : '';
   $('#closingEarlier').hidden = !earlier;
+  // A goal measured by a state to a target: offer to keep the result (07).
+  const keep = !isKeep(g) && ownMetric(g) && isNum(g.target) && relsTo(g.id, 'measures').length > 0;
+  $('#closingKeep').hidden = !keep;
+  $('#closingKeepTitle').textContent = t('closing.keepTitle');
+  $('#closingKeepText').textContent = t('closing.keepText');
+  $('#closingKeepBtn').textContent = t('closing.keepBtn');
   dlg.dataset.goal = g.id;
   dlg.returnValue = '';
   if (!dlg.open) dlg.showModal();
@@ -30,12 +41,15 @@ export function askClosing(g: Goal) {
 }
 
 // Save stores the text as a closing note dated today; Skip, Esc or nothing typed stores nothing.
+// "Set up a keep goal" also keeps what was typed, then opens the goal form filled in; nothing is created until it is saved.
 export function listenClosing() {
   dlg.addEventListener('close', () => {
     const g = db.goals.find(x => x.id === dlg.dataset.goal);
-    if (dlg.returnValue !== 'save' || !g) return;
-    if (!addNote(g, { date: today(), text: $<HTMLTextAreaElement>('#closingNote').value, kind: 'closing' })) return;
-    save();
-    requestRender();
+    if (!g || !['save', 'keep'].includes(dlg.returnValue)) return;
+    if (addNote(g, { date: today(), text: $<HTMLTextAreaElement>('#closingNote').value, kind: 'closing' })) {
+      save();
+      requestRender();
+    }
+    if (dlg.returnValue === 'keep') openForm('goal', null, { keepFrom: g.id });
   });
 }

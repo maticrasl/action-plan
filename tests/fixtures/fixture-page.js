@@ -287,6 +287,17 @@
       });
       save();
     },
+    // Keep goals (docs/specs/2026-11-23-keep-goals.md): one on a plain state, one on a state that adds up per month.
+    keep() {
+      const w = { id: uid(), title: 'Body weight', description: '', unit: 'kg', value: '74', date: day(-2), history: [{ date: day(-9), value: '76' }, { date: day(-2), value: '74' }] };
+      const e = { id: uid(), title: 'Eating out', description: '', unit: '€', value: '', history: [], cumulative: true, scale: 'month', entries: [{ id: uid(), date: day(-20), amount: '120' }] };
+      const g1 = { id: uid(), title: 'Keep weight at or under 75 kg', status: 'active', metric: 'Weight', keep: { max: 75 }, startDate: day(-30) };
+      const g2 = { id: uid(), title: 'Eat out for 50 to 300 a month', status: 'active', metric: 'Spending', keep: { min: 50, max: 300 }, period: 'month', startDate: day(-60), deadline: day(300) };
+      db.states.push(w, e);
+      db.goals.push(g1, g2);
+      db.relations.push({ id: uid(), from: w.id, to: g1.id, type: 'measures' }, { id: uid(), from: e.id, to: g2.id, type: 'measures' });
+      save();
+    },
     // Life areas (docs/specs/2026-11-23-life-areas.md): a vision with an area, a goal with a category, the
     // Areas side chosen and an area hidden.
     areas() {

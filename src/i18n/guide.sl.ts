@@ -35,6 +35,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Vizija</strong> – želeno stanje brez konca. Skupna je vsem vašim načrtom.</li>
 <li><strong>Smisel</strong> – tista vizija, h kateri vodijo vse druge vizije in vsi aktivni cilji, ko jih tako povežete.</li>
 <li><strong>Cilj</strong> – rezultat z rokom. <strong>Aktiven</strong>, <strong>Zaustavljen</strong> ali <strong>Dosežen</strong>.</li>
+<li><strong>Cilj vzdrževanja</strong> – cilj, pri katerem ostajate v razponu, namesto da bi dosegli ciljno vrednost.</li>
 <li><strong>Podcilj</strong> – manjši cilj na poti do večjega.</li>
 <li><strong>Trenutno stanje</strong> – nekaj, kar merite. Vsaka nova vrednost nadomesti prejšnjo (teža) ali pa se količine <strong>seštevajo</strong> (pretečeni kilometri).</li>
 <li><strong>Aktivnost</strong> – korak. <strong>Enkratna aktivnost</strong>, <strong>seznam</strong> (kontrolni seznam), <strong>rutina</strong> (se ponavlja) ali <strong>rutinski seznam</strong> (kontrolni seznam, ki se ponavlja).</li>
@@ -300,7 +301,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<p>Označite ga kot dosežen in se pred naslednjim za trenutek ustavite. Ta del je lahko preskočiti, prav on pa olajša naslednji cilj.</p>
 <ul>
 <li><strong>Zapišite, kaj je delovalo.</strong> Kateri korak ali rutina je naredila razliko? Aplikacija vas vpraša, ko cilj označite kot doseženega. Dovolj sta dve vrstici.</li>
-<li><strong>Odločite, kaj ostane.</strong> Veliko rezultatov potrebuje vzdrževanje: teža, jezik, prihranki. Obdržite eno majhno rutino, druge naj se končajo.</li>
+<li><strong>Odločite, kaj ostane.</strong> Veliko rezultatov potrebuje vzdrževanje: teža, jezik, prihranki. Obdržite eno majhno rutino, druge naj se končajo. Ko merjen cilj označite kot dosežen, vam aplikacija ponudi cilj vzdrževanja za rezultat, z rutinami, ki jih želite nadaljevati.</li>
 <li><strong>Naslednje izberite iz vizije,</strong> ne iz zagona. Kaj zdaj zahteva »Biti v dobri formi in živeti zdravo«? Morda nekaj povsem drugega.</li>
 <li><strong>Iz vrste vzemite zaustavljen cilj,</strong> če kateri čaka.</li>
 </ul>
@@ -368,6 +369,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Opravljenih aktivnosti</strong> – delež opravljenih aktivnosti cilja.</li>
 <li><strong>Izvajanje rutin</strong> – kako redno izvajate rutine, povezane s ciljem.</li>
 </ul>
+<p><strong>Obdržati v razponu</strong> (»Vrsta cilja«) je za rezultate, ki potrebujejo vzdrževanje: težo, stanje na računu, mejo porabe. Vpišite »Najmanj«, »Največ« ali oboje. Cilj nato pokaže, kolikšen del časa ste bili v razponu, in opozori, ko je zadnja vrednost zunaj.</p>
 <p>Cilj je lahko <strong>del</strong> večjega cilja (podcilj), je lahko <strong>odvisen od</strong> drugega cilja in lahko <strong>služi</strong> vizijam. »Stanje« ga nastavi na Aktiven, Zaustavljen ali Dosežen; ko cilj doseže ciljno vrednost, vas aplikacija vpraša, ali ga označite kot doseženega. <strong>Kategorija</strong> (Zdravje, Finance …) vam omogoča, da cilje filtrirate z oznakami nad seznamom. Pridržite cilj ali ga kliknite z desno tipko za več: dodajte podcilj ali aktivnost zanj, prikažite ga na Zemljevidu ali Časovnici.</p>
 <p>Zapiski na koncu obrazca hranijo datirane opombe; pridržite kartico in izberite »Dodaj zapisek«, da hitro zapišete enega.</p>`,
     action: { do: 'add-goal', label: 'Dodaj cilj' },

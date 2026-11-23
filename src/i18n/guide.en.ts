@@ -35,6 +35,7 @@ export const guideEn = [
 <li><strong>Vision</strong> – a wished-for state without an end. Shared by all your plans.</li>
 <li><strong>Purpose</strong> – the one vision all your other visions and active goals lead to, once you have linked them that way.</li>
 <li><strong>Goal</strong> – a result with a deadline. <strong>Active</strong>, <strong>Paused</strong> or <strong>Achieved</strong>.</li>
+<li><strong>Keep goal</strong> – a goal about staying within a range instead of reaching a target.</li>
 <li><strong>Sub-goal</strong> – a smaller goal on the way to a bigger one.</li>
 <li><strong>Current state</strong> – something you measure. Either each new value replaces the last (weight), or the amounts <strong>add up</strong> (kilometres run).</li>
 <li><strong>Activity</strong> – a step. A <strong>one-time activity</strong>, a <strong>list</strong> (a checklist), a <strong>routine</strong> (repeats) or a <strong>routine list</strong> (a checklist that repeats).</li>
@@ -300,7 +301,7 @@ export const guideEn = [
     body: `<p>Mark it Achieved and stop for a moment before the next one. It is easy to skip this, and it is the part that makes the next goal easier.</p>
 <ul>
 <li><strong>Note what worked.</strong> Which step or routine made the difference? The app asks when you mark the goal Achieved. Two lines are enough.</li>
-<li><strong>Decide what stays.</strong> Many results need upkeep: the weight, the language, the savings. Keep one small routine and let the others end.</li>
+<li><strong>Decide what stays.</strong> Many results need upkeep: the weight, the language, the savings. Keep one small routine and let the others end. When you mark a measured goal Achieved, the app offers to set up a keep goal for the result, with the routines you choose to continue.</li>
 <li><strong>Choose what is next from the vision,</strong> not from the momentum. What does “To be fit and live healthily” ask for now? Perhaps something quite different.</li>
 <li><strong>Take a paused goal out of the queue,</strong> if one is waiting.</li>
 </ul>
@@ -368,6 +369,7 @@ export const guideEn = [
 <li><strong>Activities done</strong> – the share of the goal’s activities that are done.</li>
 <li><strong>Routines kept</strong> – how steadily you keep the routines linked to the goal.</li>
 </ul>
+<p><strong>Keep within a range</strong> (“Kind of goal”) is for results that need upkeep: a weight, a balance, a limit on spending. Give “At least”, “At most” or both. The goal then shows how much of the time you were in range and warns when the latest value is outside.</p>
 <p>A goal can be <strong>part of</strong> a bigger goal (a sub-goal), can <strong>depend on</strong> another goal, and can <strong>serve</strong> visions. “Status” sets it to Active, Paused or Achieved; when a goal reaches its target the app asks whether to mark it achieved. A <strong>category</strong> (Health, Finance…) lets you filter goals with the chips above the list. Long-press or right-click a goal for more: add a sub-goal, add an activity for it, show it on the Map or the Timeline.</p>
 <p>Notes at the end of the form keep dated remarks; long-press the card and choose “Add a note” to write one quickly.</p>`,
     action: { do: 'add-goal', label: 'Add a goal' },

@@ -84,6 +84,11 @@ export interface WithNotes {
 export type Period = 'day' | 'week' | 'month' | 'year';
 export type Scale = Period | 'total';
 
+// The range of a keep goal; one side may be open.
+export interface Keep {
+  min?: number;
+  max?: number;
+}
 export interface Goal extends Item, WithNotes {
   title: string;
   status: GoalStatus;
@@ -107,6 +112,8 @@ export interface Goal extends Item, WithNotes {
   // How a state that adds up counts toward it.
   period?: Scale;
   visions?: string[];
+  // A keep goal (feature 07): the range to stay in instead of a target. Present only on keep goals.
+  keep?: Keep;
   // When the "target reached" offer was made (cleared when the target is no longer reached).
   offeredAt?: ISODate;
   createdAt?: ISODate;

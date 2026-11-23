@@ -14,9 +14,10 @@ import {
   stateValue,
 } from './cumulative';
 import { daysUntil, today } from './dates';
+import { isKeep, keepNow, keepShare } from './keep';
 import { consistency, routineState } from './routines/keeping';
 import { isRoutine, type Routine } from './routines/schedule';
-import { PARENT_REL, type Activity, type Goal, type NodeState, type Period, type State } from './model';
+import { PARENT_REL, type Activity, type Goal, type Keep, type NodeState, type Period, type State } from './model';
 import type { Entity, ParentKind } from './relations';
 
 // The goal form's fields that can be unfinished, and the SMART letters they make up.
@@ -45,7 +46,11 @@ export function smartCheck(g: Goal): SmartCheck {
   if (!g.title || g.title.trim().length < 4) errs.title = t('err.title');
   if (!g.specific || g.specific.trim().length < 15) errs.specific = t('err.specific');
   // A goal measured by its activities or routines needs no metric or target of its own.
-  if (ownMetric(g)) {
+  if (isKeep(g)) {
+    if (!g.metric || !g.metric.trim()) errs.metric = t('err.metric');
+    if (g.keep.min === undefined && g.keep.max === undefined) errs.target = t('err.keepLimit');
+    else if (keepOrderBad(g)) errs.target = t('err.keepOrder');
+  } else if (ownMetric(g)) {
     if (!g.metric || !g.metric.trim()) errs.metric = t('err.metric');
     if (!isNum(g.target)) errs.target = t('err.target');
     else if (isNum(g.baseline) && Number(g.baseline) === Number(g.target)) errs.target = t('err.targetSame');
@@ -54,8 +59,10 @@ export function smartCheck(g: Goal): SmartCheck {
   const long = (s: string | undefined) => !!s && s.trim().length >= 10;
   if (!(long(g.obstacle) && long(g.ifThen)) && !long(g.achievable)) errs.obstacle = t('hint.obstacle');
   if (!long(g.relevant)) errs.relevant = t('err.relevant');
-  if (!g.deadline) errs.deadline = t('err.deadline');
-  else if (g.startDate && g.deadline <= g.startDate) errs.deadline = t('err.deadlineOrder');
+  // A keep goal's Until is optional: its start date makes the T.
+  if (isKeep(g) && !g.startDate) errs.deadline = t('err.startRequired');
+  else if (!g.deadline && !isKeep(g)) errs.deadline = t('err.deadline');
+  else if (g.deadline && g.startDate && g.deadline <= g.startDate) errs.deadline = t('err.deadlineOrder');
   return {
     S: !errs.title && !errs.specific,
     M: !errs.metric && !errs.target,
@@ -73,12 +80,18 @@ export const isSmart = (g: Goal): boolean => {
 export function goalErrors(g: Goal): SmartCheck['errs'] {
   const errs: SmartCheck['errs'] = {};
   if (g.deadline && g.startDate && g.deadline <= g.startDate) errs.deadline = t('err.deadlineOrder');
-  if (ownMetric(g) && isNum(g.target) && isNum(g.baseline) && Number(g.baseline) === Number(g.target))
+  // A keep goal without a range would be stored as no keep goal at all.
+  if (isKeep(g)) {
+    if (g.keep.min === undefined && g.keep.max === undefined) errs.target = t('err.keepLimit');
+    else if (keepOrderBad(g)) errs.target = t('err.keepOrder');
+  } else if (ownMetric(g) && isNum(g.target) && isNum(g.baseline) && Number(g.baseline) === Number(g.target))
     errs.target = t('err.targetSame');
   return errs;
 }
+const keepOrderBad = (g: Goal & { keep: Keep }) =>
+  g.keep.min !== undefined && g.keep.max !== undefined && g.keep.min >= g.keep.max;
 // Whether a goal has a percentage: one measured by a measurement needs a numeric target.
-export const hasPercent = (g: Goal): boolean => !ownMetric(g) || isNum(g.target);
+export const hasPercent = (g: Goal): boolean => isKeep(g) || !ownMetric(g) || isNum(g.target);
 
 // Latest numeric current-state linked via "measures" wins; otherwise the goal's own value.
 export function measuringState(g: Goal): State | null {
@@ -94,7 +107,8 @@ export function measuringState(g: Goal): State | null {
 // when a period starts, and a period still under way counts once it is past the last one (for
 // better or worse). When lower is better (spend less), nothing counts before entries reach back into a
 // complete period: the first period under way, or an empty one before it, would look well under target.
-export const lowerBetter = (g: Goal): boolean => Number(g.target) < (isNum(g.baseline) ? Number(g.baseline) : 0);
+export const lowerBetter = (g: Goal): boolean =>
+  !isKeep(g) && Number(g.target) < (isNum(g.baseline) ? Number(g.baseline) : 0);
 export const lastPeriodLogged = (s: State, period: Period): boolean =>
   entriesOf(s).some(e => e.date < calPeriod(period, today()).from);
 export function goalMeasure(s: State, g: Goal): number | null {
@@ -104,6 +118,10 @@ export function goalMeasure(s: State, g: Goal): number | null {
   return Math.max(stateTotal(s, period), lastPeriodTotal(s, period));
 }
 export function goalCurrent(g: Goal): number {
+  if (isKeep(g)) {
+    const now = keepNow(g);
+    return now.kind === 'none' ? 0 : now.value;
+  }
   if (byRoutines(g)) return Math.round(goalProgress(g));
   if (byActivities(g)) return countedActivities(g).filter(a => a.status === 'done').length;
   const st = measuringState(g),
@@ -114,6 +132,10 @@ export function goalCurrent(g: Goal): number {
 }
 export function goalProgress(g: Goal): number {
   if (g.status === 'achieved') return 100;
+  if (isKeep(g)) {
+    const share = keepShare(g);
+    return share ? (share.n / share.total) * 100 : 0;
+  }
   if (byRoutines(g)) {
     const kept = goalRoutines(g)
       .map(a => consistency(a, g.startDate))
@@ -137,7 +159,7 @@ export function metricProgress(g: Goal, current: number): number {
 // only a complete period counts: one strong Wednesday does not reach "30 km a week". Consistency
 // has no target to reach (it is 100 % after the first tick).
 export function goalReached(g: Goal): boolean {
-  if (g.status !== 'active' || byRoutines(g)) return false;
+  if (g.status !== 'active' || byRoutines(g) || isKeep(g)) return false;
   const st = ownMetric(g) ? measuringState(g) : null;
   if (isCumulative(st) && goalPeriod(g) !== 'total')
     return (
@@ -221,7 +243,8 @@ export function startDueActivities(): number {
 export function goalState(g: Goal): NodeState {
   if (g.status === 'achieved') return 'done';
   if (blockers(g, 'goal').length) return 'blocked';
-  if (g.deadline && daysUntil(g.deadline)! < 0) return 'late';
+  // A keep goal is late while out of range; its Until passing does not make it late.
+  if (isKeep(g) ? keepNow(g).kind === 'out' : g.deadline && daysUntil(g.deadline)! < 0) return 'late';
   if (g.status === 'paused') return 'todo';
   return (g.startDate && g.startDate <= today()) || goalProgress(g) > 0 ? 'doing' : 'todo';
 }

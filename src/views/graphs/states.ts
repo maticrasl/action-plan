@@ -23,6 +23,7 @@ import { areaFill, grCardHtml } from './plot';
 import { noDataCard } from './state-info';
 import { hasGraph, stateSeries } from '../../core/series';
 import { paceFacts, paceGoals, paceMarks } from './pace';
+import { bandSvg, bandYs, outOfBand, stateBands } from './band';
 
 /* ---------- Graphs (measurement history of each current state) ----------
    One line chart per current state: its measurements over time, a target line for every goal it
@@ -135,6 +136,7 @@ export function graphCard(s: State, width: number) {
     .map(r => db.goals.find(g => g.id === r.to))
     .filter((g): g is Goal => !!g && !byActivities(g) && isNum(g.target))
     .map(g => ({ goal: g, value: Number(g.target), end: g.deadline ? dayNum(g.deadline) : null }));
+  const bands = stateBands(s);
   const change = stateChange(s, points, targets);
   const needs = paceGoals(targets);
   // One measurement is no line yet: the pace drawn against it reads as a wrong pace.
@@ -149,8 +151,8 @@ export function graphCard(s: State, width: number) {
   if (x1 - x0 < 14) x1 = x0 + 14;
   const { W, zoom } = zoomedWidth(s.id, width, width, x1 - x0);
   const ticks = niceTicks(
-    Math.min(...points.map(p => p.value), ...targets.map(tg => tg.value)),
-    Math.max(...points.map(p => p.value), ...targets.map(tg => tg.value)),
+    Math.min(...points.map(p => p.value), ...targets.map(tg => tg.value), ...bandYs(bands)),
+    Math.max(...points.map(p => p.value), ...targets.map(tg => tg.value), ...bandYs(bands)),
   );
   const y0 = ticks[0],
     y1 = ticks[ticks.length - 1];
@@ -173,7 +175,7 @@ export function graphCard(s: State, width: number) {
     .join('');
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${px(p.day).toFixed(1)},${py(p.value).toFixed(1)}`).join(' ');
   const area = areaFill(s.id, `${path} L${px(last.day).toFixed(1)},${py(y0)} L${px(x0).toFixed(1)},${py(y0)} Z`);
-  const dots = points.map(p => grDot(px(p.day), py(p.value), p === last, !!p.note)).join('');
+  const dots = points.map(p => grDot(px(p.day), py(p.value), p === last, !!p.note, outOfBand(bands, p.value))).join('');
 
   // Direct labels: each target at the start of its line, the latest value next to its dot – in the first
   // spot (above, below, right, left) that stays inside the plot and clear of the target labels.
@@ -241,7 +243,7 @@ export function graphCard(s: State, width: number) {
     paceFacts(needs, unit),
     `<div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(t('gr.aria', { name: s.title }))}">
       <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
-        ${grid}${todayLine}${area}${targetLines}${paceMarks(paces, points, px, py, x0, x1)}<path class="gr-line" d="${path}"/>${dots}${targetLabels}${valueLabel}${xAxis}
+        ${grid}${bandSvg(bands, py, W)}${todayLine}${area}${targetLines}${paceMarks(paces, points, px, py, x0, x1)}<path class="gr-line" d="${path}"/>${dots}${targetLabels}${valueLabel}${xAxis}
         <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
         <circle class="gr-focus" r="6" hidden/>
       </svg>${W > width ? yAxisPinned(ticks, py) : ''}
@@ -296,8 +298,8 @@ export const gridLines = (ticks: number[], py: Axis, W: number) =>
     )
     .join('') + yLabels(ticks, py);
 // A point's dot on a line; the latest is larger, and one with a note has a ring.
-export const grDot = (x: number, y: number, last: boolean, note = false) =>
-  `<circle class="gr-dot${last ? ' last' : ''}" cx="${x}" cy="${y}" r="${last ? 5 : 3.5}"/>${note ? `<circle class="gr-note-ring" cx="${x}" cy="${y}" r="${last ? 8 : 6.5}"/>` : ''}`;
+export const grDot = (x: number, y: number, last: boolean, note = false, out = false) =>
+  `<circle class="gr-dot${last ? ' last' : ''}${out ? ' out' : ''}" cx="${x}" cy="${y}" r="${last ? 5 : 3.5}"/>${note ? `<circle class="gr-note-ring" cx="${x}" cy="${y}" r="${last ? 8 : 6.5}"/>` : ''}`;
 export const yLabels = (ticks: number[], py: Axis) =>
   ticks
     .map(v => `<text class="gr-axis" x="${GR.L - 8}" y="${py(v) + 4}" text-anchor="end">${esc(fmtNum(v))}</text>`)
@@ -362,7 +364,11 @@ export function renderGraphs() {
   );
   Object.keys(grCharts).forEach(k => delete grCharts[k]);
   grDrawW = width;
-  const cards = [...withData.map(item => graphFor(item, width)), ...kept.map(item => graphFor(item, width)), ...without.map(noDataCard)];
+  const cards = [
+    ...withData.map(item => graphFor(item, width)),
+    ...kept.map(item => graphFor(item, width)),
+    ...without.map(noDataCard),
+  ];
   return `
     <div class="toolbar">${categorySelect()}${goalSelect('graphs', ui.graphGoal)}${searchBox()}</div>
     ${cards.length ? `<div class="gr-list">${cards.join('')}</div>` : `<div class="empty">${t('gr.none')}</div>`}`;

@@ -275,3 +275,33 @@
   gap: 6px;
   align-items: center;
 }
+/* A keep goal's last ten periods (07): filled in range, hollow out, dotted not measured. */
+.keep-share {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.keep-marks {
+  display: inline-flex;
+  gap: 3px;
+}
+.km {
+  width: 7px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1.5px solid var(--ok);
+}
+.km-in {
+  background: var(--ok);
+}
+.km-out {
+  border-color: var(--bad);
+}
+.km-unknown {
+  border: 1.5px dotted var(--ink-3);
+}
+.keep-out strong {
+  color: var(--bad);
+}

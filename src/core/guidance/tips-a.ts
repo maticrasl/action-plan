@@ -9,6 +9,8 @@ import { stateSeries } from '../series';
 import { isCumulative } from '../cumulative';
 import { relsTo } from '../relations';
 import { isNum } from '../util';
+import { isKeep, keepMarks } from '../keep';
+import { tp } from '../../i18n/index';
 import * as L from './tip-limits';
 import {
   activeGoals,
@@ -137,9 +139,29 @@ export const TIPS_A: Tip[] = [
     action: 'editItem',
     hits: ({ db, today }) =>
       activeGoals(db)
-        .filter(g => g.deadline && g.deadline < today && hasPercent(g))
+        .filter(g => g.deadline && g.deadline < today && hasPercent(g) && !isKeep(g))
         .sort((x, y) => x.deadline!.localeCompare(y.deadline!))
         .map(g => named(g, { pct: pct(goalProgress(g)) })),
+  },
+  {
+    id: 'keep-out',
+    cls: 'A',
+    view: 'goals',
+    cooldown: L.COOLDOWN_A,
+    guide: 'reached',
+    action: 'editItem',
+    hits: ({ db }) =>
+      activeGoals(db)
+        .filter(isKeep)
+        .map(g => ({ g, m: keepMarks(g) }))
+        .map(({ g, m }) => {
+          const marks = m?.marks || [];
+          let n = 0;
+          while (n < marks.length && marks[marks.length - 1 - n] === 'out') n++;
+          return { g, n, unit: m?.unit || 'week' };
+        })
+        .filter(x => x.n >= L.KEEP_OUT_PERIODS)
+        .map(x => named(x.g, { n: x.n, unit: tp(`f.unit.${x.unit}`, x.n) })),
   },
   {
     id: 'stuck-step',
@@ -192,7 +214,7 @@ export const TIPS_A: Tip[] = [
     hits: ({ db, today }) => {
       const goals = activeGoals(db);
       if (goals.length < L.TOO_MANY_GOALS) return [];
-      const late = goals.some(g => g.deadline && g.deadline < today);
+      const late = goals.some(g => g.deadline && g.deadline < today && !isKeep(g));
       const avg = goals.reduce((s, g) => s + goalProgress(g), 0) / goals.length;
       return late || avg < L.TOO_MANY_GOALS_PROGRESS ? [{ vars: { n: goals.length } }] : [];
     },
