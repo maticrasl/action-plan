@@ -474,7 +474,7 @@ export const sl: Language = {
       '»{name}« je pri {pct} %, do roka pa je še {days} dni. Tri poštene možnosti: ta teden mu naredite prostor, premaknite datum ali znižajte cilj.',
     'tip.goal-behind.btn': 'Odpri cilj',
     'tip.goal-past.text':
-      '»{name}« je šel čez rok pri {pct} %. To je {pct} % dlje, kot ste začeli. Dajte mu nov datum ali ga zaustavite, če zdaj ni pravi čas.',
+      '»{name}« je šel čez rok pri {pct} %. Dajte mu nov datum ali ga zaustavite, če zdaj ni pravi čas.',
     'tip.goal-past.btn': 'Odpri cilj',
     'tip.stuck-step.text':
       '»{name}« je v teku že {n} tednov. Korak, ki se noče končati, je pogosto več korakov v enem. Razdelite ga ali ga spremenite v seznam.',
