@@ -43,6 +43,7 @@ import {
   toggleTlFold,
 } from '../timeline/rows';
 import { openStateValue } from '../../ui/state-value';
+import { openNotePop } from '../../ui/note-popover';
 import { hasGraph } from '../../core/series';
 import { deleteItem } from '../../ui/undo';
 import { exportStateCsv, openCsvImport } from '../../ui/csv-dialog';
@@ -79,6 +80,7 @@ export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption
   // Highlighting links and showing one goal only mean something where links are drawn.
   const options: (MenuOption | '-')[] = [
     opt('edit', t('btn.edit')),
+    opt('note', t('ctx.addNote')),
     ...(selectsInView() ? [opt('highlight', t('ctx.highlight'))] : []),
   ];
   if (kind === 'goal') {
@@ -304,9 +306,10 @@ export function runCtxAction(act: string, id: string) {
   }
   if (verb === 'checkin') return toggleCheckin(id, today());
   // The popup opens by what the menu was opened on: a card, a box on the map, or a graph's heading (not the tall graph).
-  if (verb === 'value') {
-    const at = $(`[data-ctx-item="${id}"], [data-map-node="${id}"]`);
-    return openStateValue(id, at?.querySelector(':scope.gr-card > .card-head') || at || viewEl);
+  if (verb === 'value' || verb === 'note') {
+    const at = $(`[data-ctx-item="${id}"], [data-map-node="${id}"], [data-tl-node="${id}"]`);
+    const anchor = at?.querySelector<HTMLElement>(':scope.gr-card > .card-head') || at || viewEl;
+    return (verb === 'note' ? openNotePop : openStateValue)(id, anchor);
   }
   if (verb === 'csv-import') return openCsvImport(id);
   if (verb === 'csv-export') return exportStateCsv(id);

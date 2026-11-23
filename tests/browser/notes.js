@@ -102,6 +102,92 @@ suite(async () => {
     eq(g.notes[0].text.length, 2000, 'kept whole');
   });
 
+  await step('item menu: Add a note opens a popover; Enter adds with a toast, Esc adds nothing', () => {
+    fresh('Notes');
+    const a = mk('activity', { title: 'Stretch', startDate: d(-5), dueDate: d(5) });
+    save();
+    setView('activities');
+    openCtxMenu(a.id, 10, 10);
+    $('#ctxMenu [data-ctx="note"]').click();
+    const pop = () => $('.amount-pop');
+    assert(pop(), 'the popover');
+    eq(document.activeElement, pop().querySelector('[data-amount-note]'), 'the text has focus');
+    pop().querySelector('[data-amount-note]').value = 'thrown away';
+    pop().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert(!pop() && !a.notes, 'Esc: gone, nothing added');
+    openCtxMenu(a.id, 10, 10);
+    $('#ctxMenu [data-ctx="note"]').click();
+    pop().querySelector('[data-amount-date]').value = dateInput(d(2));
+    pop().querySelector('[data-amount-note]').value = 'Later';
+    pop().requestSubmit();
+    assert(pop() && pop().querySelector('.amount-err').textContent, 'a future day is refused');
+    pop().querySelector('[data-amount-date]').value = dateInput(d(-1));
+    pop().querySelector('[data-amount-note]').value = '  Hamstrings tight  ';
+    hideToast();
+    pop().requestSubmit();
+    eq([a.notes.length, a.notes[0].text, a.notes[0].date], [1, 'Hamstrings tight', d(-1)], 'added at once');
+    eq($('#toast').textContent, t('toast.noteAdded'), 'the toast');
+    eq($(`#view [data-notes="${a.id}"]`).textContent.trim(), '✎ 1', 'the card shows it');
+  });
+
+  await step('measurements: a value with a note shows in the table, as a ring and in the tooltip', () => {
+    fresh('Notes');
+    const s = mk('state', { title: 'Weight', unit: 'kg', value: '', history: [] });
+    save();
+    setView('graphs');
+    openStateValue(s.id, $('#view'));
+    const pop = $('.amount-pop');
+    eq(pop.querySelector('[data-amount-note]').maxLength, 200, 'at most 200');
+    pop.querySelector('[data-amount="0"]').value = '80';
+    pop.querySelector('[data-amount-note]').value = ' after two weeks off ';
+    pop.requestSubmit();
+    eq(s.history[0].note, 'after two weeks off', 'stored, trimmed');
+    openForm('state', s.id);
+    $('#f-value').value = '79';
+    $('#f-date').value = dateInput(d(-3));
+    $('#f-valueNote').value = 'new <scale>';
+    $('#f-title').value = 'Body weight';
+    submitForm();
+    eq(
+      s.history.map(h => h.note),
+      ['new <scale>', 'after two weeks off'],
+      'from the form too; a new title keeps both',
+    );
+    render();
+    const card = $(`#view [data-gr="${s.id}"]`);
+    eq(card.querySelectorAll('.gr-note-ring').length, 2, 'a ring on each point with a note');
+    eq(
+      [...card.querySelectorAll('.measure-note')].map(n => n.textContent),
+      ['after two weeks off', 'new <scale>'],
+      'in the table, newest first, as typed',
+    );
+    const plot = card.querySelector('.gr-plot');
+    showGraphPoint(plot, 0);
+    eq(plot.querySelector('.gr-tip-note')?.textContent, 'new <scale>', 'in the tooltip');
+    hideGraphPoint(plot);
+    openForm('state', s.id);
+    submitForm();
+    eq(s.history.length, 2, 'saving without a value adds nothing');
+  });
+
+  await step('amounts: the amount popover takes a note too', () => {
+    fresh('Notes');
+    const s = mk('state', { title: 'Distance', unit: 'km', value: '', history: [], cumulative: true, entries: [] });
+    save();
+    setView('graphs');
+    openStateValue(s.id, $('#view'));
+    const pop = $('.amount-pop');
+    pop.querySelector('[data-amount="0"]').value = '5';
+    pop.querySelector('[data-amount-note]').value = 'rain';
+    pop.requestSubmit();
+    eq(s.entries[0].note, 'rain', 'stored');
+    render();
+    assert(
+      [...$$('#view .measure-note')].some(n => n.textContent === 'rain'),
+      'shown under the graph',
+    );
+  });
+
   await step('search finds an item by a word in its note', () => {
     fresh('Notes');
     mk('goal', { title: 'Run', notes: [{ id: 'n1', date: d(-1), text: 'flamingo', at: '' }] });

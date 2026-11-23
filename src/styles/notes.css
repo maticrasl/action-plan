@@ -97,3 +97,15 @@
   white-space: pre-line;
   color: var(--ink-2);
 }
+.gr-note-ring {
+  fill: none;
+  stroke: var(--rel-state);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.gr-tip-note {
+  max-width: 220px;
+  white-space: pre-line;
+  font-style: italic;
+  color: var(--ink-2);
+}

@@ -10,6 +10,10 @@ import { withUnit } from './text';
 import { fmtNum, isNum } from '../core/util';
 import { $ } from './dom';
 import { fmtRel } from '../core/dates';
+import { VALUE_NOTE_MAX } from '../core/notes';
+
+// The optional line under a new value or amount (feature 15).
+const valueNote = () => ({ label: t('f.valueNote'), placeholder: t('f.valueNotePh'), max: VALUE_NOTE_MAX });
 
 export function openStateAmount(id: string, anchor: HTMLElement) {
   const s = db.states.find(x => x.id === id);
@@ -21,10 +25,12 @@ export function openStateAmount(id: string, anchor: HTMLElement) {
       fields: [{ label: t('cu.amount'), unit: s.unit }],
       withDate: true,
       okLabel: t('cu.add'),
+      note: valueNote(),
     },
-    ([n], date) => {
+    ([n], date, note) => {
       if (n === null) return anchor.focus();
-      addEntry(s, date, n);
+      const e = addEntry(s, date, n);
+      if (note) e.note = note;
       save();
       render();
       toast(t('cu.added', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));
@@ -50,10 +56,11 @@ export function openStateValue(id: string, anchor: HTMLElement) {
       fields: [{ label: t('f.value'), unit: s.unit }],
       withDate: true,
       okLabel: t('btn.save'),
+      note: valueNote(),
     },
-    ([n], date) => {
+    ([n], date, note) => {
       if (n === null) return;
-      recordMeasurement(s, date, String(n));
+      recordMeasurement(s, date, String(n), note);
       save();
       render();
       toast(t('sv.saved', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));

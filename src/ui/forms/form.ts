@@ -325,8 +325,11 @@ export function submitForm() {
     // An empty value keeps the latest measurement; a value for a date that has one replaces it.
     // A state that adds up takes it as one more amount.
     if (isNum(v.value)) {
-      if (isCumulative(s)) addEntry(s, v.date || today(), v.value);
-      else recordMeasurement(s, v.date || today(), v.value);
+      const note = (v.valueNote || '').trim().slice(0, 200);
+      if (isCumulative(s)) {
+        const e = addEntry(s, v.date || today(), v.value);
+        if (note) e.note = note;
+      } else recordMeasurement(s, v.date || today(), v.value, note);
     }
     return finish(t(existing ? 'toast.stateUpdated' : 'toast.stateAdded'));
   }
