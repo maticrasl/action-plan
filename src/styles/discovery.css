@@ -1,0 +1,320 @@
+/* ---------- Find your visions (feature 01): the quietest screen; one question, room to write ---------- */
+/* Solid paper, not glass: nothing behind should show through the writing. */
+.modal.disc {
+  width: min(720px, calc(100vw - 32px));
+  background: var(--surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.modal.disc.running {
+  height: min(760px, calc(100dvh - 48px));
+}
+.disc form {
+  height: 100%;
+}
+.disc .modal-body {
+  flex: 1;
+  gap: 20px;
+  padding-top: 4px;
+}
+.disc-close {
+  font-size: 13.5px;
+}
+
+/* The chooser */
+.disc-lead {
+  color: var(--ink-2);
+  max-width: 56ch;
+}
+.disc-exercises {
+  display: flex;
+  flex-direction: column;
+}
+.disc-ex {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 14px 4px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.disc-ex:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.disc-ex-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+.disc-ex-about {
+  color: var(--ink-2);
+}
+.disc-ex:hover:not(:disabled) .disc-ex-title {
+  color: var(--goal);
+}
+.disc-ex:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.disc-h {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin-top: 6px;
+}
+.disc-refl {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.disc-refl li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.disc-open {
+  flex: 1;
+  display: flex;
+  gap: 14px;
+  text-align: left;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.disc-date {
+  min-width: 4.5em;
+  color: var(--ink-3);
+}
+
+/* A step */
+.disc-dots {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.disc-dots li {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+.disc-dots li.past {
+  background: var(--ink-3);
+}
+.disc-dots li.now {
+  background: var(--ink);
+}
+.disc-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+.disc-q {
+  font-size: 19px;
+  line-height: 1.55;
+  max-width: 34em;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.disc-text {
+  width: 100%;
+  min-height: 9em;
+  flex: 1;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.disc-said {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.disc-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.disc-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10em;
+  gap: 8px;
+}
+.disc-better {
+  display: grid;
+  gap: 4px;
+}
+.disc-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.disc-choice {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 2px;
+  overflow-wrap: anywhere;
+}
+.disc-made {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 17px;
+}
+.disc-pick {
+  font-size: 21px;
+}
+
+/* Rating: ten small buttons per area */
+.disc-step > .btn {
+  align-self: flex-start;
+}
+.disc-rates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.disc-rate {
+  display: grid;
+  grid-template-columns: minmax(6em, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+.disc-rate-name {
+  overflow-wrap: anywhere;
+}
+.disc-scale {
+  display: flex;
+  gap: 3px;
+}
+.disc-scale button,
+.disc-skip {
+  min-width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.disc-skip {
+  padding: 0 8px;
+}
+.disc-scale button[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+.disc-skip[aria-pressed='true'] {
+  color: var(--ink-3);
+  border-style: dashed;
+}
+
+@media (max-width: 720px) {
+  .modal.disc {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100dvh;
+  }
+  .modal.disc.running {
+    height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+  }
+  .modal.disc form {
+    max-height: 100dvh;
+  }
+  .disc .modal-body,
+  .disc .modal-head,
+  .disc .modal-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .disc-q {
+    font-size: 17.5px;
+  }
+  .disc-line {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .disc-lines {
+    gap: 22px;
+  }
+  .disc-rate {
+    grid-template-columns: 1fr auto;
+  }
+  .disc-scale {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .disc-scale button {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+  }
+  .disc .modal-foot {
+    flex-wrap: wrap;
+  }
+}
+/* Phone landscape: the question beside the field, so the keyboard leaves both in view. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .modal.disc,
+  .modal.disc.running {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+  .modal.disc form {
+    max-height: 100dvh;
+  }
+  .disc-step:has(> .disc-text) {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
+  }
+  .disc-step:has(> .disc-text) > :not(.disc-text) {
+    grid-column: 1;
+  }
+  .disc-step > .disc-text {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    min-height: 6em;
+    height: 100%;
+  }
+  .disc-q {
+    font-size: 16px;
+  }
+}
+
+/* Where it starts: beside the Tree · Areas switch, and in the Visions view's empty state */
+.vis-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.vis-top .vis-mode {
+  margin: 0;
+}
+.vis-empty-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.area-rated {
+  color: var(--ink-3);
+}

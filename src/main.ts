@@ -40,6 +40,7 @@ import { listenTrash } from './ui/trash-dialog';
 import { listenRestore } from './ui/restore-dialog';
 import { listenReplan } from './ui/replan';
 import { listenClosing } from './ui/closing';
+import { listenDiscovery } from './ui/discovery';
 import { listenCsv } from './ui/csv-dialog';
 import { listenToday } from './views/focus';
 
@@ -92,6 +93,7 @@ listenTrash();
 listenRestore();
 listenReplan();
 listenClosing();
+listenDiscovery();
 listenCsv();
 listenUndo();
 

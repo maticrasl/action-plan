@@ -112,15 +112,17 @@ export function visionCard(v: Vision, depth: number, ps: PurposeState, reached: 
 
 export function renderVisions() {
   const note = `<p class="meta vis-note">${t('vis.shared')}</p>`;
+  const find = (cls: string) => `<button type="button" class="btn ${cls}" data-disc>${esc(t('disc.btn'))}</button>`;
   if (!visions.list.length)
     return `<div class="empty"><h3>${t('vis.emptyTitle')}</h3><div>${t('vis.emptyText')}</div>
-    <button class="btn primary" data-new="vision"><span aria-hidden="true">+</span> ${t('add.vision')}</button></div>${note}`;
+    <div class="vis-empty-acts">${find('primary')}<button class="btn" data-new="vision"><span aria-hidden="true">+</span> ${t('add.vision')}</button></div></div>${note}`;
   const mode = visionsMode();
-  if (mode === 'areas') return `${note}${modeSwitch(mode)}${renderAreas()}`;
+  const top = `<div class="vis-top">${modeSwitch(mode)}${find('ghost')}</div>`;
+  if (mode === 'areas') return `${note}${top}${renderAreas()}`;
   const ps = purposeState(),
     reached = reachedVisions(),
     unserved = new Map(unservedVisions(allPlansData(), today()).map(u => [u.vision.id, u]));
-  return `${note}${modeSwitch(mode)}${purposeStatus(ps)}<div class="vision-tree">${visionOrder()
+  return `${note}${top}${purposeStatus(ps)}<div class="vision-tree">${visionOrder()
     .map(({ v, depth }) => visionCard(v, depth, ps, reached, unserved.get(v.id)))
     .join('')}</div>`;
 }

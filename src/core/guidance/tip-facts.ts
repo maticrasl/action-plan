@@ -53,7 +53,7 @@ export type TipAction =
   | 'addRoutine'
   | 'addState'
   | 'addSubgoal'
-  | 'addVision'
+  | 'findVisions'
   | 'recordValue'
   | 'review'
   | 'map'

@@ -80,9 +80,11 @@ export const guideEn = [
 <li><strong>Start from a good day.</strong> Describe an ordinary Tuesday three years from now, if things went well. Where do you wake up, what do you do, who is there? What in that day is missing today?</li>
 <li><strong>Start from what you already do.</strong> Something you return to without being told is a clue. What would “a step further” be?</li>
 </ul>
+<p>The app can walk you through two of these: “A good ordinary day” and “Where things stand”.</p>
 <p>Then pick <strong>one</strong>. Not the most important one: the one you would be glad to work on this month. A first goal that takes four to eight weeks teaches you more than a perfect five-year goal.</p>
 <p>If nothing comes, open the templates and read a few. You do not have to use one; seeing how others have put a wish into steps often shakes loose your own.</p>`,
     action: { do: 'templates', label: 'Start from a template' },
+    more: { do: 'find-visions', label: 'Find your visions' },
     related: ['vision-how', 'smart-fit', 'too-many'],
   },
   {
@@ -90,12 +92,12 @@ export const guideEn = [
     group: 'stuck',
     title: 'I don’t know what my visions are',
     body: `<p>A vision is not a goal. You never finish “To be a present father” or “To live without money worries”; you only move closer or further. That is what makes it useful: when a goal is reached, or fails, the vision is still there and tells you what the next goal is.</p>
-<p>To find one, take a goal you already have and ask “what for?”. Then ask again of the answer. “Run 10 km” – what for? “To be fit.” – what for? “To have energy for my kids when I’m fifty.” When the answer stops changing, you have a vision. Write it as if it were already true, in your own words, not in words that sound good.</p>
+<p>The app can help you find one. <strong>Find your visions</strong> offers three short writing exercises: “A good ordinary day”, “What for?” (start from a goal you have and ask what it is for, until the answer stops changing) and “Where things stand”. Each ends with a vision in your own words, written as if it were already true.</p>
 <p>Signs that a vision is really yours: you would want it even if nobody knew; it would still matter if you never got praise for it.</p>
 <p>It can help to write the other side too: where you would be in a few years if you let this slide. The vision form has a field for it. Keep it honest and short, and keep it where it is: goals work better when they say what you are moving toward, so set them from the vision, not from the fear.</p>
 <p>You do not need visions to use the app. They help most on the days when a goal feels like a chore, because they remind you why you set it.</p>
 <p>When every vision leads to one vision at the top and every active goal serves it, the app marks that one as your <strong>Purpose</strong>. Treat it as a tidy picture of what you are working for now, not as a final answer; people’s purposes change.</p>`,
-    action: { do: 'add-vision', label: 'Add a vision' },
+    action: { do: 'find-visions', label: 'Find your visions' },
     related: ['what-goal', 'h-visions', 'let-go'],
   },
   {
@@ -540,6 +542,7 @@ export const guideEn = [
     title: 'Where my plans are kept',
     body: `<p>Your plans are kept in this browser, on this device. Action Plan has no server of its own: nothing you write is sent to the people who make the app, and they cannot see, read or restore your plans.</p>
 <p>If you log in with Google, a copy is also kept in your own Google Drive, in a hidden app folder. See [[p-google]].</p>
+<p>Your reflections and reviews are kept with your plans: on this device and, with sync on, in the same hidden Drive folder.</p>
 <p>The app does not use advertising or tracking, and nothing about how you use it leaves your device. When you report a problem, the app fills in its version, your browser and window size, the language, and whether sync is on. Nothing from your plans.</p>
 <p>When the app loads, its own files (the typeface among them) come from the site that hosts it. When you open Settings, it also loads Google’s sign-in script from Google, so that logging in works in one step. In both cases the company sees that your device asked for a file, as with any web page. It does not receive anything from your plans.</p>`,
     related: ['p-google', 'p-backup', 'p-device'],

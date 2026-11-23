@@ -11,6 +11,7 @@ export interface Seen {
   views?: Record<string, true>; // views opened then, in a plan that is not a sample
   menu?: true; // a card's menu was opened
   templates?: true; // the templates were opened
+  discovery?: true; // Find your visions was opened (feature 01); nothing reads it yet
   [other: string]: unknown; // facts a newer version wrote, kept as they are
 }
 
@@ -22,6 +23,7 @@ export function getSeen(): Seen {
   if (typeof seen.exported !== 'boolean') delete seen.exported;
   if (seen.menu !== true) delete seen.menu;
   if (seen.templates !== true) delete seen.templates;
+  if (seen.discovery !== true) delete seen.discovery;
   if (Array.isArray(seen.days)) seen.days = seen.days.filter(d => typeof d === 'string');
   else delete seen.days;
   if (!seen.views || typeof seen.views !== 'object' || Array.isArray(seen.views)) delete seen.views;

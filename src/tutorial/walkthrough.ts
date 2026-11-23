@@ -27,6 +27,7 @@ import { openSettings } from '../ui/settings';
 import { openExport } from '../ui/plan-io';
 import { installHintKey, installPrompt, isInstalled } from '../ui/install';
 import { requestRender } from '../ui/render';
+import { openDiscovery } from '../ui/discovery';
 import { toast } from '../ui/toast';
 import { openGuide } from '../views/guide';
 import { firstVisible, spotlight } from './spotlight';
@@ -126,7 +127,8 @@ function taskBody(x: TaskView) {
         ).join(' · ')}</span>`
       : '';
   return `<div class="walk-body" id="walk-body-${id}">
-    <p>${esc(text)} ${views}</p>
+    <p>${esc(text)} ${views}</p>${id === 'vision' ? `
+    <p><button type="button" class="guide-ref" data-walk="find">${esc(t('disc.walk'))}</button></p>` : ''}
     <div class="walk-acts">${taskButtons(id)}${btn(`skip:${id}`, t('walk.skip'), 'btn small ghost')}
       <button type="button" class="guide-ref" data-guide-open="${ARTICLE[id]}">${esc(t('walk.more'))}</button></div>
   </div>`;
@@ -249,6 +251,7 @@ export function walkAction(act: string) {
   const walk = getWalk();
   if (what === 'do') return WALK_DO[arg]();
   if (what === 'export') return openExport();
+  if (what === 'find') return openDiscovery();
   if (what === 'show') walkUi.shown = arg;
   else if (what === 'stage') walkUi.stage = walkUi.stage === arg ? '' : arg;
   else if (what === 'skip') setWalk({ ...walk, skipped: [...walk.skipped, arg] });

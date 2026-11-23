@@ -167,7 +167,7 @@ export const TIPS_B: Tip[] = [
     view: 'goals',
     cooldown: L.COOLDOWN_B,
     guide: 'vision-how',
-    action: 'addVision',
+    action: 'findVisions',
     hits: ({ db, visions, today }) => {
       const first = firstItemDay(db, visions);
       return activeGoals(db).length >= L.NO_VISION_GOALS &&

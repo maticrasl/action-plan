@@ -80,9 +80,11 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Začnite pri dobrem dnevu.</strong> Opišite navaden torek čez tri leta, če bo šlo dobro. Kje se zbudite, kaj počnete, kdo je z vami? Kaj od tega dneva danes manjka?</li>
 <li><strong>Začnite pri tem, kar že počnete.</strong> Nekaj, k čemur se vračate, ne da bi vam kdo rekel, je namig. Kaj bi bil »korak naprej«?</li>
 </ul>
+<p>Skozi dve od teh vas lahko vodi aplikacija: »Dober običajen dan« in »Kje so stvari«.</p>
 <p>Potem izberite <strong>enega</strong>. Ne najpomembnejšega, temveč tistega, s katerim bi se ta mesec radi ukvarjali. Prvi cilj, ki traja od štiri do osem tednov, vas nauči več kot popoln petletni cilj.</p>
 <p>Če se nič ne utrne, odprite predloge in jih nekaj preberite. Ni vam treba uporabiti nobene; ko vidite, kako so drugi željo razdelili na korake, se pogosto zbudi tudi vaša.</p>`,
     action: { do: 'templates', label: 'Začni s predlogo' },
+    more: { do: 'find-visions', label: 'Poiščite svoje vizije' },
     related: ['vision-how', 'smart-fit', 'too-many'],
   },
   {
@@ -90,12 +92,12 @@ export const guideSl: readonly Article<ArticleId>[] = [
     group: 'stuck',
     title: 'Ne vem, kakšne so moje vizije',
     body: `<p>Vizija ni cilj. »Biti prisoten oče« ali »Živeti brez skrbi za denar« nikoli ne zaključite; le približujete se ali oddaljujete. Prav zato je koristna: ko je cilj dosežen ali spodleti, vizija ostane in vam pove, kateri cilj je naslednji.</p>
-<p>Da jo najdete, vzemite cilj, ki ga že imate, in se vprašajte »čemu?«. Potem vprašajte isto še za odgovor. »Preteči 10 km« – čemu? »Da bom v formi.« – čemu? »Da mi bo pri petdesetih ostalo dovolj energije za otroke.« Ko se odgovor ne spreminja več, imate vizijo. Zapišite jo, kot da je že resnična, s svojimi besedami, ne z besedami, ki lepo zvenijo.</p>
+<p>Aplikacija vam jo lahko pomaga najti. <strong>Poiščite svoje vizije</strong> ponuja tri kratke vaje pisanja: »Dober običajen dan«, »Čemu?« (začnete pri cilju, ki ga imate, in sprašujete, čemu služi, dokler se odgovor ne neha spreminjati) in »Kje so stvari«. Vsaka se konča z vizijo z vašimi besedami, zapisano, kot da je že resnična.</p>
 <p>Znaki, da je vizija res vaša: želeli bi si jo, tudi če nihče ne bi vedel zanjo; pomembna bi bila, tudi če zanjo nikoli ne bi dobili pohvale.</p>
 <p>Pomaga lahko, če zapišete tudi drugo stran: kje bi bili čez nekaj let, če bi to zanemarili. Obrazec vizije ima polje zanjo. Naj bo zapis iskren in kratek, in naj ostane, kjer je: cilji delujejo bolje, ko povedo, kam se premikate, zato jih postavite iz vizije, ne iz strahu.</p>
 <p>Za uporabo aplikacije vizij ne potrebujete. Najbolj pomagajo na dneve, ko je cilj le še obveznost, ker vas spomnijo, zakaj ste si ga postavili.</p>
 <p>Ko vse vizije vodijo k eni viziji na vrhu in ji služijo vsi aktivni cilji, jo aplikacija označi kot vaš <strong>Smisel</strong>. Vzemite ga kot urejeno sliko tega, za kar delate zdaj, ne kot končni odgovor; ljudem se smisel spreminja.</p>`,
-    action: { do: 'add-vision', label: 'Dodaj vizijo' },
+    action: { do: 'find-visions', label: 'Poiščite svoje vizije' },
     related: ['what-goal', 'h-visions', 'let-go'],
   },
   {
@@ -540,6 +542,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Kje so shranjeni moji načrti',
     body: `<p>Vaši načrti so shranjeni v tem brskalniku, na tej napravi. Akcijski načrt nima svojega strežnika: nič, kar napišete, ni poslano tistim, ki aplikacijo izdelujejo, in vaših načrtov ne morejo videti, brati ali obnoviti.</p>
 <p>Če se prijavite z Googlom, je kopija shranjena tudi v vašem Google Drivu, v skriti mapi aplikacije. Glejte [[p-google]].</p>
+<p>Vaši razmisleki in pregledi so shranjeni skupaj z načrti: na tej napravi in, ob vklopljeni sinhronizaciji, v isti skriti mapi na Drivu.</p>
 <p>Aplikacija ne uporablja oglasov ali sledenja in nič o tem, kako jo uporabljate, ne zapusti vaše naprave. Ko prijavite težavo, aplikacija izpolni svojo različico, vaš brskalnik in velikost okna, jezik ter ali je sinhronizacija vklopljena. Nič iz vaših načrtov.</p>
 <p>Ko se aplikacija naloži, njene datoteke (med njimi pisava) pridejo s strani, ki jo gosti. Ko odprete Nastavitve, z Googla naloži še Googlov skript za prijavo, da prijava deluje v enem koraku. V obeh primerih podjetje vidi, da je vaša naprava zahtevala datoteko, kot pri vsaki spletni strani. Iz vaših načrtov ne dobi ničesar.</p>`,
     related: ['p-google', 'p-backup', 'p-device'],
