@@ -85,7 +85,7 @@ export const TIPS_B: Tip[] = [
   {
     id: 'stale-state',
     cls: 'B',
-    view: 'states',
+    view: 'graphs',
     cooldown: L.COOLDOWN_B,
     guide: 'h-states',
     action: 'recordValue',
@@ -211,10 +211,10 @@ export const TIPS_B: Tip[] = [
   {
     id: 'month',
     cls: 'B',
-    view: 'states',
+    view: 'graphs',
     cooldown: 0,
     guide: 'h-states',
-    action: 'states',
+    action: 'graphs',
     hits: ({ db, today, prevDay }) => {
       const from = calPeriod('month', today).from;
       if (prevDay && prevDay >= from) return [];

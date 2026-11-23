@@ -155,7 +155,7 @@ suite(async () => {
     assert(!$(`.card.routine[data-open="${ended.id}"]`)?.querySelector('.rt-items'), 'ended: no items');
     // Every view draws it.
     const before = __errors.length;
-    for (const v of ['dashboard', 'goals', 'activities', 'states', 'map', 'timeline', 'graphs']) {
+    for (const v of ['dashboard', 'goals', 'activities', 'map', 'timeline', 'graphs']) {
       setView(v);
       render();
     }

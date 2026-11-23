@@ -137,15 +137,6 @@ describe('class D', () => {
     expect(ids('try-timeline', plan({ goals: dated(4) }), { seen: { views: { timeline: true } } })).toEqual([]);
   });
 
-  test('try-graphs: a state with 3 measurements, named; 2: no', () => {
-    const h = hits('try-graphs', plan({ goals: items(1), states: [state('s', ['1', '2', '3'])] }));
-    expect(h).toEqual([{ vars: { name: 's' }, target: 's' }]);
-    expect(hits('try-graphs', plan({ goals: items(1), states: [state('s', ['1', '2'])] }))).toEqual([]);
-    expect(
-      hits('try-graphs', plan({ goals: items(1), states: [state('s', ['1', '2', '3'])] }), { seen: { views: { graphs: true } } }),
-    ).toEqual([]);
-  });
-
   describe('make-up', () => {
     // Monday, Wednesday and Friday since 2 November.
     const mwf = (more: Partial<Activity> = {}) =>

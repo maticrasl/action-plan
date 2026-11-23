@@ -6,7 +6,6 @@ export type ViewName =
   | 'dashboard'
   | 'goals'
   | 'activities'
-  | 'states'
   | 'visions'
   | 'map'
   | 'timeline'

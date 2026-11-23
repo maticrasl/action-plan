@@ -7,7 +7,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, serveTestBuild } from './lib/chrome.mjs';
 
-const VIEWS = ['dashboard', 'goals', 'activities', 'states', 'visions', 'map', 'timeline', 'graphs', 'review', 'guide', 'settings'];
+const VIEWS = ['dashboard', 'goals', 'activities', 'visions', 'map', 'timeline', 'graphs', 'review', 'guide', 'settings'];
 const args = process.argv.slice(2);
 const view = args.find(a => !a.startsWith('--'));
 if (!VIEWS.includes(view)) {

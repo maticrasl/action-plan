@@ -29,7 +29,7 @@ import { GraphPoint, GraphTarget, TipRow } from './states';
 import type { Entry, Goal, ISODate, Period, Scale, State } from '../../core/model';
 import type { Routine, Span } from '../../core/routines/schedule';
 import type { TextKey } from '../../i18n/index';
-import { areaFill, barBox, grCardHtml, grLegend, plotSvg, targetKey } from './plot';
+import { areaFill, barBox, grCardHtml, plotSvg } from './plot';
 import { paceFacts, paceGoals, paceMarks, paceTips } from './pace';
 
 /* ---------- Graphs of amounts that add up, and of routines ----------
@@ -127,10 +127,6 @@ export function periodGraphCard(s: State | Routine, width: number) {
     change = `<span class="tag gr-delta ${cls}"><span aria-hidden="true">${delta > 0 ? '▲' : delta < 0 ? '▼' : '→'}</span> ${esc(withUnit(signed(delta), unit))}</span>
       <span class="meta">${esc(t(('cu.vsPrev.' + scale) as TextKey, { period: periodLabel(scale, last.from, last.to) }))}</span>`;
   }
-  const legend = grLegend([
-    ['key-bar', t((rt ? 'cu.legendRoutine' : 'cu.legend.' + scale) as TextKey)],
-    ...(targets.length ? [targetKey(targets)] : []),
-  ]);
   // A routine's check-ins are ticked on the routine, so its table lists only the periods.
   const rows = points
     .slice()
@@ -155,7 +151,7 @@ export function periodGraphCard(s: State | Routine, width: number) {
   const value = rt
     ? t(('cu.now.' + scale) as TextKey, { value: amount(points.find(p => p.now)?.value || 0) })
     : scaleText(s, scale);
-  return grCardHtml(s, `<strong class="gr-value">${esc(value)}</strong>${change}`, legend, plot, table, scaleSwitch(s));
+  return grCardHtml(s, `<strong class="gr-value">${esc(value)}</strong>${change}`, '', plot, table, scaleSwitch(s));
 }
 
 // A step line of the running total; the tag shows what was added in the last 30 days.
@@ -220,13 +216,6 @@ export function totalGraphCard(s: State | Routine, width: number) {
   const recent = sumOf(entries.filter(e => e.date > dayStr(todayN - 30) && e.date <= today()));
   const total = rt ? t('cu.inTotal', { value: amount(entries.length) }) : totalText(s);
   const stats = `<strong class="gr-value">${esc(total)}</strong><span class="tag gr-delta ${recent > 0 ? 'ok' : ''}">${esc(withUnit(signed(recent), unit))}</span><span class="meta">${t('cu.last30')}</span>`;
-  const legend =
-    paceFacts(paces, unit) +
-    grLegend([
-      ['key-measure', t('cu.legend.total')],
-      ...(targets.length ? [targetKey(targets)] : []),
-      ...(paces.length ? [['key-pace', t('pace.legend')] as TipRow] : []),
-    ]);
   let running = sumOf(entries);
   // A routine's table lists the days it was done, with the count so far.
   const rows = entries
@@ -243,7 +232,7 @@ export function totalGraphCard(s: State | Routine, width: number) {
   const table = rt
     ? `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.total')}</th></tr></thead><tbody>${rows}</tbody></table>`
     : `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.amount')}</th><th>${t('cu.col.total')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
-  return grCardHtml(s, stats, legend, plot, table, scaleSwitch(s));
+  return grCardHtml(s, stats, paceFacts(paces, unit), plot, table, scaleSwitch(s));
 }
 
 // Check-ins in each of a routine's periods, against what the period asks for (met: filled in).
@@ -300,10 +289,6 @@ export function routineGraphCard(a: Routine, width: number) {
   );
   const streak = routineStreak(a);
   const stats = `<strong class="gr-value">${esc(periodText(a))}</strong>${streak.n ? `<span class="tag ok">${esc(streakText(streak))}</span>` : ''}`;
-  const legend = grLegend([
-    ['key-bar', t('cu.legendRoutine')],
-    ['key-goal', t('cu.legendAsks')],
-  ]);
   const rows = points
     .slice()
     .reverse()
@@ -313,7 +298,7 @@ export function routineGraphCard(a: Routine, width: number) {
     )
     .join('');
   const table = `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.checkins')}</th><th>${t('cu.col.met')}</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return grCardHtml(a, stats, legend, plot, table, scaleSwitch(a));
+  return grCardHtml(a, stats, '', plot, table, scaleSwitch(a));
 }
 
 // The graph of a state that adds up, or of a routine, shows another scale; it is kept on the item.

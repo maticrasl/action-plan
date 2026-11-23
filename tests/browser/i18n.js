@@ -71,13 +71,13 @@ suite(async () => {
       tags(due.id).includes('Tomorrow') && tags(done.id).includes('Yesterday'),
       'deadline tags: ' + tags(due.id) + ' / ' + tags(done.id),
     );
-    setView('states');
+    setView('graphs');
     assert(
-      $(`.card.state[data-open="${s.id}"]`).textContent.includes(t('states.asOf', { date: 'today' })),
+      $(`[data-gr="${s.id}"]`).textContent.includes(t('states.asOf', { date: 'today' })),
       'As of today',
     );
     changeLanguage('sl');
-    assert($(`.card.state[data-open="${s.id}"]`).textContent.includes('Izmerjeno danes'), 'Izmerjeno danes');
+    assert($(`[data-gr="${s.id}"]`).textContent.includes('Izmerjeno danes'), 'Izmerjeno danes');
     eq(
       [-1, 0, 1].map(n => fmtRel(addDays(now, n), true)),
       ['Včeraj', 'Danes', 'Jutri'],

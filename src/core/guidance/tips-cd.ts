@@ -111,19 +111,6 @@ const CLASS_D: Tip[] = (
       },
     },
     {
-      id: 'try-graphs',
-      view: 'states',
-      guide: 'h-graphs',
-      action: 'graphs',
-      hits: ({ db, seen }) =>
-        seen?.views?.graphs
-          ? []
-          : db.states
-              .filter(s => (isCumulative(s) ? s.entries || [] : s.history || []).length >= L.TRY_GRAPHS_VALUES)
-              .slice(0, 1)
-              .map(about),
-    },
-    {
       id: 'make-up',
       view: 'activities',
       guide: 'h-routines',
@@ -136,7 +123,7 @@ const CLASS_D: Tip[] = (
     },
     {
       id: 'adds-up',
-      view: 'states',
+      view: 'graphs',
       guide: 'h-states',
       action: 'editItem',
       hits: ({ db }) => {

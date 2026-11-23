@@ -116,7 +116,7 @@ export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption
   }
   // "Show in…" opens in place onto the other views, each with its name and icon from the navigation
   // (the full name is the accessible name and tooltip); with only one, it is offered directly.
-  const views = SHOW_IN[kind].filter(v => v !== ui.view && (v !== 'graphs' || hasGraph(item as State | Activity)));
+  const views = SHOW_IN[kind].filter(v => v !== ui.view && (v !== 'graphs' || kind === 'state' || hasGraph(item as Activity)));
   const showOpt = (v: ViewName) =>
     opt('show:' + v, t(('nav.' + v) as TextKey), {
       icon: v,
@@ -150,13 +150,12 @@ function openFoldMenu(x: number, y: number) {
   showCtxMenu('', '', '', tlFoldOptions(''), x, y);
 }
 
-// The views each kind of item appears in (graphs: only states with measurements or amounts, and
-// routines with check-ins).
+// The views each kind of item appears in (graphs: every state, and routines with check-ins).
 export const SHOW_IN: Record<ItemKind, ViewName[]> = {
   vision: ['visions', 'map'],
   goal: ['goals', 'map', 'timeline'],
   activity: ['activities', 'map', 'timeline', 'graphs'],
-  state: ['states', 'map', 'graphs'],
+  state: ['graphs', 'map'],
 };
 
 // Switches to another view with the item selected there (map, timeline) or its card brought into

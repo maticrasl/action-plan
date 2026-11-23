@@ -2,7 +2,6 @@
 import { renderDashboard } from './dashboard';
 import { renderGoals } from './goals';
 import { flowCards, renderActivities } from './activities';
-import { renderStates } from './states';
 import { renderVisions } from './visions';
 import { startDueActivities } from '../core/progress';
 import { offerReached } from '../ui/reached';
@@ -31,7 +30,6 @@ export const VIEWS: Record<ViewName, View> = {
   dashboard: { add: 'goal', render: renderDashboard },
   goals: { add: 'goal', render: renderGoals },
   activities: { add: 'activity', render: renderActivities },
-  states: { add: 'state', render: renderStates },
   visions: { add: 'vision', render: renderVisions },
   map: { add: 'item', render: renderMap },
   timeline: { add: 'item', render: renderTimeline },

@@ -236,7 +236,7 @@ suite(async () => {
     const glowing = () =>
       [...document.querySelectorAll('#view .vglow')].map(el => el.dataset.ctxItem || el.dataset.tlNode);
     const per = {};
-    for (const v of ['dashboard', 'goals', 'activities', 'states', 'timeline', 'graphs']) {
+    for (const v of ['dashboard', 'goals', 'activities', 'timeline', 'graphs']) {
       setView(v);
       per[v] = glowing();
       assert(
@@ -247,7 +247,6 @@ suite(async () => {
     assert(
       per.goals.includes(g.id) &&
         per.activities.includes(a.id) &&
-        per.states.includes(s.id) &&
         per.timeline.includes(g.id) &&
         per.graphs.includes(s.id) &&
         per.dashboard.includes(a.id),

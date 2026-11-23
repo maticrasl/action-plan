@@ -4,7 +4,7 @@ import { ui } from '../../store/state';
 import { ctxMenu } from '../../ui/menu';
 import { modal } from '../../ui/forms/form';
 import { requestRender as render } from '../../ui/render';
-import { emptyState, esc, fitText, hideDoneToggle, itemCount, neighbourhood } from '../../ui/dom';
+import { emptyState, esc, fitText, hideDoneToggle, itemCount } from '../../ui/dom';
 import { db, visions } from '../../core/state';
 import { t } from '../../i18n/index';
 import { categorySelect, goalSelect, scopeFor } from '../filters';
@@ -20,7 +20,7 @@ import {
 } from '../../core/visions';
 import { REL_TYPES, VISION_RELS } from '../../core/model';
 import { purposeState, reachedVisions } from '../../store/visions';
-import { findEntity, relLabel } from '../../core/relations';
+import { chainOf, findEntity, relLabel } from '../../core/relations';
 import { fmtRel } from '../../core/dates';
 import { isRoutine, periodUnit } from '../../core/routines/schedule';
 import { periodProgress, routineStreak } from '../../core/routines/keeping';
@@ -104,14 +104,15 @@ export function renderMap() {
   // Either an item or a relationship line can be selected.
   const relSel = rels.find(r => r.id === ui.mapRel) || null;
   const sel = !relSel && ui.mapSelected && visible.has(ui.mapSelected) ? ui.mapSelected : null;
-  const nearSel = relSel ? new Set([relSel.from, relSel.to]) : neighbourhood(sel, rels);
+  const chain = chainOf(sel, rels);
+  const nearSel = relSel ? new Set([relSel.from, relSel.to]) : chain.nodes;
 
   // Each line sits in a group with a wide invisible twin, so it is easy to hit; a click selects it,
   // a second click (or Enter) edits the relationship and Delete removes it.
   const edges = chains
     .map(c => {
       const def: RelSpec = REL_TYPES[c.r.type as RelType] || VISION_RELS[c.r.type as VisionRel];
-      const dim = (sel && !(c.r.from === sel || c.r.to === sel)) || (relSel && c.r.id !== relSel.id) ? 'dim' : '';
+      const dim = (sel && !chain.links.has(c.r.id)) || (relSel && c.r.id !== relSel.id) ? 'dim' : '';
       const label = relText(c.r);
       return `<g class="edge-g ${dim} ${c.r.id === relSel?.id ? 'sel' : ''}${glows(c.r) ? ' vglow' : ''}" data-rel-edit="${c.r.id}" tabindex="0" role="button" aria-pressed="${c.r.id === relSel?.id}" aria-label="${esc(t('map.relLabel', { rel: label }))}">
       <path class="edge" d="${c.d}" style="stroke:${mapLineColour(def.color)};stroke-width:${def.width || 1.1}" ${def.dash ? 'stroke-dasharray="4 3"' : ''} marker-end="url(#arrow-${c.r.type})"></path>

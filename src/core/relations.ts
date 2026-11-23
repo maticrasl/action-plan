@@ -169,3 +169,31 @@ export function possibleTypes(from: string, to: string, ignoreId?: string): RelT
     db.relations = all;
   }
 }
+
+// The selected item's whole chain: what leads to it and what it leads to, directly or through others, and the
+// lines along it. A dependency points at what must come first, so it is walked the other way.
+export function chainOf(sel: string | null, rels: { id: string; from: string; to: string; type: string }[]) {
+  const nodes = new Set<string>(),
+    links = new Set<string>();
+  if (!sel) return { nodes, links };
+  const flow = rels.map(r => (r.type === 'depends' ? { id: r.id, from: r.to, to: r.from } : r));
+  const walk = (start: string, up: boolean) => {
+    const seen = new Set([start]),
+      todo = [start];
+    while (todo.length) {
+      const id = todo.pop()!;
+      for (const r of flow) {
+        const [here, next] = up ? [r.to, r.from] : [r.from, r.to];
+        if (here !== id) continue;
+        links.add(r.id);
+        if (seen.has(next)) continue;
+        seen.add(next);
+        todo.push(next);
+      }
+    }
+    seen.forEach(n => nodes.add(n));
+  };
+  walk(sel, true);
+  walk(sel, false);
+  return { nodes, links };
+}

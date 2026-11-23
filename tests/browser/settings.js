@@ -191,7 +191,6 @@ suite(async () => {
       dashboard: '.card, .list .row',
       goals: '.card',
       activities: '.card',
-      states: '.card',
       timeline: '.tl-bar, .tl-milestone',
       graphs: '.card',
     };

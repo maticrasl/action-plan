@@ -27,7 +27,7 @@ import { removeMeasurement } from './graphs/states';
 import { removeEntry, setGraphScale } from './graphs/sums';
 import { fillWork } from './graphs/working';
 import { foldAllTl, toggleTlFold } from './timeline/rows';
-import { openStateAmount, openStateValue } from '../ui/state-value';
+import { openStateValue } from '../ui/state-value';
 import { openReplan } from '../ui/replan';
 import { logClick, setLogScope } from './review';
 
@@ -103,7 +103,7 @@ viewEl.addEventListener('click', e => {
     return (el as HTMLButtonElement).disabled || shiftRoutineWeek(el.dataset.rtWeek, Number(el.dataset.dir));
   if (el.dataset.checkin) return toggleCheckin(el.dataset.checkin, el.dataset.date!, el);
   if (el.dataset.liTick) return tickListItem(el.dataset.liTick, el.dataset.li!, el.dataset.date);
-  if (el.dataset.addAmount) return openStateAmount(el.dataset.addAmount, el);
+  if (el.dataset.addAmount) return openStateValue(el.dataset.addAmount, el);
   if (el.dataset.delMeasure) return removeMeasurement(el.dataset.delMeasure, el.dataset.date!);
   if (el.dataset.delEntry) return removeEntry(el.dataset.delEntry, el.dataset.entry!);
   if (el.dataset.grScale) return setGraphScale(el.dataset.state!, el.dataset.grScale);

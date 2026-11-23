@@ -21,8 +21,6 @@ suite(async () => {
     );
     eq($(`[data-gr="${km.id}"] .gr-scale`).getAttribute('aria-label'), 'Prikaži vsote po', 'its label');
     eq($(`[data-gr="${km.id}"] .gr-value`).textContent, '5 km ta teden', 'this week');
-    setView('states');
-    eq($(`.card.state[data-open="${km.id}"] .cu-total`).textContent, '5 km skupaj', 'card total');
     openForm('goal', g.id);
     eq(
       [$('[data-field="period"] label').textContent, $('#f-period').selectedOptions[0].textContent],
@@ -87,9 +85,9 @@ suite(async () => {
     'cumulative: a state card with both sums keeps its title on one line and everything inside the card',
     async () => {
       loadSample();
-      setView('states');
+      setView('graphs');
       const km = db.states.find(s => s.cumulative && s.scale === 'week');
-      const html = $(`.card.state[data-open="${km.id}"]`).outerHTML,
+      const html = $(`[data-gr="${km.id}"]`).outerHTML,
         out = [];
       // A phone, and the narrowest column of the desktop grid (320 px).
       for (const [name, width, pad] of [
@@ -114,11 +112,11 @@ suite(async () => {
         const doc = frame.contentDocument,
           card = doc.querySelector('.card').getBoundingClientRect();
         const title = doc.querySelector('.card-head h3'),
-          head = doc.querySelector('.cu-head').getBoundingClientRect();
+          head = doc.querySelector('.gr-add').getBoundingClientRect();
         const lineH = parseFloat(frame.contentWindow.getComputedStyle(title).lineHeight) || 24;
         assert(
           head.right <= card.right + 1 && head.left >= card.left - 1,
-          `${name}: the sums and + inside the card (${Math.round(head.right)} > ${Math.round(card.right)})`,
+          `${name}: + inside the card (${Math.round(head.right)} > ${Math.round(card.right)})`,
         );
         assert(
           title.getBoundingClientRect().height < lineH * 1.5,
@@ -206,7 +204,6 @@ suite(async () => {
       'cu.counts',
       'cu.countsHint',
       ...['total', ...PERIODS].map(k => 'cu.count.' + k),
-      'cu.legend.total',
     ];
     const gone = [
       'cu.opt.day',
@@ -217,6 +214,7 @@ suite(async () => {
       'cu.total.week',
       'cu.total.none',
       'cu.legend.none',
+      'cu.legend.total',
     ];
     added.forEach(k =>
       assert(
@@ -229,9 +227,8 @@ suite(async () => {
     const en = I18N.en.strings,
       sl = I18N.sl.strings;
     assert(
-      !/per day, week, month or year, or in total/.test(en['help.view.states']) &&
-        !/po dnevih, tednih, mesecih ali letih ali skupno:/.test(sl['help.view.states']),
-      'help.view.states',
+      !('help.view.states' in en) && !('help.view.states' in sl),
+      'help.view.states gone with its view',
     );
     assert(
       en['help.view.graphs'].includes('switch above the graph') &&

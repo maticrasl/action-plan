@@ -35,7 +35,7 @@ suite(async () => {
     const facts = c.querySelector('.gr-pace-facts').textContent;
     assert(facts.includes('Needs 4.2 km a week from here'), facts);
     assert(facts.includes(`At this rate: ${fmtDate(d(60))} (deadline ${fmtDate(d(100))})`), facts);
-    assert(c.querySelector('.gr-legend').textContent.includes('Pace to target'), 'legend');
+    assert(!c.querySelector('.gr-legend'), 'no legend: the lines speak for themselves');
     const y1 = pace[0].getAttribute('y1');
     g.deadline = d(150);
     save();
@@ -112,7 +112,6 @@ suite(async () => {
     setView('graphs');
     const c = card(one.s.id);
     assert(!c.querySelector('.gr-pace, .gr-trend'), 'no pace line, no trend');
-    assert(!c.querySelector('.gr-legend').textContent.includes('Pace to target'), 'no pace in the legend');
     const facts = c.querySelector('.gr-pace-facts').textContent;
     assert(!facts.includes('At this rate'), facts);
     setView('goals');

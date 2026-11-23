@@ -331,8 +331,8 @@ export const guideEn = [
       },
       {
         text: '<strong>Measure.</strong> Record a fresh value for each current state that has changed.',
-        go: 'view-states',
-        label: 'Current states',
+        go: 'view-graphs',
+        label: 'Graphs',
       },
       {
         text: '<strong>Look back.</strong> What moved this week? What helped? One sentence in your head is enough.',
@@ -373,8 +373,8 @@ export const guideEn = [
     id: 'h-states',
     group: 'how',
     title: 'Current states',
-    body: `<p>A current state is something you measure. Say what the value means and how you take it, so that every measurement is taken the same way. Tap its card to record a new value: one per day; a second value on the same day replaces the first. Decimals work with a dot or a comma.</p>
-<p>A state can <strong>add up</strong> instead (“Adds up: Yes”): kilometres run, money put aside. Then each entry is an amount, several a day are fine, and the card shows the total. A goal measured by such a state chooses how it counts: in total, or per day, week, month or year.</p>
+    body: `<p>A current state is something you measure. Say what the value means and how you take it, so that every measurement is taken the same way. Its card is in Graphs; tap + on it to record a new value: one per day; a second value on the same day replaces the first. Decimals work with a dot or a comma.</p>
+<p>A state can <strong>add up</strong> instead (“Adds up: Yes”): kilometres run, money put aside. Then each entry is an amount, several a day are fine, the card shows the total, and + adds an amount. A goal measured by such a state chooses how it counts: in total, or per day, week, month or year.</p>
 <p>Link the state to a goal (“Describes the current state of goal(s)”) and the goal’s progress follows it. A wrong value is deleted in Graphs, in the table under the state’s graph, or in the state’s form under the history.</p>
 <p>Values you already keep in a spreadsheet can be brought in: in the state’s menu (right-click or long-press its card or graph) or its form, “Import from CSV…” reads a file with a date and a value on each line. “Export as CSV” takes them out again.</p>`,
     action: { do: 'add-state', label: 'Add a current state' },
@@ -424,7 +424,7 @@ export const guideEn = [
     id: 'h-map',
     group: 'how',
     title: 'Map',
-    body: `<p>The Map draws every item and link: visions and goals at the top, activities in the middle, current states at the bottom. Tap a box or a line to select it and light up what it connects to. Double-click or press Enter to edit, Delete to remove.</p>
+    body: `<p>The Map draws every item and link: visions and goals at the top, activities in the middle, current states at the bottom. Tap a line to select it and light up its two ends. Tap a box to light up its whole chain: everything that leads to it and everything it leads to, step by step. Double-click or press Enter to edit, Delete to remove.</p>
 <p><strong>To link two items</strong> with a mouse, drag from one box onto the other. On a touch screen, long-press a box, choose “Link to…” and tap the other box. The app offers only the relationships that fit those two.</p>
 <p>Tap a band’s name (Visions, Goals, Activities, Current states) to fold it away; tap again to open it. Your folds are kept on every device. Drag the background to move, pinch or Ctrl + scroll to zoom. Right-click an empty spot to add something there.</p>`,
     action: { do: 'view-map', label: 'Open the Map' },
@@ -441,7 +441,7 @@ export const guideEn = [
     id: 'h-graphs',
     group: 'how',
     title: 'Graphs',
-    body: `<p>Each current state with measurements has a graph: your values over time, a dashed line for the goal’s target, and the change since the first measurement. A state that adds up shows sums per day, week, month or year, or the running total; choose above the graph. Each routine has a graph of how often you did it per period.</p>
+    body: `<p>Graphs is where you keep your current states. Each has a card: + records a new value (or adds an amount), right-click or long-press edits it, and the goals it measures are listed on it. A state with measurements also has a graph: your values over time, a dashed line for the goal’s target, and the change since the first measurement. A state that adds up shows sums per day, week, month or year, or the running total; choose above the graph. Each routine has a graph of how often you did it per period.</p>
 <p>For a goal with a target and a deadline, the graph also draws the pace: a thin dashed line from your start to the target. Above it you see how much is needed each week from here, and when you would arrive at the present rate.</p>
 <p>Hover or tap to read a value; pinch or Ctrl + scroll to zoom into a stretch of time. The table under a graph lists the measurements; delete a wrong one there.</p>
 <p>Under the graph of a state that a routine improves, and under the routine’s own graph, “Is it working?” compares how the state moved in the weeks you kept the routine and in the weeks you did not. It shows a pattern, not a proof.</p>`,

@@ -161,7 +161,7 @@ suite(async () => {
       'timeline: goal cleared, done shown',
     );
     // Graphs: a state measuring a Work goal while a Home goal is picked.
-    setView('states');
+    setView('map');
     reset({ category: 'Home', graphGoal: home.id });
     show(s.id, 'graphs');
     assert(
@@ -169,7 +169,7 @@ suite(async () => {
       'graphs: goal cleared, category of its goal',
     );
     // The search is cleared on the way.
-    setView('states');
+    setView('graphs');
     ui.search = 'nothing like it';
     render();
     reset();

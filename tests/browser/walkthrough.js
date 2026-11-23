@@ -87,7 +87,7 @@ suite(async () => {
     for (const [task, view] of [
       ['firstDone', 'activities'],
       ['tick', 'dashboard|activities'], // the Overview when it lists the routine, else Activities
-      ['measure', 'states'],
+      ['measure', 'graphs'],
     ]) {
       setView('dashboard');
       WALK_DO[task]();

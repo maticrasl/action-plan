@@ -274,8 +274,8 @@ suite(async () => {
     fresh('Cumulative card');
     const s = mk('state', { title: 'Saved', unit: '€', cumulative: true, entries: [] });
     save();
-    setView('states');
-    assert($(`.card.state[data-open="${s.id}"]`).textContent.includes(t('cu.noEntries')), 'nothing added yet');
+    setView('graphs');
+    assert($(`[data-gr="${s.id}"]`).textContent.includes(t('cu.noEntries')), 'nothing added yet');
     $(`[data-add-amount="${s.id}"]`).click();
     assert(
       !modal.open && $('.amount-pop [data-amount-date]').value === dateInput(today()),
@@ -293,9 +293,9 @@ suite(async () => {
       'added',
     );
     assert($('#toast').textContent === t('cu.added', { value: '120 €', name: 'Saved' }), $('#toast').textContent);
-    const card = $(`.card.state[data-open="${s.id}"]`);
+    const card = $(`[data-gr="${s.id}"]`);
     assert(
-      card.querySelector('.cu-total').textContent === '120 € in total' &&
+      card.querySelector('.gr-value').textContent === '120 € in total' &&
         document.activeElement === $(`[data-add-amount="${s.id}"]`),
       'total on the card, focus back on +',
     );
@@ -307,7 +307,7 @@ suite(async () => {
     document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     assert(!$('.amount-pop'), 'click elsewhere closes');
     deletePlan(plans.current);
-    return card.querySelector('.cu-total').textContent;
+    return card.querySelector('.gr-value').textContent;
   });
   await step('cumulative: the card shows the total, and this period’s sum when the graph shows periods', () => {
     fresh('Cumulative scale card');
@@ -319,18 +319,14 @@ suite(async () => {
       entries: [entry(addDays(calPeriod('week', today()).from, -1), 12)],
     });
     save();
-    setView('states');
-    const card = () => $(`.card.state[data-open="${s.id}"]`);
-    eq(
-      [card().querySelector('.cu-total').textContent, card().querySelector('.cu-now').textContent],
-      ['12 km in total', '0 km this week'],
-      'total, and nothing yet this week',
-    );
+    setView('graphs');
+    const card = () => $(`[data-gr="${s.id}"]`);
+    eq(card().querySelector('.gr-value').textContent, '0 km this week', 'nothing yet this week');
     eq(scaleText(s, 'week'), '0 km this week', 'scaleText');
     s.scale = 'total';
     render();
-    assert(!card().querySelector('.cu-now'), 'in total: just the total');
-    const text = card().querySelector('.cu-total').textContent;
+    const text = card().querySelector('.gr-value').textContent;
+    eq(text, '12 km in total', 'in total: the total');
     deletePlan(plans.current);
     return text;
   });

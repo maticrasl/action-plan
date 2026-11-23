@@ -20,7 +20,7 @@ export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] =
   { sel: '[data-category-select]', key: 'categories' },
   { sel: '.card.goal .smart', key: 'smart' },
   { sel: '.trail-ends', key: 'trail', where: 'beforeend' },
-  { sel: '.card.state .tag.state:not(.cu-total)', key: 'stateValue' },
+  { sel: '.gr-card:not(:has(.gr-scale)) .gr-value', key: 'stateValue' },
   { sel: '.cu-add', key: 'addAmount' },
   { sel: '.check', key: 'check' },
   { sel: '.rt-items-head .label', key: 'routineList', where: 'beforeend' },
@@ -31,7 +31,7 @@ export const HELP_TIPS: { sel: string; key: TipKey; where?: InsertPosition }[] =
   { sel: '[data-log-scope]', key: 'logScope' },
   { sel: '[data-replan]', key: 'replan' },
   { sel: '.gr-delta', key: 'grChange' },
-  { sel: '.gr-legend', key: 'grLegend', where: 'beforeend' },
+  { sel: '.gr-plot', key: 'grLegend', where: 'beforebegin' },
   { sel: '.map-legend', key: 'status', where: 'beforeend' },
 ];
 

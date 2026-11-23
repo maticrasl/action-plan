@@ -331,8 +331,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
       },
       {
         text: '<strong>Izmerite.</strong> Vpišite novo vrednost za vsako trenutno stanje, ki se je spremenilo.',
-        go: 'view-states',
-        label: 'Trenutna stanja',
+        go: 'view-graphs',
+        label: 'Grafi',
       },
       {
         text: '<strong>Poglejte nazaj.</strong> Kaj se je ta teden premaknilo? Kaj je pomagalo? En stavek v mislih zadošča.',
@@ -373,8 +373,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-states',
     group: 'how',
     title: 'Trenutna stanja',
-    body: `<p>Trenutno stanje je nekaj, kar merite. Zapišite, kaj vrednost pomeni in kako jo merite, da je vsaka meritev opravljena enako. Tapnite njegovo kartico, da vpišete novo vrednost: eno na dan; druga vrednost istega dne nadomesti prvo. Decimalke delujejo s piko ali z vejico.</p>
-<p>Stanje se lahko namesto tega <strong>sešteva</strong> (»Se sešteva: Da«): pretečeni kilometri, privarčevan denar. Takrat je vsak vnos količina, več na dan jih je v redu, kartica pa kaže vsoto. Cilj, ki ga meri tako stanje, izbere, kako šteje: skupno ali na dan, teden, mesec ali leto.</p>
+    body: `<p>Trenutno stanje je nekaj, kar merite. Zapišite, kaj vrednost pomeni in kako jo merite, da je vsaka meritev opravljena enako. Njegova kartica je v Grafih; tapnite + na njej, da vpišete novo vrednost: eno na dan; druga vrednost istega dne nadomesti prvo. Decimalke delujejo s piko ali z vejico.</p>
+<p>Stanje se lahko namesto tega <strong>sešteva</strong> (»Se sešteva: Da«): pretečeni kilometri, privarčevan denar. Takrat je vsak vnos količina, več na dan jih je v redu, kartica kaže vsoto, + pa doda količino. Cilj, ki ga meri tako stanje, izbere, kako šteje: skupno ali na dan, teden, mesec ali leto.</p>
 <p>Stanje povežite s ciljem (»Opisuje trenutno stanje ciljev«) in napredek cilja mu sledi. Napačno vrednost izbrišete v Grafih, v tabeli pod grafom stanja, ali v obrazcu stanja pod zgodovino.</p>
 <p>Vrednosti, ki jih že vodite v preglednici, lahko prenesete sem: v meniju stanja (desni klik ali pridržanje na kartici ali grafu) ali v njegovem obrazcu »Uvozi iz CSV …« prebere datoteko z datumom in vrednostjo v vsaki vrstici. »Izvozi kot CSV« jih spet prenese ven.</p>`,
     action: { do: 'add-state', label: 'Dodaj trenutno stanje' },
@@ -424,7 +424,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-map',
     group: 'how',
     title: 'Zemljevid',
-    body: `<p>Zemljevid nariše vse elemente in povezave: vizije in cilje na vrhu, aktivnosti na sredini, trenutna stanja spodaj. Tapnite okvir ali črto, da ga izberete in osvetlite, s čim je povezan. Dvokliknite ali pritisnite Enter za urejanje, Delete za odstranitev.</p>
+    body: `<p>Zemljevid nariše vse elemente in povezave: vizije in cilje na vrhu, aktivnosti na sredini, trenutna stanja spodaj. Tapnite črto, da jo izberete in osvetlite njena konca. Tapnite okvir, da osvetlite njegovo celo verigo: vse, kar vodi do njega, in vse, do česar vodi on, korak za korakom. Dvokliknite ali pritisnite Enter za urejanje, Delete za odstranitev.</p>
 <p><strong>Da povežete dva elementa</strong>, z miško povlecite z enega okvirja na drugega. Na zaslonu na dotik pridržite okvir, izberite »Poveži z …« in tapnite drugi okvir. Aplikacija ponudi le povezave, ki ustrezajo tema dvema.</p>
 <p>Tapnite ime pasu (Vizije, Cilji, Aktivnosti, Trenutna stanja), da ga strnete; ponoven tap ga razširi. Strnjeni pasovi ostanejo enaki na vseh napravah. Ozadje povlecite za premik, za povečavo uporabite dva prsta ali Ctrl + kolešček. Z desnim klikom na prazno mesto tja nekaj dodate.</p>`,
     action: { do: 'view-map', label: 'Odpri Zemljevid' },
@@ -441,7 +441,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-graphs',
     group: 'how',
     title: 'Grafi',
-    body: `<p>Vsako trenutno stanje z meritvami ima graf: vaše vrednosti skozi čas, črtkano črto za ciljno vrednost cilja in spremembo od prve meritve. Stanje, ki se sešteva, kaže vsote po dnevih, tednih, mesecih ali letih ali skupno vsoto; izberete nad grafom. Vsaka rutina ima graf, kako pogosto ste jo izvedli v posameznem obdobju.</p>
+    body: `<p>V Grafih imate svoja trenutna stanja. Vsako ima kartico: + vpiše novo vrednost (ali doda količino), desni klik ali dolg pritisk jo uredi, na njej pa so našteti cilji, ki jih meri. Stanje z meritvami ima tudi graf: vaše vrednosti skozi čas, črtkano črto za ciljno vrednost cilja in spremembo od prve meritve. Stanje, ki se sešteva, kaže vsote po dnevih, tednih, mesecih ali letih ali skupno vsoto; izberete nad grafom. Vsaka rutina ima graf, kako pogosto ste jo izvedli v posameznem obdobju.</p>
 <p>Pri cilju s ciljno vrednostjo in rokom graf nariše tudi tempo: tanko črtkano črto od vašega začetka do ciljne vrednosti. Nad grafom vidite, koliko je odslej treba na teden in kdaj bi prišli do cilja s sedanjim tempom.</p>
 <p>Za odčitek vrednosti se postavite nanjo z miško ali jo tapnite; za povečavo obdobja uporabite dva prsta ali Ctrl + kolešček. Tabela pod grafom našteje meritve; napačno izbrišete tam.</p>
 <p>Pod grafom stanja, ki ga izboljšuje rutina, in pod grafom same rutine »Ali deluje?« primerja, kako se je stanje premikalo v tednih, ko ste rutino izvajali, in v tednih, ko je niste. Pokaže vzorec, ne dokaza.</p>`,

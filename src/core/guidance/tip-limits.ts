@@ -50,7 +50,6 @@ export const FIRST_MONTH_OPENED = 8; // first-month: days opened in the last 30
 export const DISCOVER_AFTER = 5; // every class D tip: days since the first item
 export const TRY_MAP_ITEMS = 6; // try-map: items in the plan
 export const TRY_TIMELINE_ITEMS = 4; // try-timeline: items with dates
-export const TRY_GRAPHS_VALUES = 3; // try-graphs: measurements of one state
 export const MAKE_UP_DAYS = 14; // make-up: a set day missed within this many days
 export const ADDS_UP_VALUES = 3; // adds-up: values that only grow
 export const USE_LIST_PARTS = 3; // use-list: lines, or commas, in the details

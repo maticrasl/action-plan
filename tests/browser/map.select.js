@@ -260,6 +260,28 @@ suite(async () => {
     eq(ui.mapRel, null, 'clicking empty space clears it');
     return 'ok';
   });
+  await step('map: selecting an item lights up its whole chain, not only its neighbours', () => {
+    fresh('Map chain');
+    const v = mk('goal', { title: 'Be fit' });
+    const g = mk('goal', { title: 'Run a marathon' });
+    const a = mk('activity', { title: 'Train' });
+    const b = mk('activity', { title: 'Warm up' });
+    const x = mk('activity', { title: 'Stretch' });
+    const o = mk('activity', { title: 'Unrelated' });
+    rel(g, v, 'subgoal');
+    rel(a, g, 'contributes');
+    rel(b, a, 'subactivity');
+    rel(x, g, 'contributes');
+    save();
+    setView('map');
+    clickEl(nodeEl(a.id));
+    const dim = it => nodeEl(it.id).classList.contains('dim');
+    eq([v, g, a, b].map(dim), [false, false, false, false], 'what leads to it and what it leads to, step by step');
+    eq([x, o].map(dim), [true, true], 'a side branch and an unrelated item fade');
+    eq(edge(relOf(g, v).id).classList.contains('dim'), false, 'a line further along the chain stays lit');
+    eq(edge(relOf(x, g).id).classList.contains('dim'), true, 'a side line fades');
+    return 'ok';
+  });
   await step('map: the selection bar shows the item description, when it has one', () => {
     const { g, a, b } = mapFixture();
     g.specific = 'Finish under <4h>';
