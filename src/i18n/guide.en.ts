@@ -303,6 +303,7 @@ export const guideEn = [
 <li><strong>Take a paused goal out of the queue,</strong> if one is waiting.</li>
 </ul>
 <p>Feeling a little flat after reaching something you worked on for months is common. It passes, usually when the next thing gets its first step.</p>`,
+    action: { do: 'view-visions', label: 'Open Visions' },
     related: ['let-go', 'too-many', 'vision-how'],
   },
   {
@@ -419,6 +420,7 @@ export const guideEn = [
     title: 'Visions and Purpose',
     body: `<p>Visions are in the Visions view and belong to all your plans together. Add one, describe what it looks like as if it were already true, and choose the goals that serve it; or open a goal and choose “Serves visions”. A vision can serve broader visions. “If I let this slide” keeps the other side, folded away on the card until you open it.</p>
 <p>The view tells you how many visions are at the top and which active goals serve none. When one vision is at the top of all the others and every active goal in every plan serves it, the app shows it in gold as your <strong>Purpose</strong>.</p>
+<p>On Today and on the Overview, each step shows the vision it serves. A vision that no active goal serves says so and offers “What is next?”.</p>
 <p>The glow round everything that serves your Purpose is gold while every active goal is SMART. A goal saved half-finished turns it silver until you finish it.</p>`,
     action: { do: 'add-vision', label: 'Add a vision' },
     related: ['vision-how'],

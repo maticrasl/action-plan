@@ -2,9 +2,12 @@
 import { locale, t, tp } from '../i18n/index';
 import { visions } from '../core/state';
 import { findVision, visionParents, visionRoots } from '../core/visions';
-import { esc, linkTag } from '../ui/dom';
+import { $, esc, linkTag } from '../ui/dom';
 import { plans } from '../store/state';
-import { purposeState, reachedVisions, servingGoals } from '../store/visions';
+import { allPlansData, purposeState, reachedVisions, servingGoals } from '../store/visions';
+import { unservedVisions } from '../core/line-of-sight';
+import { fmtDay, today } from '../core/dates';
+import { setView } from '../ui/nav';
 import type { Vision } from '../core/model';
 
 type PurposeState = ReturnType<typeof purposeState>;
@@ -70,7 +73,24 @@ function vagueLine(ps: PurposeState) {
 
 export const purposeTag = () => `<span class="tag purpose">${esc(t('vis.purpose'))}</span>`;
 
-export function visionCard(v: Vision, depth: number, ps: PurposeState, reached: Set<string>) {
+type Unserved = ReturnType<typeof unservedVisions>[number];
+
+// A vision no active goal serves (feature 05): says so, or names the goal reached for it lately, and offers a new goal.
+function unservedLine(u: Unserved | undefined) {
+  if (!u) return '';
+  const text = u.reached
+    ? t('los.reached', { goal: u.reached.goal.title, date: fmtDay(u.reached.date, { day: 'numeric', month: 'short' }) })
+    : t('los.unserved');
+  return `<div class="vis-unserved"><p class="meta">${esc(text)}</p><button type="button" class="btn" data-los-next="${esc(u.vision.id)}">${t('los.next')}</button></div>`;
+}
+
+// From a vision tag on a row or card: the Visions view, with that vision's card in view.
+export function showVision(id: string) {
+  setView('visions');
+  $(`.card.vision[data-open="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'center' });
+}
+
+export function visionCard(v: Vision, depth: number, ps: PurposeState, reached: Set<string>, unserved?: Unserved) {
   const also = visionParents(v).slice(1).map(findVision) as Vision[];
   const goals = servingGoals(v.id)
     .map(({ plan, goal }) =>
@@ -85,6 +105,7 @@ export function visionCard(v: Vision, depth: number, ps: PurposeState, reached: 
     ${v.avoid ? `<details class="vis-avoid"><summary>${t('vis.avoid')}</summary><p>${esc(v.avoid)}</p></details>` : ''}
     ${also.length ? `<div class="links"><span class="meta">${t('vis.alsoUnder')}</span>${also.map(p => `<span class="tag vision" data-open="${p.id}">${esc(p.title)}</span>`).join('')}</div>` : ''}
     ${goals ? `<div class="links"><span class="meta">${t('vis.servedBy')}</span>${goals}</div>` : ''}
+    ${unservedLine(unserved)}
   </article>`;
 }
 
@@ -94,8 +115,9 @@ export function renderVisions() {
     return `<div class="empty"><h3>${t('vis.emptyTitle')}</h3><div>${t('vis.emptyText')}</div>
     <button class="btn primary" data-new="vision"><span aria-hidden="true">+</span> ${t('add.vision')}</button></div>${note}`;
   const ps = purposeState(),
-    reached = reachedVisions();
+    reached = reachedVisions(),
+    unserved = new Map(unservedVisions(allPlansData(), today()).map(u => [u.vision.id, u]));
   return `${note}${purposeStatus(ps)}<div class="vision-tree">${visionOrder()
-    .map(({ v, depth }) => visionCard(v, depth, ps, reached))
+    .map(({ v, depth }) => visionCard(v, depth, ps, reached, unserved.get(v.id)))
     .join('')}</div>`;
 }

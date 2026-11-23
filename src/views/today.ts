@@ -7,6 +7,8 @@ import { clearFocus } from '../store/journal';
 import { prefs } from '../store/prefs';
 import { requestRender as render } from '../ui/render';
 import { weekLine } from './day-rows';
+import { purposeState } from '../store/visions';
+import { setRowPurpose } from '../ui/line-of-sight';
 import { focusCard, hasItems, openFocusPicker, planName, row, todaySources } from './focus';
 
 export function renderToday() {
@@ -17,6 +19,8 @@ export function renderToday() {
     later = prefs.get('todayLater', false);
   // Plan headings only when there is more than one plan to tell apart.
   const many = sources.length > 1;
+  const ps = purposeState();
+  setRowPurpose(ps.on ? ps.root!.id : null);
   const groups = (rows: TodayRow[], cls = '') =>
     [...new Set(rows.map(r => r.plan))]
       .map(plan => {
@@ -28,6 +32,7 @@ export function renderToday() {
   const nothing = !lists.due.length && !lists.routines.length;
   return `
     <p class="today-date">${esc(fmtDay(now, { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
+    ${ps.on ? `<p class="today-purpose">${esc(t('los.purpose', { title: ps.root!.title }))}</p>` : ''}
     ${focusCard(sources)}
     ${nothing ? `<div class="empty">${t('today.none')}</div>` : ''}
     ${lists.due.length ? `<h2 class="section-title">${t('today.due')}</h2>${groups(lists.due)}` : ''}

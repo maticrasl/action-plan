@@ -256,3 +256,41 @@
   overflow-wrap: anywhere;
   color: var(--ink-2);
 }
+
+/* Line of sight (feature 05): the vision a step or goal serves, cut with an ellipsis; on a phone row
+   it is the tag that gives way first, so the tags keep to one line under the title. */
+.tag.los {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 16em;
+  border: 0;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tag.los .los-t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 720px) {
+  .row .links:has(.los) {
+    flex-wrap: nowrap;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .row .links .tag:not(.los) {
+    flex-shrink: 0;
+  }
+}
+.vis-unserved {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+.vis-unserved p {
+  margin: 0;
+}

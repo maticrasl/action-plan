@@ -43,6 +43,7 @@ import { relsFrom } from '../core/relations';
 import { openAmountPop } from '../ui/amount-popover';
 import { inPlan, requestRender as render } from '../ui/render';
 import { actingPlan } from '../store/plans';
+import { stepTag } from '../ui/line-of-sight';
 
 export function tickListItem(id: string, itemId: string, iso: ISODate = today()) {
   const a = db.activities.find(x => x.id === id);
@@ -303,6 +304,7 @@ export function routineRow(a: Routine) {
     ${items ? listFold(a.id, dayItemsDone(a, now), a.list.length) : ''}
     <span class="tag ${p.met ? 'ok' : ''}">${esc(periodText(a, p))}</span>
     ${streak.n ? `<span class="tag">${esc(streakText(streak))}</span>` : ''}
+    ${stepTag(a)}
     ${open ? `<div class="row-items">${routineItems(a as Routine & WithList, now)}</div>` : ''}
   </div>`;
 }
