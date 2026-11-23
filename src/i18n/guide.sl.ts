@@ -424,7 +424,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-map',
     group: 'how',
     title: 'Zemljevid',
-    body: `<p>Zemljevid nariše vse elemente in povezave: vizije in cilje na vrhu, aktivnosti na sredini, trenutna stanja spodaj. Tapnite okvir ali črto, da ga izberete in osvetlite, s čim je povezan. Dvokliknite ali pritisnite Enter za urejanje, Delete za odstranitev.</p>
+    body: `<p>Zemljevid nariše vse elemente in povezave: vizije in cilje na vrhu, aktivnosti na sredini, trenutna stanja spodaj. Tapnite črto, da jo izberete in osvetlite njena konca. Tapnite okvir, da osvetlite njegovo celo verigo: vse, kar vodi do njega, in vse, do česar vodi on, korak za korakom. Dvokliknite ali pritisnite Enter za urejanje, Delete za odstranitev.</p>
 <p><strong>Da povežete dva elementa</strong>, z miško povlecite z enega okvirja na drugega. Na zaslonu na dotik pridržite okvir, izberite »Poveži z …« in tapnite drugi okvir. Aplikacija ponudi le povezave, ki ustrezajo tema dvema.</p>
 <p>Tapnite ime pasu (Vizije, Cilji, Aktivnosti, Trenutna stanja), da ga strnete; ponoven tap ga razširi. Strnjeni pasovi ostanejo enaki na vseh napravah. Ozadje povlecite za premik, za povečavo uporabite dva prsta ali Ctrl + kolešček. Z desnim klikom na prazno mesto tja nekaj dodate.</p>`,
     action: { do: 'view-map', label: 'Odpri Zemljevid' },

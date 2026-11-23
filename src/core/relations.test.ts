@@ -5,6 +5,7 @@ import {
   addRelation,
   ancestors,
   canRelate,
+  chainOf,
   descendants,
   findEntity,
   kindList,
@@ -182,5 +183,26 @@ describe('nothing depends on a routine', () => {
     expect([canRelate(a.id, r.id, 'subactivity'), canRelate(r.id, a.id, 'subactivity')]).toEqual([null, null]);
     expect(addRelation(a.id, r.id, 'depends')).toBe(err);
     expect(relsFrom(a.id)).toEqual([]);
+  });
+});
+
+describe('chainOf', () => {
+  const l = (id: string, from: string, to: string, type = 'contributes') => ({ id, from, to, type });
+  test('everything that leads to the item and everything it leads to, with the lines between', () => {
+    // a → g → v, b → a, x → g2 (unrelated), c → v (shares v but not a chain through g)
+    const rels = [l('1', 'a', 'g'), l('2', 'g', 'v'), l('3', 'b', 'a'), l('4', 'x', 'g2'), l('5', 'c', 'v')];
+    const { nodes, links } = chainOf('a', rels);
+    expect([...nodes].sort()).toEqual(['a', 'b', 'g', 'v']);
+    expect([...links].sort()).toEqual(['1', '2', '3']);
+  });
+  test('a dependency counts the other way: what an item waits for leads to it', () => {
+    // g depends on p (p must come first), p contributes nothing else
+    const { nodes } = chainOf('p', [l('1', 'g', 'p', 'depends'), l('2', 'g', 'v')]);
+    expect([...nodes].sort()).toEqual(['g', 'p', 'v']);
+  });
+  test('nothing selected, or a loop, ends cleanly', () => {
+    expect(chainOf(null, [l('1', 'a', 'b')]).nodes.size).toBe(0);
+    const { nodes, links } = chainOf('a', [l('1', 'a', 'b'), l('2', 'b', 'a')]);
+    expect([nodes.size, links.size]).toEqual([2, 2]);
   });
 });
