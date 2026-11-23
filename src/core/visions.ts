@@ -35,6 +35,7 @@ export function normalizeVisions(input: unknown): VisionList {
       .map(v => {
         const out = { ...v, parents: Array.isArray(v.parents) ? v.parents.filter(safeId) : [] };
         if (typeof out.avoid !== 'string') delete out.avoid;
+        if (typeof out.area !== 'string') delete out.area;
         return out;
       });
   if (raw?.deleted && typeof raw.deleted === 'object' && !Array.isArray(raw.deleted))

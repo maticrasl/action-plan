@@ -99,6 +99,9 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
+- 2026-11-23, branch `feat/life-areas`: 03 built, not yet seen by the owner (line not ticked). Spec
+  `docs/specs/2026-11-23-life-areas.md` (counting rule, buttons instead of a context menu). Rules in
+  `core/areas.ts`, screen in `views/areas.ts`, page test `tests/browser/visions.areas.js`. "Rated" waits for 01.
 - 2026-11-23, branch `feat/line-of-sight`: 05 built, not yet seen by the owner (line not ticked).
   Rules in `core/line-of-sight.ts`, tag and toast in `ui/line-of-sight.ts`, page test
   `tests/browser/today.sight.js`. The toast names the vision only when the tick has no other
@@ -119,5 +122,3 @@ Write "yes" and the date, or the changed decision, when the owner answers.
   write into it. 17 B open.
 - Review view exists (`views/review.ts`, `core/done-log.ts`) with only the done log; weekly
   reviews (14) add their part there.
-- Chain `feat/replan` → `feat/pace-forecast` → `feat/is-it-working` → `feat/csv` (`core/csv*.ts`);
-  their 07, 09, 14, 15 parts wait for those (19: the note column is written empty, read never).

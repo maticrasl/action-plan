@@ -294,3 +294,76 @@
 .vis-unserved p {
   margin: 0;
 }
+
+/* Tree · Areas (feature 03) */
+.vis-mode {
+  display: inline-flex;
+  margin: 0 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.vis-mode button {
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13.5px;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+.vis-mode button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--vision) 45%, var(--surface));
+  color: var(--ink);
+  font-weight: 600;
+}
+.tag.area {
+  margin-left: auto;
+  overflow-wrap: anywhere;
+}
+.area-list {
+  display: grid;
+  gap: 12px;
+}
+.area-block h3 {
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 14px;
+}
+.area-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin-top: 8px;
+}
+.area-counts .meta {
+  margin: 0;
+}
+.area-counts .progress-row {
+  flex: 1 1 200px;
+}
+.area-empty {
+  margin-top: 20px;
+}
+.area-empty h3 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+.area-chip {
+  display: inline-flex;
+  align-items: center;
+}
+.area-chip .tag {
+  border: 0;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.area-chip .icon-btn {
+  width: 28px;
+  height: 28px;
+}

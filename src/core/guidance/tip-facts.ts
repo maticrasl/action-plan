@@ -39,7 +39,7 @@ export interface TipHit {
   target?: string;
 }
 export type TipClass = 'A' | 'B' | 'C' | 'D';
-export type TipView = 'dashboard' | 'goals' | 'activities' | 'graphs';
+export type TipView = 'dashboard' | 'goals' | 'activities' | 'graphs' | 'visions';
 export type TipAction =
   | 'today'
   | 'timeline'
@@ -58,6 +58,7 @@ export type TipAction =
   | 'review'
   | 'map'
   | 'addRoutineList'
+  | 'areas'
   | 'templates'
   | 'backup'
   | 'install'

@@ -109,6 +109,16 @@ const CLASS_D: Tip[] = (
       hits: ({ activePlans, seen }) => once((activePlans || 0) >= 2 && !seen?.views?.today),
     },
     {
+      id: 'try-areas',
+      view: 'visions',
+      guide: 'h-visions',
+      action: 'areas',
+      hits: ({ visions, seen }) => {
+        const n = new Set(visions.map(v => (v.area || '').trim().toLowerCase()).filter(Boolean)).size;
+        return n >= 2 && !seen?.views?.areas ? [{ vars: { n } }] : [];
+      },
+    },
+    {
       id: 'try-timeline',
       view: 'activities',
       guide: 'h-timeline',

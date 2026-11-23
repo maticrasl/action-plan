@@ -287,6 +287,18 @@
       });
       save();
     },
+    // Life areas (docs/specs/2026-11-23-life-areas.md): a vision with an area, a goal with a category, the
+    // Areas side chosen and an area hidden.
+    areas() {
+      const v = { id: uid(), title: 'To be fit', parents: [], area: 'Health' };
+      visions.list.push(v, { id: uid(), title: 'To travel', parents: [] });
+      saveVisions();
+      db.goals.push({ id: uid(), title: 'Run 5 km', status: 'active', startDate: day(-3), visions: [v.id] });
+      db.goals.push({ id: uid(), title: 'Save', status: 'active', startDate: day(-3), category: 'Finance' });
+      save();
+      prefs.set('visionsMode', 'areas');
+      prefs.set('hiddenAreas', ['Travel']);
+    },
     // Notes (docs/specs/2026-11-23-notes.md): on a goal (one closing), an activity and a state, a deleted
     // one, and notes on a measurement and an amount.
     notes() {

@@ -10,7 +10,7 @@ import { ROOT, dumpDom, readPre, serveTestBuild } from './lib/chrome.mjs';
 const FIX = join(ROOT, 'tests', 'fixtures');
 const PRIVATE = join(FIX, 'private');
 const CLOCK = '2026-11-16T11:00:00.000Z'; // the frozen "now" of every fixture page
-const STORAGE = ['sample-en', 'sample-sl', 'legacy-single', 'two-users', 'rich', 'goal-form', 'demo', 'journal', 'own-words', 'notes'];
+const STORAGE = ['sample-en', 'sample-sl', 'legacy-single', 'two-users', 'rich', 'goal-form', 'demo', 'journal', 'own-words', 'notes', 'areas'];
 const OUTPUTS = { sync: 'rich.sync.json', exportFull: 'rich.export-full.json', exportTemplate: 'rich.export-template.json', backup: 'rich.backup.json' };
 
 const args = process.argv.slice(2);
@@ -43,7 +43,7 @@ async function generateAll() {
     console.log(`wrote ${only}`);
     return 0;
   }
-  for (const name of ['sample-en', 'sample-sl', 'two-users', 'rich', 'goal-form', 'demo', 'journal', 'own-words', 'notes']) {
+  for (const name of ['sample-en', 'sample-sl', 'two-users', 'rich', 'goal-form', 'demo', 'journal', 'own-words', 'notes', 'areas']) {
     const out = await run('build:' + name, fresh(name === 'sample-sl' ? 'sl' : 'en'));
     writeJson(`${name}.storage.json`, out.storage);
     if (name === 'rich') for (const [k, file] of Object.entries(OUTPUTS)) writeJson(file, out[k]);

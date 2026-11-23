@@ -1,5 +1,5 @@
 /** Goal categories: those in use, in the order of the language, and suggestions for new ones. */
-import { db } from './state';
+import { db, visions } from './state';
 import { locale, t } from '../i18n/index';
 
 export const categories = () =>
@@ -13,4 +13,8 @@ export const categorySuggestions = () => [
       .split(',')
       .map(s => s.trim()),
   ]),
+];
+// A vision's area (feature 03): the areas already used on visions, then the goal category suggestions.
+export const areaSuggestions = () => [
+  ...new Set([...visions.list.map(v => (v.area || '').trim()).filter(Boolean), ...categorySuggestions()]),
 ];

@@ -23,7 +23,18 @@ import { dropRoutineDeps } from '../../core/normalize';
 import { achievedDay, doneDay } from '../../core/done-log';
 import { save } from '../../store/plans';
 import { requestRender } from '../render';
-import type { Activity, Goal, Item, ItemKind, RelType, Relation, Scale, State, Vision, WithNotes } from '../../core/model';
+import type {
+  Activity,
+  Goal,
+  Item,
+  ItemKind,
+  RelType,
+  Relation,
+  Scale,
+  State,
+  Vision,
+  WithNotes,
+} from '../../core/model';
 import type { TextKey } from '../../i18n/index';
 import type { WithList } from '../../core/routines/checkins';
 
@@ -226,6 +237,9 @@ export function submitForm() {
     const avoid = (v.avoid || '').trim().slice(0, 2000);
     if (avoid) vis.avoid = avoid;
     else delete vis.avoid;
+    const areaName = (v.area || '').trim().slice(0, 80);
+    if (areaName) vis.area = areaName;
+    else delete vis.area;
     if (!existing) visions.list.push(vis);
     arr('parents').forEach(p => {
       if (!canParent(vis.id, p)) vis.parents.push(p);
