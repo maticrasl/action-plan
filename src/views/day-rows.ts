@@ -10,6 +10,7 @@ import { relsFrom } from '../core/relations';
 import { activityState, blockers } from '../core/progress';
 import { isList, listDone } from '../core/routines/checkins';
 import { listFold, listOpen, listTicks } from './routines';
+import { stepTag } from '../ui/line-of-sight';
 
 // What this plan (or `sources`, on Today) finished since Monday (feature 13); nothing at all when nothing was.
 export function weekLine(now: string, sources: PlanSource[] = [{ plan: '', data: db }]) {
@@ -35,7 +36,7 @@ export function activityRow(a: Activity) {
     <span class="grow ${a.status === 'done' ? 'done-text' : ''}">${esc(a.title)}</span>
     ${isList(a) && a.list.length ? listFold(a.id, listDone(a), a.list.length) : ''}
     ${blocked ? `<span class="tag bad" title="${esc(tp('blocked.title', blocked))}">${t('blocked')}</span>` : ''}
-    <span class="links">${goals}</span>
+    <span class="links">${goals}${stepTag(a)}</span>
     ${deadlineTag(a.dueDate, a.status === 'done')}
     ${open && isList(a) ? `<div class="row-items">${listTicks(a)}</div>` : ''}
   </div>`;

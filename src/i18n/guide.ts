@@ -26,6 +26,7 @@ export const GUIDE_ACTIONS = [
   'replan',
   'view-graphs',
   'view-today',
+  'view-visions',
   'view-review',
   'pick-focus',
   'ask-tip',

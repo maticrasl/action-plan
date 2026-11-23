@@ -12,6 +12,8 @@ import { goalCard } from '../ui/goal-card';
 import { replanButton } from '../ui/replan';
 import { activityRow, weekLine } from './day-rows';
 import { focusCard } from './focus';
+import { purposeState } from '../store/visions';
+import { setRowPurpose } from '../ui/line-of-sight';
 
 export function renderDashboard() {
   if (!itemCount()) return emptyState(t('dash.emptyTitle'), t('dash.emptyText'), 'goal');
@@ -50,6 +52,8 @@ export function renderDashboard() {
       : '';
 
   const waiting = todo.filter(a => blockers(a).length).length;
+  const ps = purposeState();
+  setRowPurpose(ps.on ? ps.root!.id : null);
   return `
     ${focusCard(undefined, true)}
     <section class="summary">

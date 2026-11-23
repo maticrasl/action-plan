@@ -99,6 +99,10 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
+- 2026-11-23, branch `feat/line-of-sight`: 05 built, not yet seen by the owner (line not ticked).
+  Rules in `core/line-of-sight.ts`, tag and toast in `ui/line-of-sight.ts`, page test
+  `tests/browser/today.sight.js`. The toast names the vision only when the tick has no other
+  message (a met week keeps its own). Perf: goals view 9 → 20 ms (Serves line on each card).
 - 2026-11-23, branch `feat/today`: 09 built, not yet seen by the owner (line not ticked). Today sits
   before Review (on phones under More), not first as the plan said: the owner's choice for now.
   Other plans are ticked through `actInPlan` (`store/plans.ts`) and `inPlan` (`ui/render.ts`); a

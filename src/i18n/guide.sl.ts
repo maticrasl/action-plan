@@ -303,6 +303,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Iz vrste vzemite zaustavljen cilj,</strong> če kateri čaka.</li>
 </ul>
 <p>Rahla praznina po tem, ko dosežete nekaj, za kar ste delali mesece, je pogosta. Mine, navadno takrat, ko naslednja stvar dobi svoj prvi korak.</p>`,
+    action: { do: 'view-visions', label: 'Odpri Vizije' },
     related: ['let-go', 'too-many', 'vision-how'],
   },
   {
@@ -419,6 +420,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     title: 'Vizije in Smisel',
     body: `<p>Vizije so v pogledu Vizije in pripadajo vsem vašim načrtom skupaj. Dodajte vizijo, opišite, kako je videti, kot da je že resnična, in izberite cilje, ki ji služijo; ali pa odprite cilj in izberite »Služi vizijam«. Vizija lahko služi širšim vizijam. »Če to zanemarim« hrani drugo stran, zloženo na kartici, dokler je ne odprete.</p>
 <p>Pogled pove, koliko vizij je na vrhu in kateri aktivni cilji ne služijo nobeni. Ko je ena vizija nad vsemi drugimi in ji služi vsak aktiven cilj v vsakem načrtu, jo aplikacija pokaže v zlati barvi kot vaš <strong>Smisel</strong>.</p>
+<p>Na Danes in na Pregledu vsak korak pokaže vizijo, ki ji služi. Vizija, ki ji ne služi noben aktiven cilj, to pove in ponudi »Kaj je naslednje?«.</p>
 <p>Sij okoli vsega, kar služi vašemu Smislu, je zlat, dokler je vsak aktiven cilj SMART. Napol izpolnjen shranjen cilj ga obarva srebrno, dokler ga ne dokončate.</p>`,
     action: { do: 'add-vision', label: 'Dodaj vizijo' },
     related: ['vision-how'],

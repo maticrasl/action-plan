@@ -66,6 +66,7 @@ export const GUIDE_DO: Record<GuideAction, () => void> = {
   replan: () => openReplan(),
   'view-graphs': view('graphs'),
   'view-today': view('today'),
+  'view-visions': view('visions'),
   'view-review': view('review'),
   'pick-focus': () => openFocusPicker(),
   'ask-tip': () => askTip(),

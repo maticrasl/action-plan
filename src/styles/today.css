@@ -83,3 +83,8 @@
   color: var(--ink-3);
   white-space: nowrap;
 }
+.today-purpose {
+  margin: 0 0 10px;
+  color: color-mix(in srgb, var(--purpose) 70%, var(--ink));
+  font-weight: 500;
+}

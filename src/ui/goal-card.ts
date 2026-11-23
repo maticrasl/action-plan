@@ -19,7 +19,9 @@ import { t, tp, type TextKey } from '../i18n/index';
 import { fmtNum, isNum } from '../core/util';
 import { goalPeriod, isCumulative, lastPeriodTotal, stateTotal } from '../core/cumulative';
 import { periodText, withUnit } from './text';
-import type { Goal, Period } from '../core/model';
+import type { Goal, Period, Vision } from '../core/model';
+import { findVision, goalVisionIds } from '../core/visions';
+import { visionTag } from './line-of-sight';
 import { goalPace } from '../core/pace';
 import { today } from '../core/dates';
 
@@ -38,6 +40,12 @@ function paceMeta(g: Goal, unit: string) {
           value: withUnit(fmtNum(p.rate.value), unit),
         });
   return tag + (more ? `<span class="pace-needs">${esc(more)}</span>` : '');
+}
+
+// The visions a goal serves (feature 05), as tags under its meta line; nothing without any.
+function serves(g: Goal) {
+  const vs = goalVisionIds(g).map(findVision).filter((v): v is Vision => !!v);
+  return vs.length ? `<div class="links"><span class="meta">${t('los.serves')}</span>${vs.map(v => visionTag(v)).join('')}</div>` : '';
 }
 
 export function goalCard(g: Goal) {
@@ -79,6 +87,7 @@ export function goalCard(g: Goal) {
       ${st ? `<span title="${esc(t('goals.measuredBy'))}">◐ ${esc(st.title)}</span>` : ''}
       ${noteTag(g)}
     </div>
+    ${serves(g)}
     ${parent ? `<div class="links"><span class="meta">${t('goals.partOf')}</span>${linkTag(parent.to)}</div>` : ''}
   </article>`;
 }
