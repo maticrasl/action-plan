@@ -127,14 +127,15 @@ export function periodGraphCard(s: State | Routine, width: number) {
     change = `<span class="tag gr-delta ${cls}"><span aria-hidden="true">${delta > 0 ? '▲' : delta < 0 ? '▼' : '→'}</span> ${esc(withUnit(signed(delta), unit))}</span>
       <span class="meta">${esc(t(('cu.vsPrev.' + scale) as TextKey, { period: periodLabel(scale, last.from, last.to) }))}</span>`;
   }
-  // A routine's check-ins are ticked on the routine, so its table lists only the periods.
-  const rows = points
-    .slice()
-    .reverse()
-    .map(p =>
-      rt
-        ? `<tr><td>${esc(periodLabel(scale, p.from, p.to))}</td><td>${esc(amount(p.value))}</td></tr>`
-        : `<tr class="gr-period"><td>${esc(periodLabel(scale, p.from, p.to))}</td><td><strong>${esc(amount(p.value))}</strong></td><td></td></tr>
+  // A routine has no table: its check-ins are on the routine itself.
+  const rows = rt
+    ? ''
+    : points
+        .slice()
+        .reverse()
+        .map(
+          p =>
+            `<tr class="gr-period"><td>${esc(periodLabel(scale, p.from, p.to))}</td><td><strong>${esc(amount(p.value))}</strong></td><td></td></tr>
     ${p.entries
       .slice()
       .reverse()
@@ -143,10 +144,10 @@ export function periodGraphCard(s: State | Routine, width: number) {
           `<tr class="gr-entry"><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td>${entryDel(s, e)}</tr>`,
       )
       .join('')}`,
-    )
-    .join('');
+        )
+        .join('');
   const table = rt
-    ? `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.checkins')}</th></tr></thead><tbody>${rows}</tbody></table>`
+    ? ''
     : `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.amount')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
   const value = rt
     ? t(('cu.now.' + scale) as TextKey, { value: amount(points.find(p => p.now)?.value || 0) })
@@ -217,20 +218,19 @@ export function totalGraphCard(s: State | Routine, width: number) {
   const total = rt ? t('cu.inTotal', { value: amount(entries.length) }) : totalText(s);
   const stats = `<strong class="gr-value">${esc(total)}</strong><span class="tag gr-delta ${recent > 0 ? 'ok' : ''}">${esc(withUnit(signed(recent), unit))}</span><span class="meta">${t('cu.last30')}</span>`;
   let running = sumOf(entries);
-  // A routine's table lists the days it was done, with the count so far.
-  const rows = entries
-    .slice()
-    .reverse()
-    .map(e => {
-      const row = rt
-        ? `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(fmtNum(running))}</td></tr>`
-        : `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
-      running = Number((running - Number(e.amount)).toFixed(9));
-      return row;
-    })
-    .join('');
+  const rows = rt
+    ? ''
+    : entries
+        .slice()
+        .reverse()
+        .map(e => {
+          const row = `<tr><td>${fmtRel(e.date, true)}</td><td>${esc(withUnit(fmtNum(e.amount), unit))}</td><td>${esc(withUnit(fmtNum(running), unit))}</td>${entryDel(s, e)}</tr>`;
+          running = Number((running - Number(e.amount)).toFixed(9));
+          return row;
+        })
+        .join('');
   const table = rt
-    ? `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.total')}</th></tr></thead><tbody>${rows}</tbody></table>`
+    ? ''
     : `<table><thead><tr><th>${t('gr.col.date')}</th><th>${t('cu.col.amount')}</th><th>${t('cu.col.total')}</th><th><span class="sr-only">${t('gr.col.delete')}</span></th></tr></thead><tbody>${rows}</tbody></table>`;
   return grCardHtml(s, stats, paceFacts(paces, unit), plot, table, scaleSwitch(s));
 }
@@ -289,16 +289,7 @@ export function routineGraphCard(a: Routine, width: number) {
   );
   const streak = routineStreak(a);
   const stats = `<strong class="gr-value">${esc(periodText(a))}</strong>${streak.n ? `<span class="tag ok">${esc(streakText(streak))}</span>` : ''}`;
-  const rows = points
-    .slice()
-    .reverse()
-    .map(
-      p =>
-        `<tr><td>${esc(periodLabel(unit, p.from, p.to))}</td><td>${esc(t('cu.ofTarget', { done: p.value, target: p.target }))}</td><td>${p.met ? '✓' : ''}</td></tr>`,
-    )
-    .join('');
-  const table = `<table><thead><tr><th>${t('cu.col.period')}</th><th>${t('cu.col.checkins')}</th><th>${t('cu.col.met')}</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return grCardHtml(a, stats, '', plot, table, scaleSwitch(a));
+  return grCardHtml(a, stats, '', plot, '', scaleSwitch(a));
 }
 
 // The graph of a state that adds up, or of a routine, shows another scale; it is kept on the item.

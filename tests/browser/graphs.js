@@ -255,8 +255,8 @@ suite(async () => {
       'today’s count',
     );
     assert(
-      !card().querySelector('[data-del-entry]') && card().querySelectorAll('.gr-table tbody tr').length === 16,
-      'its table lists the days, with nothing to delete',
+      !card().querySelector('.gr-table'),
+      'no table for a routine',
     );
     card().querySelector('[data-gr-scale="week"]').click();
     assert(card().querySelector('.gr-goal'), 'its own period again: what each week asks for');
@@ -506,5 +506,30 @@ suite(async () => {
     assert($('.amount-pop') && amountPop, 'popup still open');
     closeAmountPop();
     setView('dashboard');
+  });
+  await step('measurement table: change since the last one, green toward the goal, red away', () => {
+    fresh('Since last');
+    const s = mk('state', { title: 'Weight', unit: 'kg', history: [] });
+    [
+      [-30, '90'],
+      [-20, '88'],
+      [-10, '89'],
+      [0, '89'],
+    ].forEach(([n, v]) => recordMeasurement(s, d(n), v));
+    const g = mk('goal', { title: 'Lose weight', metric: 'kg', target: '80', deadline: d(100) });
+    rel(s, g, 'measures');
+    save();
+    setView('graphs');
+    const th = $(`[data-gr="${s.id}"] .gr-table th:nth-child(3)`).textContent;
+    eq(th, t('gr.col.change'), 'header');
+    eq(th, 'Change since last', 'English header');
+    const cells = [...$(`[data-gr="${s.id}"] .gr-table tbody`).rows].map(r => r.cells[2]);
+    eq(cells.map(c => c.textContent).join(), '±0 kg,+1 kg,−2 kg,—', 'newest first, each against the one before');
+    eq(cells.map(c => c.className).join(), ',gr-bad,gr-ok,', 'no colour unchanged or first');
+    g.target = '';
+    save();
+    render();
+    const plain = [...$(`[data-gr="${s.id}"] .gr-table tbody`).rows].map(r => r.cells[2].className);
+    eq(plain.join(), ',,,', 'no colour without a target');
   });
 });

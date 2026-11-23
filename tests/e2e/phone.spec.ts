@@ -23,14 +23,13 @@ test('tab bar at the bottom, More sheet, floating add button, a form that fits',
   await page.locator('#navMore').tap();
   const sheet = page.locator('#navSheet');
   await expect(sheet).toBeVisible();
-  await expect(sheet.locator('[data-sheet-view]')).toHaveCount(5);
-  await sheet.locator('[data-sheet-view="timeline"]').tap();
+  await expect(sheet.locator('[data-sheet-view]')).toHaveCount(4);
+  await sheet.locator('[data-sheet-view="goals"]').tap();
   await expect(sheet).toBeHidden();
   await expect(page.locator('#navMore')).toHaveClass(/active/);
 
   // The add button floats above the tab bar, at the right.
-  await page.locator('.nav [data-view="goals"]').tap();
-  const add = page.locator('#addBtn');
+    const add = page.locator('#addBtn');
   const fab = (await add.boundingBox())!;
   expect([fab.width, fab.height]).toEqual([56, 56]);
   expect(fab.x + fab.width).toBeCloseTo(390 - 16, 0);
@@ -52,8 +51,7 @@ test('turned sideways, the timeline dates stick at the top of the screen', async
   await quietStart(page);
   await page.goto(app.url);
   await page.locator('[data-sample]').first().tap();
-  await page.locator('#navMore').tap();
-  await page.locator('[data-sheet-view="timeline"]').tap();
+  await page.locator('.nav [data-view="timeline"]').tap();
   await page.setViewportSize({ width: 844, height: 390 });
   await page.locator('.tl-body .tl-row').last().scrollIntoViewIfNeeded();
   await expect.poll(async () => (await page.locator('.tl-head').boundingBox())!.y).toBeLessThan(2);

@@ -275,7 +275,7 @@ suite(async () => {
     const s = mk('state', { title: 'Saved', unit: '€', cumulative: true, entries: [] });
     save();
     setView('graphs');
-    assert($(`[data-gr="${s.id}"]`).textContent.includes(t('cu.noEntries')), 'nothing added yet');
+    assert(!$(`[data-gr="${s.id}"] .meta`), 'no meta row');
     $(`[data-add-amount="${s.id}"]`).click();
     assert(
       !modal.open && $('.amount-pop [data-amount-date]').value === dateInput(today()),

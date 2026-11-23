@@ -103,7 +103,7 @@ export function grCardHtml(
     ${scales}
     ${facts}
     ${plot}
-    <details class="gr-table"><summary>${t('gr.table')}</summary>${table}</details>
+    ${table && `<details class="gr-table"><summary>${t('gr.table')}</summary>${table}</details>`}
     ${workFold(item)}
   </article>`;
 }

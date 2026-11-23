@@ -221,14 +221,17 @@ export function graphCard(s: State, width: number) {
   const spot = spots.find(s => free(s, [...hard, ...todayBox])) || spots.find(s => free(s, hard)) || spots[0];
   const valueLabel = `<text class="gr-label" x="${spot.x}" y="${spot.y}" text-anchor="${spot.anchor}">${esc(vText)}</text>`;
 
-  // Newest first, each with a button to delete it.
+  // Newest first, each with its change since the one before (green toward the target, red away) and a delete button.
   const rowsHtml = points
-    .slice()
-    .reverse()
-    .map(p => {
+    .map((p, i) => {
       const del = t('gr.delete', { date: fmtDate(p.date) });
-      return `<tr><td>${fmtRel(p.date, true)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td>${p === points[0] ? '—' : esc(withUnit(signed(p.value - points[0].value), unit))}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
+      const prev = points[i - 1],
+        delta = prev ? Number((p.value - prev.value).toFixed(9)) : 0;
+      const aim = prev && targets.length ? Math.sign(targets[0].value - prev.value) : 0;
+      const cls = !aim || !delta ? '' : Math.sign(delta) === aim ? 'gr-ok' : 'gr-bad';
+      return `<tr><td>${fmtRel(p.date, true)}</td><td>${esc(withUnit(fmtNum(p.value), unit))}</td><td class="${cls}">${prev ? esc(withUnit(signed(delta), unit)) : '—'}</td><td class="gr-del"><button type="button" class="btn small ghost" data-del-measure="${s.id}" data-date="${p.date}" title="${esc(del)}" aria-label="${esc(del)}">×</button></td></tr>`;
     })
+    .reverse()
     .join('');
 
   return grCardHtml(
