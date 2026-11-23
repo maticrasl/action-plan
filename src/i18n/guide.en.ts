@@ -444,7 +444,7 @@ export const guideEn = [
     body: `<p>Graphs is where you keep your current states. Each has a card: + records a new value (or adds an amount), right-click or long-press edits it, and the goals it measures are listed on it. A state with measurements also has a graph: your values over time, a dashed line for the goal’s target, and the change since the first measurement. A state that adds up shows sums per day, week, month or year, or the running total; choose above the graph. Each routine has a graph of how often you did it per period.</p>
 <p>For a goal with a target and a deadline, the graph also draws the pace: a thin dashed line from your start to the target. Above it you see how much is needed each week from here, and when you would arrive at the present rate.</p>
 <p>Hover or tap to read a value; pinch or Ctrl + scroll to zoom into a stretch of time. The table under a graph lists the measurements; delete a wrong one there.</p>
-<p>Under the graph of a state that a routine improves, and under the routine’s own graph, “Is it working?” compares how the state moved in the weeks you kept the routine and in the weeks you did not. It shows a pattern, not a proof.</p>`,
+<p>Under the graph of a state that a routine improves, and under the routine’s own graph, “Is it working?” compares how the state moved in the weeks you kept the routine and in the weeks you did not. It appears once there are enough of both weeks to compare. It shows a pattern, not a proof.</p>`,
     action: { do: 'view-graphs', label: 'Open Graphs' },
   },
   {

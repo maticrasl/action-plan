@@ -191,6 +191,13 @@
   color: var(--ink-3);
   font-weight: 400;
 }
+/* The change since the measurement before: toward the target or away from it. */
+.gr-table td.gr-ok {
+  color: var(--ok);
+}
+.gr-table td.gr-bad {
+  color: var(--bad);
+}
 .gr-table td.gr-del {
   width: 1%;
   padding-right: 0;

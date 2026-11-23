@@ -160,8 +160,7 @@ suite(async () => {
     const card = $(`[data-gr="${s.id}"]`),
       text = card.textContent;
     assert(text.includes('Easy pace, weekend run.'), 'description');
-    assert(text.includes(t('states.asOf', { date: 'today' })), 'as of today');
-    assert(text.includes(tp('states.improvers', 1)) && text.includes(tp('states.measurements', 2)), 'improvers and count');
+    assert(!card.querySelector('.desc + .meta') && !text.includes(tp('states.measurements', 2)), 'no as-of, improvers or count row');
     assert(card.querySelector(`.links [data-open="${g.id}"]`), 'the goal it measures');
     assert(!card.querySelector('[data-open].btn') && !card.querySelector('.gr-legend'), 'no Edit button, no legend');
     const plus = card.querySelector('.card-head [data-add-amount]');

@@ -444,7 +444,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     body: `<p>V Grafih imate svoja trenutna stanja. Vsako ima kartico: + vpiše novo vrednost (ali doda količino), desni klik ali dolg pritisk jo uredi, na njej pa so našteti cilji, ki jih meri. Stanje z meritvami ima tudi graf: vaše vrednosti skozi čas, črtkano črto za ciljno vrednost cilja in spremembo od prve meritve. Stanje, ki se sešteva, kaže vsote po dnevih, tednih, mesecih ali letih ali skupno vsoto; izberete nad grafom. Vsaka rutina ima graf, kako pogosto ste jo izvedli v posameznem obdobju.</p>
 <p>Pri cilju s ciljno vrednostjo in rokom graf nariše tudi tempo: tanko črtkano črto od vašega začetka do ciljne vrednosti. Nad grafom vidite, koliko je odslej treba na teden in kdaj bi prišli do cilja s sedanjim tempom.</p>
 <p>Za odčitek vrednosti se postavite nanjo z miško ali jo tapnite; za povečavo obdobja uporabite dva prsta ali Ctrl + kolešček. Tabela pod grafom našteje meritve; napačno izbrišete tam.</p>
-<p>Pod grafom stanja, ki ga izboljšuje rutina, in pod grafom same rutine »Ali deluje?« primerja, kako se je stanje premikalo v tednih, ko ste rutino izvajali, in v tednih, ko je niste. Pokaže vzorec, ne dokaza.</p>`,
+<p>Pod grafom stanja, ki ga izboljšuje rutina, in pod grafom same rutine »Ali deluje?« primerja, kako se je stanje premikalo v tednih, ko ste rutino izvajali, in v tednih, ko je niste. Pojavi se, ko je dovolj obojih tednov za primerjavo. Pokaže vzorec, ne dokaza.</p>`,
     action: { do: 'view-graphs', label: 'Odpri Grafe' },
   },
   {

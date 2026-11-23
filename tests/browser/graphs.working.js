@@ -54,15 +54,16 @@ suite(async () => {
     return text;
   });
 
-  await step('too little to compare: the few text with the counts', () => {
-    const { s } = setup(
+  await step('too little to compare: no fold on either card, no second tip button', () => {
+    const { s, a } = setup(
       'Working few',
       KEPT.map(() => 1),
     );
     setView('graphs');
-    const text = open(s.id).textContent;
-    assert(text.includes('Not enough weeks to compare yet: 12 kept, 0 not.'), text);
-    assert(!fold(s.id).querySelector('.work-bar'), 'no bars');
+    assert(!fold(s.id) && !fold(a.id), 'no fold');
+    const tip = CATALOGUE.find(x => x.id === 'wrong-way');
+    const c = { tip, key: `wrong-way:${s.id}`, hit: { id: s.id, vars: { name: s.title } } };
+    assert(!tipHtml(c, false).includes('do2'), 'no second button');
   });
 
   await step('three routines: three blocks, one caution line; a routine without data shows nothing', () => {
@@ -77,7 +78,13 @@ suite(async () => {
     save();
     setView('graphs');
     open(s.id);
+    const few = mk('activity', { ...copy, title: 'Every week', checkins: Object.fromEntries(mondays(12).map(m => [m, 1])) });
+    rel(few, s, 'improves');
+    save();
+    render();
+    open(s.id);
     eq(fold(s.id).querySelectorAll('.work-pair').length, 3, 'three blocks');
+    assert(!fold(s.id).textContent.includes('Every week'), 'nothing for a routine too even to compare');
     eq(fold(s.id).querySelectorAll('.work-caution').length, 1, 'one caution');
     assert(!fold(s.id).textContent.includes('Never ticked'), 'nothing for a routine without ticks');
   });

@@ -44,8 +44,8 @@ suite(async () => {
     }
     return $('#installHint').textContent || 'hidden';
   });
-  await step('phone tab bar: graphs, timeline and map under More', () => {
-    setView('goals');
+  await step('phone tab bar: visions, goals, activities and review under More', () => {
+    setView('map');
     // The tests run at desktop width; show the menu as a phone would.
     const phone = document.head.appendChild(document.createElement('style'));
     phone.textContent = '.nav-more { display: flex } .nav-sheet:not([hidden]) { display: flex }';
@@ -58,18 +58,18 @@ suite(async () => {
     more.click();
     const items = [...sheet.querySelectorAll('[data-sheet-view]')].map(b => b.dataset.sheetView);
     assert(!sheet.hidden && more.getAttribute('aria-expanded') === 'true', 'opens');
-    assert(items.join() === 'visions,map,timeline,graphs,review', 'lists the extra views');
-    assert(sheet.querySelector('[data-sheet-view="timeline"]').textContent.trim() === t('nav.timeline'), 'with labels');
+    assert(items.join() === 'visions,goals,activities,review', 'lists the extra views');
+    assert(sheet.querySelector('[data-sheet-view="goals"]').textContent.trim() === t('nav.goals'), 'with labels');
     assert(document.activeElement === sheet.querySelector('button'), 'first item focused');
     sheet.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
     assert(document.activeElement.dataset.sheetView === 'review', 'arrows wrap');
-    sheet.querySelector('[data-sheet-view="timeline"]').click();
+    sheet.querySelector('[data-sheet-view="goals"]').click();
     assert(
-      ui.view === 'timeline' && sheet.hidden && more.classList.contains('active'),
+      ui.view === 'goals' && sheet.hidden && more.classList.contains('active'),
       'picks a view, closes, More marked',
     );
     more.click();
-    assert(document.activeElement.dataset.sheetView === 'timeline', 'current view focused');
+    assert(document.activeElement.dataset.sheetView === 'goals', 'current view focused');
     document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     assert(sheet.hidden && document.activeElement === more, 'Escape closes and refocuses More');
     more.click();
@@ -78,7 +78,7 @@ suite(async () => {
     more.click();
     more.click();
     assert(sheet.hidden, 'More toggles');
-    setView('goals');
+    setView('map');
     assert(!more.classList.contains('active'), 'More unmarked on a main tab');
     phone.remove();
     return items.join();

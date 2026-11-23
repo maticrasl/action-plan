@@ -1,4 +1,4 @@
-/** The "Is it working?" fold under a state's or routine's graph: worked out when opened, remembered until the plan changes. */
+/** The "Is it working?" fold under a state's or routine's graph, shown when a pair has enough weeks; remembered until the plan changes. */
 import { db } from '../../core/state';
 import { fmtNum } from '../../core/util';
 import { today } from '../../core/dates';
@@ -30,9 +30,14 @@ function pairs(item: State | Routine): [Routine, State][] {
     ([a, s]) => hasGraph(a) && hasGraph(s) && !(isCumulative(s) && s.entries!.some(e => e.routine === a.id)),
   );
 }
-export const hasWork = (item: State | Routine) => pairs(item).length > 0;
+// A pair has data to show when there are enough weeks of both kinds to compare.
+const shown = (item: State | Routine) =>
+  pairs(item)
+    .map(([a, s]) => [a, s, work(a, s)] as const)
+    .filter((x): x is readonly [Routine, State, Work] => !!x[2] && !['few', 'seldom'].includes(x[2].kind));
+export const hasWork = (item: State | Routine) => shown(item).length > 0;
 
-// The fold, empty until it is opened (nothing is worked out while Graphs draws).
+// The fold, filled when it is opened.
 export const workFold = (item: State | Routine) =>
   hasWork(item)
     ? `<details class="gr-work" data-work="${item.id}"><summary>${t('work.title')}</summary><div class="gr-work-body"></div></details>`
@@ -90,15 +95,8 @@ export function fillWork(el: HTMLDetailsElement) {
   if (!el.open || body.childElementCount) return;
   const item = [...db.states, ...db.activities].find(x => x.id === el.dataset.work) as State | Routine | undefined;
   if (!item) return;
-  const blocks = pairs(item)
-    .map(([a, s]) => {
-      const w = work(a, s);
-      return w && block(a, s, isRoutine(item), w);
-    })
-    .filter(Boolean);
-  body.innerHTML = blocks.length
-    ? `${blocks.join('')}<p class="meta work-caution">${esc(t('work.caution'))}</p>`
-    : `<p>${esc(t('work.few', { kept: 0, missed: 0 }))}</p>`;
+  const blocks = shown(item).map(([a, s, w]) => block(a, s, isRoutine(item), w));
+  body.innerHTML = `${blocks.join('')}<p class="meta work-caution">${esc(t('work.caution'))}</p>`;
 }
 
 // From the tip `wrong-way`: Graphs, with the state's fold open.

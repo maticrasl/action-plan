@@ -62,8 +62,6 @@ suite(async () => {
       startDate: addDays(now, -5),
       dueDate: addDays(now, -1),
     });
-    const s = mk('state', { title: 'Weight', unit: 'kg', history: [] });
-    recordMeasurement(s, now, '80');
     save();
     setView('activities');
     const tags = id => [...$(`[data-open="${id}"]`).querySelectorAll('.tag')].map(x => x.textContent);
@@ -71,13 +69,7 @@ suite(async () => {
       tags(due.id).includes('Tomorrow') && tags(done.id).includes('Yesterday'),
       'deadline tags: ' + tags(due.id) + ' / ' + tags(done.id),
     );
-    setView('graphs');
-    assert(
-      $(`[data-gr="${s.id}"]`).textContent.includes(t('states.asOf', { date: 'today' })),
-      'As of today',
-    );
     changeLanguage('sl');
-    assert($(`[data-gr="${s.id}"]`).textContent.includes('Izmerjeno danes'), 'Izmerjeno danes');
     eq(
       [-1, 0, 1].map(n => fmtRel(addDays(now, n), true)),
       ['Včeraj', 'Danes', 'Jutri'],
