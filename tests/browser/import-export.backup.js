@@ -372,11 +372,13 @@ suite(async () => {
       input.files = dt.files;
       input.dispatchEvent(new Event('change', { bubbles: true }));
       // Reading the file takes real time, which the test's virtual clock does not wait for: poll.
-      for (let i = 0; i < 100 && plans.list.length === n4; i++) await new Promise(r => setTimeout(r, 20));
+      for (let i = 0; i < 100 && !$('#restoreDlg').open; i++) await new Promise(r => setTimeout(r, 20));
       assert(
-        plans.list.length === n4 + count && input.value === '' && !settings.open,
-        'picked file restored, picker reset, Settings closed',
+        $('#restoreDlg').open && input.value === '' && !settings.open,
+        'the chooser opens, picker reset, Settings closed',
       );
+      $('#restoreOk').click(); // Add as copies, every plan ticked
+      assert(plans.list.length === n4 + count, 'picked file restored');
 
       // Storage full: the plan written before it filled up stays, the other is not listed, the message says so.
       const n5 = plans.list.length,

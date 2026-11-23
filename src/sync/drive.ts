@@ -8,6 +8,7 @@ import { readTips } from '../core/guidance/tip-history';
 import { normalizeTrash } from '../core/trash';
 import { readMapFold } from '../core/map-fold';
 import { normalizeJournal } from '../core/journal';
+import { SNAPSHOT_PREFIX } from '../core/snapshots';
 import type { IdSet, ISOTime, Plan, User } from '../core/model';
 
 // The part of Google's sign-in script (loaded at run time by loadGis) this uses.
@@ -250,7 +251,33 @@ export const drive = {
   async remove(token: string, id: string): Promise<void> {
     await driveFetch(token, `${DRIVE_API}/${id}`, { method: 'DELETE' });
   },
+
+  // The dated copies (core/snapshots.ts) in the app folder: id and name only.
+  async snapshots(token: string): Promise<DriveFile[]> {
+    const q = encodeURIComponent(`name contains '${SNAPSHOT_PREFIX}' and trashed = false`);
+    const list: { files?: DriveFile[] } = await (
+      await driveFetch(token, `${DRIVE_API}?spaces=appDataFolder&q=${q}&pageSize=100&fields=files(id,name)`)
+    ).json();
+    return list.files || [];
+  },
+
+  // Drive copies the file itself, so nothing is uploaded.
+  async copy(token: string, id: string, name: string): Promise<void> {
+    await driveFetch(token, `${DRIVE_API}/${id}/copy?fields=id`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, parents: ['appDataFolder'] }),
+    });
+  },
+
+  async readText(token: string, id: string): Promise<string> {
+    return (await driveFetch(token, `${DRIVE_API}/${id}?alt=media`)).text();
+  },
 };
+export interface DriveFile {
+  id: string;
+  name: string;
+}
 
 // The sync file as read, before it is checked.
 type RawFile = {

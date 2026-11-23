@@ -159,7 +159,10 @@ export function renderSync() {
       ${user.account!.email ? `<p class="hint">${t('user.signedInAs', { email: esc(user.account!.email) })}</p>` : ''}
       <p class="sync-status" data-status="${syncState.status}"><i aria-hidden="true"></i><span>${esc(syncStatusText())}</span></p>
       <div class="set-actions">${syncState.status === 'update' ? action('reload', t('sync.reload'), 'primary') : action('now', t('sync.now'))}${action('connect', t('user.add'))}${action('logout', t('user.logOut'), 'ghost')}${action('remove', t('user.removeMe'), 'ghost', user.id)}</div>
-      <p class="hint">${t('sync.clockHint')}</p>${list}`;
+      <p class="hint">${t('sync.clockHint')}</p>
+      <div class="set-list"><button type="button" class="set-item" id="versionsBtn">
+        <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>
+        <span class="set-text"><b>${t('versions.title')}</b><small>${t('versions.lead')}</small></span></button></div>${list}`;
   }
   body.innerHTML = html;
 }

@@ -15,14 +15,15 @@ import { planCsv } from '../core/csv';
 import { currentPlan, plans } from '../store/state';
 import { t, tp, type PluralKey, type TextKey } from '../i18n/index';
 import { fmtDate, isoDate, today } from '../core/dates';
-import { $, esc, settings } from './dom';
+import { $, esc } from './dom';
 import { closeCtxMenu } from './menu';
 import { createPlan, planKey, save, uniqueName } from '../store/plans';
 import { toast } from './toast';
 import { uid } from '../core/util';
 import { SYNC_FORMAT, parseStore, toFile } from '../sync/drive';
-import { localStore } from '../sync/sync';
-import type { FullStore, Store } from '../core/merge';
+import { applyStore, localStore } from '../sync/sync';
+import { mergeStores, type FullStore, type Store } from '../core/merge';
+import { undoable } from './undo';
 import { Db, SYNC_COLLS } from '../core/model';
 import { userStorage } from '../store/users';
 import { saveVisions } from '../store/visions';
@@ -182,7 +183,8 @@ export function backupAll() {
 
 // Reads a backup file; throws an error with code 'invalid', 'plan' (a single plan's export) or
 // 'version' (from a newer app).
-export function parseBackup(text: string): { store: FullStore; exportedAt?: string } {
+export type Backup = { store: FullStore; exportedAt?: string };
+export function parseBackup(text: string): Backup {
   const fail = (code: string) => Object.assign(new Error(code), { code });
   let raw: { format?: unknown; version?: number; exportedAt?: string; [k: string]: unknown } | null;
   try {
@@ -200,13 +202,18 @@ export function parseBackup(text: string): { store: FullStore; exportedAt?: stri
   }
 }
 
-// Adds every plan in the backup as a new plan named "{name} ({date of the backup})" and the visions
-// whose id is not here, and merges the journal. The open plan stays open. Returns how many of each were added.
-export function restoreBackup({ store, exportedAt }: { store: FullStore; exportedAt?: string }) {
+// Adds the plans in the backup (all, or those in `only`) as new plans named "{name} ({date of the
+// backup})" and, unless `visions` is false, the visions whose id is not here, and merges the journal.
+// The open plan stays open. Returns how many of each were added.
+export function restoreBackup(
+  { store, exportedAt }: Backup,
+  { only, visions: withVisions = true }: { only?: string[]; visions?: boolean } = {},
+) {
   const at = new Date(exportedAt!);
   const date = isNaN(+at) ? '' : ` (${fmtDate(isoDate(at))})`;
   let added = 0;
   for (const p of store.plans.list) {
+    if (only && !only.includes(p.id)) continue;
     const id = uid(),
       data = store.data[p.id];
     data.deleted = {}; // a new plan has no deletions to remember
@@ -220,7 +227,7 @@ export function restoreBackup({ store, exportedAt }: { store: FullStore; exporte
     added++;
   }
   const have = new Set(visions.list.map(v => v.id));
-  const missing = store.visions.list.filter(v => !have.has(v.id) && have.add(v.id));
+  const missing = withVisions ? store.visions.list.filter(v => !have.has(v.id) && have.add(v.id)) : [];
   visions.list.push(...missing);
   // The journal merges as a sync would: what is here and newer, or deleted since, stays so.
   if (store.journal) applyJournal(mergeJournal(journal, store.journal));
@@ -231,33 +238,51 @@ export function restoreBackup({ store, exportedAt }: { store: FullStore; exporte
   return { plans: added, visions: missing.length };
 }
 
+// Merges the backup's plans in `only` as a sync with another device would: the newer change wins on
+// each item, and what was deleted here after the backup stays deleted. Offers Undo.
+export function mergeBackup({ store }: Backup, only: string[]) {
+  const list = store.plans.list.filter(p => only.includes(p.id));
+  const part: FullStore = { ...store, plans: { ...store.plans, list } };
+  undoable(
+    () => {
+      applyStore(mergeStores(localStore(), part));
+      return tp('backup.merged', list.length);
+    },
+    undefined,
+    true,
+  );
+}
+
 export const restoreFromFile = async (file: File) => restoreText(await file.text());
 
+// Adds everything in the backup as copies (the file picker asks first: ui/restore-dialog.ts).
 export function restoreText(text: string) {
-  let backup;
+  const backup = readBackup(text);
+  if (backup) addCopies(backup);
+}
+
+// parseBackup, saying in the toast why a file cannot be restored.
+export function readBackup(text: string): Backup | null {
   try {
-    backup = parseBackup(text);
+    return parseBackup(text);
   } catch (e) {
-    return toast(
+    toast(
       t(
         ({ plan: 'backup.isPlan', version: 'backup.newer' } as Record<string, TextKey>)[(e as { code: string }).code] ||
           'err.import',
       ),
     );
+    return null;
   }
-  const n = restoreBackup(backup);
-  if (n.plans < backup.store.plans.list.length) return; // storage ran out: that message stays
+}
+
+// restoreBackup, then says what came back.
+export function addCopies(backup: Backup, opts: Parameters<typeof restoreBackup>[1] = {}) {
+  const n = restoreBackup(backup, opts);
+  if (n.plans < (opts.only || backup.store.plans.list).length) return; // storage ran out: that message stays
   toast(tp('backup.done', n.plans) + (n.visions ? '. ' + tp('backup.visions', n.visions) : ''));
 }
 
 document.addEventListener('click', e => {
   if ((e.target as HTMLElement).closest('#backupAllBtn')) backupAll();
-});
-document.addEventListener('change', e => {
-  if ((e.target as HTMLInputElement).id !== 'backupInput') return;
-  if ((e.target as HTMLInputElement).files![0]) {
-    restoreFromFile((e.target as HTMLInputElement).files![0]);
-    settings.close();
-  }
-  (e.target as HTMLInputElement).value = '';
 });

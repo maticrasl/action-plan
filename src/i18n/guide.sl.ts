@@ -535,8 +535,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     group: 'data',
     title: 'Kaj naredi prijava z Googlom',
     body: `<p>Prijava da Akcijskemu načrtu eno dovoljenje: da svoje podatke hrani v skriti mapi vašega Google Driva. Aplikacija ne vidi vaših drugih datotek, pošte ali stikov, druge aplikacije pa ne vidijo te mape. Vaš e-poštni naslov in ime sta prebrana ob prijavi, da je na tej napravi vidno, kdo je prijavljen.</p>
-<p>Načrte v tej mapi in to, kar ste izbrisali v zadnjih 30 dneh (Nedavno izbrisano), hrani Google pod vašim računom in po Googlovih pogojih. Akcijski načrt jih ne šifrira dodatno, poleg tega, kar Google naredi za vse datoteke v Drivu.</p>
-<p>Da prenehate: odjavite se v Nastavitve › Račun in sinhronizacija. Da odstranite kopijo v Drivu: odprite nastavitve Google Driva, »Upravljanje aplikacij«, poiščite Akcijski načrt in izberite »Izbriši skrite podatke aplikacije«. Dovoljenje lahko prekličete v svojem Google računu pod »Aplikacije in storitve drugih ponudnikov«.</p>`,
+<p>Načrte v tej mapi to, kar ste izbrisali v zadnjih 30 dneh (Nedavno izbrisano), in datirane kopije za Starejše različice hrani Google pod vašim računom in po Googlovih pogojih. Akcijski načrt jih ne šifrira dodatno, poleg tega, kar Google naredi za vse datoteke v Drivu.</p>
+<p>Da prenehate: odjavite se v Nastavitve › Račun in sinhronizacija. Da odstranite kopijo v Drivu: odprite nastavitve Google Driva, »Upravljanje aplikacij«, poiščite Akcijski načrt in izberite »Izbriši skrite podatke aplikacije«; to odstrani tudi datirane kopije. Dovoljenje lahko prekličete v svojem Google računu pod »Aplikacije in storitve drugih ponudnikov«.</p>`,
     related: ['p-where', 'h-sync'],
   },
   {
@@ -559,7 +559,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Prijavite se z Googlom</strong>, da je kopija v vašem Drivu in na vaših drugih napravah.</li>
 <li>Vsake toliko <strong>izvozite polno kopijo</strong> vsakega načrta ali v Nastavitve › Podatki uporabite <strong>Varnostna kopija vsega</strong> za vse načrte in vizije v eni datoteki, in datoteko shranite drugam.</li>
 </ul>
-<p>Izbrisan element ali načrt ostane 30 dni v Nastavitve › Podatki › Nedavno izbrisano; s sinhronizacijo tudi na vaših drugih napravah. Potem ga ni več. Ko je sinhronizacija vklopljena, izbris načrta ta načrt izbriše tudi na vaših drugih napravah. Okno za brisanje ponudi, da najprej prenesete varnostno kopijo.</p>`,
+<p>Izbrisan element ali načrt ostane 30 dni v Nastavitve › Podatki › Nedavno izbrisano; s sinhronizacijo tudi na vaših drugih napravah. Potem ga ni več. Ko je sinhronizacija vklopljena, izbris načrta ta načrt izbriše tudi na vaših drugih napravah. Okno za brisanje ponudi, da najprej prenesete varnostno kopijo.</p>
+<p>Ko je sinhronizacija z Googlom vklopljena, aplikacija v vašem Drivu hrani tudi datirane kopije vseh vaših načrtov: po eno za vsakega od zadnjih 7 dni, ko je sinhronizirala, nato po eno na teden za 8 tednov. V Nastavitve › Račun in sinhronizacija › Starejše različice iz ene od njih vrnete načrte, ki jih izberete, kot kopije; nič, kar imate, se ne spremeni. Obnovi iz varnostne kopije… v Nastavitve › Podatki lahko varnostno kopijo tudi združi z vašimi načrti, tako kot sinhronizacija z drugo napravo.</p>`,
     action: { do: 'export', label: 'Izvozi načrt' },
     related: ['h-plans', 'h-sync'],
   },

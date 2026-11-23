@@ -8,6 +8,7 @@ type Events = {
   storeReplaced: boolean; // a sync stored its result; true if the open plan or the visions changed
   storageError: void; // a write did not fit
   syncChanged: void; // the sync status changed
+  uploaded: void; // a sync wrote the Drive file
 };
 
 const listeners = new Map<keyof Events, ((p: never) => void)[]>();

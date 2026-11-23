@@ -37,6 +37,7 @@ import { listenGraphs } from './views/graphs/points';
 import { listenGuide } from './views/guide';
 import { listenFeedback } from './ui/feedback';
 import { listenTrash } from './ui/trash-dialog';
+import { listenRestore } from './ui/restore-dialog';
 import { listenReplan } from './ui/replan';
 import { listenCsv } from './ui/csv-dialog';
 
@@ -69,6 +70,8 @@ on('storeReplaced', changed => {
 });
 on('storageError', () => toast(t('err.storage')));
 on('syncChanged', () => renderSync());
+// Once a merged backup is in Drive, undoing it here would be undone by the next sync.
+on('uploaded', () => dropUndo(true));
 // Another tab saved the journal: this one takes it over, so it never writes an old copy back.
 addEventListener('storage', e => e.key === userKey(JOURNAL_KEY) && loadJournal());
 // Another tab saved plans or visions: merged here item by item (sync/tabs.ts).
@@ -83,6 +86,7 @@ listenWalk();
 listenTips();
 listenFeedback();
 listenTrash();
+listenRestore();
 listenReplan();
 listenCsv();
 listenUndo();

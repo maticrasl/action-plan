@@ -210,7 +210,22 @@
     </footer>
   </dialog>
 
-  <dialog id="replan" class="modal replan" aria-labelledby="replanTitle">
+  <dialog id="restoreDlg" class="modal plan-share" aria-labelledby="restoreTitle">
+    <header class="modal-head">
+      <h2 id="restoreTitle" data-i18n="versions.title">Earlier versions</h2>
+      <button type="button" class="icon-btn" data-restore-close data-i18n-aria="btn.close" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="modal-body" id="restoreBody"></div>
+    <footer class="modal-foot">
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" data-restore-close data-i18n="btn.cancel">Cancel</button>
+      <button type="button" class="btn primary" id="restoreOk" hidden></button>
+    </footer>
+  </dialog>
+
+  <dialog id="replan"class="modal replan" aria-labelledby="replanTitle">
     <form method="dialog" id="replanForm" novalidate>
       <header class="modal-head">
         <h2 id="replanTitle" data-i18n="replan.title">Move late steps</h2>
@@ -426,7 +441,7 @@
             </button>
             <label class="set-item">
               <svg class="set-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v3.5H8"/></svg>
-              <span class="set-text"><b data-i18n="backup.restore">Restore from a backup…</b><small data-i18n="settings.restoreHint">Adds them as copies and changes nothing you have.</small></span>
+              <span class="set-text"><b data-i18n="backup.restore">Restore from a backup…</b><small data-i18n="settings.restoreHint">Choose plans to add as copies, or merge them into yours.</small></span>
               <input type="file" id="backupInput" accept=".json,application/json" hidden>
             </label>
             <button type="button" class="set-item" id="trashBtn">
