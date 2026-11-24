@@ -104,7 +104,7 @@ suite(async () => {
     );
     assert(syncState.status === 'synced' && !$('#syncBtn').hidden, 'synced, cloud shown');
     assert(
-      G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A',
+      G.tokens[JSON.parse(localStorage.getItem('actionplan.syncAuth')).value] === 'perm-A',
       'token kept for this user',
     );
     assert(!offers, 'no first-visit welcome: the data is the same');
@@ -142,11 +142,11 @@ suite(async () => {
       noLeak(keysText(bor), ['A'], "Bor's stored keys");
       assert(fileText('perm-A') === aFile, "Ana's Drive untouched");
       assert(
-        G.tokens[JSON.parse(sessionStorage.getItem(`actionplan.u.${bor.id}.syncToken`)).value] === 'perm-B',
+        G.tokens[JSON.parse(localStorage.getItem(`actionplan.u.${bor.id}.syncAuth`)).value] === 'perm-B',
         "Bor's own token, under his prefix",
       );
       assert(
-        G.tokens[JSON.parse(sessionStorage.getItem('actionplan.syncToken')).value] === 'perm-A',
+        G.tokens[JSON.parse(localStorage.getItem('actionplan.syncAuth')).value] === 'perm-A',
         "Ana's token stays hers",
       );
       // The real offer: a new user has not seen the tour nor Getting started, so the language picker opens.
@@ -198,7 +198,7 @@ suite(async () => {
     await settle();
     eq(syncState.status, 'account', 'status says it was another account');
     assert($('#syncBtn').title === t('sync.status.account', { email: 'ana@example.com' }), 'and which to choose');
-    assert(!sessionStorage.getItem('actionplan.syncToken') && !drive.token, 'the wrong token is not kept');
+    assert(!localStorage.getItem('actionplan.syncAuth') && !drive.token, 'the wrong token is not kept');
     assert(fileText('perm-A') === aFile && fileText('perm-B') === bFile, 'neither Drive touched');
     G.pick = 'A';
     await syncNow(true);
@@ -256,7 +256,7 @@ suite(async () => {
       'a new guest on their own prefix',
     );
     assert(
-      $('#syncBtn').hidden && !drive.token && !sessionStorage.getItem('actionplan.syncToken'),
+      $('#syncBtn').hidden && !drive.token && !localStorage.getItem('actionplan.syncAuth'),
       "signed out, Ana's token gone",
     );
     assert(plans.list.length === 1 && itemCount() === 0 && !visions.list.length, 'an empty start');
@@ -485,7 +485,7 @@ suite(async () => {
         k => !users.list.some(u => u.ns && k.startsWith(KEY_ROOT + u.ns)) && k !== USERS_KEY && k !== LANG_KEY,
       );
       assert(!users.list.includes(ana) && !plain.length, 'no plain keys left: ' + plain);
-      assert(!sessionStorage.getItem('actionplan.syncToken'), 'nor her token');
+      assert(!localStorage.getItem('actionplan.syncAuth'), 'nor her token');
       assert(keysText(bor) === borKeys2 && localStorage.getItem(LANG_KEY) === lang, 'Bor and the language untouched');
       eq(
         readUsers().list.map(u => u.id),
@@ -526,7 +526,7 @@ suite(async () => {
       assert(
         !twin.account.id &&
           !drive.token &&
-          !sessionStorage.getItem(userKey('actionplan.syncToken')) &&
+          !localStorage.getItem(userKey('actionplan.syncAuth')) &&
           fileText('perm-B') === bFile,
         'not taken, token dropped, nothing synced',
       );
@@ -596,14 +596,14 @@ suite(async () => {
     await logIn('bor@example.com', byAcct('B'));
     await settle();
     const bor = currentUser(),
-      tokenKey = `actionplan.${bor.ns}syncToken`;
-    assert(sessionStorage.getItem(tokenKey), 'Bor signed in here');
+      tokenKey = `actionplan.${bor.ns}syncAuth`;
+    assert(localStorage.getItem(tokenKey), 'Bor signed in here');
     const after = JSON.parse(localStorage.getItem(USERS_KEY));
     after.list = after.list.filter(u => u.id !== bor.id);
     localStorage.setItem(USERS_KEY, JSON.stringify(after));
     dispatchEvent(new StorageEvent('storage', { key: USERS_KEY }));
     assert(!currentUser().account && !users.list.some(u => u.id === bor.id), 'the guest opens');
-    assert(!sessionStorage.getItem(tokenKey) && !drive.token, "Bor's token gone from this tab");
+    assert(!localStorage.getItem(tokenKey) && !drive.token, "Bor's token gone from this tab");
     noLeak(memText(), ['B'], "the guest's screen");
     // Put Bor back (his data is still stored) for what follows.
     users.list.push(bor);

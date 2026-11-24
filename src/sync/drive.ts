@@ -1,6 +1,7 @@
 /** Google Drive client: access token, account lookup, and reading and writing the sync file. */
-import { currentUser, saveUsers, userSession, users } from '../store/users';
-import { GOOGLE_CLIENT_ID } from './config';
+import { currentUser, saveUsers, userSession, userStorage, users } from '../store/users';
+import { GOOGLE_CLIENT_ID, TOKEN_SERVER } from './config';
+import { tokenServer } from './token-server';
 import { mergeStores, type FullStore, type Store } from '../core/merge';
 import { normalize, safeId } from '../core/normalize';
 import { normalizeVisions } from '../core/visions';
@@ -35,6 +36,7 @@ declare const google: {
 export interface Token {
   value: string;
   expires: number; // ms since 1970
+  sealed?: string; // the refresh token as the token Worker sealed it (token-server.ts)
 }
 // A Google account, as Drive tells it.
 export interface Account {
@@ -55,7 +57,8 @@ export const SYNC_VERSION = 3;
 export const SYNC_FORMAT = 'actionplan-sync';
 export const SYNC_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 
-export const TOKEN_KEY = 'actionplan.syncToken'; // sessionStorage: survives a reload, not a browser restart
+export const TOKEN_KEY = 'actionplan.syncToken'; // sessionStorage, before AUTH_KEY: read once, then removed
+export const AUTH_KEY = 'actionplan.syncAuth'; // localStorage: the user's Token, kept when the app is closed
 export const DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
 export const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 export const DRIVE_ABOUT =
@@ -118,12 +121,26 @@ export const drive = {
   async getToken(interactive?: boolean): Promise<string> {
     if (!this.token) {
       try {
-        this.token = JSON.parse(userSession.getItem(TOKEN_KEY) as string);
+        this.token = JSON.parse((userStorage.getItem(AUTH_KEY) || userSession.getItem(TOKEN_KEY)) as string);
       } catch (e) {
         /* none */
       }
     }
     const user = currentUser();
+    // Expired, but the Worker can give a new hour without asking the person.
+    if (this.token?.sealed && this.token.expires - Date.now() <= 60000 && TOKEN_SERVER) {
+      try {
+        const fresh = await tokenServer.refresh(this.token.sealed);
+        if (currentUser() !== user) throw new SyncError('switched');
+        this.keep(fresh);
+        return fresh.value;
+      } catch (e) {
+        if (!(e instanceof SyncError)) throw e;
+        if (e.code === 'auth')
+          this.forget(); // revoked or expired at Google: Connect again
+        else if (!interactive || e.code === 'switched') throw e; // Worker unreachable: try again later
+      }
+    }
     if (this.token && this.token.expires - Date.now() > 60000) {
       // Linked before users existed: whose token this is gets learnt first, without a popup.
       if (user.account!.id) return this.token.value;
@@ -160,7 +177,15 @@ export const drive = {
   },
 
   // Asks Google for an access token: `hint` is the account's email, `prompt` '' or 'select_account'.
+  // With the token Worker the token also carries a sealed refresh token; without it (or when the
+  // Worker is unreachable) Google's popup gives an hour.
   async request(hint: string, prompt: string): Promise<Token> {
+    if (TOKEN_SERVER)
+      try {
+        return await tokenServer.connect(hint, prompt);
+      } catch (e) {
+        if (!(e instanceof SyncError) || e.code === 'auth') throw e;
+      }
     await loadGis();
     return new Promise((resolve, reject) => {
       const client = google.accounts.oauth2.initTokenClient({
@@ -193,15 +218,18 @@ export const drive = {
   keep(token: Token): void {
     this.token = token;
     try {
-      userSession.setItem(TOKEN_KEY, JSON.stringify(token));
+      userStorage.setItem(AUTH_KEY, JSON.stringify(token));
+      userSession.removeItem(TOKEN_KEY);
     } catch (e) {
       /* ignore */
     }
   },
 
+  // This device only: the sealed token stays in Drive for the account's other devices.
   forget(): void {
     this.token = null;
     try {
+      userStorage.removeItem(AUTH_KEY);
       userSession.removeItem(TOKEN_KEY);
     } catch (e) {
       /* ignore */

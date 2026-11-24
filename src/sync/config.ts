@@ -1,4 +1,4 @@
-/** Build-time settings: the Google OAuth client id and where problem reports go. */
+/** Build-time settings: the Google OAuth client id, the token Worker, and where problem reports go. */
 
 // Google Drive sync: the OAuth client ID of your Google Cloud project
 // (it ends in .apps.googleusercontent.com). Leave it empty and the app works
@@ -8,3 +8,7 @@ export const GOOGLE_CLIENT_ID: string = '754203093417-0bjbhld4co6nkg6ols4354lc0r
 // GitHub repository (owner/name) whose issue forms take problem reports and ideas. Leave it empty
 // in your own copy of the app and Settings and the Guide show no links to report.
 export const FEEDBACK_REPO: string = 'maticrasl/action-plan';
+
+// The token Worker (worker/README.md) that keeps sync signed in, e.g. https://action-plan-token.you.workers.dev.
+// Leave it empty and sign-in lasts about an hour, as Google's popup gives it.
+export const TOKEN_SERVER: string = '';

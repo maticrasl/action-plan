@@ -20,8 +20,8 @@ that touches `document` while loading is tested by page tests, not unit tests.
 
 **`src/core` and `src/i18n` without page APIs.** They compile without the DOM library
 (`tsconfig.core.json`), so `document`, `window` or `localStorage` there is a compile error. This
-keeps the rules testable in Node and reusable by a server later (the planned Cloudflare Worker
-for Drive tokens is the first step); nothing is built for that now.
+keeps the rules testable in Node and reusable by a server later (the token Worker, `worker/`,
+is the first step and uses none of it yet).
 
 **Layers, and events only for upward calls.** `i18n → core → store → sync → ui → views →
 tutorial → main`, enforced by ESLint (`scripts/lib/eslint-layers.mjs`). When a lower layer must
@@ -62,7 +62,8 @@ devices that may run an older version for a while, and sync carries one version'
 other. Frozen: `localStorage` keys `actionplan.v1`, `actionplan.v1.<preference>`,
 `actionplan.plans`, `actionplan.plan.<id>`, `actionplan.visions`, `actionplan.users`,
 `actionplan.lang` and the same under `actionplan.u.<userId>.`; `sessionStorage`
-`actionplan.syncToken`; the Drive app-folder file `actionplan-sync.json` (format
+`actionplan.syncToken` (still read, then moved to the per-user `localStorage` key
+`actionplan.syncAuth`); the Drive app-folder files `actionplan-auth.json` (`{ sealed }`) and `actionplan-sync.json` (format
 `actionplan-sync`); exported plan files (full copy and template); full backups (the sync format
 with `kind: 'backup'` and `exportedAt`).
 
@@ -110,6 +111,15 @@ since the typeface ships with the app (2026-11-18).
 once, so nothing reaches `main` without `npm run check` passing on GitHub. Claude does the whole
 release when the owner says "ship it" (the `ship` skill). Hosting stays on GitHub Pages at the
 same address, so stored data and Google sign-in keep working.
+
+**A server for sign-in only, no data (2026-11-24).** Sync talks to Drive from the page, but
+Google's popup token lasts an hour. The token Worker (`worker/`, Cloudflare, stateless) holds the
+client secret and swaps a code or a sealed refresh token for an access token; it never sees plans.
+The sealed token lives in the page (no cookie: Safari blocks third-party ones) and once per
+account in Drive's app folder, because Google gives a refresh token only on the first consent and
+its code popup cannot ask again. So signing out forgets it on that device only; removing the app
+in the Google account ends it everywhere. Without `TOKEN_SERVER`, or with the Worker down, the
+hour-long popup token still works. Spec: `docs/specs/2026-11-24-token-worker.md`.
 
 ## The owner's design preferences
 
