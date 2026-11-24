@@ -16,7 +16,12 @@ const plan = (p: Partial<Db>): Db => ({ ...emptyDb(), ...p });
 const goal = (id: string, more: Partial<Goal> = {}): Goal => ({ id, title: id, status: 'active', ...more });
 const act = (id: string, more: Partial<Activity> = {}): Activity => ({ id, title: id, status: 'todo', ...more });
 const daily = (id: string, start: string, ticked: string[] = [], more: Partial<Activity> = {}) =>
-  act(id, { repeat: { every: 1, unit: 'day' }, startDate: start, checkins: Object.fromEntries(ticked.map(d => [d, 1 as const])), ...more });
+  act(id, {
+    repeat: { every: 1, unit: 'day' },
+    startDate: start,
+    checkins: Object.fromEntries(ticked.map(d => [d, 1 as const])),
+    ...more,
+  });
 const state = (id: string, values: number[]): State => ({
   id,
   title: id,
@@ -45,12 +50,15 @@ describe('back', () => {
     const p = at('2026-11-01');
     p.activities.push(daily('r', '2026-10-01', ['2026-11-15']));
     expect(hits('back', p)).toHaveLength(0);
-    expect(hits('back', plan({ goals: [goal('g', { status: 'paused', updatedAt: '2026-10-01T00:00:00Z' })] }))).toHaveLength(0);
+    expect(
+      hits('back', plan({ goals: [goal('g', { status: 'paused', updatedAt: '2026-10-01T00:00:00Z' })] })),
+    ).toHaveLength(0);
   });
 });
 
 describe('overdue-pile', () => {
-  const due = (n: number, date = '2026-11-18') => plan({ activities: Array.from({ length: n }, (_, i) => act(`a${i}`, { dueDate: date })) });
+  const due = (n: number, date = '2026-11-18') =>
+    plan({ activities: Array.from({ length: n }, (_, i) => act(`a${i}`, { dueDate: date })) });
   test('3 overdue: yes, with the count; 2: no; due today is not overdue; done ones do not count', () => {
     expect(hits('overdue-pile', due(3))[0].vars).toEqual({ n: 3 });
     expect(hits('overdue-pile', due(2))).toHaveLength(0);
@@ -114,7 +122,9 @@ describe('goal-behind and goal-past', () => {
     expect(hits('goal-behind', g(44.9, '2026-11-29'))).toHaveLength(1);
   });
   test('no measuring state, or routines kept: no pace, no tip', () => {
-    expect(hits('goal-behind', plan({ goals: [metric('g', 0, { startDate: '2026-10-20', deadline: '2026-11-29' })] }))).toHaveLength(0);
+    expect(
+      hits('goal-behind', plan({ goals: [metric('g', 0, { startDate: '2026-10-20', deadline: '2026-11-29' })] })),
+    ).toHaveLength(0);
     expect(hits('goal-behind', g(0, '2026-11-29', { progress: 'routines' }))).toHaveLength(0);
   });
   test('activities done: by the share done', () => {
@@ -133,7 +143,9 @@ describe('goal-behind and goal-past', () => {
     expect(hits('goal-past', g(40, TODAY))).toHaveLength(0);
   });
   test('past its date: yes, with its progress; the most overdue first', () => {
-    const p = plan({ goals: [metric('a', 40, { deadline: '2026-11-18' }), metric('b', 10, { deadline: '2026-11-01' })] });
+    const p = plan({
+      goals: [metric('a', 40, { deadline: '2026-11-18' }), metric('b', 10, { deadline: '2026-11-01' })],
+    });
     expect(hits('goal-past', p).map(h => h.vars)).toEqual([
       { name: 'b', pct: 10 },
       { name: 'a', pct: 40 },
@@ -146,22 +158,34 @@ describe('goal-behind and goal-past', () => {
 
 describe('stuck-step', () => {
   test('In progress 21 days: yes, in weeks; 20: no', () => {
-    expect(hits('stuck-step', plan({ activities: [act('a', { status: 'doing', statusSince: '2026-10-29' })] }))[0].vars).toEqual({ name: 'a', n: 3 });
-    expect(hits('stuck-step', plan({ activities: [act('a', { status: 'doing', statusSince: '2026-10-30' })] }))).toHaveLength(0);
+    expect(
+      hits('stuck-step', plan({ activities: [act('a', { status: 'doing', statusSince: '2026-10-29' })] }))[0].vars,
+    ).toEqual({ name: 'a', n: 3 });
+    expect(
+      hits('stuck-step', plan({ activities: [act('a', { status: 'doing', statusSince: '2026-10-30' })] })),
+    ).toHaveLength(0);
   });
   test('without statusSince: the last change counts', () => {
-    expect(hits('stuck-step', plan({ activities: [act('a', { status: 'doing', updatedAt: '2026-10-01T00:00:00Z' })] }))).toHaveLength(1);
+    expect(
+      hits('stuck-step', plan({ activities: [act('a', { status: 'doing', updatedAt: '2026-10-01T00:00:00Z' })] })),
+    ).toHaveLength(1);
   });
   test('a list, or a step with sub-activities: no', () => {
     const old = { status: 'doing' as const, statusSince: '2026-01-01' };
     expect(hits('stuck-step', plan({ activities: [act('a', { ...old, list: [] })] }))).toHaveLength(0);
-    expect(hits('stuck-step', plan({ activities: [act('a', old), act('c')], relations: [rel('c', 'subactivity', 'a')] }))).toHaveLength(0);
+    expect(
+      hits('stuck-step', plan({ activities: [act('a', old), act('c')], relations: [rel('c', 'subactivity', 'a')] })),
+    ).toHaveLength(0);
   });
 });
 
 describe('wrong-way', () => {
   const p = (values: number[]) =>
-    plan({ goals: [goal('g', { metric: 'kg', baseline: '90', target: '70' })], states: [state('s', values)], relations: [rel('s', 'measures', 'g')] });
+    plan({
+      goals: [goal('g', { metric: 'kg', baseline: '90', target: '70' })],
+      states: [state('s', values)],
+      relations: [rel('s', 'measures', 'g')],
+    });
   test('three moves away from the target in a row: yes; two: no', () => {
     expect(ids('wrong-way', p([75, 77, 79, 81]))).toEqual(['s']);
     expect(ids('wrong-way', p([75, 77, 76, 81]))).toEqual([]);
@@ -184,10 +208,52 @@ describe('too-many-goals', () => {
 
 describe('too-many-routines', () => {
   const all = daysBetween('2026-11-01', TODAY);
-  const routines = (n: number, ticked: string[]) => plan({ activities: Array.from({ length: n }, (_, i) => daily(`r${i}`, '2026-11-01', ticked)) });
+  const routines = (n: number, ticked: string[]) =>
+    plan({ activities: Array.from({ length: n }, (_, i) => daily(`r${i}`, '2026-11-01', ticked)) });
   test('6 routines, kept under 60 %: yes; 5: no; all kept: no', () => {
     expect(hits('too-many-routines', routines(6, []))[0].vars).toEqual({ n: 6 });
     expect(hits('too-many-routines', routines(5, []))).toHaveLength(0);
     expect(hits('too-many-routines', routines(6, all))).toHaveLength(0);
+  });
+});
+
+describe('keep-out (feature 07)', () => {
+  // Weeks end on Sundays; today is Thursday 2026-11-19, so the last complete week ended 11-15.
+  const keep = (values: [string, number][]) =>
+    plan({
+      goals: [goal('g', { metric: 'kg', keep: { max: 75 }, startDate: '2026-10-19', deadline: '2026-11-01' })],
+      states: [
+        {
+          id: 's',
+          title: 's',
+          description: '',
+          value: String(values.at(-1)![1]),
+          history: values.map(([date, v]) => ({ date, value: String(v) })),
+        },
+      ],
+      relations: [rel('s', 'measures', 'g')],
+    });
+  test('two complete weeks out of range in a row: yes, with the count; one: no', () => {
+    expect(
+      hits(
+        'keep-out',
+        keep([
+          ['2026-10-20', 74],
+          ['2026-11-03', 76],
+        ]),
+      ),
+    ).toEqual([{ id: 'g', vars: { name: 'g', n: 2, unit: 'weeks' } }]);
+    expect(
+      hits(
+        'keep-out',
+        keep([
+          ['2026-10-20', 74],
+          ['2026-11-10', 76],
+        ]),
+      ),
+    ).toHaveLength(0);
+  });
+  test('a keep goal past its Until is not a past goal', () => {
+    expect(hits('goal-past', keep([['2026-10-20', 74]]))).toHaveLength(0);
   });
 });

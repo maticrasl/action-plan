@@ -29,7 +29,7 @@ import { installHintKey, installPrompt, isInstalled } from '../ui/install';
 import { requestRender } from '../ui/render';
 import { openDiscovery } from '../ui/discovery';
 import { toast } from '../ui/toast';
-import { openGuide } from '../views/guide';
+import { openReview } from '../views/review';
 import { firstVisible, spotlight } from './spotlight';
 
 // The Guide article each task's "More on this" opens.
@@ -88,14 +88,17 @@ export const WALK_DO: Record<TaskId, () => void> = {
   steps: () => openForm('activity', null, firstGoal() ? { contributes: [firstGoal()] } : {}),
   firstDone: () => showMe('activities', ['#view .acts .check']),
   routine: () => openForm('activity', null, { repeat: 'routine' }),
-  tick: () => showMe(ui.view === 'dashboard' && firstVisible(['#view .rt-week']) ? 'dashboard' : 'activities', ['#view .rt-week']),
+  tick: () =>
+    showMe(ui.view === 'dashboard' && firstVisible(['#view .rt-week']) ? 'dashboard' : 'activities', [
+      '#view .rt-week',
+    ]),
   measure: () => showMe('graphs', ['#view .gr-add']),
   days: () => {},
   backup: () => (syncConfigured() ? openSettings('syncSection') : openExport()),
   install: () => (installPrompt ? $('#installBtn').click() : openSettings('installSection')),
   views: () => setView(nextView()),
   vision: () => openForm('vision'),
-  review: () => openGuide('review'),
+  review: () => openReview('week'),
 };
 
 const btn = (act: string, label: string, cls = 'btn small', extra = '') =>
@@ -123,12 +126,17 @@ function taskBody(x: TaskView) {
   const views =
     id === 'views'
       ? `<span class="walk-views">${WALK_VIEWS.map(
-          v => `<span class="${getSeen().views?.[v] ? 'on' : ''}">${getSeen().views?.[v] ? '✓ ' : ''}${esc(t(`nav.${v}` as TextKey))}</span>`,
+          v =>
+            `<span class="${getSeen().views?.[v] ? 'on' : ''}">${getSeen().views?.[v] ? '✓ ' : ''}${esc(t(`nav.${v}` as TextKey))}</span>`,
         ).join(' · ')}</span>`
       : '';
   return `<div class="walk-body" id="walk-body-${id}">
-    <p>${esc(text)} ${views}</p>${id === 'vision' ? `
-    <p><button type="button" class="guide-ref" data-walk="find">${esc(t('disc.walk'))}</button></p>` : ''}
+    <p>${esc(text)} ${views}</p>${
+      id === 'vision'
+        ? `
+    <p><button type="button" class="guide-ref" data-walk="find">${esc(t('disc.walk'))}</button></p>`
+        : ''
+    }
     <div class="walk-acts">${taskButtons(id)}${btn(`skip:${id}`, t('walk.skip'), 'btn small ghost')}
       <button type="button" class="guide-ref" data-guide-open="${ARTICLE[id]}">${esc(t('walk.more'))}</button></div>
   </div>`;
@@ -142,7 +150,8 @@ function taskHtml(x: TaskView, shown: TaskId | null, v: WalkView) {
       : x.status === 'skipped'
         ? `<span class="walk-note">${esc(t('walk.skipped'))}</span>`
         : '';
-  const count = x.id === 'days' && x.status === 'open' ? `<span class="walk-n">${t('walk.days', { n: v.days })}</span>` : '';
+  const count =
+    x.id === 'days' && x.status === 'open' ? `<span class="walk-n">${t('walk.days', { n: v.days })}</span>` : '';
   const optional = x.optional ? ` <em>(${esc(t('walk.optional'))})</em>` : '';
   const open = x.status === 'open';
   const isShown = open && x.id === shown;
@@ -174,9 +183,10 @@ function stageHtml(s: StageView, walk: Walk, v: WalkView, shown: TaskId | null, 
 
 // The stages with their tasks: the one holding the shown task unfolded (or the one tapped).
 export function walkListHtml(walk: Walk, v: WalkView) {
-  const shown = walkUi.shown && v.stages.some(s => s.tasks.some(x => x.id === walkUi.shown && x.status === 'open'))
-    ? walkUi.shown
-    : v.next;
+  const shown =
+    walkUi.shown && v.stages.some(s => s.tasks.some(x => x.id === walkUi.shown && x.status === 'open'))
+      ? walkUi.shown
+      : v.next;
   const holder = v.stages.find(s => s.tasks.some(x => x.id === shown))?.id ?? null;
   const openStage = walkUi.stage ?? holder;
   return `<ol class="walk-stages">${v.stages.map(s => stageHtml(s, walk, v, shown, s.id === openStage)).join('')}</ol>`;
@@ -235,7 +245,9 @@ export function decorateWalk() {
       const task = title(ticked[ticked.length - 1]);
       // After the toast of the edit that ticked it (a form saves, draws, then says "Goal added").
       if (ui.view !== 'dashboard')
-        setTimeout(() => toast(v.next ? t('walk.tickedNext', { task, next: title(v.next) }) : t('walk.ticked', { task })));
+        setTimeout(() =>
+          toast(v.next ? t('walk.tickedNext', { task, next: title(v.next) }) : t('walk.ticked', { task })),
+        );
     }
   }
   const slot = viewEl.querySelector('[data-walk-slot]');

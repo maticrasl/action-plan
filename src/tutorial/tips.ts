@@ -35,7 +35,7 @@ import { openTemplates } from '../ui/templates-dialog';
 import { openReplan } from '../ui/replan';
 import { lateSteps } from '../core/replan';
 import { requestRender } from '../ui/render';
-import { openGuide } from '../views/guide';
+import { openReview } from '../views/review';
 import { visionsMode } from '../views/areas';
 import { prefs } from '../store/prefs';
 import { hasWork, openWork } from '../views/graphs/working';
@@ -99,7 +99,9 @@ export const TIP_DO: Record<TipAction, (c: Chosen, el: HTMLElement) => void> = {
   addSubgoal: c => openForm('goal', null, { subgoal: [target(c)] }),
   findVisions: () => openDiscovery(),
   recordValue: (c, el) => openStateValue(target(c), el),
-  review: () => openGuide('review'),
+  review: () => openReview('week'),
+  reviewMonth: () => openReview('month'),
+  reviewYear: () => openReview('year'),
   templates: () => openTemplates(),
   backup: () => (syncConfigured() ? openSettings('syncSection') : openExport()),
   install: () => (installPrompt ? $('#installBtn').click() : openSettings('installSection')),

@@ -5,9 +5,8 @@ import { GUIDE, GUIDE_ACTIONS, GUIDE_FACTS, GUIDE_GROUPS, VIEW_ARTICLE, type Art
 
 const langs = Object.entries(GUIDE) as [string, readonly Article[]][];
 const ids = new Set(GUIDE.en.map(a => a.id));
-// Every [[id]] link in a body or a review line.
-const refsIn = (a: Article) =>
-  [a.body, ...(a.review ?? []).map(r => r.text)].flatMap(s => [...s.matchAll(/\[\[([\w-]+)\]\]/g)].map(m => m[1]));
+// Every [[id]] link in a body.
+const refsIn = (a: Article) => [a.body].flatMap(s => [...s.matchAll(/\[\[([\w-]+)\]\]/g)].map(m => m[1]));
 
 describe('Guide articles', () => {
   test('every language has the same articles, in the same order and groups', () => {
@@ -16,9 +15,6 @@ describe('Guide articles', () => {
       expect(list.map(a => a.action?.do)).toEqual(GUIDE.en.map(a => a.action?.do));
       expect(list.map(a => a.more?.do)).toEqual(GUIDE.en.map(a => a.more?.do));
       expect(list.map(a => (a.related ?? []).join())).toEqual(GUIDE.en.map(a => (a.related ?? []).join()));
-      expect(list.map(a => (a.review ?? []).map(r => r.go).join())).toEqual(
-        GUIDE.en.map(a => (a.review ?? []).map(r => r.go).join()),
-      );
       expect(list.map(a => refsIn(a).join())).toEqual(GUIDE.en.map(a => refsIn(a).join()));
     }
   });
@@ -29,10 +25,13 @@ describe('Guide articles', () => {
       for (const a of list) {
         expect(GUIDE_GROUPS, a.id).toContain(a.group);
         if (a.action) expect(GUIDE_ACTIONS, a.id).toContain(a.action.do);
-        for (const r of a.review ?? []) expect(GUIDE_ACTIONS, a.id).toContain(r.go);
         expect(a.title.trim(), a.id).not.toBe('');
       }
-    for (const g of GUIDE_GROUPS) expect(GUIDE.en.some(a => a.group === g), g).toBe(true);
+    for (const g of GUIDE_GROUPS)
+      expect(
+        GUIDE.en.some(a => a.group === g),
+        g,
+      ).toBe(true);
   });
 
   test('every link to an article names one that exists', () => {
@@ -61,7 +60,7 @@ describe('Guide articles', () => {
     const allowed = /^<\/?(p|ul|ol|li|strong|em)( data-only="(\w+)")?>$/;
     for (const [lang, list] of langs)
       for (const a of list)
-        for (const s of [a.body, ...(a.review ?? []).map(r => r.text)])
+        for (const s of [a.body])
           for (const tag of s.match(/<[^>]*>/g) ?? []) {
             expect(tag, `${lang} ${a.id}`).toMatch(allowed);
             const fact = tag.match(/data-only="(\w+)"/)?.[1];

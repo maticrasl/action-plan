@@ -445,3 +445,12 @@
 .gr-card .meta {
   flex-wrap: wrap;
 }
+/* A keep goal's range (07); dots outside it in the warning colour. */
+.gr-band {
+  fill: color-mix(in srgb, var(--ok) 12%, transparent);
+  stroke: color-mix(in srgb, var(--ok) 45%, transparent);
+  stroke-dasharray: 4 4;
+}
+.gr-dot.out {
+  fill: var(--warn);
+}

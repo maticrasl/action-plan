@@ -35,6 +35,7 @@ export const guideEn = [
 <li><strong>Vision</strong> – a wished-for state without an end. Shared by all your plans.</li>
 <li><strong>Purpose</strong> – the one vision all your other visions and active goals lead to, once you have linked them that way.</li>
 <li><strong>Goal</strong> – a result with a deadline. <strong>Active</strong>, <strong>Paused</strong> or <strong>Achieved</strong>.</li>
+<li><strong>Keep goal</strong> – a goal about staying within a range instead of reaching a target.</li>
 <li><strong>Sub-goal</strong> – a smaller goal on the way to a bigger one.</li>
 <li><strong>Current state</strong> – something you measure. Either each new value replaces the last (weight), or the amounts <strong>add up</strong> (kilometres run).</li>
 <li><strong>Activity</strong> – a step. A <strong>one-time activity</strong>, a <strong>list</strong> (a checklist), a <strong>routine</strong> (repeats) or a <strong>routine list</strong> (a checklist that repeats).</li>
@@ -205,7 +206,8 @@ export const guideEn = [
 <li>Pause what you will not work on this month.</li>
 <li>For routines, tick today. That is all it takes to be on track again.</li>
 <li>Ask what made you stop. Illness and busy weeks pass by themselves. If the plan was too heavy or the goal stopped mattering, change the plan, not yourself.</li>
-</ol>`,
+</ol>
+<p>The weekly review is the quickest way back in: it shows only what needs a decision.</p>`,
     action: { do: 'replan', label: 'Move late steps…' },
     related: ['routine-slips', 'behind', 'let-go', 'review'],
   },
@@ -300,7 +302,7 @@ export const guideEn = [
     body: `<p>Mark it Achieved and stop for a moment before the next one. It is easy to skip this, and it is the part that makes the next goal easier.</p>
 <ul>
 <li><strong>Note what worked.</strong> Which step or routine made the difference? The app asks when you mark the goal Achieved. Two lines are enough.</li>
-<li><strong>Decide what stays.</strong> Many results need upkeep: the weight, the language, the savings. Keep one small routine and let the others end.</li>
+<li><strong>Decide what stays.</strong> Many results need upkeep: the weight, the language, the savings. Keep one small routine and let the others end. When you mark a measured goal Achieved, the app offers to set up a keep goal for the result, with the routines you choose to continue.</li>
 <li><strong>Choose what is next from the vision,</strong> not from the momentum. What does “To be fit and live healthily” ask for now? Perhaps something quite different.</li>
 <li><strong>Take a paused goal out of the queue,</strong> if one is waiting.</li>
 </ul>
@@ -325,34 +327,8 @@ export const guideEn = [
     id: 'review',
     group: 'stuck',
     title: 'The weekly review',
-    body: `<p>Once a week, five minutes, on a day and at a time you choose. This is what keeps a plan alive.</p>`,
-    review: [
-      {
-        text: '<strong>Tick what you did.</strong> Activities, list items, routine days you forgot to tick.',
-        go: 'view-activities',
-        label: 'Activities',
-      },
-      {
-        text: '<strong>Measure.</strong> Record a fresh value for each current state that has changed.',
-        go: 'view-graphs',
-        label: 'Graphs',
-      },
-      {
-        text: '<strong>Look back.</strong> What moved this week? What helped? One sentence in your head is enough.',
-        go: 'view-graphs',
-        label: 'Graphs',
-      },
-      {
-        text: '<strong>Fix the plan.</strong> Move dates that no longer hold. Split a step that did not move. Pause what is too much.',
-        go: 'view-timeline',
-        label: 'Timeline',
-      },
-      {
-        text: '<strong>Choose next week’s one thing.</strong> The step that matters most. Give it a day.',
-        go: 'pick-focus',
-        label: 'Choose…',
-      },
-    ],
+    body: `<p>Once a week, five minutes. The Review view walks you through it: tick what you forgot, record fresh values, write a line about how it went, fix dates that no longer hold, and choose the one step that matters most next week. Once a month it asks about your goals: keep going, change, pause or let go. Once a year it asks about your visions.</p>`,
+    action: { do: 'view-review', label: 'Open the weekly review' },
     related: ['method', 'fell-off', 'overplanning'],
   },
 
@@ -368,6 +344,7 @@ export const guideEn = [
 <li><strong>Activities done</strong> – the share of the goal’s activities that are done.</li>
 <li><strong>Routines kept</strong> – how steadily you keep the routines linked to the goal.</li>
 </ul>
+<p><strong>Keep within a range</strong> (“Kind of goal”) is for results that need upkeep: a weight, a balance, a limit on spending. Give “At least”, “At most” or both. The goal then shows how much of the time you were in range and warns when the latest value is outside.</p>
 <p>A goal can be <strong>part of</strong> a bigger goal (a sub-goal), can <strong>depend on</strong> another goal, and can <strong>serve</strong> visions. “Status” sets it to Active, Paused or Achieved; when a goal reaches its target the app asks whether to mark it achieved. A <strong>category</strong> (Health, Finance…) lets you filter goals with the chips above the list. Long-press or right-click a goal for more: add a sub-goal, add an activity for it, show it on the Map or the Timeline.</p>
 <p>Notes at the end of the form keep dated remarks; long-press the card and choose “Add a note” to write one quickly.</p>`,
     action: { do: 'add-goal', label: 'Add a goal' },
@@ -459,8 +436,11 @@ export const guideEn = [
     id: 'h-review',
     group: 'how',
     title: 'Review',
-    body: `<p>The done log lists what you finished, week by week: steps, routine days, values and goals reached. Choose <strong>This plan</strong> or <strong>All plans</strong> above it, and narrow it to one kind with the chips. Tap a line to open it; in All plans that opens its plan first. <strong>Show earlier</strong> adds older weeks. Weeks with nothing done are left out.</p>`,
+    body: `<p><strong>This week</strong> is the weekly review: what you did, the measurements with no value from the week, two lines to look back, what needs a decision, and next week’s one thing. Monday to Thursday it looks at last week, Friday to Sunday at the week under way; the arrows go to other weeks. <strong>Finish review</strong> keeps what you wrote.</p>
+<p><strong>This month</strong> asks about your goals, one card each: keep going, change it, pause it or let it go. <strong>This year</strong> asks about your visions and what the next year is for.</p>
+<p><strong>Done log</strong> lists what you finished, week by week, and <strong>Past reviews</strong> keeps every review you finished, to read again. A dot on Review means last week has no review yet.</p>`,
     action: { do: 'view-review', label: 'Open Review' },
+    related: ['review', 'h-today'],
   },
   {
     id: 'h-today',

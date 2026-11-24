@@ -80,6 +80,7 @@
     // The done log over the same history, with 240 steps finished across it (feature 13).
     for (let i = 0; i < 240; i++)
       db.activities.push({ id: 'a' + i, title: 'Activity ' + i, status: 'done', doneAt: addDays(today(), -i * 4) });
+    reviewView.tab = 'log'; // the done log is a tab of its own since feature 14
     check('240 steps + 1,100 amounts: review view', 100, () => setView('review'));
     deletePlan(plans.current);
     // Today over 5 plans of 300 activities each (feature 09): steps due around today, and daily routines.
@@ -90,13 +91,65 @@
         data.activities.push(
           i % 3
             ? { id: `t${p}-${i}`, title: 'Step ' + i, status: 'todo', dueDate: addDays(today(), (i % 20) - 10) }
-            : { id: `t${p}-${i}`, title: 'Routine ' + i, status: 'doing', repeat: { every: 1, unit: 'day' }, checkins: {} },
+            : {
+                id: `t${p}-${i}`,
+                title: 'Routine ' + i,
+                status: 'doing',
+                repeat: { every: 1, unit: 'day' },
+                checkins: {},
+              },
         );
       createPlan('Today ' + p, data);
       made.push(plans.current);
     }
     check('5 plans x 300 items: today view', 150, () => setView('today'));
+    reviewView.tab = 'week';
+    check('5 plans x 300 items: weekly review', 150, () => setView('review'));
+    reviewView.tab = 'month';
+    check('5 plans x 300 items: monthly review', 150, () => setView('review'));
     made.forEach(id => deletePlan(id));
+    // The yearly review over 3 plans with two years of data: worked out once when the tab opens (feature 14 C).
+    const years = [];
+    for (let p = 0; p < 3; p++) {
+      const data = emptyDb();
+      const checkins = {};
+      for (let i = 0; i < 730; i += 2) checkins[addDays(today(), -i)] = 1;
+      data.activities.push({
+        id: `yr${p}`,
+        title: 'Routine',
+        status: 'doing',
+        repeat: { every: 1, unit: 'day' },
+        startDate: addDays(today(), -730),
+        checkins,
+      });
+      for (let i = 0; i < 300; i++)
+        data.activities.push({
+          id: `ys${p}-${i}`,
+          title: 'Step ' + i,
+          status: 'done',
+          doneAt: addDays(today(), -i * 2),
+        });
+      data.states.push({
+        id: `yv${p}`,
+        title: 'Value',
+        description: '',
+        value: '1',
+        history: Array.from({ length: 200 }, (_, i) => ({ date: addDays(today(), -i * 3), value: String(i) })),
+      });
+      for (let i = 0; i < 20; i++)
+        data.goals.push({
+          id: `yg${p}-${i}`,
+          title: 'Goal ' + i,
+          status: i % 4 ? 'active' : 'achieved',
+          achievedAt: addDays(today(), -i * 30),
+        });
+      createPlan('Year ' + p, data);
+      years.push(plans.current);
+    }
+    reviewView.tab = 'year';
+    check('3 plans x 2 years: yearly review', 200, () => setView('review'));
+    reviewView.tab = 'week';
+    years.forEach(id => deletePlan(id));
     // Visions, last so their extra drawing doesn't weigh on the checks above: the 300-item map again,
     // with 20 visions in a tree that every goal serves (clouds, lines, the glow, a gold Purpose).
     createPlan('Visions map', emptyDb());

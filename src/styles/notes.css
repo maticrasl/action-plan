@@ -128,3 +128,17 @@
   gap: 8px;
   margin-top: 14px;
 }
+/* "Keep this result?" under the closing note (07). */
+.closing-keep {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.closing-keep h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.closing-keep p {
+  margin: 0 0 10px;
+  color: var(--ink-2);
+}

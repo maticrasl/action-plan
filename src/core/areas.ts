@@ -37,9 +37,9 @@ export interface AreaReport {
 }
 
 // Areas of every plan in `all` (visions are global); see docs/specs/2026-11-23-life-areas.md for the counting.
-export function areaReport(all: PlanSource[], now: ISODate): AreaReport {
-  const from = addDays(now, -29),
-    byKey = new Map<string, AreaBlock & { weight: number }>();
+// `from`: the first day counted (the last 30 days unless given; the yearly review gives its year).
+export function areaReport(all: PlanSource[], now: ISODate, from: ISODate = addDays(now, -29)): AreaReport {
+  const byKey = new Map<string, AreaBlock & { weight: number }>();
   const get = (name: string) => {
     const k = areaKey(name);
     if (!byKey.has(k)) byKey.set(k, { name, visions: [], goals: 0, effort: 0, share: 0, weight: 0 });

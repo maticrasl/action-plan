@@ -20,7 +20,11 @@ suite(async () => {
     setView('dashboard');
     assert(walkCard() && $('#view').firstElementChild === walkCard(), 'card first in the view');
     assert($('#view .empty'), 'the empty state stays under it');
-    eq($('#view .walk-head .walk-n').textContent, t('walk.count', { done: 0, total: total() }), 'count: nothing done yet');
+    eq(
+      $('#view .walk-head .walk-n').textContent,
+      t('walk.count', { done: 0, total: total() }),
+      'count: nothing done yet',
+    );
     eq(shownTask(), 'goal', 'the next task shows its text');
     assert(
       $('#view [data-stage="first"] .walk-stage-head').getAttribute('aria-expanded') === 'true' &&
@@ -43,7 +47,11 @@ suite(async () => {
     submitForm();
     assert(getWalk().done.goal === today(), 'goal ticked');
     await tick();
-    eq($('#toast').textContent, t('walk.tickedNext', { task: t('walk.goal.title'), next: t('walk.state.title') }), 'toast');
+    eq(
+      $('#toast').textContent,
+      t('walk.tickedNext', { task: t('walk.goal.title'), next: t('walk.state.title') }),
+      'toast',
+    );
     setView('dashboard');
     assert(pct() !== '0%' && $('#view [data-task="goal"].done'), 'trail moved, goal shows done');
     eq(shownTask(), 'state', 'next: where you stand');
@@ -102,7 +110,7 @@ suite(async () => {
     WALK_DO.views();
     eq(ui.view, 'map', 'views: the first not opened');
     WALK_DO.review();
-    assert(ui.view === 'guide' && guideState.open === 'review', 'review: the Guide article');
+    assert(ui.view === 'review' && reviewView.tab === 'week', 'review: the weekly review');
     return res.join(' ') + ` ${a.title}/${r.title}`;
   });
 
@@ -119,7 +127,10 @@ suite(async () => {
     assert($('#view [data-stage="rhythm"] .walk-tasks'), 'any stage unfolds');
     $('#view [data-walk="fold"]').click();
     assert(walkCard().classList.contains('folded') && getWalk().folded, 'folded and remembered');
-    assert(walkCard().textContent.includes(t('walk.next', { task: t('walk.state.title') })), 'one line with the next task');
+    assert(
+      walkCard().textContent.includes(t('walk.next', { task: t('walk.state.title') })),
+      'one line with the next task',
+    );
     assert(document.activeElement === $('#view [data-walk="fold"]'), 'focus stays on the fold button');
     $('#view [data-walk="fold"]').click();
     assert(!getWalk().folded, 'unfolded');
@@ -136,12 +147,32 @@ suite(async () => {
 
   await step('walkthrough: finishing shows the closing text; Close ends it; the Guide shows it done', () => {
     fresh('Walk end');
-    startWalk({ done: Object.fromEntries(['goal', 'state', 'steps', 'firstDone', 'routine', 'tick', 'measure', 'days', 'backup', 'install', 'views', 'vision'].map(id => [id, d(-1)])) });
+    startWalk({
+      done: Object.fromEntries(
+        [
+          'goal',
+          'state',
+          'steps',
+          'firstDone',
+          'routine',
+          'tick',
+          'measure',
+          'days',
+          'backup',
+          'install',
+          'views',
+          'vision',
+        ].map(id => [id, d(-1)]),
+      ),
+    });
     setView('dashboard');
     eq(shownTask(), 'review', 'one left');
     replaceWalk({ ...getWalk(), skipped: ['review'] });
     render();
-    assert(walkCard().classList.contains('finished') && $('#view .walk h2').textContent === t('walk.finished.title'), 'closing text');
+    assert(
+      walkCard().classList.contains('finished') && $('#view .walk h2').textContent === t('walk.finished.title'),
+      'closing text',
+    );
     $('#view [data-walk="close"]').click();
     assert(!walkCard() && getWalk().state === 'finished', 'gone for good');
     setView('guide');
@@ -154,20 +185,23 @@ suite(async () => {
   });
 
   // A template's states have no value yet (a template is a plan without the person in it): where you stand stays open.
-  await step('walkthrough: a plan from a template ticks goal, steps and routine at once; where you stand is next', () => {
-    startWalk();
-    const fits = TEMPLATES.find(tp => {
-      const inp = { ...walkInput(getWalk()), db: templateData(tp) };
-      return ['goal', 'steps', 'routine'].every(id => checkTask(id, inp)) && inp.db.states.length;
-    });
-    assert(fits, 'a template with a goal, two steps, a routine and a state');
-    useTemplate(fits);
-    setView('dashboard');
-    const done = getWalk().done;
-    assert(done.goal && done.steps && done.routine && !done.state, 'three ticked: ' + Object.keys(done));
-    eq(shownTask(), 'state', 'next: record where you stand');
-    return fits.id;
-  });
+  await step(
+    'walkthrough: a plan from a template ticks goal, steps and routine at once; where you stand is next',
+    () => {
+      startWalk();
+      const fits = TEMPLATES.find(tp => {
+        const inp = { ...walkInput(getWalk()), db: templateData(tp) };
+        return ['goal', 'steps', 'routine'].every(id => checkTask(id, inp)) && inp.db.states.length;
+      });
+      assert(fits, 'a template with a goal, two steps, a routine and a state');
+      useTemplate(fits);
+      setView('dashboard');
+      const done = getWalk().done;
+      assert(done.goal && done.steps && done.routine && !done.state, 'three ticked: ' + Object.keys(done));
+      eq(shownTask(), 'state', 'next: record where you stand');
+      return fits.id;
+    },
+  );
 
   await step('walkthrough: days and views are counted while it or the tips are on', () => {
     fresh('Walk days');
@@ -187,7 +221,18 @@ suite(async () => {
 
   await step('walkthrough: without sync set up the copy task offers the export only', () => {
     fresh('Walk copy');
-    startWalk({ done: { goal: today(), state: today(), steps: today(), firstDone: today(), routine: today(), tick: today(), measure: today(), days: today() } });
+    startWalk({
+      done: {
+        goal: today(),
+        state: today(),
+        steps: today(),
+        firstDone: today(),
+        routine: today(),
+        tick: today(),
+        measure: today(),
+        days: today(),
+      },
+    });
     setView('dashboard');
     eq(shownTask(), 'backup', 'copy is next');
     const text = $('#view .walk-body p').textContent;

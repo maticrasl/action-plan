@@ -12,6 +12,7 @@ import { findEntity, relLabel } from '../../core/relations';
 import { db } from '../../core/state';
 import { activityState, goalProgress, goalState } from '../../core/progress';
 import { REL_TYPES } from '../../core/model';
+import { isKeep } from '../../core/keep';
 import { mapLineColour, mapSelection } from '../map/render';
 import type { Activity, Goal, RelSpec, RelType } from '../../core/model';
 import type { Entity } from '../../core/relations';
@@ -138,7 +139,8 @@ export function renderTimeline() {
       const open = kind === 'goal' && !!s && !e;
       if (s || e) {
         const a = dayNum((s || e)!),
-          b = open ? Math.max(a, todayN) : dayNum((e || s)!);
+          // A keep goal with no end runs on to the right edge (07).
+          b = open ? Math.max(a, isKeep(item as Goal) ? to : todayN) : dayNum((e || s)!);
         const left = x(a),
           width = (b - a + 1) * px;
         const overdue = st === 'late' && e && dayNum(e) < todayN;

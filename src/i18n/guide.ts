@@ -40,8 +40,7 @@ export type GuideFact = (typeof GUIDE_FACTS)[number];
 
 /* An article. `body` is fixed HTML written by us, never user input, in a small subset:
    <p> <ul> <ol> <li> <strong> <em>, `data-only` on <p> and <ul>, and [[id]] for a link to another
-   article (drawn with that article's title). `review` is the weekly review's checklist: each line
-   with a link to the place it is about. */
+   article (drawn with that article's title). The weekly review is a view of its own (feature 14). */
 export interface Article<Id extends string = string> {
   id: Id;
   group: GuideGroup;
@@ -50,7 +49,6 @@ export interface Article<Id extends string = string> {
   action?: { do: GuideAction; label: string };
   more?: { do: GuideAction; label: string }; // a second, quieter button
   related?: readonly Id[];
-  review?: readonly { text: string; go: GuideAction; label: string }[];
 }
 
 export type ArticleId = (typeof guideEn)[number]['id'];

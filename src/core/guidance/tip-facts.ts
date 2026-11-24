@@ -56,6 +56,8 @@ export type TipAction =
   | 'findVisions'
   | 'recordValue'
   | 'review'
+  | 'reviewMonth'
+  | 'reviewYear'
   | 'map'
   | 'addRoutineList'
   | 'areas'

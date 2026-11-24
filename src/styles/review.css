@@ -99,3 +99,239 @@
 .log-more {
   margin: 16px 0 0;
 }
+
+/* The reviews (feature 14): a reading page of numbered parts joined by a thin line, like a path through the week. */
+.rv-tabs {
+  margin-bottom: 18px;
+}
+.rv-page {
+  max-width: 70ch;
+}
+.rv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.rv-title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+}
+.rv-arrows {
+  display: inline-flex;
+  gap: 4px;
+}
+.rv-sec {
+  position: relative;
+  padding: 14px 0 18px 52px;
+}
+/* The line from each number down to the next. */
+.rv-sec + .rv-sec::before {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: -14px;
+  height: 26px;
+  border-left: 2px solid var(--goal-soft);
+}
+.rv-h {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+}
+.rv-n {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--goal-soft);
+  color: var(--goal);
+  font-size: 18px;
+  font-weight: 300;
+  background: var(--bg);
+}
+.rv-lead,
+.rv-note {
+  margin: 0 0 10px;
+  color: var(--ink-2);
+}
+.rv-note {
+  font-style: italic;
+}
+.rv-counts {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.rv-sub {
+  margin: 14px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.rv-log summary {
+  cursor: pointer;
+  color: var(--goal);
+}
+.rv-plan + .rv-plan {
+  margin-top: 6px;
+}
+.rv-routine {
+  flex-wrap: wrap;
+}
+.rv-routine .rt-arrow {
+  display: none; /* the strip stays on the week reviewed */
+}
+.rv-measures {
+  display: grid;
+  gap: 6px;
+}
+.rv-measure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.rv-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rv-value input {
+  width: 7em;
+}
+.rv-fix {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rv-fix li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.rv-field textarea {
+  width: 100%;
+}
+.rv-field textarea[readonly] {
+  background: transparent;
+  border-color: transparent;
+  padding-left: 0;
+  resize: none;
+}
+.rv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rv-finish {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 0 52px;
+}
+.rv-done span {
+  color: var(--ok);
+  font-weight: 600;
+}
+/* Review in the navigation: last week has no review yet. */
+.nav-item.has-dot {
+  position: relative;
+}
+.nav-item.has-dot::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--goal);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+@media (max-width: 480px) {
+  .rv-sec {
+    padding-left: 44px;
+  }
+  .rv-finish {
+    margin-left: 0;
+  }
+}
+/* The monthly review's goal cards: one choice each, marked until the review is finished. */
+.rv-goals {
+  display: grid;
+  gap: 10px;
+}
+.rv-goal {
+  padding: 12px 14px;
+}
+.rv-goal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rv-goal h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.rv-goal p {
+  margin: 4px 0;
+}
+.rv-progress strong {
+  font-variant-numeric: tabular-nums;
+}
+.rv-why {
+  color: var(--ink-2);
+}
+.rv-choices {
+  margin-top: 8px;
+}
+.rv-work {
+  margin: 0;
+  padding-left: 18px;
+}
+.rv-work li + li {
+  margin-top: 4px;
+}
+/* Past reviews: one line each, newest first. */
+.rv-past {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 70ch;
+}
+.rv-past-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rv-past-open:hover .grow,
+.rv-past-open:focus-visible .grow {
+  color: var(--goal);
+}
+.rv-past-open small {
+  color: var(--ink-2);
+}
+.rv-text {
+  white-space: pre-line;
+  margin: 0 0 8px;
+}

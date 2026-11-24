@@ -5,10 +5,9 @@ import { GUIDE, GUIDE_GROUPS, type Article, type GuideAction, type GuideFact } f
 import { feedbackRows } from '../ui/feedback';
 import { lang, t, type TextKey } from '../i18n/index';
 import { liveBody, matchesQuery, plainText, withRefs } from '../core/guidance/search';
-import { today } from '../core/dates';
 import { ui, type ViewName } from '../store/state';
 import { users } from '../store/users';
-import { getSeen, markSeen } from '../store/seen';
+import { getSeen } from '../store/seen';
 import { syncConfigured, syncConnected } from '../sync/sync';
 import { $, esc, settings, viewEl } from '../ui/dom';
 import { lastView, setView } from '../ui/nav';
@@ -17,8 +16,8 @@ import { openTemplates } from '../ui/templates-dialog';
 import { openExport } from '../ui/plan-io';
 import { installHintKey, installPrompt, isInstalled } from '../ui/install';
 import { openSettings, setHelp } from '../ui/settings';
-import { toast } from '../ui/toast';
 import { openFocusPicker } from './focus';
+import { openReview } from './review';
 
 // The open article and the search text, kept while the app is open (not stored).
 export const guideState: { open: string | null; query: string } = { open: null, query: '' };
@@ -68,19 +67,15 @@ export const GUIDE_DO: Record<GuideAction, () => void> = {
   'view-graphs': view('graphs'),
   'view-today': view('today'),
   'view-visions': view('visions'),
-  'view-review': view('review'),
+  'view-review': () => openReview('week'),
   'pick-focus': () => openFocusPicker(),
   'find-visions': () => openDiscovery(),
   'ask-tip': () => askTip(),
 };
 
-// The words search looks in: the title, the text as it shows now, and the review's lines.
+// The words search looks in: the title and the text as it shows now.
 const searchText = (a: Article, facts: Record<GuideFact, boolean>) =>
-  [
-    a.title,
-    plainText(withRefs(liveBody(a.body, facts), titleOf)),
-    ...(a.review ?? []).map(r => plainText(r.text)),
-  ].join(' ');
+  [a.title, plainText(withRefs(liveBody(a.body, facts), titleOf))].join(' ');
 
 function actionHtml(a: Article) {
   if (!a.action) return '';
@@ -94,19 +89,10 @@ function actionHtml(a: Article) {
         : ''
     }`;
   }
-  const more = a.more ? ` <button type="button" class="btn" data-guide-do="${a.more.do}">${esc(a.more.label)}</button>` : '';
+  const more = a.more
+    ? ` <button type="button" class="btn" data-guide-do="${a.more.do}">${esc(a.more.label)}</button>`
+    : '';
   return `<p class="guide-act"><button type="button" class="btn primary" data-guide-do="${a.action.do}">${esc(a.action.label)}</button>${more}</p>`;
-}
-
-function reviewHtml(a: Article) {
-  if (!a.review) return '';
-  return `<ol class="guide-review">${a.review
-    .map(
-      r => `<li><label><input type="checkbox"><span>${r.text}</span></label>
-      <button type="button" class="guide-go" data-guide-do="${r.go}">${esc(r.label)}</button></li>`,
-    )
-    .join('')}</ol>
-    <p class="guide-act"><button type="button" class="btn primary" data-review-done>${esc(t('guide.review.done'))}</button></p>`;
 }
 
 function articleHtml(a: Article, facts: Record<GuideFact, boolean>, shown: boolean) {
@@ -118,7 +104,7 @@ function articleHtml(a: Article, facts: Record<GuideFact, boolean>, shown: boole
     <h3><button type="button" class="guide-q" id="gq-${a.id}" data-guide-toggle="${a.id}" aria-expanded="${open}" aria-controls="ga-${a.id}">${esc(a.title)}</button></h3>
     <div class="guide-a" id="ga-${a.id}" role="region" aria-labelledby="gq-${a.id}"${open ? '' : ' hidden="until-found"'}>
       <div class="guide-text">${withRefs(liveBody(a.body, facts), ref)}</div>
-      ${reviewHtml(a)}${actionHtml(a)}${related}
+      ${actionHtml(a)}${related}
     </div>
   </article>`;
 }
@@ -222,16 +208,12 @@ export function listenGuide() {
   });
   // Article links work everywhere in the view, also in the help banners of other views.
   viewEl.addEventListener('click', e => {
-    const el = (e.target as HTMLElement).closest<HTMLElement>(
-      '[data-guide-open],[data-guide-toggle],[data-guide-do],[data-review-done]',
-    );
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-guide-open],[data-guide-toggle],[data-guide-do]');
     if (!el) return;
     if (el.dataset.guideOpen) return openGuide(el.dataset.guideOpen);
     if (el.dataset.guideToggle)
       return showArticle(guideState.open === el.dataset.guideToggle ? null : el.dataset.guideToggle);
-    if (el.dataset.guideDo) return GUIDE_DO[el.dataset.guideDo as GuideAction]();
-    markSeen({ lastReview: today() });
-    toast(t('guide.review.toast'));
+    if (el.dataset.guideDo) GUIDE_DO[el.dataset.guideDo as GuideAction]();
   });
   viewEl.addEventListener('input', e => {
     const box = e.target as HTMLInputElement;

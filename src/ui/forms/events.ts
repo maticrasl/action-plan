@@ -99,7 +99,7 @@ $('#modalForm').addEventListener('change', e => {
     updateMeasuredBy();
     return updateSmartLive();
   }
-  if ((e.target as HTMLElement).id !== 'f-progress') return;
+  if (!['f-progress', 'f-goalKind'].includes((e.target as HTMLElement).id)) return;
   updateProgressFields();
   updateSmartLive();
 });

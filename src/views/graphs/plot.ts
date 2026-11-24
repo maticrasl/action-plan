@@ -8,6 +8,7 @@ import { withUnit } from '../../ui/text';
 import { fmtNum } from '../../core/util';
 import { esc } from '../../ui/dom';
 import { workFold } from './working';
+import { bandSvg, bandYs, type stateBands } from './band';
 import { cardHead, stateInfo } from './state-info';
 import type { State } from '../../core/model';
 import type { Routine } from '../../core/routines/schedule';
@@ -42,10 +43,11 @@ interface PlotOpts<P extends GraphPoint> {
   aria: string;
   ys?: number[];
   whole?: boolean;
+  bands?: ReturnType<typeof stateBands>; // keep goals' ranges (07)
 }
 export function plotSvg<P extends GraphPoint>(
   id: string,
-  { points, targets = [], unit, from, to, bars = 0, marks, tip, aria, ys = [], whole = false }: PlotOpts<P>,
+  { points, targets = [], unit, from, to, bars = 0, marks, tip, aria, ys = [], whole = false, bands = [] }: PlotOpts<P>,
   width: number,
 ) {
   const todayN = dayNum(today());
@@ -55,7 +57,7 @@ export function plotSvg<P extends GraphPoint>(
   if (x1 - x0 < 14) x1 = x0 + 14;
   const base = bars ? Math.max(width, GR.L + GR.R + Math.ceil(((x1 - x0) / ((to - from) / bars)) * GR_SLOT)) : width;
   const { W, zoom } = zoomedWidth(id, base, width, x1 - x0);
-  const values = [0, ...points.map(p => p.value), ...targets.map(tg => tg.value), ...ys];
+  const values = [0, ...points.map(p => p.value), ...targets.map(tg => tg.value), ...ys, ...bandYs(bands)];
   const ticks = niceTicks(Math.min(...values), Math.max(...values), 4, whole);
   const y0 = ticks[0],
     y1 = ticks[ticks.length - 1];
@@ -80,7 +82,7 @@ export function plotSvg<P extends GraphPoint>(
     .join('');
   return `<div class="gr-plot${W > width ? ' scroll' : ''}" tabindex="0" role="img" aria-label="${esc(aria)}">
       <svg width="${W}" height="${GR.H}" viewBox="0 0 ${W} ${GR.H}" aria-hidden="true">
-        ${grid}${bars ? '' : todayLine}${marks(px, py, x0, x1)}${bars ? todayLine : ''}${targetLines}${xAxis}
+        ${grid}${bandSvg(bands, py, W)}${bars ? '' : todayLine}${marks(px, py, x0, x1)}${bars ? todayLine : ''}${targetLines}${xAxis}
         <line class="gr-cross" y1="${GR.T}" y2="${GR.H - GR.B}" hidden/>
         <circle class="gr-focus" r="6" hidden/>
       </svg>${W > width ? yAxisPinned(ticks, py) : ''}

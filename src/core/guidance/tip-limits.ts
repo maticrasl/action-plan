@@ -59,3 +59,4 @@ export const BACKUP_DAYS = 7; // backup: days since the first item
 export const INSTALL_DAYS = 5; // install: days opened
 export const MENU_ITEMS = 10; // menu and ctrl-enter: items in the plan
 export const SHARE_DAYS = 30; // share: days since the first item
+export const KEEP_OUT_PERIODS = 2; // keep-out: complete periods out of range in a row

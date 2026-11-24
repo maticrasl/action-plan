@@ -1,4 +1,4 @@
-/** The Review view; for now only its done log (feature 13): what was finished, by week and day, in this plan or all plans. */
+/** The Review view (feature 14): the switch between the reviews, and the done log (feature 13): what was finished, by week and day, in this plan or all plans. */
 import { db } from '../core/state';
 import { fmtDay, today } from '../core/dates';
 import { addDays, weekday } from '../core/routines/schedule';
@@ -13,6 +13,23 @@ import { openForm } from '../ui/forms/form';
 import { toast } from '../ui/toast';
 import { setView } from '../ui/nav';
 import { requestRender as render } from '../ui/render';
+import { reviewView, tabsHtml, type ReviewTab } from './review-frame';
+import { finishWeek, renderWeekReview, shiftWeek } from './review-week';
+import { chooseForVision, finishYear, renderYearReview, shiftYearView, type VChoice } from './review-year';
+import { deletePast, renderPastReviews } from './review-past';
+import {
+  chooseForGoal,
+  finishMonth,
+  renderMonthReview,
+  shiftMonthView,
+  unpauseGoal,
+  type Choice,
+} from './review-month';
+import { openFocusPicker, openIn } from './focus';
+import { openReplan } from '../ui/replan';
+import { addEntry, isCumulative, recordMeasurement } from '../core/cumulative';
+import { parseNum } from '../core/util';
+import { save } from '../store/plans';
 
 const FILTERS = {
   all: null,
@@ -27,9 +44,40 @@ const WEEKS = 8; // shown at first, and added by "Show earlier"
 // What the log shows; the same for every user and plan, so not stored.
 export const logView = { all: false, filter: 'all' as LogFilter, weeks: WEEKS };
 
-const MARK: Record<DoneKind, string> = { step: '✓', item: '✓', routine: '⟳', value: '◐', amount: '◐', goal: '★', note: '✎' };
+const MARK: Record<DoneKind, string> = {
+  step: '✓',
+  item: '✓',
+  routine: '⟳',
+  value: '◐',
+  amount: '◐',
+  goal: '★',
+  note: '✎',
+};
 
+// Each tab: how it draws, and for the reviews, their arrows and Finish.
+const PAGES: Record<ReviewTab, { render: () => string; shift?: (dir: number) => void; finish?: () => void }> = {
+  week: { render: () => renderWeekReview(), shift: d => shiftWeek(d), finish: () => finishWeek() },
+  month: { render: () => renderMonthReview(), shift: d => shiftMonthView(d), finish: () => finishMonth() },
+  year: { render: () => renderYearReview(), shift: d => shiftYearView(d), finish: () => finishYear() },
+  log: { render: () => renderLog() },
+  past: { render: () => renderPastReviews() },
+};
+
+// Opens the Review view on one of its tabs (tips, Getting started and the Guide's buttons).
+export function openReview(tab: ReviewTab) {
+  reviewView.tab = tab;
+  reviewView.open = '';
+  setView('review');
+}
+
+// The switch, then the tab shown.
 export function renderReview(): string {
+  const tab = reviewView.tab;
+  const body = PAGES[tab].render();
+  return `<div class="rv-view">${tabsHtml()}${body}</div>`;
+}
+
+function renderLog(): string {
   const now = today(),
     monday = addDays(now, -weekday(now)),
     from = addDays(monday, -7 * (logView.weeks - 1));
@@ -69,7 +117,7 @@ const groupBy = <T>(xs: T[], key: (x: T) => string) => {
   return out;
 };
 
-function weeks(entries: DoneEntry[], monday: string, data: Map<string, Db>): string {
+export function weeks(entries: DoneEntry[], monday: string, data: Map<string, Db>): string {
   const span = (start: string) =>
     `${fmtDay(start, { day: 'numeric', month: 'short' })} – ${fmtDay(addDays(start, 6), { day: 'numeric', month: 'short' })}`;
   return [...groupBy(entries, e => addDays(e.day, -weekday(e.day)))]
@@ -132,8 +180,10 @@ export function logClick(el: HTMLElement) {
   const what = el.dataset.log;
   if (what === 'filter') Object.assign(logView, { filter: el.dataset.v as LogFilter, weeks: WEEKS });
   else if (what === 'more') logView.weeks += WEEKS;
-  else if (what === 'view') return setView('review');
-  else if (what === 'open') {
+  else if (what === 'view') {
+    reviewView.tab = 'log'; // the This week line opens the done log
+    return setView('review');
+  } else if (what === 'open') {
     const plan = el.dataset.plan!;
     if (plan && plan !== plans.current) {
       openPlan(plan);
@@ -144,6 +194,50 @@ export function logClick(el: HTMLElement) {
   }
   render();
 }
+// A tap on a review's own buttons (data-review). Buttons of another plan's rows run in that plan (see events.ts).
+export function reviewClick(el: HTMLElement) {
+  const what = el.dataset.review;
+  if (what === 'tab') {
+    reviewView.tab = el.dataset.v as ReviewTab;
+    reviewView.open = '';
+  } else if (what === 'shift') PAGES[reviewView.tab].shift?.(Number(el.dataset.dir));
+  else if (what === 'edit') reviewView.editing = el.closest<HTMLElement>('[data-period]')?.dataset.period || '';
+  else if (what === 'finish') PAGES[reviewView.tab].finish?.();
+  else if (what === 'vchoice') return chooseForVision(el.dataset.id!, el.dataset.v as VChoice);
+  else if (what === 'past') reviewView.open = el.dataset.id!;
+  else if (what === 'pastBack') reviewView.open = '';
+  else if (what === 'pastDelete') return deletePast(el.dataset.id!);
+  else if (what === 'choice') return chooseForGoal(el.dataset.plan!, el.dataset.id!, el.dataset.v as Choice);
+  else if (what === 'unpause') return unpauseGoal(el.dataset.plan!, el.dataset.id!);
+  else if (what === 'focus') return openFocusPicker(el.dataset.week);
+  else if (what === 'states') return setView('graphs');
+  else if (what === 'record') return recordValue(el);
+  else if (what === 'open') return openIn(el.dataset.plan!, el.dataset.id!);
+  else if (what === 'replan') {
+    if (el.dataset.plan && el.dataset.plan !== plans.current) openPlan(el.dataset.plan);
+    return openReplan();
+  }
+  render();
+}
+
+// Record in "Measure": the value typed beside the state, dated today. Runs in the state's plan.
+function recordValue(el: HTMLElement) {
+  const s = db.states.find(x => x.id === el.dataset.id);
+  const box = el.closest('.rv-measure')?.querySelector<HTMLInputElement>('[data-rv-value]');
+  const n = parseNum(box?.value);
+  if (!s || !box) return;
+  if (isNaN(n)) {
+    box.setCustomValidity(t('err.number'));
+    box.reportValidity();
+    return box.focus();
+  }
+  if (isCumulative(s)) addEntry(s, today(), n);
+  else recordMeasurement(s, today(), String(n));
+  save();
+  toast(t('review.recorded', { name: s.title }));
+  render();
+}
+
 export function setLogScope(v: string) {
   Object.assign(logView, { all: v === 'all', weeks: WEEKS });
   render();

@@ -1,4 +1,5 @@
 /** Graphs of amounts that add up (per period or in total) and of routines, their scale switch and entries. */
+import { stateBands } from './band';
 import {
   SCALES,
   calPeriod,
@@ -105,6 +106,7 @@ export function periodGraphCard(s: State | Routine, width: number) {
       to: points.at(-1)!.b,
       bars: points.length,
       whole: rt,
+      bands: rt ? [] : stateBands(s, scale),
       aria: t(rt ? 'cu.routineAria' : 'cu.aria', { name: s.title }),
       marks: (px, py) =>
         points

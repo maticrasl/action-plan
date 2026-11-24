@@ -10,6 +10,7 @@ import { canParent, ownVisions, setGoalVisions, visionRel } from '../../core/vis
 import { setCal } from '../calendar';
 import { activityChoice, activityForm, readRepeat, updateRepeatFields } from './activity';
 import { goalForm, updateMeasuredBy, updateProgressFields, updateSmartLive } from './goal';
+import { formGoal, keepErrs, keepTotalErr } from './keep-form';
 import { stateForm, updateStateFields } from './state';
 import { fillRelTypes, relationForm } from './relation';
 import { visionForm } from './vision';
@@ -256,8 +257,9 @@ export function submitForm() {
 
   if (kind === 'goal') {
     // Only answers that contradict each other stop a save; unfinished SMART parts do not.
-    const errs = goalErrors(v as unknown as Goal);
-    if (Object.keys(errs).length) return showErrors(errs);
+    const fg = formGoal(v);
+    const errs: Errors = keepErrs(fg, { ...goalErrors(fg), period: keepTotalErr(fg, v) });
+    if (Object.values(errs).some(Boolean)) return showErrors(errs);
     const reachedOn = finishedDay(v, 'achievedAt'),
       wasReached = existing ? achievedDay(existing as Goal) : undefined;
     const becomes = v.status === 'achieved' && (existing as Goal | null)?.status !== 'achieved';
@@ -279,8 +281,13 @@ export function submitForm() {
       category: v.category.trim(),
     }) as Goal;
     // The metric fields are kept while measuring by activities, in case the goal switches back.
-    if (ownMetric(v as unknown as Goal)) delete g.progress;
+    if (ownMetric(fg)) delete g.progress;
     else g.progress = v.progress as Goal['progress'];
+    // A keep goal stores its range and no start, current or target value (07).
+    if (fg.keep) {
+      g.keep = fg.keep;
+      for (const k of ['baseline', 'current', 'target'] as const) delete g[k];
+    } else delete g.keep;
     // How a state that adds up counts; kept when the field is not shown.
     if (v.period && !$('#f-period').closest<HTMLElement>('.field')!.hidden) g.period = v.period as Scale;
     // The obstacle and the plan for it: no field at all when empty.
@@ -295,7 +302,8 @@ export function submitForm() {
     if (!existing) db.goals.push(g);
     setLinks(g.id, 'subgoal', v.parent ? [v.parent] : []);
     setLinks(g.id, 'depends', arr('depends'));
-    setIncoming(g.id, 'contributes', arr('activities'));
+    // Routines ticked to continue from a reached goal are linked to its keep goal (07).
+    setIncoming(g.id, 'contributes', [...new Set([...arr('activities'), ...arr('keepRoutines')])]);
     // The picker shows one state: another linked one stays unless the goal is unlinked or linked to a new one.
     if (!v.measuredBy) setIncoming(g.id, 'measures', []);
     else if (!relsTo(g.id, 'measures').some(r => r.from === v.measuredBy))

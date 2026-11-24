@@ -54,6 +54,7 @@ suite(async () => {
     cook.checkins = {};
     const seen = new Set();
     const per = [...views, 'visions'].map(v => {
+      if (v === 'review') reviewView.tab = 'log'; // the done log's tips (the sample is no review: it is a demo)
       setView(v);
       $('#view')
         .querySelectorAll('[data-help-tip]')

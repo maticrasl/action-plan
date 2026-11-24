@@ -287,6 +287,28 @@
       });
       save();
     },
+    // Reviews (docs/specs/2026-11-23-reviews.md): one finished review of each kind, and a weekly draft.
+    reviews() {
+      const g = { id: uid(), title: 'Run 5 km', status: 'active', startDate: day(-30) };
+      db.goals.push(g);
+      save();
+      const stats = { steps: 2, routineDays: 5, values: 1, goals: 0 };
+      addReview({ kind: 'week', period: '2026-W46', doneAt: '2026-11-15T18:00:00.000Z', answers: { well: 'Three runs', hard: 'Rain', focus: { plan: plans.current, item: g.id, title: g.title }, stats } });
+      addReview({ kind: 'month', period: '2026-10', doneAt: '2026-11-02T18:00:00.000Z', answers: { sentence: 'Running took shape', goals: { [g.id]: { plan: plans.current, title: g.title, choice: 'keep', from: 20, to: 45 } }, stats } });
+      addReview({ kind: 'year', period: '2025', doneAt: '2026-01-04T18:00:00.000Z', answers: { glad: 'The move', differently: 'Rest more', next: 'Calm', visions: {}, stats } });
+      prefs.set('reviewDraft.2026-W47', { well: 'Half written' });
+    },
+    // Keep goals (docs/specs/2026-11-23-keep-goals.md): one on a plain state, one on a state that adds up per month.
+    keep() {
+      const w = { id: uid(), title: 'Body weight', description: '', unit: 'kg', value: '74', date: day(-2), history: [{ date: day(-9), value: '76' }, { date: day(-2), value: '74' }] };
+      const e = { id: uid(), title: 'Eating out', description: '', unit: '€', value: '', history: [], cumulative: true, scale: 'month', entries: [{ id: uid(), date: day(-20), amount: '120' }] };
+      const g1 = { id: uid(), title: 'Keep weight at or under 75 kg', status: 'active', metric: 'Weight', keep: { max: 75 }, startDate: day(-30) };
+      const g2 = { id: uid(), title: 'Eat out for 50 to 300 a month', status: 'active', metric: 'Spending', keep: { min: 50, max: 300 }, period: 'month', startDate: day(-60), deadline: day(300) };
+      db.states.push(w, e);
+      db.goals.push(g1, g2);
+      db.relations.push({ id: uid(), from: w.id, to: g1.id, type: 'measures' }, { id: uid(), from: e.id, to: g2.id, type: 'measures' });
+      save();
+    },
     // Life areas (docs/specs/2026-11-23-life-areas.md): a vision with an area, a goal with a category, the
     // Areas side chosen and an area hidden.
     areas() {

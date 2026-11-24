@@ -346,3 +346,59 @@ test('a goal counting a state that adds up per period: the higher of this and th
   rel(sp, k, 'measures');
   expect([goalCurrent(k), goalReached(k)]).toEqual([730, false]);
 });
+
+describe('keep goals (feature 07)', () => {
+  // Started 21 days ago (a Monday): three complete weeks to last Sunday.
+  const keepGoal = (p: Partial<Goal> = {}) =>
+    goal({ title: 'Keep weight', metric: 'weight', keep: { max: 75 }, startDate: d(-21), ...p });
+  const weigh = (g: Goal, history: [number, number][]) => {
+    const s = state({
+      value: String(history.at(-1)![1]),
+      date: d(history.at(-1)![0]),
+      history: history.map(([day, v]) => ({ date: d(day), value: String(v) })),
+    });
+    rel(s, g, 'measures');
+  };
+  test('progress is the share of weeks in range; never reached', () => {
+    const g = keepGoal();
+    weigh(g, [
+      [-20, 74],
+      [-13, 76],
+      [-6, 74],
+    ]);
+    expect(goalProgress(g)).toBeCloseTo(66.67, 1);
+    expect(goalReached(g)).toBe(false);
+    expect(goalCurrent(g)).toBe(74);
+    expect(hasPercent(g)).toBe(true);
+  });
+  test('late only while out of range; a past Until does not make it late', () => {
+    const g = keepGoal({ deadline: d(-1) });
+    weigh(g, [[-2, 74]]);
+    expect(goalState(g)).toBe('doing');
+    const h = keepGoal();
+    weigh(h, [[-2, 76]]);
+    expect(goalState(h)).toBe('late');
+    expect(goalState({ ...h, status: 'achieved' })).toBe('done');
+    expect(goalProgress(keepGoal())).toBe(0); // nothing measured
+  });
+  test('SMART: M needs a metric and a limit in order, T a start date; no deadline needed', () => {
+    const base: Goal = {
+      id: 'k',
+      status: 'active',
+      title: 'Keep weight',
+      specific: 'Stay at or under 75 kg every week',
+      metric: 'Weight',
+      keep: { max: 75 },
+      obstacle: 'Holidays come',
+      ifThen: 'Weigh in on Monday',
+      relevant: 'I want to stay well',
+      startDate: '2026-01-01',
+    };
+    expect(isSmart(base)).toBe(true);
+    expect(smartCheck({ ...base, keep: {} }).errs.target).toBe(t('err.keepLimit'));
+    expect(smartCheck({ ...base, keep: { min: 80, max: 75 } }).errs.target).toBe(t('err.keepOrder'));
+    expect(smartCheck({ ...base, startDate: undefined }).T).toBe(false);
+    expect(goalErrors({ ...base, keep: { min: 80, max: 75 } }).target).toBe(t('err.keepOrder'));
+    expect(goalErrors({ ...base, deadline: '2025-01-01' }).deadline).toBe(t('err.deadlineOrder'));
+  });
+});
