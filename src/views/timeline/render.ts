@@ -28,6 +28,12 @@ export const foldBtn = (
 ) =>
   `<button type="button" class="tl-fold" data-tl-fold="${key}" aria-expanded="${!folded}" aria-label="${tip}" title="${tip}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${folded ? 'M9 6l6 6-6 6' : 'M6 9l6 6 6-6'}"/></svg></button>`;
 
+// Collapse all / Expand all in the narrow corner: a double arrow, its words as its name.
+const foldAllBtn = (folded: boolean) => {
+  const tip = esc(t(folded ? 'tl.expandAll' : 'tl.collapseAll'));
+  return `<button type="button" class="tl-fold" data-tl-fold-all="${folded ? 'expand' : 'collapse'}" aria-label="${tip}" title="${tip}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${folded ? 'M6 6l5 6-5 6M13 6l5 6-5 6' : 'M6 6l6 5 6-5M6 13l6 5 6-5'}"/></svg></button>`;
+};
+
 /* ---------- Timeline (Gantt chart of goals and activities) ---------- */
 
 // ZOOM presets and the MIN–MAX range for free zooming are in pixels per day.
@@ -119,6 +125,10 @@ export function renderTimeline() {
     }
   }
 
+  // The left column holds fold arrows, lines and dots only: as wide as the deepest row needs.
+  const labelW = `calc(var(--tl-pad) + ${Math.max(0, ...rows.map(r => r.depth ?? 0))} * var(--tl-step) + 22px)`,
+    halfLabel = (26 + Math.max(0, ...rows.map(r => r.depth ?? 0)) * 18 + 22) / 2;
+
   // A bar can be selected, as in the map.
   const sel = ui.mapSelected && rows.some(r => r.item?.id === ui.mapSelected) ? ui.mapSelected : null;
   const near = neighbourhood(sel, db.relations);
@@ -128,13 +138,18 @@ export function renderTimeline() {
   const body = rows
     .map((r, i) => {
       if (r.kind === 'group')
-        return `<div class="tl-row tl-group"><div class="tl-label">${foldBtn('rest', r.label, r.collapsed)}${esc(r.label)}</div><div class="tl-track"></div></div>`;
+        return `<div class="tl-row tl-group"><div class="tl-label">${foldBtn('rest', r.label, r.collapsed)}</div><div class="tl-track"><i class="tl-at" style="width:8px"></i><span class="tl-bar-label">${esc(r.label)}</span></div></div>`;
       const { item, kind, depth } = r;
       const st = kind === 'goal' ? goalState(item as Goal) : activityState(item as Activity);
       const s = item.startDate,
         e = endOf(kind, item);
       const dateText = fmtSpan(s, e, true) || t('tl.noDates');
-      let bar = `<span class="tl-nodates">${t('tl.noDates')}</span>`;
+      const also = r.also ? t('tl.alsoUnder', { goals: r.also.join(', ') }) : '';
+      // The title sits in the row: in or beside its bar; sticky, so a bar off screen keeps it at that edge.
+      // A spacer, not a margin, puts it there: a sticky box cannot move left past its own margin.
+      const label = (at: number, inside = false, extra = '') =>
+        `<i class="tl-at" style="width:${Math.round(at)}px"></i><span class="tl-bar-label${inside ? ' in' : ''}"><span class="tl-title">${esc(item.title)}</span>${also ? `<span class="tl-also" title="${esc(also)}" aria-hidden="true">↻</span>` : ''}${extra}</span>`;
+      let bar = label(8, false, ` <em class="tl-nodates">${t('tl.noDates')}</em>`);
       // A goal with a start and no deadline yet runs to today and fades out there; it has no end to drag.
       const open = kind === 'goal' && !!s && !e;
       if (s || e) {
@@ -152,7 +167,7 @@ export function renderTimeline() {
         const drag = item.id === ui.tlDates ? ` tl-drag" data-tl-drag="${item.id}` : '';
         if ((!s || !e) && !open) {
           const cx = left + px / 2;
-          bar = `${lateHtml}<i class="tl-milestone glass ${kind} st-${st}${drag}" style="left:${cx}px" title="${esc(tip)}"></i><span class="tl-bar-label" style="left:${Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0)}px">${esc(item.title)}</span>`;
+          bar = `${lateHtml}<i class="tl-milestone glass ${kind} st-${st}${drag}" style="left:${cx}px" title="${esc(tip)}"></i>${label(Math.max(cx + 14, overdue ? x(todayN + 1) + 6 : 0))}`;
         } else {
           const inside = width > item.title.length * 7.2 + 26;
           const pct = kind === 'goal' ? goalProgress(item as Goal) : null;
@@ -165,15 +180,14 @@ export function renderTimeline() {
                   )
                   .join('')
               : '';
-          bar = `${lateHtml}${grips}<div class="tl-bar glass ${kind} st-${st}${open ? ' tl-open' : ''}${drag}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}${inside ? `<span>${esc(item.title)}</span>` : ''}</div>${inside ? '' : `<span class="tl-bar-label" style="left:${Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8}px">${esc(item.title)}</span>`}`;
+          bar = `${lateHtml}${grips}<div class="tl-bar glass ${kind} st-${st}${open ? ' tl-open' : ''}${drag}" style="left:${left}px;width:${width}px" title="${esc(tip)}">${pct === null ? '' : `<i class="tl-progress" style="width:${pct.toFixed(1)}%"></i>`}</div>${inside ? label(left + 8, true) : label(Math.max(left + width, overdue ? x(todayN + 1) : 0) + 8)}`;
         }
       }
       if (s || e) bar += tlRoutineDays(item, from, to, x, px);
       const dim = sel && !near.has(item.id) ? 'dim' : '';
-      const also = r.also ? t('tl.alsoUnder', { goals: r.also.join(', ') }) : '';
       const fold = r.fold ? foldBtn(item.id, item.title, r.collapsed!) : '';
       return `<div class="tl-row ${kind} ${dim}${item.id === sel ? ' selected' : ''}" data-tl-node="${item.id}" tabindex="0" role="button" aria-haspopup="menu" aria-label="${esc([item.title, dateText, also].filter(Boolean).join(', '))}">
-      <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow${(REL_TYPES as Record<RelType, RelSpec>)[r.rel].dash ? ' dash' : ''}" style="--rel:${mapLineColour(REL_TYPES[r.rel].color)};--w:${(REL_TYPES as Record<RelType, RelSpec>)[r.rel].width || 1.1}px;--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}${fold}<span class="tl-dot ${kind} st-${st}"></span><span class="tl-text"><span class="tl-head-line"><span class="tl-title">${esc(item.title)}</span>${also ? `<span class="tl-also" title="${esc(also)}" aria-hidden="true">↻</span>` : ''}</span><span class="tl-dates">${esc(dateText)}</span></span></div>
+      <div class="tl-label" style="--depth:${depth}">${r.rel && r.parent !== undefined ? `<i class="tl-elbow${(REL_TYPES as Record<RelType, RelSpec>)[r.rel].dash ? ' dash' : ''}" style="--rel:${mapLineColour(REL_TYPES[r.rel].color)};--w:${(REL_TYPES as Record<RelType, RelSpec>)[r.rel].width || 1.1}px;--up:${i - r.parent - 1}" title="${esc(relLabel(r.rel))}"></i>` : ''}${fold}<span class="tl-dot ${kind} st-${st}"></span></div>
       <div class="tl-track">${bar}</div>
     </div>`;
     })
@@ -189,10 +203,10 @@ export function renderTimeline() {
     </div>
     ${
       rows.length
-        ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + 145)}" data-from="${from}" data-to="${to}">
+        ? `<div class="tl-scroll" data-focus-x="${Math.round(x(todayN) + halfLabel)}" style="--label-w:${labelW}" data-from="${from}" data-to="${to}">
       <div class="tl-inner" style="--tl-w:${W}px">
         <div class="tl-head">
-          <div class="tl-corner">${tlAllFolded() ? `<button class="chip" data-tl-fold-all="expand">${t('tl.expandAll')}</button>` : `<button class="chip" data-tl-fold-all="collapse">${t('tl.collapseAll')}</button>`}</div>
+          <div class="tl-corner">${foldAllBtn(tlAllFolded())}</div>
           <div class="tl-scale"><div class="tl-months">${months.join('')}</div><div class="tl-ticks">${ticks.join('')}</div>
             <span class="tl-today-flag" style="left:${x(todayN) + px / 2}px">${t('tl.today')}</span></div>
         </div>

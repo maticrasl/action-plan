@@ -17,8 +17,7 @@
   border-left-style: dashed;
   border-bottom-style: dashed;
 }
-.tl-label .tl-dot,
-.tl-label .tl-text {
+.tl-label .tl-dot {
   position: relative;
   z-index: 2;
 }

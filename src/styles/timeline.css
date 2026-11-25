@@ -215,29 +215,6 @@
   padding: 0 10px 0 calc(var(--tl-pad) + var(--depth, 0) * var(--tl-step));
   min-width: 0;
 }
-.tl-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.2;
-}
-.tl-title {
-  font-size: 14px;
-  font-weight: 400;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tl-dates {
-  font-size: 11.5px;
-  color: var(--ink-3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.tl-row.goal .tl-title {
-  font-weight: 600;
-}
 .tl-group {
   cursor: default;
 }
@@ -272,11 +249,6 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.tl-head-line {
-  display: flex;
-  align-items: baseline;
-  min-width: 0;
-}
 .tl-also {
   flex: none;
   margin-left: 5px;
@@ -284,10 +256,9 @@
   color: var(--ink-3);
   cursor: help;
 }
-.tl-group .tl-label {
+.tl-group .tl-bar-label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--ink-2);
 }
 .tl-dot {
   width: 10px;
@@ -306,6 +277,8 @@
   position: relative;
   width: var(--tl-w);
   flex: none;
+  display: flex;
+  align-items: center;
 }
 
 .tl-bar {
@@ -318,17 +291,6 @@
   display: flex;
   align-items: center;
   z-index: 1;
-}
-/* While the bar runs off the left edge, its title stays in view, just right of the labels. */
-.tl-bar span {
-  position: sticky;
-  left: var(--label-w);
-  padding: 0 8px;
-  font-size: 12.5px;
-  font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .tl-bar.goal {
   top: 7px;
@@ -505,23 +467,35 @@
     transparent 2px 6px
   );
 }
+/* A row's title, in or beside its bar. Sticky both ways: while its bar is off screen (or runs off
+   the left), the title waits at that edge, just right of the labels or at the right. */
 .tl-bar-label {
-  position: absolute;
-  top: 11px;
+  position: sticky;
+  left: calc(var(--label-w) + 8px);
+  right: 8px;
+  z-index: 2;
+  flex: none;
+  display: flex;
+  align-items: baseline;
   font-size: 12.5px;
   font-weight: 400;
   color: var(--ink-2);
   white-space: nowrap;
 }
+.tl-at {
+  flex: none;
+}
+/* Over its bar: the bar takes the presses, so it can still be dragged. */
+.tl-bar-label.in {
+  color: var(--ink);
+  pointer-events: none;
+}
+.tl-row.goal .tl-title {
+  font-weight: 600;
+}
 .tl-nodates {
-  position: sticky;
-  left: calc(var(--label-w) + 12px);
-  top: 12px;
-  display: inline-block;
-  margin-top: 11px;
-  font-size: 12.5px;
+  margin-left: 6px;
   color: var(--ink-3);
-  font-style: italic;
 }
 @media (max-width: 720px) {
   .tl-scroll {
@@ -532,9 +506,6 @@
   #view[data-view='timeline'] > :not(.tl-scroll) {
     padding-left: 16px;
     padding-right: 16px;
-  }
-  .tl-dates {
-    display: none;
   }
 }
 

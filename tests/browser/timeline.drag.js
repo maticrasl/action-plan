@@ -119,7 +119,7 @@ suite(async () => {
     mouse('pointermove', document, 400 + 3 * px + 3);
     eq(parseFloat(row(a.id).querySelector('.tl-bar').style.left), left0 + 3 * px, 'the bar follows at once');
     eq(
-      row(a.id).querySelector('.tl-dates').textContent,
+      $('.tl-drag-tip').textContent,
       `${fmtDate(addDays(now, 3))} – ${fmtDate(addDays(now, 8))}`,
       'its dates follow at once',
     );
@@ -189,7 +189,7 @@ suite(async () => {
     mouse('pointerup', document, 400 + 5 * px);
     click(row(a.id));
     eq(a.startDate, addDays(now, 1), 'Esc: not moved');
-    eq(row(a.id).querySelector('.tl-dates').textContent, 'Tomorrow – tomorrow', 'Esc: drawn where it was');
+    assert(row(a.id).getAttribute('aria-label').includes('Tomorrow – tomorrow'), 'Esc: drawn where it was');
     eq(ui.mapSelected, a.id, 'Esc during a drag keeps the selection');
 
     // A plain click on the selected bar still deselects it, and nothing moves.

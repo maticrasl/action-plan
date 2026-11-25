@@ -220,7 +220,7 @@ suite(async () => {
     // Collapse all / Expand all: one button, reading Expand all only while everything is folded.
     const foldAll = () =>
       $$('[data-tl-fold-all]')
-        .map(b => `${b.dataset.tlFoldAll}:${b.textContent}`)
+        .map(b => `${b.dataset.tlFoldAll}:${b.getAttribute('aria-label')}`)
         .join(',');
     eq(foldAll(), `collapse:${t('tl.collapseAll')}`, 'nothing folded: Collapse all only');
     fold(g1.id).click();

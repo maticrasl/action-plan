@@ -418,8 +418,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-timeline',
     group: 'how',
     title: 'Časovnica',
-    body: `<p>Časovnica kaže cilje in aktivnosti po datumih; element potrebuje začetni datum ali rok, da se pojavi. Aktivnosti so pod cilji, h katerim prispevajo. Rdeči odseki so zamujeni čas, barva traku je njegovo stanje, rutine z določenimi dnevi pa vsak dan kažejo kot opravljen, zamujen ali prihajajoč.</p>
-<p>Tapnite trak, da ga izberete, nato ga povlecite, da premaknete njegove datume, ali povlecite en konec, da spremenite le ta datum (na zaslonu na dotik ga najprej pridržite). ▾ ob cilju strne njegove vrstice; Strni vse zgoraj levo strne vse cilje, meni na cilju (desni klik ali pridržanje) pa ponudi oboje. Dva prsta ali Ctrl + kolešček spremenita merilo. Gumb »Premakni zamujene korake …« v orodni vrstici z enim dejanjem prestavi vse zamujene trakove.</p>`,
+    body: `<p>Časovnica kaže cilje in aktivnosti po datumih; element potrebuje začetni datum ali rok, da se pojavi. Aktivnosti so pod cilji, h katerim prispevajo. Rdeči odseki so zamujeni čas, barva traku je njegovo stanje, rutine z določenimi dnevi pa vsak dan kažejo kot opravljen, zamujen ali prihajajoč. Vsak naslov je v svoji vrstici; ko je trak zunaj zaslona, naslov počaka ob tistem robu.</p>
+<p>Tapnite trak, da ga izberete, nato ga povlecite, da premaknete njegove datume, ali povlecite en konec, da spremenite le ta datum (na zaslonu na dotik ga najprej pridržite). ▾ ob cilju strne njegove vrstice; dvojna puščica zgoraj levo (Strni vse) strne vse cilje, meni na cilju (desni klik ali pridržanje) pa ponudi oboje. Dva prsta ali Ctrl + kolešček spremenita merilo. Gumb »Premakni zamujene korake …« v orodni vrstici z enim dejanjem prestavi vse zamujene trakove.</p>`,
     action: { do: 'view-timeline', label: 'Odpri Časovnico' },
   },
   {

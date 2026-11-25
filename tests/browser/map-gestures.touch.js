@@ -124,7 +124,10 @@ suite(async () => {
     tapMenu('fold-all:collapse');
     assert(ctxMenu.hidden && $('[data-tl-fold-all="expand"]'), 'all folded');
     await longPress($(`[data-tl-node="${g.id}"] .tl-label`));
-    assert(items().includes(t('ctx.expand')) && items().includes(t('tl.expandAll')), 'a folded goal offers Expand and Expand all');
+    assert(
+      items().includes(t('ctx.expand')) && items().includes(t('tl.expandAll')),
+      'a folded goal offers Expand and Expand all',
+    );
     tapMenu('fold');
     assert($(`[data-tl-node="${b.id}"]`) && $('[data-tl-fold-all="collapse"]'), 'the goal unfolded');
     deletePlan(plans.current);
@@ -305,14 +308,17 @@ suite(async () => {
     ui.mapSelected = null;
     render();
     const sc = () => $('.tl-scroll');
-    const tx = $('.tl-corner').getBoundingClientRect().right + 120,
+    const tx = $('.tl-corner').getBoundingClientRect().right + 360,
       ty = $(`[data-tl-node="${b.id}"]`).getBoundingClientRect().top + 10;
     const dayAt = () => (tx - $('.tl-scale').getBoundingClientRect().left) / ui.tlPx + Number(sc().dataset.from);
     const under = () => document.elementFromPoint(tx, ty) || sc();
     const day0 = dayAt();
     res = await tapDrag(under, tx, ty, 80);
     assert(ui.tlPx > 8 && res.prevented, `timeline zoomed in: ${ui.tlPx}`);
-    assert(Math.abs(dayAt() - day0) < 1, `the tapped day stays put: ${day0.toFixed(1)} → ${dayAt().toFixed(1)}`);
+    assert(
+      Math.abs(dayAt() - day0) < 1,
+      `the tapped day stays put: ${day0.toFixed(1)} → ${dayAt().toFixed(1)}`,
+    );
     const wide = ui.tlPx;
     await wait(400);
     await tapDrag(under, tx, ty, -80);

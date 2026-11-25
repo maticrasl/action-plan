@@ -82,11 +82,13 @@ export function previewTlDrag(d: TlDrag) {
       label = row.querySelector<HTMLElement>('.tl-bar-label');
     if (bar) Object.assign(bar.style, { left: `${left}px`, width: `${width}px` });
     if (dot) dot.style.left = `${left + px / 2}px`;
-    if (label) label.style.left = `${bar ? left + width + 8 : left + px / 2 + 14}px`;
+    // The label's place is the width of the spacer before it (see renderTimeline).
+    if (label)
+      (label.previousElementSibling as HTMLElement).style.width =
+        `${label.classList.contains('in') ? left + 8 : bar ? left + width + 8 : left + px / 2 + 14}px`;
     row.querySelectorAll<HTMLElement>('[data-tl-edge]').forEach(g => {
       g.style.cssText = tlGrip(g.dataset.tlEdge, left, width);
     });
-    row.querySelector('.tl-dates')!.textContent = fmtSpan(s, e, true);
   });
   showTlDragTip(d, s, e);
 }
