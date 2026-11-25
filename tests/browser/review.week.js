@@ -88,6 +88,21 @@ suite(async () => {
     deletePlan(plans.current);
   });
 
+  await step('review: a value recorded for a state of a plan that is not open is saved in that plan', () => {
+    const { s } = week();
+    const other = plans.current;
+    fresh('Open one');
+    save();
+    inPlan(other, () => openStateValue(s.id, document.body));
+    const pop = $('.amount-pop');
+    pop.querySelector('[data-amount]').value = '6';
+    pop.querySelector('button[type="submit"]').click();
+    eq(readPlan(other).states[0].history.at(-1).value, '6', 'stored in its own plan');
+    eq(db.states.length, 0, 'the open plan untouched');
+    deletePlan(plans.current);
+    deletePlan(other);
+  });
+
   await step('review: the arrows stop at the first week and month the plans were used', () => {
     week();
     only(plans.current);

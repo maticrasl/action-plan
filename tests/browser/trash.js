@@ -116,6 +116,57 @@ suite(async () => {
     deletePlan(plans.current);
   });
 
+  await step('trash: the delete question acts in its own plan, looks again, keeps links and the form', () => {
+    // Asked for a goal of a plan that is not open (a row on Today): Delete acts in that plan.
+    fresh('Other plan');
+    clearTrash();
+    const og = mk('goal', { title: 'Far goal' }),
+      oa = mk('activity', { title: 'Far step' });
+    rel(oa, og, 'contributes');
+    save();
+    const other = plans.current;
+    fresh('Open plan');
+    const x = mk('goal', { title: 'Here 1' }),
+      y = mk('goal', { title: 'Here 2' });
+    save();
+    inPlan(other, () => deleteItem('goal', og.id));
+    assert($('#deleteDlg').open, 'asks');
+    $('#deleteOk').click();
+    eq([readPlan(other).goals.length, readPlan(other).activities.length], [0, 0], 'gone from the other plan');
+    assert(findEntity(x.id) && findEntity(y.id), 'the open plan untouched');
+    // Something under it removed while the question is open (a sync): nothing else goes.
+    const g = mk('goal', { title: 'Run' }),
+      a = mk('activity', { title: 'Shoes' }),
+      b = mk('activity', { title: 'Socks' }),
+      keep = mk('activity', { title: 'Unrelated' });
+    rel(a, g, 'contributes');
+    rel(b, g, 'contributes');
+    save();
+    deleteItem('goal', g.id);
+    db.activities = db.activities.filter(z => z.id !== b.id);
+    db.relations = db.relations.filter(r => r.from !== b.id);
+    $('#deleteOk').click();
+    assert(!findEntity(g.id) && !findEntity(a.id) && findEntity(keep.id), 'only what is still there goes');
+    // Restored one by one from Recently deleted, they come back linked.
+    openTrash();
+    rowBtn('Run', 'restore').click();
+    openTrash();
+    rowBtn('Shoes', 'restore').click();
+    assert(
+      db.relations.some(r => r.from === a.id && r.to === g.id),
+      'the activity is linked to its goal again',
+    );
+    // Cancel in the question keeps the form open, with what was typed.
+    openForm('goal', g.id);
+    $('#f-title').value = 'Run far';
+    $('#deleteBtn').click();
+    $('#deleteCancel').click();
+    assert(modal.open && $('#f-title').value === 'Run far', 'the form stays, as typed');
+    modal.close();
+    deletePlan(plans.current);
+    deletePlan(other);
+  });
+
   await step('trash: Ctrl+Z (or Cmd+Z) undoes the last delete; not while typing, not when nothing is offered', () => {
     fresh('Keys plan');
     clearTrash();

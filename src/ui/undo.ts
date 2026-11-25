@@ -1,7 +1,7 @@
 /** Undo for the last action: a copy of what it may change, put back from the toast's button or Ctrl+Z; deleting items through it. */
 import { db, setDb, visions } from '../core/state';
 import type { Db, ItemKind, PlanList, Vision } from '../core/model';
-import { openPlan, planKey, readPlan, removeEntity, save } from '../store/plans';
+import { actingPlan, openPlan, planKey, readPlan, removeEntity, save } from '../store/plans';
 import { plans } from '../store/state';
 import { saveVisions } from '../store/visions';
 import { getTrash, trashForget } from '../store/trash';
@@ -10,7 +10,7 @@ import { emit } from '../store/events';
 import { t, tp, type TextKey } from '../i18n/index';
 import { deletesWith, findEntity } from '../core/relations';
 import { askDelete } from './delete-ask';
-import { requestRender } from './render';
+import { inPlan, requestRender } from './render';
 import { applyStore, localStore } from '../sync/sync';
 import type { FullStore } from '../core/merge';
 import { hideToast, toast } from './toast';
@@ -101,18 +101,32 @@ export function listenUndo() {
 }
 
 // Deleting a goal, state, activity or vision: Undo after. A goal or activity with activities under it
-// first asks whether they go too; those that also belong elsewhere always stay.
-export function deleteItem(kind: ItemKind, id: string) {
+// first asks whether they go too; those that also belong elsewhere always stay. `before` runs only
+// when something is deleted (a Cancel leaves the form open and the filters as they were).
+export function deleteItem(kind: ItemKind, id: string, before?: () => void) {
   const { gone, shared } = kind === 'goal' || kind === 'activity' ? deletesWith(id) : { gone: [], shared: 0 };
-  if (!gone.length) return removeItems(kind, id, []);
+  if (!gone.length) {
+    before?.();
+    return removeItems(kind, id, []);
+  }
+  // The answer comes later, outside the plan this ran in (a row of another plan on Today): go back
+  // to it, and look again, as a sync may have changed the plan meanwhile.
+  const plan = actingPlan() || '';
   askDelete(kind as 'goal' | 'activity', findEntity(id)?.item.title || '', gone.length, shared, withThem =>
-    removeItems(kind, id, withThem ? gone : []),
+    inPlan(plan, () => {
+      if (!findEntity(id)) return;
+      before?.();
+      removeItems(kind, id, withThem ? deletesWith(id).gone : []);
+    }),
   );
 }
 
 function removeItems(kind: ItemKind, id: string, under: string[]) {
   undoable(() => {
-    const kept = [removeEntity(kind, id), ...under.map(a => removeEntity('activity', a))].every(k => k === 'ok');
+    // The deepest first, the item last: each one's Recently deleted entry keeps its links up.
+    const kept = [...[...under].reverse().map(a => removeEntity('activity', a)), removeEntity(kind, id)].every(
+      k => k === 'ok',
+    );
     save();
     requestRender();
     if (!kept) return t('trash.notKept');

@@ -3,8 +3,8 @@ import { db } from '../core/state';
 import { openAmountPop } from './amount-popover';
 import { t } from '../i18n/index';
 import { addEntry, isCumulative, recordMeasurement } from '../core/cumulative';
-import { save } from '../store/plans';
-import { requestRender as render } from './render';
+import { actingPlan, save } from '../store/plans';
+import { inPlan, requestRender as render } from './render';
 import { toast } from './toast';
 import { withUnit } from './text';
 import { fmtNum, isNum } from '../core/util';
@@ -14,6 +14,13 @@ import { VALUE_NOTE_MAX } from '../core/notes';
 
 // The optional line under a new value or amount (feature 15).
 const valueNote = () => ({ label: t('f.valueNote'), placeholder: t('f.valueNotePh'), max: VALUE_NOTE_MAX });
+
+// The popup answers after the click that opened it: back in the plan it was opened for (a row of
+// another plan on Today or in the Review), the state looked up again there.
+function inPlanLater<A extends unknown[]>(fn: (...a: A) => void) {
+  const plan = actingPlan() || '';
+  return (...a: A) => inPlan(plan, () => fn(...a));
+}
 
 export function openStateAmount(id: string, anchor: HTMLElement) {
   const s = db.states.find(x => x.id === id);
@@ -27,15 +34,16 @@ export function openStateAmount(id: string, anchor: HTMLElement) {
       okLabel: t('cu.add'),
       note: valueNote(),
     },
-    ([n], date, note) => {
-      if (n === null) return anchor.focus();
+    inPlanLater(([n], date, note) => {
+      const s = db.states.find(x => x.id === id);
+      if (n === null || !s) return anchor.focus();
       const e = addEntry(s, date, n);
       if (note) e.note = note;
       save();
       render();
       toast(t('cu.added', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));
       $(`[data-add-amount="${id}"]`)?.focus();
-    },
+    }),
   );
 }
 
@@ -58,12 +66,13 @@ export function openStateValue(id: string, anchor: HTMLElement) {
       okLabel: t('btn.save'),
       note: valueNote(),
     },
-    ([n], date, note) => {
-      if (n === null) return;
+    inPlanLater(([n], date, note) => {
+      const s = db.states.find(x => x.id === id);
+      if (n === null || !s) return;
       recordMeasurement(s, date, String(n), note);
       save();
       render();
       toast(t('sv.saved', { value: withUnit(fmtNum(n), s.unit || ''), name: s.title }));
-    },
+    }),
   );
 }

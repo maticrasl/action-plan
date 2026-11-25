@@ -214,13 +214,16 @@ modal.addEventListener('click', e => {
 });
 $('#deleteBtn').addEventListener('click', () => {
   const { kind, id } = formCtx!;
-  modal.close();
-  if (kind === 'relation')
+  if (kind === 'relation') {
+    modal.close();
     return undoable(() => {
       db.relations = db.relations.filter(r => r.id !== id);
       save();
       requestRender();
       return t('toast.relRemoved');
     });
-  if (findEntity(id!) || kind === 'vision') deleteItem(kind, id!);
+  }
+  // The form closes once the delete happens: a Cancel in its question keeps what was typed.
+  if (findEntity(id!) || kind === 'vision') deleteItem(kind, id!, () => modal.close());
+  else modal.close();
 });

@@ -126,8 +126,11 @@ export function renderTimeline() {
   }
 
   // The left column holds fold arrows, lines and dots only: as wide as the deepest row needs.
-  const labelW = `calc(var(--tl-pad) + ${Math.max(0, ...rows.map(r => r.depth ?? 0))} * var(--tl-step) + 22px)`,
-    halfLabel = (26 + Math.max(0, ...rows.map(r => r.depth ?? 0)) * 18 + 22) / 2;
+  const deepest = Math.max(0, ...rows.map(r => r.depth ?? 0)),
+    labelW = `calc(var(--tl-pad) + ${deepest} * var(--tl-step) + 22px)`,
+    // --tl-pad and --tl-step as in timeline.css (smaller on a phone), to centre today in the view.
+    phone = matchMedia('(max-width: 720px)').matches,
+    halfLabel = ((phone ? 24 : 26) + deepest * (phone ? 10 : 18) + 22) / 2;
 
   // A bar can be selected, as in the map.
   const sel = ui.mapSelected && rows.some(r => r.item?.id === ui.mapSelected) ? ui.mapSelected : null;

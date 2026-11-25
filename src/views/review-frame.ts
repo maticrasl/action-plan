@@ -28,7 +28,11 @@ export const reviewSources = () => todaySources();
 // The first day the reviewed plans were used: their first item, change or measurement; today if none.
 export function firstUse() {
   const days = reviewSources()
-    .map(s => firstItemDay(s.data, visions.list))
+    .flatMap(s => [
+      firstItemDay(s.data, visions.list),
+      ...s.data.activities.flatMap(a => [...Object.keys(a.checkins || {}), a.doneAt, a.statusSince]),
+      ...s.data.goals.flatMap(g => [g.achievedAt, g.statusSince]),
+    ])
     .filter((d): d is string => !!d);
   return days.reduce((a, b) => (a < b ? a : b), today());
 }
