@@ -108,8 +108,10 @@ since the typeface ships with the app (2026-11-18).
 ## Releases
 
 **Branch, pull request, checks, auto-merge, deploy.** A push to `main` reaches every user at
-once, so nothing reaches `main` without `npm run check` passing on GitHub. Claude does the whole
-release when the owner says "ship it" (the `ship` skill). Hosting stays on GitHub Pages at the
+once, so nothing reaches `main` without `npm run check` passing on GitHub. The owner starts a release
+by typing `/ship` (Claude Code's command; project steps in CLAUDE.md, "Git") and merges the pull
+request; Claude pushes, opens it, reviews it, fixes CI and watches the deploy (since 2026-11-25;
+before that a project `ship` skill also merged). Hosting stays on GitHub Pages at the
 same address, so stored data and Google sign-in keep working.
 
 **A server for sign-in only, no data (2026-11-24).** Sync talks to Drive from the page, but
