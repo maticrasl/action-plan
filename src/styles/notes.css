@@ -123,6 +123,13 @@
   width: 100%;
   margin-top: 6px;
 }
+/* Deleting a goal or activity: "Also delete its activities" (the dialog borrows the closing note's frame). */
+.delete-kids {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
 .closing-actions {
   display: flex;
   gap: 8px;

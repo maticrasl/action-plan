@@ -371,8 +371,11 @@ suite(async () => {
       eq($('#toast').firstChild.textContent, t('toast.deleted.state'), 'state message');
       clickEl(nodeEl(g.id));
       press('Delete', document.body);
-      assert(!findEntity(g.id), 'goal deleted');
-      eq($('#toast').firstChild.textContent, t('toast.deleted.goal'), 'goal message');
+      // Its activity B hangs off it: Delete asks first, as the form does.
+      assert($('#deleteDlg').open && findEntity(g.id), 'a goal with an activity asks first');
+      $('#deleteOk').click();
+      assert(!findEntity(g.id) && !findEntity(b.id), 'goal deleted, with its activity');
+      eq($('#toast').firstChild.textContent, tp('toast.deletedWith.goal', 1), 'goal message');
     } finally {
       window.confirm = realConfirm;
     }

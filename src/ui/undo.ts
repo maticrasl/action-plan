@@ -7,7 +7,9 @@ import { saveVisions } from '../store/visions';
 import { getTrash, trashForget } from '../store/trash';
 import { currentUser, userStorage } from '../store/users';
 import { emit } from '../store/events';
-import { t, type TextKey } from '../i18n/index';
+import { t, tp, type TextKey } from '../i18n/index';
+import { deletesWith, findEntity } from '../core/relations';
+import { askDelete } from './delete-ask';
 import { requestRender } from './render';
 import { applyStore, localStore } from '../sync/sync';
 import type { FullStore } from '../core/merge';
@@ -98,12 +100,24 @@ export function listenUndo() {
   });
 }
 
-// Deleting a goal, state, activity or vision: no question first, Undo after.
+// Deleting a goal, state, activity or vision: Undo after. A goal or activity with activities under it
+// first asks whether they go too; those that also belong elsewhere always stay.
 export function deleteItem(kind: ItemKind, id: string) {
+  const { gone, shared } = kind === 'goal' || kind === 'activity' ? deletesWith(id) : { gone: [], shared: 0 };
+  if (!gone.length) return removeItems(kind, id, []);
+  askDelete(kind as 'goal' | 'activity', findEntity(id)?.item.title || '', gone.length, shared, withThem =>
+    removeItems(kind, id, withThem ? gone : []),
+  );
+}
+
+function removeItems(kind: ItemKind, id: string, under: string[]) {
   undoable(() => {
-    const kept = removeEntity(kind, id);
+    const kept = [removeEntity(kind, id), ...under.map(a => removeEntity('activity', a))].every(k => k === 'ok');
     save();
     requestRender();
-    return kept === 'ok' ? t(('toast.deleted.' + kind) as TextKey) : t('trash.notKept');
+    if (!kept) return t('trash.notKept');
+    return under.length
+      ? tp(kind === 'goal' ? 'toast.deletedWith.goal' : 'toast.deletedWith.activity', under.length)
+      : t(('toast.deleted.' + kind) as TextKey);
   });
 }

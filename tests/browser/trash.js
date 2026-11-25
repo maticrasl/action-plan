@@ -62,6 +62,60 @@ suite(async () => {
     assert(findEntity(a.id), 'context menu: back');
   });
 
+  await step('trash: deleting a goal or activity asks about the activities under it; shared ones stay', () => {
+    fresh('Cascade plan');
+    clearTrash();
+    const g = mk('goal', { title: 'Run' }),
+      g2 = mk('goal', { title: 'Swim' });
+    const a = mk('activity', { title: 'Shoes' }),
+      a1 = mk('activity', { title: 'Try on' }),
+      both = mk('activity', { title: 'Stretch' }),
+      lone = mk('activity', { title: 'Alone' });
+    rel(a, g, 'contributes');
+    rel(a1, a, 'subactivity');
+    rel(both, g, 'contributes');
+    rel(both, g2, 'contributes');
+    save();
+    const dlg = $('#deleteDlg'),
+      box = () => $('#deleteKids');
+    // Nothing under it: deleted at once, as before.
+    openForm('activity', lone.id);
+    $('#deleteBtn').click();
+    assert(!dlg.open && !findEntity(lone.id), 'no activities under it: no question');
+    // A goal: the question names how many go, ticked; the shared one is named as staying.
+    openForm('goal', g.id);
+    $('#deleteBtn').click();
+    assert(dlg.open && findEntity(g.id), 'asks first, nothing deleted yet');
+    assert(box().checked, 'ticked by default');
+    eq($('#deleteKidsText').textContent, tp('del.kids.goal', 2), 'counts its activities');
+    eq($('#deleteShared').textContent, tp('del.shared', 1), 'and the one that stays');
+    $('#deleteCancel').click();
+    assert(!dlg.open && findEntity(g.id) && findEntity(a.id), 'Cancel: nothing deleted');
+    runCtxAction('delete', g.id);
+    assert(dlg.open, 'the context menu asks too');
+    $('#deleteOk').click();
+    assert(!findEntity(g.id) && !findEntity(a.id) && !findEntity(a1.id), 'goal, activity and sub-activity gone');
+    assert(findEntity(both.id) && findEntity(g2.id), 'the shared activity stays');
+    eq(toastText(), tp('toast.deletedWith.goal', 2), 'the toast counts them');
+    eq(getTrash().items.length, 4, 'each in Recently deleted (with Alone)');
+    undoBtn().click();
+    assert(findEntity(g.id) && findEntity(a.id) && findEntity(a1.id), 'Undo brings all back');
+    assert(
+      db.relations.some(r => r.from === a1.id && r.to === a.id),
+      'with their links',
+    );
+    // An activity, unticked: only it goes; its sub-activity stays.
+    openForm('activity', a.id);
+    $('#deleteBtn').click();
+    eq($('#deleteKidsText').textContent, tp('del.kids.activity', 1), 'counts its sub-activities');
+    assert($('#deleteShared').hidden, 'nothing shared');
+    box().checked = false;
+    $('#deleteOk').click();
+    assert(!findEntity(a.id) && findEntity(a1.id), 'unticked: the sub-activity stays');
+    eq(toastText(), t('toast.deleted.activity'), 'the usual toast');
+    deletePlan(plans.current);
+  });
+
   await step('trash: Ctrl+Z (or Cmd+Z) undoes the last delete; not while typing, not when nothing is offered', () => {
     fresh('Keys plan');
     clearTrash();

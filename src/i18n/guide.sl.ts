@@ -498,7 +498,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Ctrl + Enter</strong> shrani obrazec, v katerem ste. <strong>Esc</strong> ga zapre; če ste kaj spremenili, vas pred zavrženjem vpraša, tako kot Prekliči in ×.</li>
 <li>V Vodniku vas <strong>Esc</strong> vrne v pogled, iz katerega ste prišli.</li>
 <li>Na Zemljevidu in Časovnici: <strong>Enter</strong> uredi izbrani element, <strong>Delete</strong> ga odstrani, <strong>Esc</strong> prekliče izbiro.</li>
-<li>Ko kaj izbrišete, sporočilo na dnu nekaj sekund ponuja <strong>Razveljavi</strong>; <strong>Ctrl + Z</strong> (<strong>⌘ + Z</strong> na Macu) naredi isto. Pozneje je izbrisano še 30 dni v Nastavitve › Podatki › Nedavno izbrisano.</li>
+<li>Ko kaj izbrišete, sporočilo na dnu nekaj sekund ponuja <strong>Razveljavi</strong>; <strong>Ctrl + Z</strong> (<strong>⌘ + Z</strong> na Macu) naredi isto. Ko brišete cilj ali aktivnost z aktivnostmi pod njo, vas najprej vpraša, ali gredo tudi te; aktivnost, ki spada tudi k drugemu cilju ali aktivnosti, vedno ostane. Pozneje je izbrisano še 30 dni v Nastavitve › Podatki › Nedavno izbrisano.</li>
 <li><strong>Dva prsta</strong> ali <strong>Ctrl + kolešček</strong> povečata Zemljevid, Časovnico in grafe. Z enim prstom: tapnite, nato se znova dotaknite in povlecite navzdol ali navzgor.</li>
 <li>Gumb <strong>Dodaj</strong> vedno doda, kar ustreza pogledu, v katerem ste.</li>
 <li><strong>Razlage na zaslonu</strong> (na tej strani in v Nastavitvah) vsakemu pogledu dodajo kratko opombo, kontrolnikom pa oznake ⓘ.</li>

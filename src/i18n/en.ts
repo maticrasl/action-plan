@@ -69,6 +69,21 @@ export const en = {
     'toast.visionAdded': 'Vision added',
     'toast.visionUpdated': 'Vision updated',
     'toast.deleted.vision': 'Vision deleted',
+    'toast.deletedWith.goal': {
+      one: 'Goal and {n} activity deleted',
+      other: 'Goal and {n} activities deleted',
+    },
+    'toast.deletedWith.activity': {
+      one: 'Activity and {n} sub-activity deleted',
+      other: 'Activity and {n} sub-activities deleted',
+    },
+    'del.title': 'Delete “{name}”?',
+    'del.kids.goal': { one: 'Also delete its {n} activity', other: 'Also delete its {n} activities' },
+    'del.kids.activity': { one: 'Also delete its {n} sub-activity', other: 'Also delete its {n} sub-activities' },
+    'del.shared': {
+      one: '{n} activity under it stays: it also belongs to another goal or activity.',
+      other: '{n} activities under it stay: they also belong to another goal or activity.',
+    },
     'err.visionLoop': 'That would make a loop of visions',
     'err.visionGoalOnly': 'Only goals can serve visions',
     'vis.shared': 'Visions are shared by all your plans.',

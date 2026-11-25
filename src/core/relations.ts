@@ -66,6 +66,27 @@ export function ancestors(id: string, type: RelType): string[] {
   for (let r = relsFrom(id, type)[0]; r && !out.includes(r.to); r = relsFrom(r.to, type)[0]) out.push(r.to);
   return out;
 }
+// The activities that go when a goal or activity is deleted: those under it (contributing, or sub-activities
+// all the way down) that hang off nothing else. `shared`: how many under it stay, as they also belong elsewhere.
+export function deletesWith(id: string): { gone: string[]; shared: number } {
+  const hang = (r: Relation) => r.type === 'contributes' || r.type === 'subactivity';
+  const under: string[] = [];
+  for (let i = -1; i < under.length; i++)
+    db.relations
+      .filter(r => hang(r) && r.to === (i < 0 ? id : under[i]) && r.from !== id && !under.includes(r.from))
+      .forEach(r => under.push(r.from));
+  // Grows until stable: an activity goes once everything it hangs off goes.
+  const gone = new Set([id]);
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const a of under)
+      if (!gone.has(a) && db.relations.filter(r => hang(r) && r.from === a).every(r => gone.has(r.to)))
+        grew = !!gone.add(a);
+  }
+  const out = under.filter(a => gone.has(a));
+  return { gone: out, shared: under.length - out.length };
+}
+
 export function descendants(id: string, type: RelType): string[] {
   const out: string[] = [];
   const queue = [id];
