@@ -99,7 +99,7 @@ function measurePart(sources: PlanSource[], monday: string, sunday: string) {
         last
           ? t('review.last', { value: withUnit(fmtNum(last.value), s.unit || ''), date: fmtDate(last.date) })
           : t('review.never'),
-      )}</span></span><span class="rv-value"><input type="text" inputmode="decimal" autocomplete="off" data-rv-value="${s.id}" aria-label="${esc(s.title)}">${s.unit ? `<span class="unit">${esc(s.unit)}</span>` : ''}<button type="button" class="btn small" data-review="record" data-id="${s.id}">${t('review.record')}</button></span></div>`,
+      )}</span></span><button type="button" class="btn small" data-review="record" data-id="${s.id}">${t('review.record')}</button></div>`,
       many,
     ),
   );

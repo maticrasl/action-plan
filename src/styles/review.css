@@ -198,14 +198,6 @@
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
 }
-.rv-value {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.rv-value input {
-  width: 7em;
-}
 .rv-fix {
   list-style: none;
   margin: 0;

@@ -60,17 +60,22 @@ suite(async () => {
     deletePlan(plans.current);
   });
 
-  await step('review: Record in Measure saves the value, the state leaves the list, the goal moves', () => {
+  await step('review: Record in Measure opens the value popup from Graphs; it saves, the state leaves the list', () => {
     const { s, g } = week();
     open();
     const row = sec(2).querySelector('.rv-measure');
     assert(row.textContent.includes('Longest run'), 'listed: no value from that week');
-    row.querySelector('[data-rv-value]').value = 'x';
+    assert(!row.querySelector('input'), 'no box of its own in the row');
     row.querySelector('[data-review="record"]').click();
+    const pop = $('.amount-pop');
+    assert(pop && pop.textContent.includes(t('sv.title', { name: s.title })), 'the same popup as on Graphs');
+    assert(pop.querySelector('[data-amount-date]') && pop.querySelector('[data-amount-note]'), 'with its date and note');
+    pop.querySelector('[data-amount]').value = 'x';
+    pop.querySelector('button[type="submit"]').click();
     eq(s.history.length, 1, 'not a number: nothing stored');
     const before = goalProgress(g);
-    row.querySelector('[data-rv-value]').value = '4,2';
-    row.querySelector('[data-review="record"]').click();
+    pop.querySelector('[data-amount]').value = '4,2';
+    pop.querySelector('button[type="submit"]').click();
     eq([s.history.at(-1).date, s.history.at(-1).value], [today(), '4.2'], 'dated today');
     assert(goalProgress(g) > before, 'progress changed');
     // A value from today is not one from last week: the review of this week no longer lists it.
