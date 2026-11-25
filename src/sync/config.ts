@@ -11,4 +11,4 @@ export const FEEDBACK_REPO: string = 'maticrasl/action-plan';
 
 // The token Worker (worker/README.md) that keeps sync signed in, e.g. https://action-plan-token.you.workers.dev.
 // Leave it empty and sign-in lasts about an hour, as Google's popup gives it.
-export const TOKEN_SERVER: string = '';
+export const TOKEN_SERVER: string = 'https://action-plan-token.maticrasl.workers.dev';

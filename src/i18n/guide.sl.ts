@@ -476,7 +476,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-sync',
     group: 'how',
     title: 'Več naprav, več ljudi',
-    body: `<p data-only="syncSetUp">Prijavite se z Googlom v Nastavitve › Račun in sinhronizacija in vaši načrti bodo enaki na vsaki napravi, kjer se prijavite. Google vas približno enkrat na uro prosi za potrditev; ko gumb z oblakom pravi, da je sinhronizacija ustavljena, ga kliknite. Spremembe brez povezave počakajo na napravi in se sinhronizirajo pozneje. Če dve napravi spremenita isti element, obvelja poznejša sprememba, zato naj imata uro nastavljeno samodejno.</p>
+    body: `<p data-only="syncSetUp">Prijavite se z Googlom v Nastavitve › Račun in sinhronizacija in vaši načrti bodo enaki na vsaki napravi, kjer se prijavite. Na vsaki napravi se prijavite enkrat in prijava ostane; če gumb z oblakom kdaj pravi, da je sinhronizacija ustavljena, ga kliknite. Spremembe brez povezave počakajo na napravi in se sinhronizirajo pozneje. Če dve napravi spremenita isti element, obvelja poznejša sprememba, zato naj imata uro nastavljeno samodejno.</p>
 <p data-only="syncSetUp">Eno napravo lahko uporablja več ljudi: vsak se prijavi s svojim Google računom in vidi le svoje načrte.</p>
 <p data-only="noSync">Sinhronizacija za to različico aplikacije ni nastavljena. Vaši načrti ostanejo na tej napravi; za prenos uporabite izvoz in uvoz.</p>`,
     action: { do: 'settings-sync', label: 'Odpri Račun in sinhronizacijo' },
@@ -520,7 +520,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'p-where',
     group: 'data',
     title: 'Kje so shranjeni moji načrti',
-    body: `<p>Vaši načrti so shranjeni v tem brskalniku, na tej napravi. Akcijski načrt nima svojega strežnika: nič, kar napišete, ni poslano tistim, ki aplikacijo izdelujejo, in vaših načrtov ne morejo videti, brati ali obnoviti.</p>
+    body: `<p>Vaši načrti so shranjeni v tem brskalniku, na tej napravi. Akcijski načrt nima strežnika, ki bi hranil vaše načrte: nič, kar napišete, ni poslano tistim, ki aplikacijo izdelujejo, in vaših načrtov ne morejo videti, brati ali obnoviti.</p>
 <p>Če se prijavite z Googlom, je kopija shranjena tudi v vašem Google Drivu, v skriti mapi aplikacije. Glejte [[p-google]].</p>
 <p>Vaši razmisleki in pregledi so shranjeni skupaj z načrti: na tej napravi in, ob vklopljeni sinhronizaciji, v isti skriti mapi na Drivu.</p>
 <p>Aplikacija ne uporablja oglasov ali sledenja in nič o tem, kako jo uporabljate, ne zapusti vaše naprave. Ko prijavite težavo, aplikacija izpolni svojo različico, vaš brskalnik in velikost okna, jezik ter ali je sinhronizacija vklopljena. Nič iz vaših načrtov.</p>
@@ -532,8 +532,9 @@ export const guideSl: readonly Article<ArticleId>[] = [
     group: 'data',
     title: 'Kaj naredi prijava z Googlom',
     body: `<p>Prijava da Akcijskemu načrtu eno dovoljenje: da svoje podatke hrani v skriti mapi vašega Google Driva. Aplikacija ne vidi vaših drugih datotek, pošte ali stikov, druge aplikacije pa ne vidijo te mape. Vaš e-poštni naslov in ime sta prebrana ob prijavi, da je na tej napravi vidno, kdo je prijavljen.</p>
+<p>Da prijava ostane, majhen pomočnik Akcijskega načrta (na Cloudflaru) vsako uro obnovi Googlovo dovoljenje. Ravna samo s tem dovoljenjem, zaklenjenim tako, da ga lahko uporabi le pomočnik, vaših načrtov nikoli ne vidi in ničesar ne hrani. Zaklenjeno dovoljenje je shranjeno na vaših napravah in v skriti mapi na Drivu, da ga lahko uporabijo tudi vaše druge naprave.</p>
 <p>Načrte v tej mapi to, kar ste izbrisali v zadnjih 30 dneh (Nedavno izbrisano), in datirane kopije za Starejše različice hrani Google pod vašim računom in po Googlovih pogojih. Akcijski načrt jih ne šifrira dodatno, poleg tega, kar Google naredi za vse datoteke v Drivu.</p>
-<p>Da prenehate: odjavite se v Nastavitve › Račun in sinhronizacija. Da odstranite kopijo v Drivu: odprite nastavitve Google Driva, »Upravljanje aplikacij«, poiščite Akcijski načrt in izberite »Izbriši skrite podatke aplikacije«; to odstrani tudi datirane kopije. Dovoljenje lahko prekličete v svojem Google računu pod »Aplikacije in storitve drugih ponudnikov«.</p>`,
+<p>Da prenehate na eni napravi: odjavite se v Nastavitve › Račun in sinhronizacija. Da odstranite kopijo v Drivu: odprite nastavitve Google Driva, »Upravljanje aplikacij«, poiščite Akcijski načrt in izberite »Izbriši skrite podatke aplikacije«; to odstrani tudi datirane kopije. Dovoljenje lahko prekličete v svojem Google računu pod »Aplikacije in storitve drugih ponudnikov«.</p>`,
     related: ['p-where', 'h-sync'],
   },
   {

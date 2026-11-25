@@ -651,7 +651,7 @@ export const sl: Language = {
     'sync.connected': 'Prijavljeni – načrti se zdaj sinhronizirajo prek Google Drive',
     'sync.connectFailed': 'Prijava z Googlom ni uspela',
     'sync.clockHint':
-      'Če dve napravi spremenita isti element, obvelja kasnejša sprememba, zato naj imata samodejno nastavljeno uro. Google približno enkrat na uro znova zahteva potrditev; dokler ne kliknete gumba z oblakom, spremembe počakajo na tej napravi.',
+      'Če dve napravi spremenita isti element, obvelja kasnejša sprememba, zato naj imata samodejno nastavljeno uro. Prijava ostane; če se sinhronizacija kdaj ustavi, spremembe počakajo na tej napravi, dokler ne kliknete gumba z oblakom.',
     'sync.status.synced': 'Sinhronizirano {time}',
     'sync.status.never': 'Še ni sinhronizirano',
     'sync.status.syncing': 'Sinhroniziranje …',

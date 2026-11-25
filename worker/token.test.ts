@@ -74,6 +74,8 @@ describe('token worker', () => {
     expect((await call('/refresh', {})).status).toBe(400);
     google({ error: 'x' }, 500);
     expect((await call('/token', { code: 'c' })).status).toBe(502);
+    google({ error: 'invalid_client' }, 401); // secret missing or wrong: not the person's fault
+    expect((await call('/token', { code: 'c' })).status).toBe(502);
   });
 
   test('only the app origins; preflight answered; other paths 404', async () => {

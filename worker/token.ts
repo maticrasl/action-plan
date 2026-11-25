@@ -40,8 +40,9 @@ async function google(env: Env, params: Record<string, string>) {
     body: new URLSearchParams({ client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, ...params }),
   });
   const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  // 400/401 from Google: the code or refresh token is no good (used, revoked, expired).
-  if (!res.ok) return { status: res.status === 400 || res.status === 401 ? 401 : 502, body: null };
+  // 400 from Google: the code or refresh token is no good (used, revoked, expired). Anything else (401 is a
+  // wrong or missing client secret) is the Worker's fault: 502, so the app falls back to Google's popup.
+  if (!res.ok) return { status: res.status === 400 ? 401 : 502, body: null };
   return { status: 200, body };
 }
 
