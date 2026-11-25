@@ -8,7 +8,7 @@ import { emptyState, esc, fitText, hideDoneToggle, itemCount } from '../../ui/do
 import { db, visions } from '../../core/state';
 import { t } from '../../i18n/index';
 import { categorySelect, goalSelect, scopeFor } from '../filters';
-import { activityState, blockers, goalProgress, goalState, isComplete } from '../../core/progress';
+import { activityState, goalProgress, goalState, isComplete } from '../../core/progress';
 import {
   contributingIds,
   findVision,
@@ -148,12 +148,8 @@ export function renderMap() {
         pct = '';
       if (n.kind === 'goal') {
         st = goalState(item as Goal);
-        sub =
-          st === 'blocked'
-            ? t('acts.waitsFor', { n: blockers(item as Goal, 'goal').length })
-            : (item as Goal).deadline
-              ? fmtRel((item as Goal).deadline!, true)
-              : t('map.noDeadline');
+        // The box's colour shows the status (waiting, late, …): the line holds only the date.
+        sub = (item as Goal).deadline ? fmtRel((item as Goal).deadline!, true) : t('map.noDeadline');
         // Progress shows as a green bar along the bottom of the box; the number stays in the tooltip.
         const p = goalProgress(item as Goal);
         pct = ` – ${Math.round(p)} %`;
@@ -172,11 +168,7 @@ export function renderMap() {
             : periodText(item, p)) + (streak.n ? ', ' + t('map.rt.streak', { n: streak.n }) : '');
       } else if (n.kind === 'activity') {
         st = activityState(item as Activity);
-        sub =
-          (st === 'blocked'
-            ? t('acts.waitsFor', { n: blockers(item as Activity).length })
-            : t(('activity.' + (item as Activity).status) as TextKey)) +
-          ((item as Activity).dueDate ? ', ' + fmtRel((item as Activity).dueDate!) : '');
+        sub = (item as Activity).dueDate ? fmtRel((item as Activity).dueDate!, true) : '';
       } else {
         sub = isNum((item as State).value)
           ? `${fmtNum((item as State).value!)} ${(item as State).unit || ''}, ${fmtRel((item as State).date!)}`

@@ -356,6 +356,8 @@ suite(async () => {
       'long title: cut with … and whole in the tooltip',
     );
     assert(node(wide).querySelector('text').textContent.endsWith('…'), 'wide letters: cut by width, not by count');
+    // The box's colour shows the status, so its second line holds only the date.
+    assert(!sub(long).includes(t('activity.doing')) && sub(long) !== '', `activity: date, no status: ${sub(long)}`);
     assert(
       sub(state).endsWith('…') && tip(state).includes('kilometrov in še nekaj'),
       `long amount: cut, whole in the tooltip: ${sub(state)}`,
