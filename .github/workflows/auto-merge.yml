@@ -1,7 +1,9 @@
 name: auto-merge
-# The owner's pull requests merge themselves once "check" passes on them, and the merge is deployed.
-# A draft pull request is left alone. A merge made with this workflow's token starts no other
-# workflow (GitHub's rule), so this one starts deploy itself; workflow_dispatch is the exception.
+# The owner's own pull requests (written by them, from this repository) merge themselves once
+# "check" passes on them, and the merge is deployed. A draft pull request is left alone; marking it
+# ready runs check again (check.yml), which brings it here. A merge made with this workflow's token
+# starts no other workflow (GitHub's rule), so this one starts deploy itself; workflow_dispatch is
+# the exception.
 on:
   workflow_run:
     workflows: [check]
@@ -24,11 +26,15 @@ jobs:
       GH_REPO: ${{ github.repository }}
       SHA: ${{ github.event.workflow_run.head_sha }}
       BRANCH: ${{ github.event.workflow_run.head_branch }}
+      OWNER: ${{ github.repository_owner }}
     steps:
       - name: Merge the pull request whose commit passed, then deploy
         run: |
-          pr=$(gh pr list --head "$BRANCH" --state open --json number,headRefOid,isDraft \
-            --jq ".[] | select(.headRefOid == \"$SHA\" and (.isDraft | not)) | .number")
+          # Who started the check is not enough (the owner may update someone else's branch):
+          # the pull request itself must be the owner's, from this repository.
+          pr=$(gh pr list --head "$BRANCH" --state open \
+            --json number,headRefOid,isDraft,author,isCrossRepository \
+            --jq ".[] | select(.headRefOid == \"$SHA\" and (.isDraft | not) and (.isCrossRepository | not) and .author.login == \"$OWNER\") | .number")
           if [ -z "$pr" ]; then echo "No open, ready pull request at $SHA."; exit 0; fi
           # Only the commit that passed: a newer push waits for its own check.
           gh pr merge "$pr" --squash --delete-branch --match-head-commit "$SHA"
