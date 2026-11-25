@@ -245,11 +245,10 @@ export function removeEntity(kind: ItemKind, id: string): 'ok' | 'large' | 'full
     deleteVision(id);
     return kept;
   }
-  const list = collection(kind);
-  list.splice(
-    list.findIndex(x => x.id === id),
-    1,
-  );
+  const list = collection(kind),
+    at = list.findIndex(x => x.id === id);
+  if (at < 0) return kept;
+  list.splice(at, 1);
   db.relations = db.relations.filter(r => r.from !== id && r.to !== id);
   if (ui.mapSelected === id) ui.mapSelected = null;
   return kept;

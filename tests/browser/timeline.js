@@ -196,11 +196,18 @@ suite(async () => {
       // Bars are flat, goals too: a thin edge, no slab.
       const goalBar = $('.tl-bar.goal');
       assert(!/ 2px 2px 0px/.test(css(goalBar).boxShadow), `flat goal bar: ${css(goalBar).boxShadow}`);
+      // The left column holds only fold arrows, lines and dots; every title is in its row.
+      assert(!$('.tl-label .tl-title, .tl-dates'), 'no titles or dates in the left column');
+      assert(
+        [...$$('.tl-row[data-tl-node]')].every(r => r.querySelector('.tl-track .tl-bar-label .tl-title')),
+        'each row has its title in the chart',
+      );
+      assert($('.tl-corner').offsetWidth < 150, 'a narrow left column: ' + $('.tl-corner').offsetWidth);
       // A bar that starts left of the view keeps its title just right of the labels.
       // No scrollbars of its own: the main pane scrolls; toolbar, labels and the date scale stay in view.
       const main = $('.main'),
         wide = [...$$('.tl-bar')].sort((p, q) => q.offsetWidth - p.offsetWidth)[0],
-        label = wide.querySelector('span');
+        label = wide.closest('.tl-row').querySelector('.tl-bar-label');
       assert(css($('.tl-scroll')).overflowX === 'visible' && css(main).overflowX === 'auto', 'main scrolls');
       main.scrollLeft = wide.offsetLeft + wide.offsetWidth / 2;
       const pane = main.getBoundingClientRect(),
@@ -211,9 +218,28 @@ suite(async () => {
         `toolbar stays at the left: ${$('.toolbar').getBoundingClientRect().left} vs ${pane.left}`,
       );
       assert(
-        css(label).position === 'sticky' && Math.abs(label.getBoundingClientRect().left - labelsEdge) < 2,
+        css(label).position === 'sticky' && Math.abs(label.getBoundingClientRect().left - labelsEdge) < 10,
         `title in view: ${label.getBoundingClientRect().left} vs ${labelsEdge}`,
       );
+      // Bars wholly off screen keep their title at that side: left of the view at the left, right of it at the right.
+      const bars = [...$$('.tl-row[data-tl-node] .tl-bar')].sort((p, q) => p.offsetLeft - q.offsetLeft),
+        first = bars[0],
+        last = bars.at(-1),
+        lblOf = b => b.closest('.tl-row').querySelector('.tl-bar-label').getBoundingClientRect();
+      main.scrollLeft = first.offsetLeft + first.offsetWidth + 400;
+      assert(first.getBoundingClientRect().right < labelsEdge, 'the first bar is off to the left');
+      assert(
+        Math.abs(lblOf(first).left - labelsEdge) < 10,
+        `left title at the left edge: ${lblOf(first).left} vs ${labelsEdge}`,
+      );
+      main.scrollLeft = 0;
+      const right = main.getBoundingClientRect().right;
+      assert(last.getBoundingClientRect().left > right, 'the last bar is off to the right');
+      assert(
+        lblOf(last).right <= right + 1 && right - lblOf(last).right < 24,
+        `right title at the right edge: ${lblOf(last).right} vs ${right}`,
+      );
+      main.scrollLeft = wide.offsetLeft + wide.offsetWidth / 2;
       main.scrollTop = main.scrollHeight;
       const head = $('.tl-head').getBoundingClientRect().top,
         barBottom = $('.topbar').getBoundingClientRect().bottom;

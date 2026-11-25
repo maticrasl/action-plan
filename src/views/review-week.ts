@@ -18,6 +18,8 @@ import { weeks } from './review';
 import {
   finishHtml,
   finishedOf,
+  firstPeriod,
+  firstUse,
   headHtml,
   reviewSources,
   reviewView,
@@ -32,9 +34,10 @@ const mondayOf = (iso: string) => addDays(iso, -weekday(iso));
 
 // The Monday of the week shown: the one the calendar picks unless the arrows moved.
 export const shownWeekOf = (now = today()) => reviewView.period.week || reviewWeek(now);
+const firstWeek = () => firstPeriod(mondayOf(firstUse()), reviewWeek(today()));
 export const shiftWeek = (dir: number) => {
   const next = addDays(shownWeekOf(), dir * 7);
-  reviewView.period.week = next > mondayOf(today()) ? mondayOf(today()) : next;
+  reviewView.period.week = next > mondayOf(today()) ? mondayOf(today()) : next < firstWeek() ? firstWeek() : next;
 };
 
 const inPlanDiv = (plan: string, body: string, many: boolean) =>
@@ -99,7 +102,7 @@ function measurePart(sources: PlanSource[], monday: string, sunday: string) {
         last
           ? t('review.last', { value: withUnit(fmtNum(last.value), s.unit || ''), date: fmtDate(last.date) })
           : t('review.never'),
-      )}</span></span><span class="rv-value"><input type="text" inputmode="decimal" autocomplete="off" data-rv-value="${s.id}" aria-label="${esc(s.title)}">${s.unit ? `<span class="unit">${esc(s.unit)}</span>` : ''}<button type="button" class="btn small" data-review="record" data-id="${s.id}">${t('review.record')}</button></span></div>`,
+      )}</span></span><button type="button" class="btn small" data-review="record" data-id="${s.id}">${t('review.record')}</button></div>`,
       many,
     ),
   );
@@ -189,7 +192,7 @@ export function renderWeekReview() {
     ],
   ];
   return `<article class="rv-page" data-rv-kind="week" data-period="${period}">
-    ${headHtml(t('review.week.title', { range: fmtRange(monday, sunday) }), monday < mondayOf(now))}
+    ${headHtml(t('review.week.title', { range: fmtRange(monday, sunday) }), monday < mondayOf(now), monday > firstWeek())}
     ${parts.map(([title, lead, body], i) => sectionHtml(i + 1, title, lead, body)).join('')}
     ${finishHtml(kept, period, iso => fmtDay(iso.slice(0, 10), { day: 'numeric', month: 'long' }))}
   </article>`;

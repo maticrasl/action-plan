@@ -165,6 +165,19 @@
       </div>
     </form>
   </dialog>
+  <dialog id="deleteDlg" class="modal closing-dlg" aria-labelledby="deleteTitle">
+    <form method="dialog" novalidate>
+      <div class="closing-body">
+        <h2 id="deleteTitle"></h2>
+        <label class="delete-kids"><input type="checkbox" id="deleteKids" checked> <span id="deleteKidsText"></span></label>
+        <p class="hint" id="deleteShared" hidden></p>
+        <div class="closing-actions">
+          <button class="btn danger" value="delete" id="deleteOk"></button>
+          <button class="btn ghost" value="cancel" id="deleteCancel"></button>
+        </div>
+      </div>
+    </form>
+  </dialog>
   <dialog id="planDelete" class="modal plan-delete" aria-labelledby="planDeleteTitle">
     <form method="dialog" id="planDeleteForm" novalidate>
       <header class="modal-head">

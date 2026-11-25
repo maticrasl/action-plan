@@ -27,9 +27,7 @@ import {
 } from './review-month';
 import { openFocusPicker, openIn } from './focus';
 import { openReplan } from '../ui/replan';
-import { addEntry, isCumulative, recordMeasurement } from '../core/cumulative';
-import { parseNum } from '../core/util';
-import { save } from '../store/plans';
+import { openStateValue } from '../ui/state-value';
 
 const FILTERS = {
   all: null,
@@ -211,7 +209,8 @@ export function reviewClick(el: HTMLElement) {
   else if (what === 'unpause') return unpauseGoal(el.dataset.plan!, el.dataset.id!);
   else if (what === 'focus') return openFocusPicker(el.dataset.week);
   else if (what === 'states') return setView('graphs');
-  else if (what === 'record') return recordValue(el);
+  // The same popup as on Graphs: value (or amount), date and note.
+  else if (what === 'record') return openStateValue(el.dataset.id!, el);
   else if (what === 'open') return openIn(el.dataset.plan!, el.dataset.id!);
   else if (what === 'replan') {
     if (el.dataset.plan && el.dataset.plan !== plans.current) openPlan(el.dataset.plan);
@@ -221,22 +220,6 @@ export function reviewClick(el: HTMLElement) {
 }
 
 // Record in "Measure": the value typed beside the state, dated today. Runs in the state's plan.
-function recordValue(el: HTMLElement) {
-  const s = db.states.find(x => x.id === el.dataset.id);
-  const box = el.closest('.rv-measure')?.querySelector<HTMLInputElement>('[data-rv-value]');
-  const n = parseNum(box?.value);
-  if (!s || !box) return;
-  if (isNaN(n)) {
-    box.setCustomValidity(t('err.number'));
-    box.reportValidity();
-    return box.focus();
-  }
-  if (isCumulative(s)) addEntry(s, today(), n);
-  else recordMeasurement(s, today(), String(n));
-  save();
-  toast(t('review.recorded', { name: s.title }));
-  render();
-}
 
 export function setLogScope(v: string) {
   Object.assign(logView, { all: v === 'all', weeks: WEEKS });

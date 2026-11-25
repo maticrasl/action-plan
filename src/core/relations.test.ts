@@ -6,6 +6,7 @@ import {
   ancestors,
   canRelate,
   chainOf,
+  deletesWith,
   descendants,
   findEntity,
   kindList,
@@ -204,5 +205,53 @@ describe('chainOf', () => {
     expect(chainOf(null, [l('1', 'a', 'b')]).nodes.size).toBe(0);
     const { nodes, links } = chainOf('a', [l('1', 'a', 'b'), l('2', 'b', 'a')]);
     expect([nodes.size, links.size]).toEqual([2, 2]);
+  });
+});
+
+describe('deletesWith: what goes with a deleted goal or activity', () => {
+  test('a goal takes its activities and their sub-activities, all the way down', () => {
+    const g = goal(),
+      a = act(),
+      b = act(),
+      a1 = act(),
+      a11 = act();
+    rel(a, g, 'contributes');
+    rel(b, g, 'contributes');
+    rel(a1, a, 'subactivity');
+    rel(a11, a1, 'subactivity');
+    expect(deletesWith(g.id)).toEqual({ gone: [a.id, b.id, a1.id, a11.id], shared: 0 });
+  });
+
+  test('an activity takes its sub-activities; nothing for one without any', () => {
+    const a = act(),
+      a1 = act(),
+      other = act();
+    rel(a1, a, 'subactivity');
+    expect(deletesWith(a.id)).toEqual({ gone: [a1.id], shared: 0 });
+    expect(deletesWith(other.id)).toEqual({ gone: [], shared: 0 });
+    expect(deletesWith('missing')).toEqual({ gone: [], shared: 0 });
+  });
+
+  test('an activity that also serves another goal stays, and so do the ones under it', () => {
+    const g = goal(),
+      g2 = goal(),
+      solo = act(),
+      both = act(),
+      under = act();
+    rel(solo, g, 'contributes');
+    rel(both, g, 'contributes');
+    rel(both, g2, 'contributes');
+    rel(under, both, 'subactivity');
+    // Both stay: the shared one, and the one under it, which hangs off it.
+    expect(deletesWith(g.id)).toEqual({ gone: [solo.id], shared: 2 });
+  });
+
+  test('a sub-activity that also serves a goal of its own stays', () => {
+    const g = goal(),
+      a = act(),
+      a1 = act();
+    rel(a1, a, 'subactivity');
+    rel(a1, g, 'contributes');
+    expect(deletesWith(a.id)).toEqual({ gone: [], shared: 1 });
   });
 });

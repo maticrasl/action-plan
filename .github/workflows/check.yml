@@ -3,6 +3,8 @@ on:
   push:
     branches-ignore: [main] # on main, deploy.yml runs this workflow before it publishes
   pull_request:
+    # ready_for_review too: a draft marked ready is checked again, so auto-merge.yml sees it.
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:
 
 jobs:

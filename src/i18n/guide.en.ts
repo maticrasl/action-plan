@@ -418,8 +418,8 @@ export const guideEn = [
     id: 'h-timeline',
     group: 'how',
     title: 'Timeline',
-    body: `<p>The Timeline shows goals and activities by date; an item needs a start or due date to appear. Activities sit under the goals they contribute to. Red stretches are overdue time, a bar’s colour is its status, and routines with set days show each day as done, missed or to come.</p>
-<p>Tap a bar to select it, then drag the bar to move its dates or one end to change only that date (on a touch screen, long-press first). ▾ beside a goal folds its rows away; Collapse all, top left, folds every goal, and the menu on a goal (right-click or long-press) offers both. Pinch or Ctrl + scroll changes the scale. The toolbar’s “Move late steps…” re-dates every overdue bar in one go.</p>`,
+    body: `<p>The Timeline shows goals and activities by date; an item needs a start or due date to appear. Activities sit under the goals they contribute to. Red stretches are overdue time, a bar’s colour is its status, and routines with set days show each day as done, missed or to come. Each title sits in its row; while a bar is off screen, its title waits at that edge.</p>
+<p>Tap a bar to select it, then drag the bar to move its dates or one end to change only that date (on a touch screen, long-press first). ▾ beside a goal folds its rows away; the double arrow at the top left (Collapse all) folds every goal, and the menu on a goal (right-click or long-press) offers both. Pinch or Ctrl + scroll changes the scale. The toolbar’s “Move late steps…” re-dates every overdue bar in one go.</p>`,
     action: { do: 'view-timeline', label: 'Open the Timeline' },
   },
   {
@@ -436,7 +436,7 @@ export const guideEn = [
     id: 'h-review',
     group: 'how',
     title: 'Review',
-    body: `<p><strong>This week</strong> is the weekly review: what you did, the measurements with no value from the week, two lines to look back, what needs a decision, and next week’s one thing. Monday to Thursday it looks at last week, Friday to Sunday at the week under way; the arrows go to other weeks. <strong>Finish review</strong> keeps what you wrote.</p>
+    body: `<p><strong>This week</strong> is the weekly review: what you did, the measurements with no value from the week, two lines to look back, what needs a decision, and next week’s one thing. Monday to Thursday it looks at last week, Friday to Sunday at the week under way; the arrows go to other weeks, back as far as the week you started. <strong>Finish review</strong> keeps what you wrote.</p>
 <p><strong>This month</strong> asks about your goals, one card each: keep going, change it, pause it or let it go. <strong>This year</strong> asks about your visions and what the next year is for.</p>
 <p><strong>Done log</strong> lists what you finished, week by week, and <strong>Past reviews</strong> keeps every review you finished, to read again. A dot on Review means last week has no review yet.</p>`,
     action: { do: 'view-review', label: 'Open Review' },
@@ -498,7 +498,7 @@ export const guideEn = [
 <li><strong>Ctrl + Enter</strong> saves the form you are in. <strong>Esc</strong> closes it; if you changed something, it asks before discarding it, as Cancel and × do.</li>
 <li>In the Guide, <strong>Esc</strong> goes back to the view you came from.</li>
 <li>On the Map and Timeline: <strong>Enter</strong> edits the selected item, <strong>Delete</strong> removes it, <strong>Esc</strong> deselects.</li>
-<li>After deleting something, the message at the bottom offers <strong>Undo</strong> for a few seconds; <strong>Ctrl + Z</strong> (<strong>⌘ + Z</strong> on a Mac) does the same. Later, Settings › Data › Recently deleted still has it for 30 days.</li>
+<li>After deleting something, the message at the bottom offers <strong>Undo</strong> for a few seconds; <strong>Ctrl + Z</strong> (<strong>⌘ + Z</strong> on a Mac) does the same. Deleting a goal or activity with activities under it first asks whether they go too; one that also belongs to another goal or activity always stays. Later, Settings › Data › Recently deleted still has it for 30 days.</li>
 <li><strong>Pinch</strong> or <strong>Ctrl + scroll</strong> zooms the Map, the Timeline and graphs. With one finger: tap, then touch again and drag down or up.</li>
 <li>The <strong>Add</strong> button always adds what fits the view you are in.</li>
 <li><strong>Explanations on screen</strong> (on this page and in Settings) adds a short note to each view and ⓘ marks on the controls.</li>

@@ -62,7 +62,7 @@ export const nodeId = (el: HTMLElement | SVGElement | null | undefined): string 
   el?.dataset.mapNode || el?.dataset.tlNode || el?.dataset.ctxItem;
 export const LONG_PRESS_MS = 500;
 // The timeline's label column outside any item row.
-const TL_LABELS = '.tl-group .tl-label, .tl-corner';
+const TL_LABELS = '.tl-group .tl-label, .tl-group .tl-track, .tl-corner';
 
 export function ctxOptions(kind: ItemKind, item: PlanItem | Vision): (MenuOption | '-')[] {
   const opt = (act: string, label: string, extra: Partial<MenuOption> = {}): MenuOption => ({ act, label, ...extra });
@@ -369,10 +369,11 @@ export function runCtxAction(act: string, id: string, plan = '') {
     );
   }
   if (verb === 'delete') {
-    Object.values(GOAL_FILTERS).forEach(k => {
-      if (ui[k] === id) ui[k] = '';
-    });
-    deleteItem(kind, id);
+    deleteItem(kind, id, () =>
+      Object.values(GOAL_FILTERS).forEach(k => {
+        if (ui[k] === id) ui[k] = '';
+      }),
+    );
   }
 }
 

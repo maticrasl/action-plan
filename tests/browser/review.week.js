@@ -60,23 +60,63 @@ suite(async () => {
     deletePlan(plans.current);
   });
 
-  await step('review: Record in Measure saves the value, the state leaves the list, the goal moves', () => {
+  await step('review: Record in Measure opens the value popup from Graphs; it saves, the state leaves the list', () => {
     const { s, g } = week();
     open();
     const row = sec(2).querySelector('.rv-measure');
     assert(row.textContent.includes('Longest run'), 'listed: no value from that week');
-    row.querySelector('[data-rv-value]').value = 'x';
+    assert(!row.querySelector('input'), 'no box of its own in the row');
     row.querySelector('[data-review="record"]').click();
+    const pop = $('.amount-pop');
+    assert(pop && pop.textContent.includes(t('sv.title', { name: s.title })), 'the same popup as on Graphs');
+    assert(
+      pop.querySelector('[data-amount-date]') && pop.querySelector('[data-amount-note]'),
+      'with its date and note',
+    );
+    pop.querySelector('[data-amount]').value = 'x';
+    pop.querySelector('button[type="submit"]').click();
     eq(s.history.length, 1, 'not a number: nothing stored');
     const before = goalProgress(g);
-    row.querySelector('[data-rv-value]').value = '4,2';
-    row.querySelector('[data-review="record"]').click();
+    pop.querySelector('[data-amount]').value = '4,2';
+    pop.querySelector('button[type="submit"]').click();
     eq([s.history.at(-1).date, s.history.at(-1).value], [today(), '4.2'], 'dated today');
     assert(goalProgress(g) > before, 'progress changed');
     // A value from today is not one from last week: the review of this week no longer lists it.
     reviewView.period.week = d(-2);
     render();
     assert(sec(2).textContent.includes(t('review.allMeasured')), 'this week has its value');
+    deletePlan(plans.current);
+  });
+
+  await step('review: a value recorded for a state of a plan that is not open is saved in that plan', () => {
+    const { s } = week();
+    const other = plans.current;
+    fresh('Open one');
+    save();
+    inPlan(other, () => openStateValue(s.id, document.body));
+    const pop = $('.amount-pop');
+    pop.querySelector('[data-amount]').value = '6';
+    pop.querySelector('button[type="submit"]').click();
+    eq(readPlan(other).states[0].history.at(-1).value, '6', 'stored in its own plan');
+    eq(db.states.length, 0, 'the open plan untouched');
+    deletePlan(plans.current);
+    deletePlan(other);
+  });
+
+  await step('review: the arrows stop at the first week and month the plans were used', () => {
+    week();
+    only(plans.current);
+    open();
+    const prev = () => $('#view .rv-arrow[data-dir="-1"]');
+    // The first use is the value of d(-20), Thursday 29 Oct: its week starts on d(-23).
+    for (let i = 0; i < 5 && !prev().disabled; i++) prev().click();
+    eq(reviewView.period.week, d(-23), 'stops at the week of the first use');
+    assert(prev().disabled, 'no earlier week');
+    reviewView.tab = 'month';
+    render();
+    for (let i = 0; i < 5 && !prev().disabled; i++) prev().click();
+    eq(reviewView.period.month ?? d(-20).slice(0, 7), d(-20).slice(0, 7), 'stops at the month of the first use');
+    assert(prev().disabled, 'no earlier month');
     deletePlan(plans.current);
   });
 

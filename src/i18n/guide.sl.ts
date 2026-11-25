@@ -418,8 +418,8 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-timeline',
     group: 'how',
     title: 'Časovnica',
-    body: `<p>Časovnica kaže cilje in aktivnosti po datumih; element potrebuje začetni datum ali rok, da se pojavi. Aktivnosti so pod cilji, h katerim prispevajo. Rdeči odseki so zamujeni čas, barva traku je njegovo stanje, rutine z določenimi dnevi pa vsak dan kažejo kot opravljen, zamujen ali prihajajoč.</p>
-<p>Tapnite trak, da ga izberete, nato ga povlecite, da premaknete njegove datume, ali povlecite en konec, da spremenite le ta datum (na zaslonu na dotik ga najprej pridržite). ▾ ob cilju strne njegove vrstice; Strni vse zgoraj levo strne vse cilje, meni na cilju (desni klik ali pridržanje) pa ponudi oboje. Dva prsta ali Ctrl + kolešček spremenita merilo. Gumb »Premakni zamujene korake …« v orodni vrstici z enim dejanjem prestavi vse zamujene trakove.</p>`,
+    body: `<p>Časovnica kaže cilje in aktivnosti po datumih; element potrebuje začetni datum ali rok, da se pojavi. Aktivnosti so pod cilji, h katerim prispevajo. Rdeči odseki so zamujeni čas, barva traku je njegovo stanje, rutine z določenimi dnevi pa vsak dan kažejo kot opravljen, zamujen ali prihajajoč. Vsak naslov je v svoji vrstici; ko je trak zunaj zaslona, naslov počaka ob tistem robu.</p>
+<p>Tapnite trak, da ga izberete, nato ga povlecite, da premaknete njegove datume, ali povlecite en konec, da spremenite le ta datum (na zaslonu na dotik ga najprej pridržite). ▾ ob cilju strne njegove vrstice; dvojna puščica zgoraj levo (Strni vse) strne vse cilje, meni na cilju (desni klik ali pridržanje) pa ponudi oboje. Dva prsta ali Ctrl + kolešček spremenita merilo. Gumb »Premakni zamujene korake …« v orodni vrstici z enim dejanjem prestavi vse zamujene trakove.</p>`,
     action: { do: 'view-timeline', label: 'Odpri Časovnico' },
   },
   {
@@ -436,7 +436,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-review',
     group: 'how',
     title: 'Pogled nazaj',
-    body: `<p><strong>Ta teden</strong> je tedenski pregled: kaj ste naredili, meritve brez vrednosti iz tega tedna, dve vrstici za pogled nazaj, kar čaka na odločitev, in ena stvar prihodnjega tedna. Od ponedeljka do četrtka gleda prejšnji teden, od petka do nedelje tekočega; s puščicami greste na druge tedne. <strong>Zaključi pregled</strong> shrani, kar ste zapisali.</p>
+    body: `<p><strong>Ta teden</strong> je tedenski pregled: kaj ste naredili, meritve brez vrednosti iz tega tedna, dve vrstici za pogled nazaj, kar čaka na odločitev, in ena stvar prihodnjega tedna. Od ponedeljka do četrtka gleda prejšnji teden, od petka do nedelje tekočega; s puščicami greste na druge tedne, nazaj do tedna, ko ste začeli. <strong>Zaključi pregled</strong> shrani, kar ste zapisali.</p>
 <p><strong>Ta mesec</strong> vas vpraša o ciljih, za vsakega ena kartica: nadaljujete, spremenite, zaustavite ali opustite. <strong>To leto</strong> vas vpraša o vizijah in o tem, čemu bo namenjeno naslednje leto.</p>
 <p><strong>Dnevnik opravljenega</strong> našteje, kaj ste opravili, po tednih, <strong>Pretekli pregledi</strong> pa hranijo vsak zaključen pregled, da ga lahko znova preberete. Pika pri Pogledu nazaj pomeni, da prejšnji teden še nima pregleda.</p>`,
     action: { do: 'view-review', label: 'Odpri Pogled nazaj' },
@@ -498,7 +498,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
 <li><strong>Ctrl + Enter</strong> shrani obrazec, v katerem ste. <strong>Esc</strong> ga zapre; če ste kaj spremenili, vas pred zavrženjem vpraša, tako kot Prekliči in ×.</li>
 <li>V Vodniku vas <strong>Esc</strong> vrne v pogled, iz katerega ste prišli.</li>
 <li>Na Zemljevidu in Časovnici: <strong>Enter</strong> uredi izbrani element, <strong>Delete</strong> ga odstrani, <strong>Esc</strong> prekliče izbiro.</li>
-<li>Ko kaj izbrišete, sporočilo na dnu nekaj sekund ponuja <strong>Razveljavi</strong>; <strong>Ctrl + Z</strong> (<strong>⌘ + Z</strong> na Macu) naredi isto. Pozneje je izbrisano še 30 dni v Nastavitve › Podatki › Nedavno izbrisano.</li>
+<li>Ko kaj izbrišete, sporočilo na dnu nekaj sekund ponuja <strong>Razveljavi</strong>; <strong>Ctrl + Z</strong> (<strong>⌘ + Z</strong> na Macu) naredi isto. Ko brišete cilj ali aktivnost z aktivnostmi pod njo, vas najprej vpraša, ali gredo tudi te; aktivnost, ki spada tudi k drugemu cilju ali aktivnosti, vedno ostane. Pozneje je izbrisano še 30 dni v Nastavitve › Podatki › Nedavno izbrisano.</li>
 <li><strong>Dva prsta</strong> ali <strong>Ctrl + kolešček</strong> povečata Zemljevid, Časovnico in grafe. Z enim prstom: tapnite, nato se znova dotaknite in povlecite navzdol ali navzgor.</li>
 <li>Gumb <strong>Dodaj</strong> vedno doda, kar ustreza pogledu, v katerem ste.</li>
 <li><strong>Razlage na zaslonu</strong> (na tej strani in v Nastavitvah) vsakemu pogledu dodajo kratko opombo, kontrolnikom pa oznake ⓘ.</li>
