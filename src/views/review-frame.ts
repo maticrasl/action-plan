@@ -6,6 +6,9 @@ import { addReview, journal, updateReview } from '../store/journal';
 import { latestReview } from '../core/reviews';
 import { todaySources } from './focus';
 import type { Review } from '../core/journal';
+import { firstItemDay } from '../core/guidance/tip-facts';
+import { visions } from '../core/state';
+import { today } from '../core/dates';
 
 export type ReviewTab = 'week' | 'month' | 'year' | 'log' | 'past';
 export const TABS: ReviewTab[] = ['week', 'month', 'year', 'log', 'past'];
@@ -22,19 +25,30 @@ export const reviewView = {
 // Every plan but a sample, the open one first (as Today reads them).
 export const reviewSources = () => todaySources();
 
+// The first day the reviewed plans were used: their first item, change or measurement; today if none.
+export function firstUse() {
+  const days = reviewSources()
+    .map(s => firstItemDay(s.data, visions.list))
+    .filter((d): d is string => !!d);
+  return days.reduce((a, b) => (a < b ? a : b), today());
+}
+// The earliest period the arrows reach: the one of the first use, or the current review if that is earlier.
+export const firstPeriod = (ofFirstUse: string, current: string) => (ofFirstUse < current ? ofFirstUse : current);
+
 export const tabsHtml = () =>
   `<div class="chips rv-tabs" role="group" aria-label="${esc(t('review.tabs'))}">${TABS.map(
     k =>
       `<button type="button" class="chip ${reviewView.tab === k ? 'active' : ''}" data-review="tab" data-v="${k}" aria-pressed="${reviewView.tab === k}">${t(`review.tab.${k}` as TextKey)}</button>`,
   ).join('')}</div>`;
 
-// The title with arrows to earlier and later periods; there is nothing to review after the current one.
-export function headHtml(title: string, canNext: boolean) {
+// The title with arrows to earlier and later periods; there is nothing to review after the current one
+// or before the plans were first used.
+export function headHtml(title: string, canNext: boolean, canPrev: boolean) {
   const arrow = (dir: number, off = false) => {
     const tip = esc(t(dir < 0 ? 'review.prev' : 'review.next'));
     return `<button type="button" class="icon-btn rv-arrow" data-review="shift" data-dir="${dir}" title="${tip}" aria-label="${tip}" ${off ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${dir < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg></button>`;
   };
-  return `<div class="rv-head"><h2 class="rv-title">${esc(title)}</h2><span class="rv-arrows">${arrow(-1)}${arrow(1, !canNext)}</span></div>`;
+  return `<div class="rv-head"><h2 class="rv-title">${esc(title)}</h2><span class="rv-arrows">${arrow(-1, !canPrev)}${arrow(1, !canNext)}</span></div>`;
 }
 
 export const sectionHtml = (n: number, title: string, lead: string, body: string) =>

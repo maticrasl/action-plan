@@ -436,7 +436,7 @@ export const guideEn = [
     id: 'h-review',
     group: 'how',
     title: 'Review',
-    body: `<p><strong>This week</strong> is the weekly review: what you did, the measurements with no value from the week, two lines to look back, what needs a decision, and next week’s one thing. Monday to Thursday it looks at last week, Friday to Sunday at the week under way; the arrows go to other weeks. <strong>Finish review</strong> keeps what you wrote.</p>
+    body: `<p><strong>This week</strong> is the weekly review: what you did, the measurements with no value from the week, two lines to look back, what needs a decision, and next week’s one thing. Monday to Thursday it looks at last week, Friday to Sunday at the week under way; the arrows go to other weeks, back as far as the week you started. <strong>Finish review</strong> keeps what you wrote.</p>
 <p><strong>This month</strong> asks about your goals, one card each: keep going, change it, pause it or let it go. <strong>This year</strong> asks about your visions and what the next year is for.</p>
 <p><strong>Done log</strong> lists what you finished, week by week, and <strong>Past reviews</strong> keeps every review you finished, to read again. A dot on Review means last week has no review yet.</p>`,
     action: { do: 'view-review', label: 'Open Review' },

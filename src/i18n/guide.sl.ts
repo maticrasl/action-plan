@@ -436,7 +436,7 @@ export const guideSl: readonly Article<ArticleId>[] = [
     id: 'h-review',
     group: 'how',
     title: 'Pogled nazaj',
-    body: `<p><strong>Ta teden</strong> je tedenski pregled: kaj ste naredili, meritve brez vrednosti iz tega tedna, dve vrstici za pogled nazaj, kar čaka na odločitev, in ena stvar prihodnjega tedna. Od ponedeljka do četrtka gleda prejšnji teden, od petka do nedelje tekočega; s puščicami greste na druge tedne. <strong>Zaključi pregled</strong> shrani, kar ste zapisali.</p>
+    body: `<p><strong>Ta teden</strong> je tedenski pregled: kaj ste naredili, meritve brez vrednosti iz tega tedna, dve vrstici za pogled nazaj, kar čaka na odločitev, in ena stvar prihodnjega tedna. Od ponedeljka do četrtka gleda prejšnji teden, od petka do nedelje tekočega; s puščicami greste na druge tedne, nazaj do tedna, ko ste začeli. <strong>Zaključi pregled</strong> shrani, kar ste zapisali.</p>
 <p><strong>Ta mesec</strong> vas vpraša o ciljih, za vsakega ena kartica: nadaljujete, spremenite, zaustavite ali opustite. <strong>To leto</strong> vas vpraša o vizijah in o tem, čemu bo namenjeno naslednje leto.</p>
 <p><strong>Dnevnik opravljenega</strong> našteje, kaj ste opravili, po tednih, <strong>Pretekli pregledi</strong> pa hranijo vsak zaključen pregled, da ga lahko znova preberete. Pika pri Pogledu nazaj pomeni, da prejšnji teden še nima pregleda.</p>`,
     action: { do: 'view-review', label: 'Odpri Pogled nazaj' },

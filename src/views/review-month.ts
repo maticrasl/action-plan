@@ -24,6 +24,8 @@ import {
   draftOf,
   finishHtml,
   finishedOf,
+  firstPeriod,
+  firstUse,
   headHtml,
   reviewSources,
   reviewView,
@@ -47,10 +49,11 @@ export interface GoalChoice {
 }
 const WORK_MAX = 3; // results of "Is it working?" shown
 
+const firstMonth = () => firstPeriod(firstUse().slice(0, 7), reviewMonth(today()));
 export const shownMonthOf = (now = today()) => reviewView.period.month || reviewMonth(now);
 export function shiftMonthView(dir: number) {
   const next = shiftMonth(shownMonthOf(), dir);
-  reviewView.period.month = next > today().slice(0, 7) ? today().slice(0, 7) : next;
+  reviewView.period.month = next > today().slice(0, 7) ? today().slice(0, 7) : next < firstMonth() ? firstMonth() : next;
 }
 const monthName = (ym: string) => fmtDay(`${ym}-01`, { month: 'long', year: 'numeric' });
 const pct = (n: number) => `${Math.round(n)} %`;
@@ -217,7 +220,7 @@ export function renderMonthReview() {
     [t('review.s.sentence'), '', textField(period, 'sentence', t('review.monthAbout'), kept, locked)],
   ];
   return `<article class="rv-page" data-rv-kind="month" data-period="${period}">
-    ${headHtml(t('review.month.title', { month: monthName(period) }), period < now.slice(0, 7))}
+    ${headHtml(t('review.month.title', { month: monthName(period) }), period < now.slice(0, 7), period > firstMonth())}
     ${parts.map(([title, lead, body], i) => sectionHtml(i + 1, title, lead, body)).join('')}
     ${finishHtml(kept, period, iso => fmtDay(iso.slice(0, 10), { day: 'numeric', month: 'long' }))}
   </article>`;

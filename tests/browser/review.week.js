@@ -69,7 +69,10 @@ suite(async () => {
     row.querySelector('[data-review="record"]').click();
     const pop = $('.amount-pop');
     assert(pop && pop.textContent.includes(t('sv.title', { name: s.title })), 'the same popup as on Graphs');
-    assert(pop.querySelector('[data-amount-date]') && pop.querySelector('[data-amount-note]'), 'with its date and note');
+    assert(
+      pop.querySelector('[data-amount-date]') && pop.querySelector('[data-amount-note]'),
+      'with its date and note',
+    );
     pop.querySelector('[data-amount]').value = 'x';
     pop.querySelector('button[type="submit"]').click();
     eq(s.history.length, 1, 'not a number: nothing stored');
@@ -82,6 +85,23 @@ suite(async () => {
     reviewView.period.week = d(-2);
     render();
     assert(sec(2).textContent.includes(t('review.allMeasured')), 'this week has its value');
+    deletePlan(plans.current);
+  });
+
+  await step('review: the arrows stop at the first week and month the plans were used', () => {
+    week();
+    only(plans.current);
+    open();
+    const prev = () => $('#view .rv-arrow[data-dir="-1"]');
+    // The first use is the value of d(-20), Thursday 29 Oct: its week starts on d(-23).
+    for (let i = 0; i < 5 && !prev().disabled; i++) prev().click();
+    eq(reviewView.period.week, d(-23), 'stops at the week of the first use');
+    assert(prev().disabled, 'no earlier week');
+    reviewView.tab = 'month';
+    render();
+    for (let i = 0; i < 5 && !prev().disabled; i++) prev().click();
+    eq(reviewView.period.month ?? d(-20).slice(0, 7), d(-20).slice(0, 7), 'stops at the month of the first use');
+    assert(prev().disabled, 'no earlier month');
     deletePlan(plans.current);
   });
 

@@ -20,6 +20,8 @@ import {
   draftOf,
   finishHtml,
   finishedOf,
+  firstPeriod,
+  firstUse,
   headHtml,
   reviewSources,
   reviewView,
@@ -37,10 +39,11 @@ export const VCHOICES = ['true', 'change', 'drop'] as const;
 export type VChoice = (typeof VCHOICES)[number];
 const CHANGES_SHOWN = 3;
 
+const firstYear = () => firstPeriod(firstUse().slice(0, 4), reviewYear(today()));
 export const shownYearOf = (now = today()) => reviewView.period.year || reviewYear(now);
 export function shiftYearView(dir: number) {
   const y = Number(shownYearOf()) + dir;
-  reviewView.period.year = String(Math.min(y, Number(today().slice(0, 4))));
+  reviewView.period.year = String(Math.max(Math.min(y, Number(today().slice(0, 4))), Number(firstYear())));
 }
 
 // Worked out once per year shown and change of the plans, not on every draw (npm run perf, "yearly review").
@@ -174,7 +177,7 @@ export function renderYearReview() {
     ],
   ];
   return `<article class="rv-page" data-rv-kind="year" data-period="${period}">
-    ${headHtml(t('review.year.title', { year: period }), period < now.slice(0, 4))}
+    ${headHtml(t('review.year.title', { year: period }), period < now.slice(0, 4), period > firstYear())}
     ${parts.map(([title, lead, body], i) => sectionHtml(i + 1, title, lead, body)).join('')}
     ${finishHtml(kept, period, iso => fmtDay(iso.slice(0, 10), { day: 'numeric', month: 'long' }))}
   </article>`;
