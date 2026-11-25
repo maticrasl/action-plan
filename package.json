@@ -21,7 +21,8 @@
     "cycles": "node scripts/cycles.mjs",
     "move": "node scripts/move-decls.mjs",
     "move-steps": "node scripts/move-steps.mjs",
-    "emoji-data": "node scripts/emoji-data.mjs"
+    "emoji-data": "node scripts/emoji-data.mjs",
+    "worker:deploy": "npx wrangler deploy --config worker/wrangler.toml"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -115,4 +115,8 @@ export function removeUserKeys(user: User, all: boolean) {
   );
 }
 
+// One device key of a user who may not be the current one: 'actionplan.x' → 'actionplan.u.<id>.x'.
+export const removeUserKey = (user: User, key: string) =>
+  localStorage.removeItem(KEY_ROOT + user.ns + key.slice(KEY_ROOT.length));
+
 export const LANG_KEY = 'actionplan.lang';

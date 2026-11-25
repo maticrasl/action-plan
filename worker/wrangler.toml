@@ -1,0 +1,9 @@
+# Cloudflare Worker that keeps Google Drive sync signed in (see README.md). Deploy: npm run worker:deploy
+name = "action-plan-token"
+main = "token.ts"
+compatibility_date = "2026-11-01"
+
+[vars]
+GOOGLE_CLIENT_ID = "754203093417-0bjbhld4co6nkg6ols4354lc0rcq5slc.apps.googleusercontent.com"
+ALLOWED_ORIGINS = "https://maticrasl.github.io,http://localhost:5173"
+# Secrets (never in this file): npx wrangler secret put GOOGLE_CLIENT_SECRET / SEAL_KEY

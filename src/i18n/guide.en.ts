@@ -476,7 +476,7 @@ export const guideEn = [
     id: 'h-sync',
     group: 'how',
     title: 'Several devices, several people',
-    body: `<p data-only="syncSetUp">Log in with Google in Settings › Account and sync and your plans are the same on every device where you log in. Google asks you to confirm about once an hour; when the cloud button says sync is paused, click it. Changes made offline wait on the device and sync later. If two devices change the same item, the later change wins, so keep their clocks set automatically.</p>
+    body: `<p data-only="syncSetUp">Log in with Google in Settings › Account and sync and your plans are the same on every device where you log in. You log in once on each device and stay logged in; if the cloud button ever says sync is paused, click it. Changes made offline wait on the device and sync later. If two devices change the same item, the later change wins, so keep their clocks set automatically.</p>
 <p data-only="syncSetUp">Several people can use one device: each logs in with their own Google account and sees only their own plans.</p>
 <p data-only="noSync">Sync is not set up for this copy of the app. Your plans stay on this device; use Export and Import to move them.</p>`,
     action: { do: 'settings-sync', label: 'Open Account and sync' },
@@ -520,7 +520,7 @@ export const guideEn = [
     id: 'p-where',
     group: 'data',
     title: 'Where my plans are kept',
-    body: `<p>Your plans are kept in this browser, on this device. Action Plan has no server of its own: nothing you write is sent to the people who make the app, and they cannot see, read or restore your plans.</p>
+    body: `<p>Your plans are kept in this browser, on this device. Action Plan has no server that holds your plans: nothing you write is sent to the people who make the app, and they cannot see, read or restore your plans.</p>
 <p>If you log in with Google, a copy is also kept in your own Google Drive, in a hidden app folder. See [[p-google]].</p>
 <p>Your reflections and reviews are kept with your plans: on this device and, with sync on, in the same hidden Drive folder.</p>
 <p>The app does not use advertising or tracking, and nothing about how you use it leaves your device. When you report a problem, the app fills in its version, your browser and window size, the language, and whether sync is on. Nothing from your plans.</p>
@@ -532,8 +532,9 @@ export const guideEn = [
     group: 'data',
     title: 'What logging in with Google does',
     body: `<p>Logging in gives Action Plan one permission: to keep its own data in a hidden folder of your Google Drive. The app cannot see your other files, your mail or your contacts, and other apps cannot see this folder. Your email address and name are read when you log in, to show who is logged in on this device.</p>
+<p>So that you stay logged in, a small helper of Action Plan’s own (on Cloudflare) renews Google’s permission each hour. It handles only that permission, locked so that only the helper can use it, never sees your plans and keeps nothing. The locked permission is kept on your devices and in the hidden Drive folder, so your other devices can use it too.</p>
 <p>The plans in that folder, what you deleted in the last 30 days (Recently deleted), and the dated copies kept for Earlier versions, are stored by Google under your account and under Google’s terms. They are not encrypted by Action Plan beyond what Google does for all Drive files.</p>
-<p>To stop: log out in Settings › Account and sync. To remove the copy in Drive: open your Google Drive settings, “Manage apps”, find Action Plan and choose “Delete hidden app data”; that removes the dated copies too. You can withdraw the permission in your Google account under “Third-party apps and services”.</p>`,
+<p>To stop on one device: log out in Settings › Account and sync. To remove the copy in Drive: open your Google Drive settings, “Manage apps”, find Action Plan and choose “Delete hidden app data”; that removes the dated copies too. You can withdraw the permission in your Google account under “Third-party apps and services”.</p>`,
     related: ['p-where', 'h-sync'],
   },
   {

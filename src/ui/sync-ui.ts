@@ -1,7 +1,17 @@
 /** Signing in and out, the sync button and the Account section in Settings (screen part of sync). */
 import { locale, t, type TextKey } from '../i18n/index';
-import { USERS_KEY, addUser, currentUser, readUsers, removeUserKeys, saveUsers, setUsers, users } from '../store/users';
-import { drive, loadGis, type Account } from '../sync/drive';
+import {
+  USERS_KEY,
+  addUser,
+  currentUser,
+  readUsers,
+  removeUserKey,
+  removeUserKeys,
+  saveUsers,
+  setUsers,
+  users,
+} from '../store/users';
+import { AUTH_KEY, drive, loadGis, type Account } from '../sync/drive';
 import { SYNC_COLLS, type User } from '../core/model';
 import { prefs } from '../store/prefs';
 import { SYNC_EVERY, setSyncStatus, syncConfigured, syncConnected, syncNow, syncState } from '../sync/sync';
@@ -204,6 +214,7 @@ export function initSync() {
       return renderSync();
     }
     removeUserKeys(was, false);
+    removeUserKey(was, AUTH_KEY); // their data stays: a list this tab cannot read must not wipe it
     enterUser((users.list.find(u => !u.account) || addUser()).id);
   });
   // Load Google's script ahead of a click, so its popup opens straight from that click.

@@ -547,7 +547,7 @@ export const en = {
     'sync.connected': 'Logged in – your plans now sync through Google Drive',
     'sync.connectFailed': 'Could not log in with Google',
     'sync.clockHint':
-      'When two devices change the same item, the later change wins, so keep their clocks set automatically. Google asks you to confirm again about once an hour; until you click the cloud button, changes wait on this device.',
+      'When two devices change the same item, the later change wins, so keep their clocks set automatically. You stay logged in; if sync ever pauses, changes wait on this device until you click the cloud button.',
     'sync.status.synced': 'Synced {time}',
     'sync.status.never': 'Not synced yet',
     'sync.status.syncing': 'Syncing…',
