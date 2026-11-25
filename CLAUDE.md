@@ -92,12 +92,13 @@ strings (always through `esc()` for user text) and replace the view's content.
 - Work on a branch `feat/<name>` or `fix/<name>`, never on `main`.
 - Commit when a step is complete and `check:fast` passes. Subject at most 72 characters.
 - Push only through `/ship`, which the owner types ("ship it" in other words: ask them to type
-  `/ship`). The owner merges the pull request; Claude never merges.
+  `/ship`). Claude never merges: GitHub does. `.github/workflows/auto-merge.yml` squash-merges
+  the owner's pull request once `check` passes on it (not a draft), then starts `deploy`.
 - During `/ship`, this project adds:
   - Before pushing: `npm run check` passes; never `--no-verify`. Never ship from `main`.
   - A check that fails on GitHub but passed locally: read `tests/ci-skip.txt` and
     `gh run view <id> --log-failed` before changing anything; report, do not retry blindly.
-  - Once merged: the `deploy` workflow runs on the merge commit. Find it with
+  - Once merged: the `deploy` workflow runs on the merge commit (started by auto-merge.yml). Find it with
     `gh run list --workflow deploy.yml --branch main --limit 3 --json databaseId,headSha,status`
     and `gh run watch <id> --exit-status`; report its result with: "The installed app can show
     the old version for a few minutes: hard-reload (Ctrl+Shift+R) before checking."
