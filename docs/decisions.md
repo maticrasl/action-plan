@@ -82,6 +82,17 @@ How to change them safely:
 6. A new section in the sync file raises `SYNC_VERSION` (`sync/drive.ts`). A copy that reads a
    higher version merges nothing and writes nothing, and asks to reload (since version 2, 2026-11-20).
 
+**A fast clock elsewhere does not win (2026-11-26).** Sync keeps the newer stamp of each item, and
+stamps come from the device clock. A new stamp (an edit, a deletion, a list tick, a note) is never
+earlier than the newest stamp this device has seen in the user's data as loaded: each list's
+change-tracking snapshot, its deletions included, and a plan about to be deleted (`stampNow`,
+`snapshotOf`, `core/merge.ts`). So a phone whose clock runs two hours fast cannot beat later edits
+on the laptop, also right after a reload. Merging alone does not move the clock, so a sync still
+under way for a user who has just left cannot reach the next one. A stamp more than a day ahead of
+this clock is not followed, so one badly wrong clock does not move every later stamp; that case
+keeps the old rule. Folded map bands and the tip switch keep the plain clock. Fields and file shape
+are unchanged, so older versions read the same data.
+
 ## Tests and speed
 
 **Page tests stay in-page.** The old suite was fast and thorough; it was split by feature

@@ -6,7 +6,9 @@ import { SYNC_COLLS, emptyDb, type Db, type Item, type ItemKind, type PlanList }
 import { currentPlan, plans, plansVersion, setPlans, setPlansVersion, ui } from './state';
 import {
   keepSnapshot,
+  lastTouched,
   restoreSnapshot,
+  seeStamp,
   stampChanges,
   stampPlanChanges,
   takePlanSnapshot,
@@ -191,6 +193,9 @@ export function createPlan(name: string, data: Db = emptyDb(), demo = false, emo
 }
 
 export function deletePlan(id: string) {
+  // Its tombstone must beat its last edit, also one stamped by a fast clock elsewhere (plan never opened here).
+  const entry = plans.list.find(p => p.id === id);
+  if (entry) seeStamp(lastTouched(entry, readPlan(id)));
   try {
     userStorage.removeItem(planKey(id));
   } catch (e) {

@@ -78,7 +78,10 @@ export const itemContent = (item: { updatedAt?: ISOTime }): string => {
 
 // Call whenever `db` is replaced by stored data, so only later edits count as changes.
 export function takeSnapshot(data: Db): void {
-  syncSnapshot = new Map(SYNC_COLLS.flatMap(c => data[c].map((x): [string, string] => [x.id, itemContent(x)])));
+  syncSnapshot = snapshotOf(
+    SYNC_COLLS.flatMap((c): SyncItem[] => data[c]),
+    data.deleted,
+  );
   statusSnapshot = new Map([...data.goals, ...data.activities].map((x): [string, string] => [x.id, statusKey(x)]));
   // List items ticked, as '<activity>/<item>', so a tick is told apart from an item ticked before.
   data.activities.forEach(a => a.list?.forEach(i => i.done && statusSnapshot.set(`${a.id}/${i.id}`, 'done')));
@@ -129,9 +132,35 @@ function stampCompletion(data: Db, day: ISODate): void {
   });
 }
 
+/* ---------- The stamp clock ----------
+   Stamps come from the device clock and the newer one wins a merge, so a device whose clock runs
+   fast would beat later edits made elsewhere. A new stamp is therefore never earlier than the newest
+   one seen in this user's data as it was loaded (each list's snapshot, its deletions too); a clock more
+   than a day ahead is not followed (docs/decisions.md). Merging alone does not move it, so a sync
+   still under way for a user who has left cannot reach the next one. */
+const AHEAD_MAX = 86400000;
+let seen = 0; // ms since 1970: the newest stamp seen
+export const resetClock = () => {
+  seen = 0;
+};
+export function seeStamp(at: ISOTime | undefined): void {
+  const ms = at ? Date.parse(at) : NaN;
+  if (ms > seen && ms <= Date.now() + AHEAD_MAX) seen = ms;
+}
+// A list's change-tracking snapshot (id → content without its stamp); its stamps and `deleted`'s are seen.
+export function snapshotOf(list: Stamped[], deleted: IdSet<ISOTime> = {}): Map<string, string> {
+  list.forEach(x => seeStamp(x.updatedAt));
+  Object.values(deleted).forEach(seeStamp);
+  return new Map(list.map(x => [x.id, itemContent(x)]));
+}
+export function stampNow(): ISOTime {
+  const now = Date.now();
+  return new Date(seen > now ? seen + 1 : now).toISOString(); // own stamps (seen = now) are not lifted
+}
+
 // One list's change tracking: stamps items whose content differs from `snapshot` (or that are new),
-// records ids that are gone in `deleted`, and forgets deletions older than TOMBSTONE_DAYS.
-// Visions and the journal use it; plans have their own (several lists share one snapshot).
+// records ids that are gone in `deleted` (an id that is back, e.g. after undo, is no longer deleted),
+// and forgets deletions older than TOMBSTONE_DAYS. Plans, visions and the journal use it.
 export function stampList(
   list: { id: string; updatedAt?: ISOTime }[],
   snapshot: Map<string, string>,
@@ -154,24 +183,14 @@ export function stampList(
 }
 
 export function stampChanges(data: Db): void {
-  const now = new Date().toISOString();
-  const present = new Set();
   data.deleted ||= {};
   stampStatus(data);
-  SYNC_COLLS.forEach(c =>
-    data[c].forEach(x => {
-      present.add(x.id);
-      if (syncSnapshot.get(x.id) !== itemContent(x)) x.updatedAt = now;
-      delete data.deleted[x.id]; // an id that is back (e.g. undo) is no longer deleted
-    }),
+  stampList(
+    SYNC_COLLS.flatMap((c): SyncItem[] => data[c]),
+    syncSnapshot,
+    data.deleted,
+    stampNow(),
   );
-  syncSnapshot.forEach((_, id) => {
-    if (!present.has(id)) data.deleted[id] = now;
-  });
-  const cutoff = new Date(Date.now() - TOMBSTONE_DAYS * 86400000).toISOString();
-  Object.keys(data.deleted).forEach(id => {
-    if (data.deleted[id] < cutoff) delete data.deleted[id];
-  });
   takeSnapshot(data);
 }
 
@@ -180,12 +199,13 @@ export function stampChanges(data: Db): void {
 export let planSnapshot = new Map<string, string>(); // plan id → name and emoji as last saved
 const planLook = (p: Plan) => `${p.name}|${p.emoji ?? ''}`;
 
-export function takePlanSnapshot(index: { list: Plan[] }): void {
+export function takePlanSnapshot(index: { list: Plan[]; deleted?: IdSet<ISOTime> }): void {
+  snapshotOf(index.list, index.deleted); // only to see the stamps: plans compare their look
   planSnapshot = new Map(index.list.map(p => [p.id, planLook(p)]));
 }
 
 export function stampPlanChanges(index: PlanList): void {
-  const now = new Date().toISOString();
+  const now = stampNow();
   index.deleted ||= {};
   index.list.forEach(p => {
     if (planSnapshot.get(p.id) !== planLook(p)) p.updatedAt = now;

@@ -1,6 +1,7 @@
 /** Routines on screen: week strips, list ticks, the routine card and row, and ticking days and items. */
 import { fmtDay, fmtRel, today } from '../core/dates';
 import { db } from '../core/state';
+import { stampNow } from '../core/merge';
 import {
   checkedOn,
   dayItemsDone,
@@ -50,7 +51,7 @@ export function tickListItem(id: string, itemId: string, iso: ISODate = today())
   if (a && isListRoutine(a)) return tickRoutineItem(a, itemId, iso);
   const it = a && isList(a) && a.list.find(i => i.id === itemId);
   if (!it) return;
-  Object.assign(it, { done: !it.done, at: new Date().toISOString() });
+  Object.assign(it, { done: !it.done, at: stampNow() });
   const was = a.status;
   followList(a);
   const waits = blockers(a);

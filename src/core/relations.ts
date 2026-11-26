@@ -103,11 +103,6 @@ export function descendants(id: string, type: RelType): string[] {
 
 export const kindList = (kinds: readonly ItemKind[]): string =>
   kinds.map(k => t(('kindLower.' + k) as TextKey)).join(' / ');
-// Human-readable allowed direction, e.g. "activity → activity, goal → goal".
-export function relSignature(type: RelType): string {
-  const d: RelSpec = REL_TYPES[type];
-  return d.from.map(f => `${kindList([f])} → ${kindList(d.to === 'same' ? [f] : d.to)}`).join(', ');
-}
 
 // Why `from` cannot link to `to` with `type` (a message), or null if it can.
 export function canRelate(from: string, to: string, type: RelType): string | null {

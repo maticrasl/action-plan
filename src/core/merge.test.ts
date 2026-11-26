@@ -6,6 +6,9 @@ import {
   mergeState,
   mergeStores,
   repairRelations,
+  resetClock,
+  snapshotOf,
+  stampNow,
   stampChanges,
   stampPlanChanges,
   takePlanSnapshot,
@@ -54,6 +57,7 @@ const copy = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-11-16T11:00:00Z'));
+  resetClock();
 });
 afterEach(() => vi.useRealTimers());
 
@@ -107,7 +111,13 @@ describe('change tracking', () => {
         act({ id: 'a' }),
         act({ id: 'was-done', status: 'done' }),
         act({ id: 'r', repeat: { every: 1, unit: 'day' } }),
-        act({ id: 'l', list: [{ id: 'i1', text: 'one' }, { id: 'i2', text: 'two', done: true }] }),
+        act({
+          id: 'l',
+          list: [
+            { id: 'i1', text: 'one' },
+            { id: 'i2', text: 'two', done: true },
+          ],
+        }),
       ],
     });
     takeSnapshot(data);
@@ -453,7 +463,12 @@ describe('notes merge', () => {
     expect('notes' in mergeGoal(goal({ id: 'g' }), goal({ id: 'g' }))).toBe(false);
   });
   test('states and activities keep notes from both; a deleted one stays deleted', () => {
-    const s1 = state({ id: 's', updatedAt: '2099-01-02T00:00:00.000Z', notes: [N('n1', 'x')], droppedNotes: { n3: 1 } });
+    const s1 = state({
+      id: 's',
+      updatedAt: '2099-01-02T00:00:00.000Z',
+      notes: [N('n1', 'x')],
+      droppedNotes: { n3: 1 },
+    });
     const s2 = state({ id: 's', notes: [N('n2', 'y'), N('n3', 'z')] });
     expect(mergeState(s1, s2).notes!.map(n => n.id)).toEqual(['n1', 'n2']);
     const a1 = act({ id: 'a', updatedAt: '2099-01-02T00:00:00.000Z' });
@@ -464,6 +479,80 @@ describe('notes merge', () => {
     const a = plan({ goals: [goal({ id: 'g', updatedAt: '2099-01-02T00:00:00.000Z', notes: [N('n1', 'x')] })] });
     const b = plan({ goals: [goal({ id: 'g', notes: [N('n2', 'y')] })] });
     expect(mergePlans(a, b).goals[0].notes!.length).toBe(2);
+  });
+});
+
+describe('a device whose clock runs ahead', () => {
+  const NOW = '2026-11-16T11:00:00.000Z',
+    AHEAD = '2026-11-16T13:00:00.000Z'; // the phone's clock: two hours fast
+  // This device receives `g`, last edited on the phone, through a merge (sync or another tab).
+  const received = (): Db => {
+    const local = plan({ goals: [goal({ id: 'g', title: 'old', updatedAt: '2026-11-01T00:00:00.000Z' })] });
+    const phone = plan({ goals: [goal({ id: 'g', title: 'phone', updatedAt: AHEAD })] });
+    const store = (d: Db): Store => ({ plans: { list: [{ id: 'p', name: 'P' }] }, data: { p: d } });
+    const data = mergeStores(store(local), store(phone)).data.p;
+    takeSnapshot(data);
+    return data;
+  };
+
+  test('a later edit here still wins over it', () => {
+    const data = received();
+    const phoneCopy = copy(data);
+    data.goals[0].title = 'laptop';
+    stampChanges(data);
+    expect(data.goals[0].updatedAt! > AHEAD).toBe(true);
+    expect(mergePlans(phoneCopy, data).goals[0].title).toBe('laptop');
+  });
+
+  test('a later deletion here still wins over it', () => {
+    const data = received();
+    const phoneCopy = copy(data);
+    data.goals = [];
+    stampChanges(data);
+    expect(mergePlans(phoneCopy, data).goals).toEqual([]);
+  });
+
+  test('a clock more than a day ahead is not followed', () => {
+    const store = (at: string): Store => ({
+      plans: { list: [{ id: 'p', name: 'P' }] },
+      data: { p: plan({ goals: [goal({ id: 'g', updatedAt: at })] }) },
+    });
+    const data = mergeStores(store('2099-01-01T00:00:00.000Z'), store(NOW)).data.p;
+    takeSnapshot(data);
+    data.goals.push(goal({ id: 'new' }));
+    stampChanges(data);
+    expect(data.goals[1].updatedAt).toBe(NOW);
+  });
+
+  test('another user starts from this device clock again', () => {
+    received();
+    resetClock();
+    const data = plan({ goals: [goal({ id: 'x' })] });
+    takeSnapshot(data);
+    data.goals[0].title = 'changed';
+    stampChanges(data);
+    expect(data.goals[0].updatedAt).toBe(NOW);
+  });
+
+  test('stored lists and their deletions are seen when loaded (visions, journal, plan list)', () => {
+    snapshotOf([{ id: 'v', updatedAt: AHEAD }]);
+    expect(stampNow() > AHEAD).toBe(true);
+    resetClock();
+    const later = '2026-11-16T14:00:00.000Z';
+    snapshotOf([], { gone: later }); // restoring `gone` here must beat its deletion
+    expect(stampNow() > later).toBe(true);
+    resetClock();
+    takePlanSnapshot({ list: [{ id: 'p', name: 'P' }], deleted: { q: AHEAD } });
+    expect(stampNow() > AHEAD).toBe(true);
+  });
+
+  test('merging alone does not move the clock (a sync of a user who has just left)', () => {
+    const store = (at: string): Store => ({
+      plans: { list: [{ id: 'p', name: 'P' }] },
+      data: { p: plan({ goals: [goal({ id: 'g', updatedAt: at })] }) },
+    });
+    mergeStores(store(AHEAD), store(NOW));
+    expect(stampNow()).toBe(NOW);
   });
 });
 

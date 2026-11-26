@@ -16,6 +16,7 @@ import {
   updateReview,
   updateSession,
 } from './journal';
+import { resetClock } from '../core/merge';
 
 let storage: ReturnType<typeof memoryStorage>;
 const stored = () => JSON.parse(storage.getItem(JOURNAL_KEY) as string);
@@ -24,6 +25,7 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', storage);
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-11-21T10:00:00Z'));
+  resetClock(); // stamps an earlier test saw are later than this test's clock
   loadJournal();
 });
 afterEach(() => {

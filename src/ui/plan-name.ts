@@ -10,12 +10,18 @@ let pick = '',
   exceptId: string | undefined,
   done: (name: string, emoji: string) => void = () => {};
 
-// The full list with names is large: it loads on first use, once per language.
+// The full list with names is large: it loads on first use, once per language. A failed load (offline,
+// or an old tab after a deploy) is not kept, so the next opening tries again.
 const lists: Partial<Record<Lang, Promise<EmojiEntry[]>>> = {};
-export const emojiList = () =>
-  (lists[lang] ??= (lang === 'sl' ? import('../core/emoji-names.sl') : import('../core/emoji-names.en')).then(m =>
-    parseEmojis(m.EMOJI_NAMES),
-  ));
+export function emojiList() {
+  const l = lang;
+  return (lists[l] ??= (l === 'sl' ? import('../core/emoji-names.sl') : import('../core/emoji-names.en'))
+    .then(m => parseEmojis(m.EMOJI_NAMES))
+    .catch(e => {
+      delete lists[l];
+      throw e;
+    }));
+}
 
 const input = () => $<HTMLInputElement>('#planNameInput');
 const search = () => $<HTMLInputElement>('#planEmojiSearch');
@@ -33,7 +39,8 @@ async function drawEmojis() {
     // The chosen emoji stays in view even when it is not a common one.
     html = (pick && !COMMON_EMOJIS.includes(pick) ? [pick, ...COMMON_EMOJIS] : COMMON_EMOJIS).map(emojiBtn).join('');
   } else {
-    const list = await emojiList();
+    const list = await emojiList().catch(() => null); // not loaded (offline): the grid stays as it is
+    if (!list) return;
     if (n !== drawing) return; // typed on meanwhile
     if (q) {
       const found = searchEmojis(list, q);

@@ -239,41 +239,16 @@ export const drive = {
   // The sync file's id and content (null when there is none yet). Two devices connecting at the
   // same moment can each create a file; then all are merged and the extra ones listed for removal.
   async read(token: string): Promise<Remote> {
-    const q = encodeURIComponent(`name = '${SYNC_FILE}' and trashed = false`);
-    const list: { files?: { id: string }[] } = await (
-      await driveFetch(token, `${DRIVE_API}?spaces=appDataFolder&q=${q}&orderBy=createdTime&fields=files(id)`)
-    ).json();
-    const files = list.files || [];
+    const files = await findFiles(token, SYNC_FILE);
     if (!files.length) return { id: null, content: null, extra: [] };
     const contents: FullStore[] = [];
-    for (const f of files)
-      contents.push(parseStore(await (await driveFetch(token, `${DRIVE_API}/${f.id}?alt=media`)).text()));
-    return {
-      id: files[0].id,
-      content: contents.reduce((a, b) => mergeStores(a, b)),
-      extra: files.slice(1).map(f => f.id),
-    };
+    for (const id of files)
+      contents.push(parseStore(await (await driveFetch(token, `${DRIVE_API}/${id}?alt=media`)).text()));
+    return { id: files[0], content: contents.reduce((a, b) => mergeStores(a, b)), extra: files.slice(1) };
   },
 
   async write(token: string, id: string | null, content: SyncFile): Promise<string> {
-    const body = JSON.stringify(content);
-    if (id) {
-      await driveFetch(token, `${DRIVE_UPLOAD}/${id}?uploadType=media`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-      return id;
-    }
-    const boundary = 'actionplan' + Date.now().toString(36);
-    const meta = JSON.stringify({ name: SYNC_FILE, parents: ['appDataFolder'] });
-    const multipart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`;
-    const res = await driveFetch(token, `${DRIVE_UPLOAD}?uploadType=multipart&fields=id`, {
-      method: 'POST',
-      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
-      body: multipart,
-    });
-    return (await res.json()).id;
+    return saveFile(token, id, SYNC_FILE, JSON.stringify(content));
   },
 
   async remove(token: string, id: string): Promise<void> {
@@ -302,6 +277,37 @@ export const drive = {
     return (await driveFetch(token, `${DRIVE_API}/${id}?alt=media`)).text();
   },
 };
+// The ids of the app folder's files called `name`, oldest first.
+export async function findFiles(token: string, name: string): Promise<string[]> {
+  const q = encodeURIComponent(`name = '${name}' and trashed = false`);
+  const list: { files?: { id: string }[] } = await (
+    await driveFetch(token, `${DRIVE_API}?spaces=appDataFolder&q=${q}&orderBy=createdTime&fields=files(id)`)
+  ).json();
+  return (list.files || []).map(f => f.id);
+}
+
+// Writes JSON text to the app folder's file `id`, or to a new file called `name`; the file's id.
+export async function saveFile(token: string, id: string | null | undefined, name: string, body: string) {
+  if (id) {
+    await driveFetch(token, `${DRIVE_UPLOAD}/${id}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+    return id;
+  }
+  const boundary = 'actionplan' + Date.now().toString(36);
+  const meta = JSON.stringify({ name, parents: ['appDataFolder'] });
+  const res = await driveFetch(token, `${DRIVE_UPLOAD}?uploadType=multipart&fields=id`, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`,
+  });
+  const created = (await res.json()).id;
+  if (typeof created !== 'string') throw new SyncError('error'); // no id: nothing to write to next time
+  return created;
+}
+
 export interface DriveFile {
   id: string;
   name: string;

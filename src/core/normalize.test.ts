@@ -106,6 +106,16 @@ describe('normalize', () => {
     expect(resetProgress(d, { shift: true, template: true }).goals[0].keep).toEqual({ max: 75 });
   });
 
+  test('a title that is not text becomes text, so a hand-made file cannot break a view', () => {
+    const d = normalize({
+      goals: [{ id: 'g1' }, { id: 'g2', title: 2026 }, { id: 'g3', title: 'Run' }],
+      activities: [{ id: 'a1', title: { x: 1 } }],
+      states: [{ id: 's1', title: null }],
+    });
+    expect(d.goals.map(g => g.title)).toEqual(['', '2026', 'Run']);
+    expect([d.activities[0].title, d.states[0].title]).toEqual(['', '']);
+  });
+
   test('"is related to" links are dropped; the rest stays', () => {
     const old = {
       goals: [

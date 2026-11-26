@@ -17,21 +17,22 @@ import {
 } from './plans';
 import { currentPlan, plans, setPlans } from './state';
 import { db } from '../core/state';
-import { repairRelations } from '../core/merge';
+import { repairRelations, resetClock } from '../core/merge';
 import { SYNC_COLLS, emptyDb, type Db, type Item, type Plan } from '../core/model';
 import { normalize, progressCounts } from '../core/normalize';
 import { progressPlan } from '../core/test-plans';
 import { memoryStorage } from './memory-storage';
 
-beforeEach(() =>
+beforeEach(() => {
+  resetClock(); // stamps an earlier test saw are later than this test's clock
   setPlans({
     current: 'a',
     list: [
       { id: 'a', name: 'Sample plan' },
       { id: 'b', name: 'Renamed plan' },
     ],
-  }),
-);
+  });
+});
 
 describe('plan names', () => {
   test('a name is taken ignoring case and spaces around it', () => {
@@ -245,6 +246,22 @@ describe('working on a plan that is not open', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  test('deleting a plan never opened here still beats its edits from a device whose clock runs fast', () => {
+    createPlan('Other');
+    const otherId = plans.current!;
+    save();
+    const ahead = '2026-11-18T12:00:00.000Z'; // edited on a phone two hours fast, then synced here
+    localStorage.setItem(
+      planKey(otherId),
+      JSON.stringify({ ...emptyDb(), goals: [{ id: 'o1', title: 'Phone', status: 'active', updatedAt: ahead }] }),
+    );
+    createPlan('Open');
+    resetClock(); // as after a reload: the other plan was never opened
+    deletePlan(otherId);
+    save();
+    expect(plans.deleted![otherId] > ahead).toBe(true);
   });
 
   test('withPlan shows the core another plan and puts the open one back, also when it throws', () => {
