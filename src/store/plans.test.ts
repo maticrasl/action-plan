@@ -17,21 +17,22 @@ import {
 } from './plans';
 import { currentPlan, plans, setPlans } from './state';
 import { db } from '../core/state';
-import { repairRelations } from '../core/merge';
+import { repairRelations, resetClock } from '../core/merge';
 import { SYNC_COLLS, emptyDb, type Db, type Item, type Plan } from '../core/model';
 import { normalize, progressCounts } from '../core/normalize';
 import { progressPlan } from '../core/test-plans';
 import { memoryStorage } from './memory-storage';
 
-beforeEach(() =>
+beforeEach(() => {
+  resetClock(); // stamps an earlier test saw are later than this test's clock
   setPlans({
     current: 'a',
     list: [
       { id: 'a', name: 'Sample plan' },
       { id: 'b', name: 'Renamed plan' },
     ],
-  }),
-);
+  });
+});
 
 describe('plan names', () => {
   test('a name is taken ignoring case and spaces around it', () => {

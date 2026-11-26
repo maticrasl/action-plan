@@ -78,6 +78,7 @@ export const itemContent = (item: { updatedAt?: ISOTime }): string => {
 
 // Call whenever `db` is replaced by stored data, so only later edits count as changes.
 export function takeSnapshot(data: Db): void {
+  SYNC_COLLS.forEach(c => data[c].forEach(x => see(x.updatedAt))); // stored data may come from another device
   syncSnapshot = new Map(SYNC_COLLS.flatMap(c => data[c].map((x): [string, string] => [x.id, itemContent(x)])));
   statusSnapshot = new Map([...data.goals, ...data.activities].map((x): [string, string] => [x.id, statusKey(x)]));
   // List items ticked, as '<activity>/<item>', so a tick is told apart from an item ticked before.
@@ -129,9 +130,27 @@ function stampCompletion(data: Db, day: ISODate): void {
   });
 }
 
+/* ---------- The stamp clock ----------
+   Stamps come from the device clock and the newer one wins a merge, so a device whose clock runs
+   fast would beat later edits made elsewhere. A new stamp is therefore never earlier than the newest
+   one seen in merged data; a clock more than a day ahead is not followed (docs/decisions.md). */
+const AHEAD_MAX = 86400000;
+let seen = 0; // ms since 1970: the newest stamp seen in merged data
+export const resetClock = () => {
+  seen = 0;
+};
+function see(at: ISOTime | undefined): void {
+  const ms = at ? Date.parse(at) : NaN;
+  if (ms > seen && ms <= Date.now() + AHEAD_MAX) seen = ms;
+}
+export function stampNow(): ISOTime {
+  const now = Date.now();
+  return new Date(seen > now ? seen + 1 : now).toISOString(); // own stamps (seen = now) are not lifted
+}
+
 // One list's change tracking: stamps items whose content differs from `snapshot` (or that are new),
-// records ids that are gone in `deleted`, and forgets deletions older than TOMBSTONE_DAYS.
-// Visions and the journal use it; plans have their own (several lists share one snapshot).
+// records ids that are gone in `deleted` (an id that is back, e.g. after undo, is no longer deleted),
+// and forgets deletions older than TOMBSTONE_DAYS. Plans, visions and the journal use it.
 export function stampList(
   list: { id: string; updatedAt?: ISOTime }[],
   snapshot: Map<string, string>,
@@ -154,24 +173,14 @@ export function stampList(
 }
 
 export function stampChanges(data: Db): void {
-  const now = new Date().toISOString();
-  const present = new Set();
   data.deleted ||= {};
   stampStatus(data);
-  SYNC_COLLS.forEach(c =>
-    data[c].forEach(x => {
-      present.add(x.id);
-      if (syncSnapshot.get(x.id) !== itemContent(x)) x.updatedAt = now;
-      delete data.deleted[x.id]; // an id that is back (e.g. undo) is no longer deleted
-    }),
+  stampList(
+    SYNC_COLLS.flatMap((c): SyncItem[] => data[c]),
+    syncSnapshot,
+    data.deleted,
+    stampNow(),
   );
-  syncSnapshot.forEach((_, id) => {
-    if (!present.has(id)) data.deleted[id] = now;
-  });
-  const cutoff = new Date(Date.now() - TOMBSTONE_DAYS * 86400000).toISOString();
-  Object.keys(data.deleted).forEach(id => {
-    if (data.deleted[id] < cutoff) delete data.deleted[id];
-  });
   takeSnapshot(data);
 }
 
@@ -185,7 +194,7 @@ export function takePlanSnapshot(index: { list: Plan[] }): void {
 }
 
 export function stampPlanChanges(index: PlanList): void {
-  const now = new Date().toISOString();
+  const now = stampNow();
   index.deleted ||= {};
   index.list.forEach(p => {
     if (planSnapshot.get(p.id) !== planLook(p)) p.updatedAt = now;
@@ -405,13 +414,18 @@ export function mergeStores(a: Store, b: Store): FullStore {
     data[id] = plan;
   });
   const kept = new Set(list.map(p => p.id));
+  list.forEach(p => see(lastTouched(p, data[p.id])));
+  const visions = mergeVisions(a.visions, b.visions),
+    journal = (a.journal || b.journal) && mergeJournal(a.journal, b.journal);
+  [...visions.list, ...(journal ? [...journal.reviews, ...journal.sessions] : [])].forEach(x => see(x.updatedAt));
+  see(journal?.focus?.at);
   return {
     plans: { list, deleted: Object.fromEntries(Object.entries(deleted).filter(([id]) => !kept.has(id))) },
     data,
-    visions: mergeVisions(a.visions, b.visions),
+    visions,
     ...((a.tips || b.tips) && { tips: mergeTips(a.tips, b.tips) }),
     ...((a.trash || b.trash) && { trash: mergeTrash(a.trash, b.trash) }),
     ...((a.mapFold || b.mapFold) && { mapFold: mergeMapFold(a.mapFold, b.mapFold) }),
-    ...((a.journal || b.journal) && { journal: mergeJournal(a.journal, b.journal) }),
+    ...(journal && { journal }),
   };
 }

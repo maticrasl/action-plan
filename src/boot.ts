@@ -1,6 +1,7 @@
 /** Boot: loading a user's plans, visions and preferences and showing them, and switching users. */
 import { clamp } from './core/util';
 import { emptyDb } from './core/model';
+import { resetClock } from './core/merge';
 import { setDb } from './core/state';
 import { saveUsers, userStorage, users } from './store/users';
 import { STORAGE_KEY, prefs } from './store/prefs';
@@ -77,6 +78,7 @@ export function enterUser(id: string) {
   clearTimeout(syncState.timer as number);
   Object.assign(syncState, { status: 'idle', again: false, timer: null });
   drive.token = null;
+  resetClock(); // stamps the user before saw are not theirs
   users.current = id;
   saveUsers();
   Object.keys(ui).forEach(k => delete (ui as unknown as Record<string, unknown>)[k]);

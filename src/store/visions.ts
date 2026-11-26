@@ -1,6 +1,6 @@
 /** Visions: the global list above goals, stored apart from plans, and the goals serving them. */
 import { db, setVisions, visions } from '../core/state';
-import { itemContent, stampList } from '../core/merge';
+import { itemContent, stampList, stampNow } from '../core/merge';
 import { normalizeVisions, ownVisions, purposeOf, visionAncestors, type PlanData } from '../core/visions';
 import type { VisionList } from '../core/model';
 import { userStorage } from './users';
@@ -40,7 +40,7 @@ export function loadVisions() {
 
 // Stamps what changed since the last save, remembers deleted ids (as plans do), stores the list and syncs.
 export function saveVisions() {
-  stampList(visions.list, visionSnapshot, visions.deleted, new Date().toISOString());
+  stampList(visions.list, visionSnapshot, visions.deleted, stampNow());
   takeVisionSnapshot();
   visionsVersion++;
   try {

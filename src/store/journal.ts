@@ -1,5 +1,5 @@
 /** The journal as stored (per user, synced): load, save, reviews, sessions and this week's focus. */
-import { itemContent, stampList } from '../core/merge';
+import { itemContent, stampList, stampNow } from '../core/merge';
 import { normalizeJournal, type Journal, type Review, type Session } from '../core/journal';
 import { today } from '../core/dates';
 import { addDays, weekday } from '../core/routines/schedule';
@@ -50,7 +50,7 @@ export function hasJournal() {
 
 // Stamps what changed since the last save and remembers deleted ids, as visions do.
 export function saveJournal() {
-  const now = new Date().toISOString();
+  const now = stampNow();
   stampList(journal.reviews, reviewSnapshot, journal.deleted, now);
   stampList(journal.sessions, sessionSnapshot, journal.deleted, now);
   take();
@@ -109,7 +109,7 @@ export function deleteSession(id: string) {
 // `week` (a Monday) is this week unless given: a review done Friday to Sunday chooses for the coming week.
 export function setFocus(plan: string, item: string, week?: ISODate) {
   const day = today();
-  journal.focus = { week: week || addDays(day, -weekday(day)), plan, item, at: new Date().toISOString() };
+  journal.focus = { week: week || addDays(day, -weekday(day)), plan, item, at: stampNow() };
   saveJournal();
 }
 // Leaves an empty focus with its time, so another device's older choice does not come back on sync.
