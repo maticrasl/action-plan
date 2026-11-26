@@ -55,6 +55,11 @@ export function normalize(input: unknown): Db {
   for (const k of SYNC_COLLS)
     if (Array.isArray(data?.[k]))
       (d[k] as SyncItem[]) = data[k].filter(x => x && typeof x === 'object' && safeId(x.id));
+  // Views read titles as text; a hand-made file may hold none, or a number.
+  [...d.goals, ...d.activities, ...d.states].forEach(x => {
+    const title: unknown = x.title;
+    if (typeof title !== 'string') x.title = typeof title === 'number' ? String(title) : '';
+  });
   // "Is related to" links were dropped from the app; old plans and synced copies lose theirs here.
   d.relations = d.relations.filter(r => safeId(r.from) && safeId(r.to) && (r.type as string) !== 'related');
   d.relations = dropRoutineDeps(d.relations, d.activities);
