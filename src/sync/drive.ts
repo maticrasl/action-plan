@@ -303,7 +303,9 @@ export async function saveFile(token: string, id: string | null | undefined, nam
     headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
     body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`,
   });
-  return String((await res.json()).id);
+  const created = (await res.json()).id;
+  if (typeof created !== 'string') throw new SyncError('error'); // no id: nothing to write to next time
+  return created;
 }
 
 export interface DriveFile {

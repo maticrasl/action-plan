@@ -7,6 +7,8 @@ import {
   mergeStores,
   repairRelations,
   resetClock,
+  snapshotOf,
+  stampNow,
   stampChanges,
   stampPlanChanges,
   takePlanSnapshot,
@@ -530,6 +532,27 @@ describe('a device whose clock runs ahead', () => {
     data.goals[0].title = 'changed';
     stampChanges(data);
     expect(data.goals[0].updatedAt).toBe(NOW);
+  });
+
+  test('stored lists and their deletions are seen when loaded (visions, journal, plan list)', () => {
+    snapshotOf([{ id: 'v', updatedAt: AHEAD }]);
+    expect(stampNow() > AHEAD).toBe(true);
+    resetClock();
+    const later = '2026-11-16T14:00:00.000Z';
+    snapshotOf([], { gone: later }); // restoring `gone` here must beat its deletion
+    expect(stampNow() > later).toBe(true);
+    resetClock();
+    takePlanSnapshot({ list: [{ id: 'p', name: 'P' }], deleted: { q: AHEAD } });
+    expect(stampNow() > AHEAD).toBe(true);
+  });
+
+  test('merging alone does not move the clock (a sync of a user who has just left)', () => {
+    const store = (at: string): Store => ({
+      plans: { list: [{ id: 'p', name: 'P' }] },
+      data: { p: plan({ goals: [goal({ id: 'g', updatedAt: at })] }) },
+    });
+    mergeStores(store(AHEAD), store(NOW));
+    expect(stampNow()).toBe(NOW);
   });
 });
 

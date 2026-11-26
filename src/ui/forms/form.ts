@@ -1,5 +1,6 @@
 /** The item dialog: field builders, opening a form, reading and checking it, saving and deleting. */
 import { db, visions } from '../../core/state';
+import { stampNow } from '../../core/merge';
 import { addRelation, canRelate, findEntity, relsFrom, relsTo } from '../../core/relations';
 import { toast } from '../toast';
 import { $, esc } from '../dom';
@@ -404,7 +405,7 @@ export function submitForm() {
       // Only items that changed get a new time; removed ones are remembered for sync. A list
       // routine's items are ticked per day instead (listDays).
       if (repeat) list.forEach(i => (i.done = false));
-      const now = new Date().toISOString(),
+      const now = stampNow(),
         before = new Map(((existing as Activity | undefined)?.list || []).map(i => [i.id, i]));
       a.list = list.map(i => {
         const was = before.get(i.id);

@@ -78,8 +78,10 @@ export const itemContent = (item: { updatedAt?: ISOTime }): string => {
 
 // Call whenever `db` is replaced by stored data, so only later edits count as changes.
 export function takeSnapshot(data: Db): void {
-  SYNC_COLLS.forEach(c => data[c].forEach(x => see(x.updatedAt))); // stored data may come from another device
-  syncSnapshot = new Map(SYNC_COLLS.flatMap(c => data[c].map((x): [string, string] => [x.id, itemContent(x)])));
+  syncSnapshot = snapshotOf(
+    SYNC_COLLS.flatMap((c): SyncItem[] => data[c]),
+    data.deleted,
+  );
   statusSnapshot = new Map([...data.goals, ...data.activities].map((x): [string, string] => [x.id, statusKey(x)]));
   // List items ticked, as '<activity>/<item>', so a tick is told apart from an item ticked before.
   data.activities.forEach(a => a.list?.forEach(i => i.done && statusSnapshot.set(`${a.id}/${i.id}`, 'done')));
@@ -133,15 +135,23 @@ function stampCompletion(data: Db, day: ISODate): void {
 /* ---------- The stamp clock ----------
    Stamps come from the device clock and the newer one wins a merge, so a device whose clock runs
    fast would beat later edits made elsewhere. A new stamp is therefore never earlier than the newest
-   one seen in merged data; a clock more than a day ahead is not followed (docs/decisions.md). */
+   one seen in this user's data as it was loaded (each list's snapshot, its deletions too); a clock more
+   than a day ahead is not followed (docs/decisions.md). Merging alone does not move it, so a sync
+   still under way for a user who has left cannot reach the next one. */
 const AHEAD_MAX = 86400000;
-let seen = 0; // ms since 1970: the newest stamp seen in merged data
+let seen = 0; // ms since 1970: the newest stamp seen
 export const resetClock = () => {
   seen = 0;
 };
-function see(at: ISOTime | undefined): void {
+export function seeStamp(at: ISOTime | undefined): void {
   const ms = at ? Date.parse(at) : NaN;
   if (ms > seen && ms <= Date.now() + AHEAD_MAX) seen = ms;
+}
+// A list's change-tracking snapshot (id → content without its stamp); its stamps and `deleted`'s are seen.
+export function snapshotOf(list: Stamped[], deleted: IdSet<ISOTime> = {}): Map<string, string> {
+  list.forEach(x => seeStamp(x.updatedAt));
+  Object.values(deleted).forEach(seeStamp);
+  return new Map(list.map(x => [x.id, itemContent(x)]));
 }
 export function stampNow(): ISOTime {
   const now = Date.now();
@@ -189,7 +199,8 @@ export function stampChanges(data: Db): void {
 export let planSnapshot = new Map<string, string>(); // plan id → name and emoji as last saved
 const planLook = (p: Plan) => `${p.name}|${p.emoji ?? ''}`;
 
-export function takePlanSnapshot(index: { list: Plan[] }): void {
+export function takePlanSnapshot(index: { list: Plan[]; deleted?: IdSet<ISOTime> }): void {
+  snapshotOf(index.list, index.deleted); // only to see the stamps: plans compare their look
   planSnapshot = new Map(index.list.map(p => [p.id, planLook(p)]));
 }
 
@@ -414,18 +425,13 @@ export function mergeStores(a: Store, b: Store): FullStore {
     data[id] = plan;
   });
   const kept = new Set(list.map(p => p.id));
-  list.forEach(p => see(lastTouched(p, data[p.id])));
-  const visions = mergeVisions(a.visions, b.visions),
-    journal = (a.journal || b.journal) && mergeJournal(a.journal, b.journal);
-  [...visions.list, ...(journal ? [...journal.reviews, ...journal.sessions] : [])].forEach(x => see(x.updatedAt));
-  see(journal?.focus?.at);
   return {
     plans: { list, deleted: Object.fromEntries(Object.entries(deleted).filter(([id]) => !kept.has(id))) },
     data,
-    visions,
+    visions: mergeVisions(a.visions, b.visions),
     ...((a.tips || b.tips) && { tips: mergeTips(a.tips, b.tips) }),
     ...((a.trash || b.trash) && { trash: mergeTrash(a.trash, b.trash) }),
     ...((a.mapFold || b.mapFold) && { mapFold: mergeMapFold(a.mapFold, b.mapFold) }),
-    ...(journal && { journal }),
+    ...((a.journal || b.journal) && { journal: mergeJournal(a.journal, b.journal) }),
   };
 }

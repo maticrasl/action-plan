@@ -1,6 +1,6 @@
 /** Visions: the global list above goals, stored apart from plans, and the goals serving them. */
 import { db, setVisions, visions } from '../core/state';
-import { itemContent, stampList, stampNow } from '../core/merge';
+import { snapshotOf, stampList, stampNow } from '../core/merge';
 import { normalizeVisions, ownVisions, purposeOf, visionAncestors, type PlanData } from '../core/visions';
 import type { VisionList } from '../core/model';
 import { userStorage } from './users';
@@ -25,7 +25,7 @@ export let visionsVersion = 0; // bumped on every change to the list, so cached 
 export let visionSnapshot = new Map<string, string>();
 
 export const takeVisionSnapshot = () => {
-  visionSnapshot = new Map(visions.list.map(v => [v.id, itemContent(v)]));
+  visionSnapshot = snapshotOf(visions.list, visions.deleted);
 };
 
 export function loadVisions() {

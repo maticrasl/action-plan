@@ -248,6 +248,22 @@ describe('working on a plan that is not open', () => {
     vi.unstubAllGlobals();
   });
 
+  test('deleting a plan never opened here still beats its edits from a device whose clock runs fast', () => {
+    createPlan('Other');
+    const otherId = plans.current!;
+    save();
+    const ahead = '2026-11-18T12:00:00.000Z'; // edited on a phone two hours fast, then synced here
+    localStorage.setItem(
+      planKey(otherId),
+      JSON.stringify({ ...emptyDb(), goals: [{ id: 'o1', title: 'Phone', status: 'active', updatedAt: ahead }] }),
+    );
+    createPlan('Open');
+    resetClock(); // as after a reload: the other plan was never opened
+    deletePlan(otherId);
+    save();
+    expect(plans.deleted![otherId] > ahead).toBe(true);
+  });
+
   test('withPlan shows the core another plan and puts the open one back, also when it throws', () => {
     createPlan('Open');
     const open = db,

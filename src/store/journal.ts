@@ -1,5 +1,5 @@
 /** The journal as stored (per user, synced): load, save, reviews, sessions and this week's focus. */
-import { itemContent, stampList, stampNow } from '../core/merge';
+import { seeStamp, snapshotOf, stampList, stampNow } from '../core/merge';
 import { normalizeJournal, type Journal, type Review, type Session } from '../core/journal';
 import { today } from '../core/dates';
 import { addDays, weekday } from '../core/routines/schedule';
@@ -16,10 +16,10 @@ export let journal: Journal = normalizeJournal(null);
 let reviewSnapshot = new Map<string, string>(),
   sessionSnapshot = new Map<string, string>();
 
-const snap = (list: { id: string; updatedAt?: string }[]) => new Map(list.map(x => [x.id, itemContent(x)] as const));
 function take() {
-  reviewSnapshot = snap(journal.reviews);
-  sessionSnapshot = snap(journal.sessions);
+  reviewSnapshot = snapshotOf(journal.reviews, journal.deleted);
+  sessionSnapshot = snapshotOf(journal.sessions);
+  seeStamp(journal.focus?.at);
 }
 function store() {
   try {

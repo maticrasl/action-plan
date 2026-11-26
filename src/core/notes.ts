@@ -2,12 +2,13 @@
 import type { ISODate, ISOTime, Note, WithNotes } from './model';
 import { safeId } from './normalize';
 import { uid } from './util';
+import { stampNow } from './merge';
 
 export const NOTE_MAX = 2000;
 export const VALUE_NOTE_MAX = 200;
 
 const byDate = (a: Note, b: Note) => a.date.localeCompare(b.date) || a.at.localeCompare(b.at);
-const stamp = () => new Date().toISOString();
+const stamp = () => stampNow(); // a call, not the function itself: merge.ts imports this module too
 
 // Keeps the list sorted, and no empty list behind.
 function setNotes(x: WithNotes, notes: Note[]): void {

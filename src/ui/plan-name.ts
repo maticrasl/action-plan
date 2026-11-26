@@ -39,7 +39,8 @@ async function drawEmojis() {
     // The chosen emoji stays in view even when it is not a common one.
     html = (pick && !COMMON_EMOJIS.includes(pick) ? [pick, ...COMMON_EMOJIS] : COMMON_EMOJIS).map(emojiBtn).join('');
   } else {
-    const list = await emojiList();
+    const list = await emojiList().catch(() => null); // not loaded (offline): the grid stays as it is
+    if (!list) return;
     if (n !== drawing) return; // typed on meanwhile
     if (q) {
       const found = searchEmojis(list, q);
