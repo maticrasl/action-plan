@@ -10,12 +10,18 @@ let pick = '',
   exceptId: string | undefined,
   done: (name: string, emoji: string) => void = () => {};
 
-// The full list with names is large: it loads on first use, once per language.
+// The full list with names is large: it loads on first use, once per language. A failed load (offline,
+// or an old tab after a deploy) is not kept, so the next opening tries again.
 const lists: Partial<Record<Lang, Promise<EmojiEntry[]>>> = {};
-export const emojiList = () =>
-  (lists[lang] ??= (lang === 'sl' ? import('../core/emoji-names.sl') : import('../core/emoji-names.en')).then(m =>
-    parseEmojis(m.EMOJI_NAMES),
-  ));
+export function emojiList() {
+  const l = lang;
+  return (lists[l] ??= (l === 'sl' ? import('../core/emoji-names.sl') : import('../core/emoji-names.en'))
+    .then(m => parseEmojis(m.EMOJI_NAMES))
+    .catch(e => {
+      delete lists[l];
+      throw e;
+    }));
+}
 
 const input = () => $<HTMLInputElement>('#planNameInput');
 const search = () => $<HTMLInputElement>('#planEmojiSearch');

@@ -74,8 +74,6 @@ export function spotlight(sels: string[]): boolean {
   return true;
 }
 
-export const spotlightOn = () => !!spotSels;
-
 export function clearSpotlight() {
   if (!spotSels) return;
   spotSels = null;
