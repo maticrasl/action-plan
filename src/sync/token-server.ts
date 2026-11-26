@@ -1,6 +1,6 @@
 /** Sign-in that lasts: Google's code popup, the token Worker (worker/token.ts), and the sealed token shared in Drive. */
 import { GOOGLE_CLIENT_ID, TOKEN_SERVER } from './config';
-import { DRIVE_API, DRIVE_UPLOAD, SYNC_SCOPE, SyncError, driveFetch, loadGis, type Token } from './drive';
+import { DRIVE_API, SYNC_SCOPE, SyncError, driveFetch, findFiles, loadGis, saveFile, type Token } from './drive';
 
 // The part of Google's sign-in script this uses (the code model).
 declare const google: {
@@ -83,31 +83,11 @@ export const tokenServer = {
   },
 
   async share(access: string, sealed: string): Promise<void> {
-    const file = await this.authFile(access),
-      body = JSON.stringify({ sealed });
-    if (file)
-      await driveFetch(access, `${DRIVE_UPLOAD}/${file}?uploadType=media`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-    else {
-      const boundary = 'actionplan' + Date.now().toString(36);
-      const meta = JSON.stringify({ name: AUTH_FILE, parents: ['appDataFolder'] });
-      await driveFetch(access, `${DRIVE_UPLOAD}?uploadType=multipart`, {
-        method: 'POST',
-        headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
-        body: `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${boundary}--`,
-      });
-    }
+    await saveFile(access, await this.authFile(access), AUTH_FILE, JSON.stringify({ sealed }));
   },
 
   async authFile(access: string): Promise<string | undefined> {
-    const q = encodeURIComponent(`name = '${AUTH_FILE}' and trashed = false`);
-    const list: { files?: { id: string }[] } = await (
-      await driveFetch(access, `${DRIVE_API}?spaces=appDataFolder&q=${q}&fields=files(id)`)
-    ).json();
-    return list.files?.[0]?.id;
+    return (await findFiles(access, AUTH_FILE))[0];
   },
 
   // Google's popup: a one-time code for the Worker. `prompt` 'select_account' lets the person pick an account.
