@@ -12,8 +12,8 @@ export const FAITH: Template[] = [
     name: ['Exodus 90', 'Exodus 90'],
     emoji: '⛪',
     about: [
-      'Ninety days of prayer, asceticism and fraternity for men, as the Exodus 90 exercise lays them out: a daily holy hour, cold showers and simple living, fasting on Wednesdays and Fridays, a daily anchor check-in and a weekly fraternity meeting. A week of preparation first; set the dates so day 90 is Easter Sunday.',
-      'Devetdeset dni molitve, askeze in bratstva za moške, kot jih predvideva duhovna vaja Exodus 90: vsakodnevna sveta ura, mrzle prhe in preprosto življenje, post ob sredah in petkih, vsakodnevni pogovor s sidrom in tedensko srečanje bratstva. Najprej teden priprave; datume nastavite tako, da bo 90. dan velikonočna nedelja.',
+      'Ninety days of prayer and asceticism for men, as the Exodus 90 exercise lays them out: a daily holy hour, cold showers and simple living, exercise, and fasting on Wednesdays and Fridays. A week of preparation first; set the dates so day 90 is Easter Sunday.',
+      'Devetdeset dni molitve in askeze za moške, kot ju predvideva duhovna vaja Exodus 90: vsakodnevna sveta ura, mrzle prhe in preprosto življenje, vadba ter post ob sredah in petkih. Najprej teden priprave; datume nastavite tako, da bo 90. dan velikonočna nedelja.',
     ],
     goals: [
       {
@@ -22,12 +22,12 @@ export const FAITH: Template[] = [
         progress: 'routines',
         title: ['Complete Exodus 90', 'Opraviti Exodus 90'],
         specific: [
-          'Keep the prayer, asceticism and fraternity of Exodus 90 for 90 days with a small group of men.',
-          '90 dni z majhno skupino moških živeti molitev, askezo in bratstvo duhovne vaje Exodus 90.',
+          'Keep the prayer and asceticism of Exodus 90 for 90 days.',
+          '90 dni živeti molitev in askezo duhovne vaje Exodus 90.',
         ],
         achievable: [
-          'No one does it alone: the anchor and the fraternity carry each man through the hard days, and Sundays bring rest.',
-          'Nihče ne gre skozi to sam: sidro in bratstvo vsakogar poneseta skozi težke dni, nedelje pa prinesejo počitek.',
+          'Each day asks only for that day, Sundays bring rest, and a missed day is a fresh start, not the end.',
+          'Vsak dan zahteva le tisti dan, nedelje prinesejo počitek, zamujen dan pa je nov začetek in ne konec.',
         ],
         relevant: [
           'Freedom from attachments, to love God and the people entrusted to you more fully.',
@@ -53,8 +53,8 @@ export const FAITH: Template[] = [
         goals: ['exodus'],
         title: ['Pick the start date', 'Izbrati datum začetka'],
         description: [
-          'Ninety days before Easter Sunday so it ends on Easter, or when your group starts; change the dates to match.',
-          'Devetdeset dni pred velikonočno nedeljo, da se konča na veliko noč, ali ko začne vaša skupina; datume prilagodite.',
+          'Ninety days before Easter Sunday so it ends on Easter; change the dates to match.',
+          'Devetdeset dni pred velikonočno nedeljo, da se konča na veliko noč; datume prilagodite.',
         ],
       },
       {
@@ -66,29 +66,6 @@ export const FAITH: Template[] = [
         description: [
           'Why you are doing this and for whom you offer the sacrifices.',
           'Zakaj se podajate na pot in za koga darujete svoje odpovedi.',
-        ],
-      },
-      {
-        k: 'fraternity',
-        start: 0,
-        end: 3,
-        goals: ['exodus'],
-        title: ['Form a fraternity', 'Oblikovati bratstvo'],
-        description: [
-          'A small group of men who start together and meet weekly: a parish group or a few friends.',
-          'Majhna skupina moških, ki začnejo skupaj in se srečujejo vsak teden: župnijska skupina ali nekaj prijateljev.',
-        ],
-      },
-      {
-        k: 'anchor',
-        start: 4,
-        end: 5,
-        goals: ['exodus'],
-        deps: ['fraternity'],
-        title: ['Choose an anchor', 'Izbrati sidro'],
-        description: [
-          'Pair up within the fraternity (a three if the number is odd) to keep each other accountable.',
-          'V bratstvu se povežite po dva (ob lihem številu po trije) in drug drugega spremljajte pri zvestobi.',
         ],
       },
       {
@@ -189,38 +166,14 @@ export const FAITH: Template[] = [
         ],
       },
       {
-        k: 'checkin',
-        start: 7,
-        end: 96,
-        repeat: DAILY,
-        goals: ['exodus'],
-        title: ['Check in with your anchor', 'Pogovor s sidrom'],
-        description: [
-          'A short meeting or call; on busy days a message will do.',
-          'Kratko srečanje ali klic; ob napornih dneh zadošča sporočilo.',
-        ],
-      },
-      {
-        k: 'meeting',
-        start: 7,
-        end: 96,
-        repeat: { ...onDays(5), makeUp: true },
-        goals: ['exodus'],
-        title: ['Weekly fraternity meeting', 'Tedensko srečanje bratstva'],
-        description: [
-          'Pray together and share how the week went. Set the day your group meets; if it moves, another day that week counts.',
-          'Skupna molitev in pogovor o tem, kako je minil teden. Nastavite dan, ko se dobiva vaša skupina; če se srečanje prestavi, šteje drug dan v tednu.',
-        ],
-      },
-      {
         k: 'review',
         start: 96,
         end: 96,
         goals: ['exodus'],
         title: ['Look back on day 90', 'Pogled nazaj na 90. dan'],
         description: [
-          'With the fraternity: what changed, and what will you keep after Easter?',
-          'Z bratstvom: kaj se je spremenilo in kaj boste ohranili po veliki noči?',
+          'What changed, and what will you keep after Easter?',
+          'Kaj se je spremenilo in kaj boste ohranili po veliki noči?',
         ],
       },
     ],
