@@ -244,6 +244,7 @@ suite(async () => {
       );
       const routines = db.activities.filter(isRoutine);
       eq(routines.length, 6, `${code}: six routines`);
+      assert(!tpl.activities.some(x => x.k === 'fraternity'), `${code}: no step to form a fraternity`);
       assert(
         routines.every(
           a =>

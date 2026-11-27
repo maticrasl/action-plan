@@ -69,22 +69,10 @@ export const FAITH: Template[] = [
         ],
       },
       {
-        k: 'fraternity',
-        start: 0,
-        end: 3,
-        goals: ['exodus'],
-        title: ['Form a fraternity', 'Oblikovati bratstvo'],
-        description: [
-          'A small group of men who start together and meet weekly: a parish group or a few friends.',
-          'Majhna skupina moških, ki začnejo skupaj in se srečujejo vsak teden: župnijska skupina ali nekaj prijateljev.',
-        ],
-      },
-      {
         k: 'anchor',
         start: 4,
         end: 5,
         goals: ['exodus'],
-        deps: ['fraternity'],
         title: ['Choose an anchor', 'Izbrati sidro'],
         description: [
           'Pair up within the fraternity (a three if the number is odd) to keep each other accountable.',
