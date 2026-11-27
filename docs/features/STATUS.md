@@ -52,18 +52,18 @@ Guide article is then added when the Guide exists.
 - [x] `15-notes` 2026-11-23
 - [x] `06-goal-form` 2026-11-21
 - [x] `30-what-it-costs`, `25-planned-reward`, `21-future-to-avoid` (three small ones; one session if it fits, else one each) 2026-11-23
-- [ ] `09-today`
-- [ ] `05-line-of-sight`
-- [ ] `03-life-areas`
-- [ ] `01-guided-discovery`
+- [x] `09-today` 2026-11-23
+- [x] `05-line-of-sight` 2026-11-23
+- [x] `03-life-areas` 2026-11-23
+- [x] `01-guided-discovery` 2026-11-23
 - [x] `08-pace-and-forecast` 2026-11-21
   - shipped in #44; weighted trend #45
-- [ ] `07-keep-goals`
+- [x] `07-keep-goals` 2026-11-24
 - [x] `16-is-it-working` 2026-11-21
   - shipped in #44
-- [ ] `14-reviews`, session A: weekly
-- [ ] `14-reviews`, session B: monthly
-- [ ] `14-reviews`, session C: yearly
+- [x] `14-reviews`, session A: weekly 2026-11-24
+- [x] `14-reviews`, session B: monthly 2026-11-24
+- [x] `14-reviews`, session C: yearly 2026-11-24
 - [x] `19-csv` 2026-11-21
   - shipped in #44
 - [ ] `18-progress-report`
@@ -99,13 +99,10 @@ Write "yes" and the date, or the changed decision, when the owner answers.
 
 ## Notes for the next session
 
-- 2026-11-23, branches `feat/keep-goals` (07) and `feat/reviews` (14 A, B, C, stacked on it): built, full
-  `npm run check` passes, not yet seen by the owner (lines not ticked). Specs `docs/specs/2026-11-23-keep-goals.md`
-  and `docs/specs/2026-11-23-reviews.md` record what the build decided. Shipping `feat/reviews` ships both.
-- 07: `goal.keep { min?, max? }`, rules in `core/keep.ts`, form parts `ui/forms/keep-form.ts`, band `views/graphs/band.ts`.
-- 14: rules in `core/reviews*.ts`, pages `views/review-*.ts`; the Guide checklist is gone; tips `week`, `month`,
-  `new-year` open their review. Two `shortcut:` limits (flexible routines in Forgot to tick; biggest changes).
-- 01, 03, 05 and 09 are shipped (#60–#63) but still wait for the owner to look before their lines are ticked.
-- Next open lines after the owner looks: `18-progress-report` (needs 13 and 14), then `20-mcp-server`.
+- 2026-11-27: every line through 16 and 19 is shipped and ticked (01, 03, 05, 09 in #60–#63; 07 and
+  14 A–C in #64, specs `docs/specs/2026-11-23-keep-goals.md` and `docs/specs/2026-11-23-reviews.md`).
+- Next open line: `18-progress-report` (needs 13 and 14, both shipped). Offer it after the weekly review
+  (`views/review-*.ts`, rules in `core/reviews*.ts`).
+- Then `20-mcp-server` step 0, a trial with the owner: do not start it alone.
 - Plans were written 2026-11-15 against `5b71e59`; find code with `npm run map`, not the plans' paths.
-- Still waiting: decision 10 (feedback channel, Q-010).
+- Still waiting: decision 10 (feedback channel, Q-010 in the owner's inbox).
