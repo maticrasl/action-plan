@@ -212,6 +212,9 @@ export function deletePlan(id: string) {
 export function mergePlanInto(fromId: string, toId: string, remove = false) {
   if (fromId === toId) return;
   const source: Db = fromId === plans.current ? JSON.parse(JSON.stringify(db)) : readPlan(fromId);
+  const entry = plans.list.find(p => p.id === fromId);
+  // As in deletePlan, and before place() clears the stamps: the tombstone beats fast-clock edits.
+  if (remove && entry) seeStamp(lastTouched(entry, source));
   if (plans.current !== toId) openPlan(toId);
   const taken = new Set([...SYNC_COLLS.flatMap(c => db[c].map(x => x.id)), ...Object.keys(db.deleted || {})]);
   const ids = new Map<string, string>();

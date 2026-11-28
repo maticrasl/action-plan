@@ -264,6 +264,23 @@ describe('working on a plan that is not open', () => {
     expect(plans.deleted![otherId] > ahead).toBe(true);
   });
 
+  test('merging a plan never opened here into another and removing it also beats its fast-clock edits', () => {
+    createPlan('Other');
+    const otherId = plans.current!;
+    save();
+    const ahead = '2026-11-18T12:00:00.000Z';
+    localStorage.setItem(
+      planKey(otherId),
+      JSON.stringify({ ...emptyDb(), goals: [{ id: 'o1', title: 'Phone', status: 'active', updatedAt: ahead }] }),
+    );
+    createPlan('Open');
+    const openId = plans.current!;
+    resetClock();
+    mergePlanInto(otherId, openId, true);
+    save();
+    expect(plans.deleted![otherId] > ahead).toBe(true);
+  });
+
   test('withPlan shows the core another plan and puts the open one back, also when it throws', () => {
     createPlan('Open');
     const open = db,
